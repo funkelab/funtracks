@@ -1,27 +1,24 @@
 import networkx as nx
 import numpy as np
 import pytest
-from motile_toolbox.candidate_graph.graph_attributes import EdgeAttr, NodeAttr
 from numpy.testing import assert_array_almost_equal
 
-from motile_tracker.data_model import Tracks
-from motile_tracker.data_model.actions import (
+from funtracks.data_model import Tracks
+from funtracks.data_model.actions import (
     AddEdges,
     AddNodes,
     UpdateNodeSegs,
 )
+from funtracks.data_model.graph_attributes import EdgeAttr, NodeAttr
 
 
-class TestAddDeleteNodes():
+class TestAddDeleteNodes:
     @staticmethod
     @pytest.mark.parametrize("use_seg", [True, False])
     def test_2d_seg(segmentation_2d, graph_2d, use_seg):
         # start with an empty Tracks
         empty_graph = nx.DiGraph()
-        if use_seg:
-            empty_seg = np.zeros_like(segmentation_2d)
-        else:
-            empty_seg = None
+        empty_seg = np.zeros_like(segmentation_2d) if use_seg else None
         tracks = Tracks(empty_graph, segmentation=empty_seg, ndim=3)
         # add all the nodes from graph_2d/seg_2d
         nodes = list(graph_2d.nodes())

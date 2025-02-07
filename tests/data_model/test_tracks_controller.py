@@ -1,8 +1,8 @@
 import numpy as np
-from motile_toolbox.candidate_graph.graph_attributes import NodeAttr
 
-from motile_tracker.data_model.solution_tracks import SolutionTracks
-from motile_tracker.data_model.tracks_controller import TracksController
+from funtracks.data_model.graph_attributes import NodeAttr
+from funtracks.data_model.solution_tracks import SolutionTracks
+from funtracks.data_model.tracks_controller import TracksController
 
 
 def test__add_nodes_no_seg(graph_2d):

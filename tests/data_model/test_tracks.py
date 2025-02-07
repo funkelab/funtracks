@@ -1,9 +1,8 @@
 import networkx as nx
 import numpy as np
 import pytest
-from motile_toolbox.candidate_graph import NodeAttr
 
-from motile_tracker.data_model import Tracks
+from funtracks.data_model import NodeAttr, Tracks
 
 
 def test_create_tracks(graph_3d, segmentation_3d):
