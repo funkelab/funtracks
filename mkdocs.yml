@@ -1,1 +1,16 @@
 site_name: funtracks
+
+site_url: https://funkelab.github.io/funtracks/
+
+theme:
+  name: material
+  palette:
+    scheme: slate
+    primary: indigo
+    accent: indigo
+
+
+extra:
+  version:
+    provider: mike
+    default: latest
