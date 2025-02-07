@@ -1,0 +1,87 @@
+[build-system]
+requires = ["setuptools>=70", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "funtracks"
+dynamic = ["version"]
+description = "Cell tracking data model"
+readme = "README.md"
+license = { text = "BSD 3-Clause License" }
+requires-python = ">=3.10"
+authors = [
+    { name = "Caroline Malin-Mayor", email = "malinmayorc@janelia.hhmi.org" },
+]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Image Processing",
+]
+
+dependencies =[
+    "numpy",
+    "pydantic",
+    "networkx",
+    "psygnal",
+    "scikit-image",
+]
+[project.optional-dependencies]
+testing =["pytest", "pytest-cov"]
+docs = ["mkdocs-material", "mike"]
+dev = ["ruff", "pre-commit"]
+all = ["funtracks[testing,docs,dev]"]
+
+[project.urls]
+"Bug Tracker" = "https://github.com/funkelab/funtracks/issues"
+"Documentation" ="https://funkelab.github.io/funtracks/"
+
+[tool.setuptools_scm]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+fix = true
+src = ["src"]
+
+[tool.ruff.lint]
+select = [
+    "E", "F", "W", #flake8
+    "UP", # pyupgrade
+    "I", # isort
+    "BLE", # flake8-blind-exception
+    "B", # flake8-bugbear
+    "A", # flake8-builtins
+    "C4", # flake8-comprehensions
+    "ISC", # flake8-implicit-str-concat
+    "G", # flake8-logging-format
+    "PIE", # flake8-pie
+    "SIM", # flake8-simplify
+]
+ignore = [
+    "UP006", "UP007", # type annotation. As using magicgui require runtime type annotation then we disable this.
+    "ISC001", # implicit string concatenation
+    "E501", # line too long
+]
+
+unfixable = [
+  "B905", # currently adds strict=False to zips. Should add strict=True (manually)
+]
+
+# https://docs.astral.sh/ruff/formatter/
+[tool.ruff.format]
+
+[tool.mypy]
+ignore_missing_imports = true
+
+[tool.coverage.report]
+exclude_also = [
+    "if TYPE_CHECKING:",
+]

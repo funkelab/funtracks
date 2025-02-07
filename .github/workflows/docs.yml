@@ -1,0 +1,40 @@
+name: Docs build
+
+# build the documentation whenever there are new commits on main
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+# security: restrict permissions for CI jobs.
+permissions:
+  contents: read
+
+jobs:
+  deploy-book:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          pip install -e ".[docs]"
+
+      # Build the book
+      - name: Build the book
+        run: |
+          mkdocs build
+
+      # Push the site to github-pages
+      - name: GitHub Pages action
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          publish_dir: ./site
+          github_token: ${{ secrets.GITHUB_TOKEN }}
