@@ -1,8 +1,8 @@
 from collections.abc import Iterable
+from typing import TYPE_CHECKING
+from warnings import warn
 
 import numpy as np
-from napari.utils.notifications import show_info, show_warning
-from qtpy.QtWidgets import QMessageBox
 
 from .action_history import ActionHistory
 from .actions import (
@@ -19,6 +19,13 @@ from .actions import (
 from .graph_attributes import NodeAttr
 from .solution_tracks import SolutionTracks
 from .tracks import Attrs, Node, SegMask
+
+if TYPE_CHECKING:
+    pass
+
+
+def show_warning(warning: str):
+    warn(warning, stacklevel=2)
 
 
 class TracksController:
@@ -43,9 +50,11 @@ class TracksController:
             pixels (list[SegMask] | None, optional): The pixels associated with each node,
                 if a segmentation is present. Defaults to None.
         """
-        action, nodes = self._add_nodes(attributes, pixels)
-        self.action_history.add_new_action(action)
-        self.tracks.refresh.emit(nodes[0] if nodes else None)
+        result = self._add_nodes(attributes, pixels)
+        if result is not None:
+            action, nodes = result
+            self.action_history.add_new_action(action)
+            self.tracks.refresh.emit(nodes[0] if nodes else None)
 
     def _get_pred_and_succ(
         self, track_id: int, time: int
@@ -81,30 +90,6 @@ class TracksController:
                 succ = cand
                 break
         return pred, succ
-
-    def _confirm_remove_division_edges(self) -> bool:
-        """Spawn a dialog box to ask the user if they want to break an upstream division
-        event or not.
-
-        Returns:
-            bool: True if the upstream division edges should be removed to make room for
-                the new node in the track, False if the user wants to cancel the operation.
-        """
-        msg = QMessageBox()
-        msg.setWindowTitle("Delete existing division?")
-        msg.setText(
-            "Painting a label with this track id involves breaking an upstream division event. Proceed?"
-        )
-        msg.setIcon(QMessageBox.Information)
-
-        # Set both OK and Cancel buttons
-        msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
-
-        # Execute the message box and catch the result
-        result = msg.exec_()
-
-        # Check which button was clicked
-        return result == QMessageBox.Ok
 
     def _add_nodes(
         self,
@@ -169,13 +154,11 @@ class TracksController:
                         self.tracks._get_node_attr(node, NodeAttr.TIME.value) <= time
                         and self.tracks.graph.out_degree(node) == 2
                     ):  # there is an upstream division event here
-                        if self._confirm_remove_division_edges():
-                            for succ in self.tracks.graph.successors(node):
-                                edges_to_remove.append((node, succ))
-                        else:
-                            show_info("Action canceled by user")
-                            self.tracks.refresh.emit()
-                            return
+                        show_warning(
+                            "Cannot add node here - upstream division event detected."
+                        )
+                        self.tracks.refresh.emit()
+                        return
 
         if len(edges_to_remove) > 0:
             actions.append(DeleteEdges(self.tracks, edges_to_remove))
@@ -421,32 +404,8 @@ class TracksController:
 
         # reject if target node already has an incoming edge
         elif self.tracks.graph.in_degree(edge[1]) > 0:
-            msg = QMessageBox()
-            msg.setWindowTitle("Delete existing edge?")
-            msg.setText(
-                "Creating this edge involves breaking an existing incoming edge to the target node. Proceed?"
-            )
-            msg.setIcon(QMessageBox.Information)
-
-            # Set both OK and Cancel buttons
-            msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
-
-            # Execute the message box and catch the result
-            result = msg.exec_()
-
-            # Check which button was clicked
-            if result == QMessageBox.Ok:
-                print("User clicked OK")
-
-                # identify incoming edge in the target node and insert a delete action
-                pred = next(self.tracks.graph.predecessors(edge[1]))
-                action = self._delete_edges(edges=np.array([[pred, edge[1]]]))
-
-            elif result == QMessageBox.Cancel:
-                show_warning(
-                    "Edge is rejected because merges are currently not allowed."
-                )
-                return False, action
+            show_warning("Edge is rejected because merges are currently not allowed.")
+            return False, action
 
         elif self.tracks.graph.out_degree(edge[0]) > 1:
             show_warning(
@@ -568,19 +527,27 @@ class TracksController:
         self.action_history.add_new_action(action_group)
         self.tracks.refresh.emit(node_to_select)
 
-    def undo(self) -> None:
-        """Obtain the action to undo from the history, and invert"""
+    def undo(self) -> bool:
+        """Obtain the action to undo from the history, and invert.
+        Returns:
+            bool: True if the action was undone, False if there were no more actions
+        """
         if self.action_history.undo():
             self.tracks.refresh.emit()
+            return True
         else:
-            show_info("No more actions to undo")
+            return False
 
     def redo(self) -> None:
-        """Obtain the action to redo from the history"""
+        """Obtain the action to redo from the history
+        Returns:
+            bool: True if the action was re-done, False if there were no more actions
+        """
         if self.action_history.redo():
             self.tracks.refresh.emit()
+            return True
         else:
-            show_info("No more actions to redo")
+            return False
 
     def _get_new_node_ids(self, n: int) -> list[Node]:
         """Get a list of new node ids for creating new nodes.
