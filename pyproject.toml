@@ -94,9 +94,11 @@ funtracks = { path = ".", editable = true }
 
 [tool.pixi.environments]
 default = { solve-group = "default" }
-all = { features = ["all", "testing", "docs", "dev"], solve-group = "default" }
 dev = { features = ["dev"], solve-group = "default" }
 docs = { features = ["docs"], solve-group = "default" }
 testing = { features = ["testing"], solve-group = "default" }
 
 [tool.pixi.tasks]
+
+[tool.pixi.feature.testing.tasks]
+test = "pytest --cov=funtracks tests/"

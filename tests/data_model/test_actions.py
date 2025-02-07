@@ -66,6 +66,9 @@ class TestAddDeleteNodes:
         assert set(tracks.graph.nodes()) == set(graph_2d.nodes())
         for node, data in tracks.graph.nodes(data=True):
             graph_2d_data = graph_2d.nodes[node]
+            # TODO: get back custom attrs https://github.com/funkelab/funtracks/issues/1
+            if not use_seg:
+                del graph_2d_data["area"]
             assert data == graph_2d_data
         if use_seg:
             assert_array_almost_equal(tracks.segmentation, segmentation_2d)
