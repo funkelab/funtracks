@@ -3,8 +3,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import networkx as nx
-from motile_toolbox.candidate_graph.graph_attributes import NodeAttr
 
+from .graph_attributes import NodeAttr
 from .tracks import Tracks
 
 if TYPE_CHECKING:

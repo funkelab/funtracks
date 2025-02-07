@@ -11,10 +11,11 @@ from typing import (
 
 import networkx as nx
 import numpy as np
-from motile_toolbox.candidate_graph import EdgeAttr, NodeAttr
-from motile_toolbox.candidate_graph.iou import _compute_ious
 from psygnal import Signal
 from skimage import measure
+
+from .compute_ious import _compute_ious
+from .graph_attributes import EdgeAttr, NodeAttr
 
 if TYPE_CHECKING:
     from pathlib import Path

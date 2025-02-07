@@ -1,7 +1,6 @@
 from collections.abc import Iterable
 
 import numpy as np
-from motile_toolbox.candidate_graph import NodeAttr
 from napari.utils.notifications import show_info, show_warning
 from qtpy.QtWidgets import QMessageBox
 
@@ -17,6 +16,7 @@ from .actions import (
     UpdateNodeSegs,
     UpdateTrackID,
 )
+from .graph_attributes import NodeAttr
 from .solution_tracks import SolutionTracks
 from .tracks import Attrs, Node, SegMask
 

@@ -16,8 +16,7 @@ from many low-level actions.
 
 from __future__ import annotations
 
-from motile_toolbox.candidate_graph.graph_attributes import NodeAttr
-
+from .graph_attributes import NodeAttr
 from .solution_tracks import SolutionTracks
 from .tracks import Attrs, Edge, Node, SegMask, Tracks
 
