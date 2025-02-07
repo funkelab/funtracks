@@ -1,19 +1,21 @@
-name: Docs build
+name: Push docs update
 
-# build the documentation whenever there are new commits on main
+# push to the gh-pages branch whenever there is a new push to main or a new tag
 on:
   push:
     branches:
       - main
+    tags: ["*"]
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
+
+env:
+    TAG: ${{ contains(github.ref, 'tags') && 'latest' || 'dev'}}
 
 jobs:
-  deploy-book:
+  push-docs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -28,14 +30,14 @@ jobs:
         run: |
           pip install -e ".[docs]"
 
-      # Build the book
-      - name: Build the book
-        run: |
-          mkdocs build
+      - id: get_version
+        uses: battila7/get-version-action@v2
 
-      # Push the site to github-pages
-      - name: GitHub Pages action
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          publish_dir: ./site
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: configure git
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git fetch origin gh-pages --depth=1
+
+      - name: Push changes to gh-pages branch
+        run: mike deploy ${{ steps.get_version.outputs.version }} -u $TAG
