@@ -85,3 +85,18 @@ ignore_missing_imports = true
 exclude_also = [
     "if TYPE_CHECKING:",
 ]
+[tool.pixi.project]
+channels = ["conda-forge"]
+platforms = ["osx-arm64"]
+
+[tool.pixi.pypi-dependencies]
+funtracks = { path = ".", editable = true }
+
+[tool.pixi.environments]
+default = { solve-group = "default" }
+all = { features = ["all", "testing", "docs", "dev"], solve-group = "default" }
+dev = { features = ["dev"], solve-group = "default" }
+docs = { features = ["docs"], solve-group = "default" }
+testing = { features = ["testing"], solve-group = "default" }
+
+[tool.pixi.tasks]

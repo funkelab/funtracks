@@ -85,3 +85,7 @@ venv/
 
 # written by setuptools_scm
 **/_version.py
+
+# pixi environments
+.pixi
+*.egg-info
