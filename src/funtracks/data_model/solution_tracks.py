@@ -150,6 +150,10 @@ class SolutionTracks(Tracks):
         positions: np.ndarray | None = None,
         attrs: Attrs | None = None,
     ):
+        if attrs is None:
+            raise ValueError(
+                f"Node attributes cannot be None, must contain {NodeAttr.TRACK_ID.value}"
+            )
         # overriding add_nodes to add new nodes to the track_id_to_node mapping
         super().add_nodes(nodes, times, positions, attrs)
         for node, track_id in zip(nodes, attrs[NodeAttr.TRACK_ID.value], strict=True):

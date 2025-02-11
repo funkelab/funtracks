@@ -35,8 +35,8 @@ dependencies =[
 ]
 [project.optional-dependencies]
 testing =["pytest", "pytest-cov"]
-docs = ["mkdocs-material", "mike"]
-dev = ["ruff", "pre-commit"]
+docs = ["mkdocs-material", "mike", "mkdocstrings[python]", "mkdocs-autoapi"]
+dev = ["ruff", "pre-commit", "mypy"]
 all = ["funtracks[testing,docs,dev]"]
 
 [project.urls]
@@ -102,3 +102,7 @@ testing = { features = ["testing"], solve-group = "default" }
 
 [tool.pixi.feature.testing.tasks]
 test = "pytest --cov=funtracks tests/"
+
+
+[tool.pixi.feature.docs.tasks]
+localdocs = "mike build"

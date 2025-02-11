@@ -16,9 +16,14 @@ from many low-level actions.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from .graph_attributes import NodeAttr
 from .solution_tracks import SolutionTracks
 from .tracks import Attrs, Edge, Node, SegMask, Tracks
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 
 class TracksAction:
@@ -81,9 +86,9 @@ class AddNodes(TracksAction):
     def __init__(
         self,
         tracks: Tracks,
-        nodes: list[Node],
+        nodes: Iterable[Node],
         attributes: Attrs,
-        pixels: list[SegMask] | None = None,
+        pixels: Iterable[SegMask] | None = None,
     ):
         """Create an action to add new nodes, with optional segmentation
 
@@ -100,9 +105,9 @@ class AddNodes(TracksAction):
         self.times = attributes.get(NodeAttr.TIME.value, None)
         if NodeAttr.TIME.value in attributes:
             del user_attrs[NodeAttr.TIME.value]
-        self.positions = attributes.get(tracks.pos_attr, None)
-        if tracks.pos_attr in attributes:
-            del user_attrs[tracks.pos_attr]
+        self.positions = attributes.get(NodeAttr.POS.value, None)
+        if NodeAttr.POS.value in attributes:
+            del user_attrs[NodeAttr.POS.value]
         self.pixels = pixels
         self.attributes = user_attrs
         self._apply()
@@ -127,7 +132,10 @@ class DeleteNodes(TracksAction):
     """
 
     def __init__(
-        self, tracks: Tracks, nodes: list[Node], pixels: list[SegMask] | None = None
+        self,
+        tracks: Tracks,
+        nodes: Iterable[Node],
+        pixels: Iterable[SegMask] | None = None,
     ):
         super().__init__(tracks)
         self.nodes = nodes
@@ -170,8 +178,8 @@ class UpdateNodeSegs(TracksAction):
     def __init__(
         self,
         tracks: Tracks,
-        nodes: list[Node],
-        pixels: list[SegMask],
+        nodes: Iterable[Node],
+        pixels: Iterable[SegMask],
         added: bool = True,
     ):
         """
@@ -211,13 +219,13 @@ class UpdateNodeAttrs(TracksAction):
     def __init__(
         self,
         tracks: Tracks,
-        nodes: list[Node],
+        nodes: Iterable[Node],
         attrs: Attrs,
     ):
         """
         Args:
             tracks (Tracks): The tracks to update the node attributes for
-            nodes (list[Node]): The nodes to update the attributes for
+            nodes (Iterable[Node]): The nodes to update the attributes for
             attrs (Attrs): A mapping from attribute name to list of new attribute values
                 for the given nodes.
 
@@ -257,7 +265,7 @@ class UpdateNodeAttrs(TracksAction):
 class AddEdges(TracksAction):
     """Action for adding new edges"""
 
-    def __init__(self, tracks: Tracks, edges: list[Edge]):
+    def __init__(self, tracks: Tracks, edges: Iterable[Edge]):
         super().__init__(tracks)
         self.edges = edges
         self._apply()
@@ -277,7 +285,7 @@ class AddEdges(TracksAction):
 class DeleteEdges(TracksAction):
     """Action for deleting edges"""
 
-    def __init__(self, tracks: Tracks, edges: list[Edge]):
+    def __init__(self, tracks: Tracks, edges: Iterable[Edge]):
         super().__init__(tracks)
         self.edges = edges
         self._apply()
@@ -303,6 +311,7 @@ class UpdateTrackID(TracksAction):
             track_id (int): The new track id to assign.
         """
         super().__init__(tracks)
+        self.tracks: SolutionTracks = tracks
         self.start_node = start_node
         self.old_track_id = self.tracks.get_track_id(start_node)
         self.new_track_id = track_id

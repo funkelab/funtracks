@@ -14,7 +14,7 @@ class ActionHistory:
     the undone actions)
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.undo_stack: list[TracksAction] = []  # list of actions that can be undone
         self.redo_stack: list[TracksAction] = []  # list of actions that can be redone
 

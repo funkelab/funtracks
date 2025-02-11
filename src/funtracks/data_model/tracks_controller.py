@@ -1,8 +1,7 @@
-from collections.abc import Iterable
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 from warnings import warn
-
-import numpy as np
 
 from .action_history import ActionHistory
 from .actions import (
@@ -18,10 +17,10 @@ from .actions import (
 )
 from .graph_attributes import NodeAttr
 from .solution_tracks import SolutionTracks
-from .tracks import Attrs, Node, SegMask
+from .tracks import Attrs, Edge, Node, SegMask
 
 if TYPE_CHECKING:
-    pass
+    from collections.abc import Iterable
 
 
 def show_warning(warning: str):
@@ -133,11 +132,12 @@ class TracksController:
 
         times = attributes[NodeAttr.TIME.value]
         track_ids = attributes[NodeAttr.TRACK_ID.value]
+        nodes: list[Node]
         if pixels is not None:
             nodes = attributes["node_id"]
         else:
             nodes = self._get_new_node_ids(len(times))
-        actions = []
+        actions: list[TracksAction] = []
 
         # remove skip edges that will be replaced by new edges after adding nodes
         edges_to_remove = []
@@ -198,7 +198,7 @@ class TracksController:
         self.tracks.refresh.emit()
 
     def _delete_nodes(
-        self, nodes: Iterable[Node], pixels: list[SegMask] | None = None
+        self, nodes: Iterable[Node], pixels: Iterable[SegMask] | None = None
     ) -> TracksAction:
         """Delete the nodes provided by the array from the graph but maintain successor
         track_ids. Reconnect to the nearest predecessor and/or nearest successor
@@ -213,7 +213,7 @@ class TracksController:
         Args:
             nodes (np.ndarray): array of node_ids to be deleted
         """
-        actions = []
+        actions: list[TracksAction] = []
 
         # find all the edges that should be deleted (no duplicates) and put them in a single action
         # also keep track of which deletions removed a division, and save the sibling nodes so we can
@@ -263,7 +263,7 @@ class TracksController:
     def _update_node_segs(
         self,
         nodes: Iterable[Node],
-        pixels: list[SegMask],
+        pixels: Iterable[SegMask],
         added=False,
     ) -> TracksAction:
         """Update the segmentation and segmentation-managed attributes for
@@ -281,12 +281,12 @@ class TracksController:
         """
         return UpdateNodeSegs(self.tracks, nodes, pixels, added=added)
 
-    def add_edges(self, edges: np.ndarray[int]) -> None:
+    def add_edges(self, edges: Iterable[Edge]) -> None:
         """Add edges to the graph. Also update the track ids and
         corresponding segmentations if applicable
 
         Args:
-            edges (np.array[int]): An Nx2 array of N edges, each with source and target
+            edges (Iterable[Edge]): An iterable of edges, each with source and target
                 node ids
         """
         make_valid_actions = []
@@ -298,6 +298,7 @@ class TracksController:
             if valid_action is not None:
                 make_valid_actions.append(valid_action)
         main_action = self._add_edges(edges)
+        action: TracksAction
         if len(make_valid_actions) > 0:
             make_valid_actions.append(main_action)
             action = ActionGroup(self.tracks, make_valid_actions)
@@ -333,18 +334,18 @@ class TracksController:
         """
         return UpdateNodeAttrs(self.tracks, nodes, attributes)
 
-    def _add_edges(self, edges: np.ndarray[int]) -> TracksAction:
+    def _add_edges(self, edges: Iterable[Edge]) -> TracksAction:
         """Add edges and attributes to the graph. Also update the track ids of the target
         node tracks and potentially sibling tracks.
 
         Args:
-            edges (np.array[int]): An Nx2 array of N edges, each with source and target
+            edges (Iterable[edge]): An iterable of edges, each with source and target
                 node ids
 
         Returns:
             A TracksAction containing all edits performed in this call
         """
-        actions = []
+        actions: list[TracksAction] = []
         for edge in edges:
             out_degree = self.tracks.graph.out_degree(edge[0])
             if out_degree == 0:  # joining two segments
@@ -368,7 +369,7 @@ class TracksController:
         actions.append(AddEdges(self.tracks, edges))
         return ActionGroup(self.tracks, actions)
 
-    def is_valid(self, edge) -> tuple[bool, TracksAction | None]:
+    def is_valid(self, edge: Edge) -> tuple[bool, TracksAction | None]:
         """Check if this edge is valid.
         Criteria:
         - not horizontal
@@ -430,11 +431,11 @@ class TracksController:
         # all checks passed!
         return True, action
 
-    def delete_edges(self, edges: np.ndarray):
+    def delete_edges(self, edges: Iterable[Edge]):
         """Delete edges from the graph.
 
         Args:
-            edges (np.ndarray): The Nx2 array of edges to be deleted
+            edges (Iterable[Edge]): The Nx2 array of edges to be deleted
         """
 
         for edge in edges:
@@ -446,8 +447,8 @@ class TracksController:
         self.action_history.add_new_action(action)
         self.tracks.refresh.emit()
 
-    def _delete_edges(self, edges: np.ndarray) -> ActionGroup:
-        actions = [DeleteEdges(self.tracks, edges)]
+    def _delete_edges(self, edges: Iterable[Edge]) -> ActionGroup:
+        actions: list[TracksAction] = [DeleteEdges(self.tracks, edges)]
         for edge in edges:
             out_degree = self.tracks.graph.out_degree(edge[0])
             if out_degree == 0:  # removed a normal (non division) edge
@@ -465,10 +466,10 @@ class TracksController:
 
     def update_segmentations(
         self,
-        to_remove: list[Node],  # (node_ids, pixels)
-        to_update_smaller: list[tuple],  # (node_id, pixels)
-        to_update_bigger: list[tuple],  # (node_id, pixels)
-        to_add: list[tuple],  # (node_id, track_id, pixels)
+        to_remove: list[tuple[Node, SegMask]],  # (node_ids, pixels)
+        to_update_smaller: list[tuple[Node, SegMask]],  # (node_id, pixels)
+        to_update_bigger: list[tuple[Node, SegMask]],  # (node_id, pixels)
+        to_add: list[tuple[Node, int, SegMask]],  # (node_id, track_id, pixels)
         current_timepoint: int,
     ) -> None:
         """Handle a change in the segmentation mask, checking for node addition, deletion, and attribute updates.
@@ -481,7 +482,7 @@ class TracksController:
                 or integer representing the new value(s)
             current_timepoint (int): the current time point in the viewer, used to set the selected node.
         """
-        actions = []
+        actions: list[TracksAction] = []
         node_to_select = None
 
         if len(to_remove) > 0:
@@ -538,7 +539,7 @@ class TracksController:
         else:
             return False
 
-    def redo(self) -> None:
+    def redo(self) -> bool:
         """Obtain the action to redo from the history
         Returns:
             bool: True if the action was re-done, False if there were no more actions

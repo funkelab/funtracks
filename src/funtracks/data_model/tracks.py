@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Iterable, Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
-    Optional,
     TypeAlias,
 )
 
@@ -23,8 +22,8 @@ if TYPE_CHECKING:
 AttrValue: TypeAlias = Any
 Node: TypeAlias = int
 Edge: TypeAlias = tuple[Node, Node]
-AttrValues: TypeAlias = Sequence[AttrValue]
-Attrs: TypeAlias = Mapping[str, AttrValues]
+AttrValues: TypeAlias = list[AttrValue]
+Attrs: TypeAlias = dict[str, AttrValues]
 SegMask: TypeAlias = tuple[np.ndarray, ...]
 
 
@@ -51,7 +50,7 @@ class Tracks:
     be performed, and those after will not.
     """
 
-    refresh = Signal(Optional[str])
+    refresh = Signal(object)
     GRAPH_FILE = "graph.json"
     SEG_FILE = "seg.npy"
     ATTRS_FILE = "attrs.json"
@@ -240,7 +239,7 @@ class Tracks:
                 Defaults to None.
         """
         pos = np.expand_dims(position, axis=0) if position is not None else None
-        attributes: dict[str, Sequence[Any]] | None = (
+        attributes: dict[str, list[Any]] | None = (
             {key: [val] for key, val in attrs.items()} if attrs is not None else None
         )
         self.add_nodes([node], [time], positions=pos, attrs=attributes)
@@ -315,7 +314,7 @@ class Tracks:
     def get_iou(self, edge: Edge):
         return self._get_edge_attr(edge, EdgeAttr.IOU.value)
 
-    def get_pixels(self, nodes: list[Node]) -> list[tuple[np.ndarray, ...]] | None:
+    def get_pixels(self, nodes: Iterable[Node]) -> list[tuple[np.ndarray, ...]] | None:
         """Get the pixels corresponding to each node in the nodes list.
 
         Args:
@@ -363,14 +362,7 @@ class Tracks:
         auto-computed attributes of the nodes and incident edges.
         """
         times = self.get_times(nodes)
-        values = (
-            nodes
-            if added
-            else [
-                0,
-            ]
-            * len(nodes)
-        )
+        values = nodes if added else [0 for _ in nodes]
         self.set_pixels(pixels, values)
         computed_attrs = self._compute_node_attrs(nodes, times)
         positions = np.array(computed_attrs[NodeAttr.POS.value])
@@ -425,8 +417,7 @@ class Tracks:
             directory (Path): The directory to save the tracks in.
         """
         self._save_graph(directory)
-        if self.segmentation is not None:
-            self._save_seg(directory)
+        self._save_seg(directory)
         self._save_attrs(directory)
 
     def _save_graph(self, directory: Path):
@@ -468,8 +459,9 @@ class Tracks:
         Args:
             directory (Path): The directory in which to save the segmentation
         """
-        out_path = directory / self.SEG_FILE
-        np.save(out_path, self.segmentation)
+        if self.segmentation is not None:
+            out_path = directory / self.SEG_FILE
+            np.save(out_path, self.segmentation)
 
     def _save_attrs(self, directory: Path):
         """Save the time_attr, pos_attr, and scale in a json file in the given directory.
@@ -595,7 +587,7 @@ class Tracks:
             )
         return ndim
 
-    def _set_node_attr(self, node: Node, attr: NodeAttr, value: Any):
+    def _set_node_attr(self, node: Node, attr: str, value: Any):
         if isinstance(value, np.ndarray):
             value = list(value)
         self.graph.nodes[node][attr] = value
@@ -672,7 +664,6 @@ class Tracks:
             )
             attrs[NodeAttr.AREA.value].append(area)
             attrs[NodeAttr.POS.value].append(pos)
-        attrs[NodeAttr.POS.value] = np.array(attrs[NodeAttr.POS.value])
         return attrs
 
     def _compute_edge_attrs(self, edges: Iterable[Edge]) -> Attrs:
