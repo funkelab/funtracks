@@ -35,7 +35,7 @@ dependencies =[
 ]
 [project.optional-dependencies]
 testing =["pytest", "pytest-cov"]
-docs = ["mkdocs-material", "mike", "mkdocstrings[python]", "mkdocs-autoapi"]
+docs = ["mkdocs-material", "mike", "mkdocstrings[python]", "mkdocs-api-autonav"]
 dev = ["ruff", "pre-commit", "mypy"]
 all = ["funtracks[testing,docs,dev]"]
 
