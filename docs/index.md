@@ -1,17 +1,7 @@
-# Welcome to MkDocs
+# Funtracks
+A data model for cell tracking with actions, undo history, persistence, and more!
 
-For full documentation visit [mkdocs.org](https://www.mkdocs.org).
+Designed for use with the [finn tracks viewer](https://github.com/funkelab/finn) and [motile tracker](https://github.com/funkelab/motile_tracker). Provides a data model for programmatic editing of tracks that can be used by a UI like finn or by a machine agent for active learning.
 
-## Commands
-
-* `mkdocs new [dir-name]` - Create a new project.
-* `mkdocs serve` - Start the live-reloading docs server.
-* `mkdocs build` - Build the documentation site.
-* `mkdocs -h` - Print help message and exit.
-
-## Project layout
-
-    mkdocs.yml    # The configuration file.
-    docs/
-        index.md  # The documentation homepage.
-        ...       # Other markdown pages, images and other files.
+# Installation
+`pip install funtracks`
