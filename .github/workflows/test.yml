@@ -34,7 +34,7 @@ jobs:
 
       - name: Test with pytest
         run: |
-          pytest --color=yes --cov=motile_tracker --cov-report=xml --cov-report=term-missing tests
+          pytest --color=yes --cov=funtracks --cov-report=xml --cov-report=term-missing tests
 
       - name: Coverage
         uses: codecov/codecov-action@v4
