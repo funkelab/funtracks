@@ -16,7 +16,7 @@
       
       
       <link rel="icon" href="assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.3">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.4">
     
     
       
@@ -24,7 +24,7 @@
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/main.d7758b05.min.css">
+      <link rel="stylesheet" href="assets/stylesheets/main.8608ea7d.min.css">
       
         
         <link rel="stylesheet" href="assets/stylesheets/palette.06af60db.min.css">
@@ -214,6 +214,18 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Funtracks
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="." class="md-nav__link md-nav__link--active">
         
   
@@ -224,6 +236,43 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Installation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#roadmap" class="md-nav__link">
+    <span class="md-ellipsis">
+      Roadmap
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -578,6 +627,32 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#installation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Installation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#roadmap" class="md-nav__link">
+    <span class="md-ellipsis">
+      Roadmap
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -595,8 +670,18 @@
 <h1 id="funtracks">Funtracks</h1>
 <p>A data model for cell tracking with actions, undo history, persistence, and more!</p>
 <p>Designed for use with the <a href="https://github.com/funkelab/finn">finn tracks viewer</a> and <a href="https://github.com/funkelab/motile_tracker">motile tracker</a>. Provides a data model for programmatic editing of tracks that can be used by a UI like finn or by a machine agent for active learning.</p>
-<h1 id="installation">Installation</h1>
+<h2 id="installation">Installation</h2>
 <p><code>pip install funtracks</code></p>
+<p>Or use pixi!</p>
+<h2 id="roadmap">Roadmap</h2>
+<p>Features already included in funtracks:
+- fully undo-able action history</p>
+<p>Features that will be included in funtracks:
+- both in-memory and out-of-memory tracks
+  - in-memory using networkx (slower, pure python) or spatial_graph (faster, compiled C) data structures
+  - out-of-memory using zarr for segmentations and SQLite/PostGreSQL for graphs
+- functions to import from and export to common file structures (csv, segmentation relabeled by track id)
+- generic features with the option to automatically update features on tracks editing actions</p>
 
 
 
