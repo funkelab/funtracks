@@ -102,7 +102,3 @@ testing = { features = ["testing"], solve-group = "default" }
 
 [tool.pixi.feature.testing.tasks]
 test = "pytest --cov=funtracks tests/"
-
-
-[tool.pixi.feature.docs.tasks]
-localdocs = "mike build"

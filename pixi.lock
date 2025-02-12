@@ -127,7 +127,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/2c/19/04f9b178c2d8a15b076c8b5140708fa6ffc5601fb6f1e975537072df5b2a/mergedeep-1.3.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/fd/1a/31b7cd6e4e7a02df4e076162e9783620777592bea9e4bb036389389af99d/mike-2.1.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/22/5b/dbc6a8cddc9cfa9c4971d59fb12bb8d42e161b7e7f8cc89e49137c5b279c/mkdocs-1.6.1-py3-none-any.whl
-      - pypi: https://files.pythonhosted.org/packages/22/da/70e9719126c0a5da7cad0e551fb031d7705b9a81d09bc9addcfcd02ea1e7/mkdocs_autoapi-0.4.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/56/58/3d8e8e908150c07628dfa0c4f8ea596e111fab3ea1ade4c2f1c75dc80355/mkdocs_api_autonav-0.1.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/db/19/f20edc082c1de2987dbaf30fcc514ed7a908d465a15aba7cba595c3b245a/mkdocs_autorefs-1.3.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/9f/d4/029f984e8d3f3b6b726bd33cafc473b75e9e44c0f7e80a5b29abc466bdea/mkdocs_get_deps-0.2.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/11/a4/e0da0bc6a7dbfda6a786427f82a0caa4dd1f163249a5a5e5dccbb50c5f1e/mkdocs_material-9.6.3-py3-none-any.whl
@@ -304,8 +304,8 @@ packages:
   requires_python: '>=3.9'
 - pypi: .
   name: funtracks
-  version: 0.1.dev12+g1f67406.d20250211
-  sha256: 00a1fe6fe9dae14f6c95a487bc5d6d9216a8633531a24b76406f7a7a7c844d14
+  version: 0.1.dev13+gf419d66.d20250211
+  sha256: baa594fd8841f2086ff377d4d77181e063e43a52be615a5ca501831a814622cb
   requires_dist:
   - numpy
   - pydantic
@@ -317,7 +317,7 @@ packages:
   - mkdocs-material ; extra == 'docs'
   - mike ; extra == 'docs'
   - mkdocstrings[python] ; extra == 'docs'
-  - mkdocs-autoapi ; extra == 'docs'
+  - mkdocs-api-autonav ; extra == 'docs'
   - ruff ; extra == 'dev'
   - pre-commit ; extra == 'dev'
   - mypy ; extra == 'dev'
@@ -640,17 +640,14 @@ packages:
   - pyyaml==5.1 ; extra == 'min-versions'
   - watchdog==2.0 ; extra == 'min-versions'
   requires_python: '>=3.8'
-- pypi: https://files.pythonhosted.org/packages/22/da/70e9719126c0a5da7cad0e551fb031d7705b9a81d09bc9addcfcd02ea1e7/mkdocs_autoapi-0.4.0-py3-none-any.whl
-  name: mkdocs-autoapi
-  version: 0.4.0
-  sha256: ce2b5e8b4d1df37bd1273a6bce1dded152107e2280cedbfa085cea10edf8531b
+- pypi: https://files.pythonhosted.org/packages/56/58/3d8e8e908150c07628dfa0c4f8ea596e111fab3ea1ade4c2f1c75dc80355/mkdocs_api_autonav-0.1.2-py3-none-any.whl
+  name: mkdocs-api-autonav
+  version: 0.1.2
+  sha256: 369e9e21730d22487be55db899dced2c63c37f56087044081911e494a2f6a4b6
   requires_dist:
-  - mkdocs>=1.4.0
-  - mkdocstrings>=0.19.0
-  - mkdocstrings[python-legacy]>=0.19.0 ; extra == 'python-legacy'
-  - mkdocstrings[python]>=0.19.0 ; extra == 'python'
-  - mkdocstrings-vba>=0.0.10 ; extra == 'vba'
-  requires_python: '>=3.6'
+  - mkdocs>=1.6
+  - mkdocstrings-python>=1.11.0
+  requires_python: '>=3.9'
 - pypi: https://files.pythonhosted.org/packages/db/19/f20edc082c1de2987dbaf30fcc514ed7a908d465a15aba7cba595c3b245a/mkdocs_autorefs-1.3.1-py3-none-any.whl
   name: mkdocs-autorefs
   version: 1.3.1
