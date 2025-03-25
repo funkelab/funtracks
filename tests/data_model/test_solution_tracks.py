@@ -7,6 +7,8 @@ from funtracks.data_model import SolutionTracks
 def test_next_track_id(graph_2d):
     tracks = SolutionTracks(graph_2d, ndim=3)
     assert tracks.get_next_track_id() == 6
+    tracks.add_node(10, time=3, position=[0, 0, 0, 0], attrs={"track_id": 10})
+    assert tracks.get_next_track_id() == 11
 
 
 def test_next_track_id_empty():
