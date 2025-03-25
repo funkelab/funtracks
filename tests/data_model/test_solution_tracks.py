@@ -4,7 +4,12 @@ import numpy as np
 from funtracks.data_model import SolutionTracks
 
 
-def test_empty_tracks():
+def test_next_track_id(graph_2d):
+    tracks = SolutionTracks(graph_2d, ndim=3)
+    assert tracks.get_next_track_id() == 6
+
+
+def test_next_track_id_empty():
     graph = nx.DiGraph()
     seg = np.zeros(shape=(10, 100, 100, 100), dtype=np.uint64)
     tracks = SolutionTracks(graph, segmentation=seg)
