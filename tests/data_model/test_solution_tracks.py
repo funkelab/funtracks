@@ -1,4 +1,21 @@
+import networkx as nx
+import numpy as np
+
 from funtracks.data_model import SolutionTracks
+
+
+def test_next_track_id(graph_2d):
+    tracks = SolutionTracks(graph_2d, ndim=3)
+    assert tracks.get_next_track_id() == 6
+    tracks.add_node(10, time=3, position=[0, 0, 0, 0], attrs={"track_id": 10})
+    assert tracks.get_next_track_id() == 11
+
+
+def test_next_track_id_empty():
+    graph = nx.DiGraph()
+    seg = np.zeros(shape=(10, 100, 100, 100), dtype=np.uint64)
+    tracks = SolutionTracks(graph, segmentation=seg)
+    assert tracks.get_next_track_id() == 1
 
 
 def test_export_to_csv(graph_2d, graph_3d, tmp_path):
