@@ -64,6 +64,7 @@ select = [
     "G", # flake8-logging-format
     "PIE", # flake8-pie
     "SIM", # flake8-simplify
+    "T20", # flake-print
 ]
 ignore = [
     "UP006", "UP007", # type annotation. As using magicgui require runtime type annotation then we disable this.
