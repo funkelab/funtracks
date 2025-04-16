@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import Iterable, Sequence
 from typing import (
     TYPE_CHECKING,
@@ -25,6 +26,8 @@ Edge: TypeAlias = tuple[Node, Node]
 AttrValues: TypeAlias = list[AttrValue]
 Attrs: TypeAlias = dict[str, AttrValues]
 SegMask: TypeAlias = tuple[np.ndarray, ...]
+
+logger = logging.getLogger(__name__)
 
 
 class Tracks:
@@ -386,7 +389,7 @@ class Tracks:
                 for key, values in attributes.items():
                     self.graph.nodes[node][key] = values[idx]
             else:
-                print(f"Node {node} not found in the graph.")
+                logger.info("Node %d not found in the graph.", node)
 
     def _set_edge_attributes(self, edges: Iterable[Edge], attributes: Attrs) -> None:
         """Set the edge attributes for the given edges. Attributes should already exist
@@ -405,7 +408,7 @@ class Tracks:
                 for key, value in attributes.items():
                     self.graph.edges[edge][key] = value[idx]
             else:
-                print(f"Edge {edge} not found in the graph.")
+                logger.info("Edge %d not found in the graph.", edge)
 
     def save(self, directory: Path):
         """Save the tracks to the given directory.
@@ -571,7 +574,6 @@ class Tracks:
         scale: list[float] | None,
         provided_ndim: int | None,
     ):
-        print(seg, scale, provided_ndim)
         seg_ndim = seg.ndim if seg is not None else None
         scale_ndim = len(scale) if scale is not None else None
         ndims = [seg_ndim, scale_ndim, provided_ndim]
