@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import numpy as np
 from typing_extensions import override
 
 from .graph_attributes import NodeAttr
@@ -105,12 +106,8 @@ class AddNodes(TracksAction):
         super().__init__(tracks)
         self.nodes = nodes
         user_attrs = attributes.copy()
-        self.times = attributes.get(NodeAttr.TIME.value, None)
-        if NodeAttr.TIME.value in attributes:
-            del user_attrs[NodeAttr.TIME.value]
-        self.positions = attributes.get(NodeAttr.POS.value, None)
-        if NodeAttr.POS.value in attributes:
-            del user_attrs[NodeAttr.POS.value]
+        self.times = attributes.pop(NodeAttr.TIME.value, None)
+        self.positions = attributes.pop(NodeAttr.POS.value, None)
         self.pixels = pixels
         self.attributes = user_attrs
         self._apply()
@@ -123,9 +120,35 @@ class AddNodes(TracksAction):
         """Apply the action, and set segmentation if provided in self.pixels"""
         if self.pixels is not None:
             self.tracks.set_pixels(self.pixels, self.nodes)
-        self.tracks.add_nodes(
-            self.nodes, self.times, self.positions, attrs=self.attributes
-        )
+        attrs = self.attributes
+        if attrs is None:
+            attrs = {}
+        self.tracks.graph.add_nodes_from(self.nodes)
+        self.tracks.set_times(self.nodes, self.times)
+        final_pos: np.ndarray
+        if self.tracks.segmentation is not None:
+            computed_attrs = self.tracks._compute_node_attrs(self.nodes, self.times)
+            if self.positions is None:
+                final_pos = np.array(computed_attrs[NodeAttr.POS.value])
+            else:
+                final_pos = self.positions
+            attrs[NodeAttr.AREA.value] = computed_attrs[NodeAttr.AREA.value]
+        elif self.positions is None:
+            raise ValueError("Must provide positions or segmentation and ids")
+        else:
+            final_pos = self.positions
+
+        self.tracks.set_positions(self.nodes, final_pos)
+        for attr, values in attrs.items():
+            self.tracks._set_nodes_attr(self.nodes, attr, values)
+
+        if isinstance(self.tracks, SolutionTracks):
+            for node, track_id in zip(
+                self.nodes, attrs[NodeAttr.TRACK_ID.value], strict=True
+            ):
+                if track_id not in self.tracks.track_id_to_node:
+                    self.tracks.track_id_to_node[track_id] = []
+                self.tracks.track_id_to_node[track_id].append(node)
 
 
 class DeleteNodes(TracksAction):
@@ -171,7 +194,11 @@ class DeleteNodes(TracksAction):
                 [0] * len(self.pixels),
             )
 
-        self.tracks.remove_nodes(self.nodes)
+        if isinstance(self.tracks, SolutionTracks):
+            for node in self.nodes:
+                self.tracks.track_id_to_node[self.tracks.get_track_id(node)].remove(node)
+
+        self.tracks.graph.remove_nodes_from(self.nodes)
 
 
 class UpdateNodeSegs(TracksAction):
