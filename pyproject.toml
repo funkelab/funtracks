@@ -66,10 +66,6 @@ select = [
     "SIM", # flake8-simplify
     "T20", # flake-print
 ]
-ignore = [
-    "UP006", "UP007", # type annotation. As using magicgui require runtime type annotation then we disable this.
-    "ISC001", # implicit string concatenation
-]
 
 unfixable = [
   "B905", # currently adds strict=False to zips. Should add strict=True (manually)
