@@ -1,6 +1,8 @@
 import networkx as nx
 import numpy as np
 import pytest
+from networkx.utils import graphs_equal
+from numpy.testing import assert_array_almost_equal
 
 from funtracks.data_model import NodeAttr, Tracks
 
@@ -188,3 +190,25 @@ def test_update_segmentations(graph_2d, segmentation_2d):
 
     # the edge IOUs have updated
     assert tracks.get_iou(edge) == pytest.approx(iou, abs=0.01)
+
+
+def test_save_load_delete(tmp_path, graph_2d, segmentation_2d):
+    tracks_dir = tmp_path / "tracks"
+    tracks = Tracks(graph_2d, segmentation_2d)
+    with pytest.warns(
+        DeprecationWarning,
+        match="`Tracks.save` is deprecated and will be removed in 2.0",
+    ):
+        tracks.save(tracks_dir)
+    with pytest.warns(
+        DeprecationWarning,
+        match="`Tracks.load` is deprecated and will be removed in 2.0",
+    ):
+        loaded = Tracks.load(tracks_dir)
+        assert graphs_equal(loaded.graph, tracks.graph)
+        assert_array_almost_equal(loaded.segmentation, tracks.segmentation)
+    with pytest.warns(
+        DeprecationWarning,
+        match="`Tracks.delete` is deprecated and will be removed in 2.0",
+    ):
+        Tracks.delete(tracks_dir)
