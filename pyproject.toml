@@ -81,6 +81,7 @@ unfixable = [
 
 [tool.mypy]
 ignore_missing_imports = true
+python_verion = 3.10
 
 [tool.coverage.report]
 exclude_also = [
