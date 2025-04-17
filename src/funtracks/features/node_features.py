@@ -17,7 +17,7 @@ class Time(Feature):
 
 
 class Position(Feature):
-    def __init__(self, axes: tuple[str], attr_name="pos"):
+    def __init__(self, axes: tuple[str, ...], attr_name="pos"):
         super().__init__(
             attr_name=attr_name,
             value_names=axes,
