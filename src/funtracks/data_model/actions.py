@@ -1,8 +1,8 @@
 """This module contains all the low level actions used to control a Tracks object.
 Low level actions should control these aspects of Tracks:
     - adding/removing nodes and edges to/from the segmentation and graph
-    - Updating the segmentation and graph attributes that are controlled by the segmentation.
-    Currently, position and area for nodes, and IOU for edges.
+    - Updating the segmentation and graph attributes that are controlled by the
+      segmentation. Currently, position and area for nodes, and IOU for edges.
     - Keeping track of information needed to undo the given action. For removing a node,
     this means keeping track of the incident edges that were removed, along with their
     attributes.
@@ -96,8 +96,8 @@ class AddNodes(TracksAction):
             tracks (Tracks): The Tracks to add the nodes to
             nodes (Node): A list of node ids
             attributes (Attrs): Includes times and optionally positions
-            pixels (list[SegMask] | None, optional): The segmentations associated with each node.
-                Defaults to None.
+            pixels (list[SegMask] | None, optional): The segmentations associated with
+                each node. Defaults to None.
         """
         super().__init__(tracks)
         self.nodes = nodes
@@ -155,8 +155,8 @@ class DeleteNodes(TracksAction):
         return AddNodes(self.tracks, self.nodes, self.attributes, pixels=self.pixels)
 
     def _apply(self):
-        """ASSUMES THERE ARE NO INCIDENT EDGES - raises valueerror if an edge will be removed
-        by this operation
+        """ASSUMES THERE ARE NO INCIDENT EDGES - raises valueerror if an edge will be
+        removed by this operation
         Steps:
         - For each node
             set pixels to 0 if self.pixels is provided
@@ -277,7 +277,8 @@ class AddEdges(TracksAction):
     def _apply(self):
         """
         Steps:
-        - add each edge to the graph. Assumes all edges are valid (they should be checked at this point already)
+        - add each edge to the graph. Assumes all edges are valid (they should be checked
+        at this point already)
         """
         self.tracks.add_edges(self.edges)
 

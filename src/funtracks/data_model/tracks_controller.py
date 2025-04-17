@@ -42,12 +42,14 @@ class TracksController:
         attributes: Attrs,
         pixels: list[SegMask] | None = None,
     ) -> None:
-        """Calls the _add_nodes function to add nodes. Calls the refresh signal when finished.
+        """Calls the _add_nodes function to add nodes. Calls the refresh signal when
+        finished.
 
         Args:
-            attributes (Attrs): dictionary containing at least time and position attributes
-            pixels (list[SegMask] | None, optional): The pixels associated with each node,
-                if a segmentation is present. Defaults to None.
+            attributes (Attrs): dictionary containing at least time and position
+                attributes
+            pixels (list[SegMask] | None, optional): The pixels associated with each
+                node, if a segmentation is present. Defaults to None.
         """
         result = self._add_nodes(attributes, pixels)
         if result is not None:
@@ -96,8 +98,8 @@ class TracksController:
         pixels: list[SegMask] | None = None,
     ) -> tuple[TracksAction, list[Node]] | None:
         """Add nodes to the graph. Includes all attributes and the segmentation.
-        Will return the actions needed to add the nodes, and the node ids generated for the
-        new nodes.
+        Will return the actions needed to add the nodes, and the node ids generated for
+        the new nodes.
         If there is a segmentation, the attributes must include:
         - time
         - node_id
@@ -123,11 +125,13 @@ class TracksController:
         """
         if NodeAttr.TIME.value not in attributes:
             raise ValueError(
-                f"Cannot add nodes without times. Please add {NodeAttr.TIME.value} attribute"
+                f"Cannot add nodes without times. Please add "
+                f"{NodeAttr.TIME.value} attribute"
             )
         if NodeAttr.TRACK_ID.value not in attributes:
             raise ValueError(
-                f"Cannot add nodes without track ids. Please add {NodeAttr.TRACK_ID.value} attribute"
+                "Cannot add nodes without track ids. Please add "
+                f"{NodeAttr.TRACK_ID.value} attribute"
             )
 
         times = attributes[NodeAttr.TIME.value]
@@ -146,7 +150,8 @@ class TracksController:
             if pred is not None and succ is not None:
                 edges_to_remove.append((pred, succ))
 
-            # Find and remove edges to nodes with different track_ids (upstream division events)
+            # Find and remove edges to nodes with different track_ids (upstream division
+            # events)
             if track_id in self.tracks.track_id_to_node:
                 track_id_nodes = self.tracks.track_id_to_node[track_id]
                 for node in track_id_nodes:
@@ -215,9 +220,9 @@ class TracksController:
         """
         actions: list[TracksAction] = []
 
-        # find all the edges that should be deleted (no duplicates) and put them in a single action
-        # also keep track of which deletions removed a division, and save the sibling nodes so we can
-        # update the track ids
+        # find all the edges that should be deleted (no duplicates) and put them in a
+        # single action. also keep track of which deletions removed a division, and save
+        # the sibling nodes so we can update the track ids
         edges_to_delete = set()
         new_track_ids = []
         for node in nodes:
@@ -226,11 +231,12 @@ class TracksController:
                 # determine if we need to relabel any tracks
                 siblings = list(self.tracks.graph.successors(pred))
                 if len(siblings) == 2:
-                    # need to relabel the track id of the sibling to match the pred because
-                    # you are implicitly deleting a division
+                    # need to relabel the track id of the sibling to match the pred
+                    # because you are implicitly deleting a division
                     siblings.remove(node)
                     sib = siblings[0]
-                    # check if the sibling is also deleted, because then relabeling is not needed
+                    # check if the sibling is also deleted, because then relabeling is
+                    # not needed
                     if sib not in nodes:
                         new_track_id = self.tracks.get_track_id(pred)
                         new_track_ids.append((sib, new_track_id))
@@ -335,8 +341,8 @@ class TracksController:
         return UpdateNodeAttrs(self.tracks, nodes, attributes)
 
     def _add_edges(self, edges: Iterable[Edge]) -> TracksAction:
-        """Add edges and attributes to the graph. Also update the track ids of the target
-        node tracks and potentially sibling tracks.
+        """Add edges and attributes to the graph. Also update the track ids of the
+        target node tracks and potentially sibling tracks.
 
         Args:
             edges (Iterable[edge]): An iterable of edges, each with source and target
@@ -357,9 +363,7 @@ class TracksController:
                 # assign a new track id to existing child
                 successor = next(iter(self.tracks.graph.successors(edge[0])))
                 actions.append(
-                    UpdateTrackID(
-                        self.tracks, successor, self.tracks.get_next_track_id()
-                    )
+                    UpdateTrackID(self.tracks, successor, self.tracks.get_next_track_id())
                 )
             else:
                 raise RuntimeError(
@@ -376,8 +380,10 @@ class TracksController:
         - not existing yet
         - no merges
         - no triple divisions
-        - new edge should be the shortest possible connection between two nodes, given their track_ids.
-        (no skipping/bypassing any nodes of the same track_id). Check if there are any nodes of the same source or target track_id between source and target
+        - new edge should be the shortest possible connection between two nodes, given
+            their track_ids (no skipping/bypassing any nodes of the same track_id).
+            Check if there are any nodes of the same source or target track_id between
+            source and target
 
         Args:
             edge (np.ndarray[(int, int)]: edge to be validated
@@ -416,7 +422,8 @@ class TracksController:
 
         elif time2 - time1 > 1:
             track_id2 = self.tracks.graph.nodes[edge[1]][NodeAttr.TRACK_ID.value]
-            # check whether there are already any nodes with the same track id between source and target (shortest path between equal track_ids rule)
+            # check whether there are already any nodes with the same track id between
+            # source and target (shortest path between equal track_ids rule)
             for t in range(time1 + 1, time2):
                 nodes = [
                     n
@@ -466,21 +473,21 @@ class TracksController:
 
     def update_segmentations(
         self,
-        to_remove: list[tuple[Node, SegMask]],  # (node_ids, pixels)
-        to_update_smaller: list[tuple[Node, SegMask]],  # (node_id, pixels)
-        to_update_bigger: list[tuple[Node, SegMask]],  # (node_id, pixels)
-        to_add: list[tuple[Node, int, SegMask]],  # (node_id, track_id, pixels)
+        to_remove: list[tuple[Node, SegMask]],
+        to_update_smaller: list[tuple[Node, SegMask]],
+        to_update_bigger: list[tuple[Node, SegMask]],
+        to_add: list[tuple[Node, int, SegMask]],
         current_timepoint: int,
     ) -> None:
-        """Handle a change in the segmentation mask, checking for node addition, deletion, and attribute updates.
+        """Handle a change in the segmentation mask, checking for node addition,
+        deletion, and attribute updates.
         Args:
-            updated_pixels (list[(tuple(np.ndarray, np.ndarray, np.ndarray), np.ndarray, int)]):
-                list holding the operations that updated the segmentation (directly from
-                the napari labels paint event).
-                Each element in the list consists of a tuple of np.ndarrays representing
-                indices for each dimension, an array of the previous values, and an array
-                or integer representing the new value(s)
-            current_timepoint (int): the current time point in the viewer, used to set the selected node.
+            to_remove (list[tuple[Node, SegMask]]): (node_ids, pixels)
+            to_update_smaller (list[tuple[Node, SegMask]]): (node_id, pixels)
+            to_update_bigger (list[tuple[Node, SegMask]]): (node_id, pixels)
+            to_add (list[tuple[Node, int, SegMask]]): (node_id, track_id, pixels)
+            current_timepoint (int): the current time point in the viewer, used to set
+                the selected node.
         """
         actions: list[TracksAction] = []
         node_to_select = None
