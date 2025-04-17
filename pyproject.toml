@@ -104,3 +104,4 @@ docs = { features = ["docs"], solve-group = "default" }
 ruff-check = "ruff check --fix ."
 ruff-format = "ruff format ."
 test = "pytest --cov=funtracks tests/"
+mypy = "mypy src/"

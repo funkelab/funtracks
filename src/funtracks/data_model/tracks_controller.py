@@ -94,7 +94,7 @@ class TracksController:
         self,
         attributes: Attrs,
         pixels: list[SegMask] | None = None,
-    ) -> tuple[TracksAction, list[Node]]:
+    ) -> tuple[TracksAction, list[Node]] | None:
         """Add nodes to the graph. Includes all attributes and the segmentation.
         Will return the actions needed to add the nodes, and the node ids generated for the
         new nodes.
@@ -158,7 +158,7 @@ class TracksController:
                             "Cannot add node here - upstream division event detected."
                         )
                         self.tracks.refresh.emit()
-                        return
+                        return None
 
         if len(edges_to_remove) > 0:
             actions.append(DeleteEdges(self.tracks, edges_to_remove))
