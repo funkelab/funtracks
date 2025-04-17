@@ -2,12 +2,17 @@ import networkx as nx
 import numpy as np
 
 from funtracks.data_model import SolutionTracks
+from funtracks.data_model.actions import AddNodes
 
 
 def test_next_track_id(graph_2d):
     tracks = SolutionTracks(graph_2d, ndim=3)
     assert tracks.get_next_track_id() == 6
-    tracks.add_node(10, time=3, position=[0, 0, 0, 0], attrs={"track_id": 10})
+    AddNodes(
+        tracks,
+        nodes=[10],
+        attributes={"time": [3], "pos": [[0, 0, 0, 0]], "track_id": [10]},
+    )
     assert tracks.get_next_track_id() == 11
 
 
