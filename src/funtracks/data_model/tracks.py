@@ -128,7 +128,8 @@ class Tracks:
         if not isinstance(positions, np.ndarray):
             positions = np.array(positions)
         if incl_time:
-            self.set_times(nodes, positions[:, 0].tolist())
+            times = positions[:, 0].tolist()  # we know this is a list of ints
+            self.set_times(nodes, times)  # type: ignore
             positions = positions[:, 1:]
 
         if isinstance(self.pos_attr, tuple | list):

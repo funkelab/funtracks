@@ -81,6 +81,7 @@ unfixable = [
 
 [tool.mypy]
 ignore_missing_imports = true
+python_verion = 3.10
 
 [tool.coverage.report]
 exclude_also = [
@@ -95,11 +96,13 @@ funtracks = { path = ".", editable = true }
 
 [tool.pixi.environments]
 default = { solve-group = "default" }
-dev = { features = ["dev"], solve-group = "default" }
+dev = { features = ["dev", "testing"], solve-group = "default" }
 docs = { features = ["docs"], solve-group = "default" }
-testing = { features = ["testing"], solve-group = "default" }
 
 [tool.pixi.tasks]
 
-[tool.pixi.feature.testing.tasks]
+[tool.pixi.feature.dev.tasks]
+ruff-check = "ruff check --fix ."
+ruff-format = "ruff format ."
 test = "pytest --cov=funtracks tests/"
+mypy = "mypy src/"
