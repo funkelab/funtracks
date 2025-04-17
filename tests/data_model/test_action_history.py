@@ -25,7 +25,7 @@ def test_action_history():
     assert tracks.graph.number_of_nodes() == 0
     assert len(history.undo_stack) == 1
     assert len(history.redo_stack) == 1
-    assert history.undo_pointer == -1
+    assert history._undo_pointer == -1
 
     # no more actions to undo
     assert not history.undo()
@@ -35,7 +35,7 @@ def test_action_history():
     assert tracks.graph.number_of_nodes() == 2
     assert len(history.undo_stack) == 1
     assert len(history.redo_stack) == 0
-    assert history.undo_pointer == 0
+    assert history._undo_pointer == 0
 
     # no more actions to redo
     assert not history.redo()
@@ -48,7 +48,7 @@ def test_action_history():
     # there are 3 things on the stack: action1, action1's inverse, and action 2
     assert len(history.undo_stack) == 3
     assert len(history.redo_stack) == 0
-    assert history.undo_pointer == 2
+    assert history._undo_pointer == 2
 
     # undo back to after action 1
     assert history.undo()
@@ -57,4 +57,4 @@ def test_action_history():
 
     assert len(history.undo_stack) == 3
     assert len(history.redo_stack) == 2
-    assert history.undo_pointer == 0
+    assert history._undo_pointer == 0

@@ -23,10 +23,6 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
 
-def show_warning(warning: str):
-    warn(warning, stacklevel=2)
-
-
 class TracksController:
     """A set of high level functions to change the data model.
     All changes to the data should go through this API.
@@ -159,8 +155,9 @@ class TracksController:
                         self.tracks._get_node_attr(node, NodeAttr.TIME.value) <= time
                         and self.tracks.graph.out_degree(node) == 2
                     ):  # there is an upstream division event here
-                        show_warning(
-                            "Cannot add node here - upstream division event detected."
+                        warn(
+                            "Cannot add node here - upstream division event detected.",
+                            stacklevel=2,
                         )
                         self.tracks.refresh.emit()
                         return None
@@ -216,7 +213,9 @@ class TracksController:
         - update track ids if we removed a division by deleting the dge
 
         Args:
-            nodes (np.ndarray): array of node_ids to be deleted
+            nodes (Iterable[Node]): array of node_ids to be deleted
+            pixels (Iterable[SegMask] | None): pixels of the ndoes to be deleted, if
+                known already. Will be computed if not provided.
         """
         actions: list[TracksAction] = []
 
@@ -386,7 +385,8 @@ class TracksController:
             source and target
 
         Args:
-            edge (np.ndarray[(int, int)]: edge to be validated
+            edge (Edge): edge to be validated
+
         Returns:
             True if the edge is valid, false if invalid"""
 
@@ -401,22 +401,25 @@ class TracksController:
         # do all checks
         # reject if edge already exists
         if self.tracks.graph.has_edge(edge[0], edge[1]):
-            show_warning("Edge is rejected because it exists already.")
+            warn("Edge is rejected because it exists already.", stacklevel=2)
             return False, action
 
         # reject if edge is horizontal
         elif self.tracks.get_time(edge[0]) == self.tracks.get_time(edge[1]):
-            show_warning("Edge is rejected because it is horizontal.")
+            warn("Edge is rejected because it is horizontal.", stacklevel=2)
             return False, action
 
         # reject if target node already has an incoming edge
         elif self.tracks.graph.in_degree(edge[1]) > 0:
-            show_warning("Edge is rejected because merges are currently not allowed.")
+            warn(
+                "Edge is rejected because merges are currently not allowed.", stacklevel=2
+            )
             return False, action
 
         elif self.tracks.graph.out_degree(edge[0]) > 1:
-            show_warning(
-                "Edge is rejected because triple divisions are currently not allowed."
+            warn(
+                "Edge is rejected because triple divisions are currently not allowed.",
+                stacklevel=2,
             )
             return False, action
 
@@ -432,7 +435,7 @@ class TracksController:
                     and attr.get(NodeAttr.TRACK_ID.value) == track_id2
                 ]
                 if len(nodes) > 0:
-                    show_warning("Please connect to the closest node")
+                    warn("Please connect to the closest node", stacklevel=2)
                     return False, action
 
         # all checks passed!
@@ -448,7 +451,7 @@ class TracksController:
         for edge in edges:
             # First check if the to be deleted edges exist
             if not self.tracks.graph.has_edge(edge[0], edge[1]):
-                show_warning("Cannot delete non-existing edge!")
+                warn("Cannot delete non-existing edge!", stacklevel=2)
                 return
         action = self._delete_edges(edges)
         self.action_history.add_new_action(action)

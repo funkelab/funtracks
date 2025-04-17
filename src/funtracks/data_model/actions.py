@@ -18,6 +18,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from typing_extensions import override
+
 from .graph_attributes import NodeAttr
 from .solution_tracks import SolutionTracks
 from .tracks import Attrs, Edge, Node, SegMask, Tracks
@@ -70,6 +72,7 @@ class ActionGroup(TracksAction):
         super().__init__(tracks)
         self.actions = actions
 
+    @override
     def inverse(self) -> ActionGroup:
         actions = [action.inverse() for action in self.actions[::-1]]
         return ActionGroup(self.tracks, actions)

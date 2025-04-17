@@ -581,6 +581,11 @@ class Tracks:
 
     @classmethod
     def delete(cls, directory: Path):
+        """Delete the tracks in the given directory. Also deletes the directory.
+
+        Args:
+            directory (Path): Directory containing tracks to be deleted
+        """
         warn(
             "`Tracks.delete` is deprecated and will be removed in 2.0, use "
             "`funtracks.import_export.internal_format.delete` instead",
