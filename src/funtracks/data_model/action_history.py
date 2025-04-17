@@ -19,7 +19,7 @@ class ActionHistory:
         self.redo_stack: list[TracksAction] = []  # list of actions that can be redone
 
     @property
-    def undo_pointer(self):
+    def _undo_pointer(self):
         return len(self.undo_stack) - len(self.redo_stack) - 1
 
     def add_new_action(self, action: TracksAction) -> None:
@@ -41,10 +41,10 @@ class ActionHistory:
             bool: True if an action was undone, and False
             if there was no previous action to undo.
         """
-        if self.undo_pointer < 0:
+        if self._undo_pointer < 0:
             return False
         else:
-            action = self.undo_stack[self.undo_pointer]
+            action = self.undo_stack[self._undo_pointer]
             inverse = action.inverse()
             self.redo_stack.append(inverse)
             return True

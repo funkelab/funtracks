@@ -71,9 +71,7 @@ class Tracks:
         self.scale = scale
         self.ndim = self._compute_ndim(segmentation, scale, ndim)
 
-    def get_positions(
-        self, nodes: Iterable[Node], incl_time: bool = False
-    ) -> np.ndarray:
+    def get_positions(self, nodes: Iterable[Node], incl_time: bool = False) -> np.ndarray:
         """Get the positions of nodes in the graph. Optionally include the
         time frame as the first dimension. Raises an error if any of the nodes
         are not in the graph.
@@ -345,8 +343,8 @@ class Tracks:
         Args:
             pixels (Iterable[tuple[np.ndarray]]): The pixels that should be set,
                 formatted like the output of np.nonzero (each element of the tuple
-                represents one dimension, containing an array of indices in that dimension).
-                Can be used to directly index the segmentation.
+                represents one dimension, containing an array of indices in that
+                dimension). Can be used to directly index the segmentation.
             value (Iterable[int | None]): The value to set each pixel to
         """
         if self.segmentation is None:
@@ -420,12 +418,14 @@ class Tracks:
         ndims = [d for d in ndims if d is not None]
         if len(ndims) == 0:
             raise ValueError(
-                "Cannot compute dimensions from segmentation or scale: please provide ndim argument"
+                "Cannot compute dimensions from segmentation or scale: please provide "
+                "ndim argument"
             )
         ndim = ndims[0]
         if not all(d == ndim for d in ndims):
             raise ValueError(
-                f"Dimensions from segmentation {seg_ndim}, scale {scale_ndim}, and ndim {provided_ndim} must match"
+                f"Dimensions from segmentation {seg_ndim}, scale {scale_ndim}, and ndim "
+                f"{provided_ndim} must match"
             )
         return ndim
 
@@ -549,7 +549,8 @@ class Tracks:
             directory (Path): The directory to save the tracks in.
         """
         warn(
-            "`Tracks.save` is deprecated and will be removed in 2.0, use `funtracks.import_export.internal_format.save` instead",
+            "`Tracks.save` is deprecated and will be removed in 2.0, use "
+            "`funtracks.import_export.internal_format.save` instead",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -569,7 +570,8 @@ class Tracks:
             Tracks: A tracks object loaded from the given directory
         """
         warn(
-            "`Tracks.load` is deprecated and will be removed in 2.0, use `funtracks.import_export.internal_format.load` instead",
+            "`Tracks.load` is deprecated and will be removed in 2.0, use "
+            "`funtracks.import_export.internal_format.load` instead",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -579,8 +581,14 @@ class Tracks:
 
     @classmethod
     def delete(cls, directory: Path):
+        """Delete the tracks in the given directory. Also deletes the directory.
+
+        Args:
+            directory (Path): Directory containing tracks to be deleted
+        """
         warn(
-            "`Tracks.delete` is deprecated and will be removed in 2.0, use `funtracks.import_export.internal_format.delete` instead",
+            "`Tracks.delete` is deprecated and will be removed in 2.0, use "
+            "`funtracks.import_export.internal_format.delete` instead",
             DeprecationWarning,
             stacklevel=2,
         )

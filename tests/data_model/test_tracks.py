@@ -165,8 +165,7 @@ def test_update_segmentations(graph_2d, segmentation_2d):
     iou = tracks.get_iou(edge)
     # get the first 5 pixels of each segmentation
     pix_to_remove = [
-        tuple(pix[dim][0:5] for dim in range(segmentation_2d.ndim))
-        for pix in current_pix
+        tuple(pix[dim][0:5] for dim in range(segmentation_2d.ndim)) for pix in current_pix
     ]
     tracks.update_segmentations(nodes, pix_to_remove, added=False)
 
