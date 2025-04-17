@@ -172,32 +172,6 @@ class Tracks:
         """
         self.set_times([node], [int(time)])
 
-    def add_edges(self, edges: Iterable[Edge]):
-        attrs: dict[str, Sequence[Any]] = {}
-        attrs.update(self._compute_edge_attrs(edges))
-        for idx, edge in enumerate(edges):
-            for node in edge:
-                if not self.graph.has_node(node):
-                    raise KeyError(
-                        f"Cannot add edge {edge}: endpoint {node} not in graph yet"
-                    )
-            self.graph.add_edge(
-                edge[0], edge[1], **{key: vals[idx] for key, vals in attrs.items()}
-            )
-
-    def add_edge(self, edge: Edge):
-        self.add_edges([edge])
-
-    def remove_edges(self, edges: Iterable[Edge]):
-        for edge in edges:
-            self.remove_edge(edge)
-
-    def remove_edge(self, edge: Edge):
-        if self.graph.has_edge(*edge):
-            self.graph.remove_edge(*edge)
-        else:
-            raise KeyError(f"Edge {edge} not in the graph, and cannot be removed")
-
     def get_areas(self, nodes: Iterable[Node]) -> Sequence[int | None]:
         """Get the area/volume of a given node. Raises a KeyError if the node
         is not in the graph. Returns None if the given node does not have an Area
