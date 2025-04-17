@@ -162,7 +162,6 @@ def _load_seg(seg_file: Path, seg_required: bool = False) -> np.ndarray | None:
         return None
 
 
-@staticmethod
 def _load_attrs(attrs_file: Path) -> dict:
     if attrs_file.is_file():
         with open(attrs_file) as f:
