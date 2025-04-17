@@ -239,7 +239,22 @@ class UpdateNodeSegs(TracksAction):
 
     def _apply(self):
         """Set new attributes"""
-        self.tracks.update_segmentations(self.nodes, self.pixels, self.added)
+        times = self.tracks.get_times(self.nodes)
+        values = self.nodes if self.added else [0 for _ in self.nodes]
+        self.tracks.set_pixels(self.pixels, values)
+        computed_attrs = self.tracks._compute_node_attrs(self.nodes, times)
+        positions = np.array(computed_attrs[NodeAttr.POS.value])
+        self.tracks.set_positions(self.nodes, positions)
+        self.tracks._set_nodes_attr(
+            self.nodes, NodeAttr.AREA.value, computed_attrs[NodeAttr.AREA.value]
+        )
+
+        incident_edges = list(self.tracks.graph.in_edges(self.nodes)) + list(
+            self.tracks.graph.out_edges(self.nodes)
+        )
+        for edge in incident_edges:
+            new_edge_attrs = self.tracks._compute_edge_attrs([edge])
+            self.tracks._set_edge_attributes([edge], new_edge_attrs)
 
 
 class UpdateNodeAttrs(TracksAction):

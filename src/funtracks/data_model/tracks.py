@@ -245,29 +245,6 @@ class Tracks:
                 raise ValueError("Cannot set pixels to None value")
             self.segmentation[pix] = val
 
-    def update_segmentations(
-        self, nodes: Iterable[Node], pixels: Iterable[SegMask], added: bool = True
-    ) -> None:
-        """Updates the segmentation of the given nodes. Also updates the
-        auto-computed attributes of the nodes and incident edges.
-        """
-        times = self.get_times(nodes)
-        values = nodes if added else [0 for _ in nodes]
-        self.set_pixels(pixels, values)
-        computed_attrs = self._compute_node_attrs(nodes, times)
-        positions = np.array(computed_attrs[NodeAttr.POS.value])
-        self.set_positions(nodes, positions)
-        self._set_nodes_attr(
-            nodes, NodeAttr.AREA.value, computed_attrs[NodeAttr.AREA.value]
-        )
-
-        incident_edges = list(self.graph.in_edges(nodes)) + list(
-            self.graph.out_edges(nodes)
-        )
-        for edge in incident_edges:
-            new_edge_attrs = self._compute_edge_attrs([edge])
-            self._set_edge_attributes([edge], new_edge_attrs)
-
     def _set_node_attributes(self, nodes: Iterable[Node], attributes: Attrs):
         """Update the attributes for given nodes"""
 

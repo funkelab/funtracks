@@ -1,5 +1,4 @@
 import networkx as nx
-import numpy as np
 import pytest
 from networkx.utils import graphs_equal
 from numpy.testing import assert_array_almost_equal
@@ -68,43 +67,6 @@ def test_pixels_and_seg_id(graph_3d, segmentation_3d):
 
     with pytest.raises(KeyError):
         tracks.get_positions(["0"])
-
-
-def test_update_segmentations(graph_2d, segmentation_2d):
-    tracks = Tracks(graph_2d.copy(), segmentation=segmentation_2d.copy())
-
-    # remove pixels from a segmentation
-    nodes = [1]
-    edge = (1, 3)
-    current_pix = tracks.get_pixels(nodes)
-    areas = tracks.get_areas(nodes)
-    iou = tracks.get_iou(edge)
-    # get the first 5 pixels of each segmentation
-    pix_to_remove = [
-        tuple(pix[dim][0:5] for dim in range(segmentation_2d.ndim)) for pix in current_pix
-    ]
-    tracks.update_segmentations(nodes, pix_to_remove, added=False)
-
-    # there are 5 different pixels for each node
-    assert np.sum(segmentation_2d != tracks.segmentation) == len(nodes) * 5
-
-    # the areas have updated
-    for node, area in zip(nodes, areas, strict=False):
-        assert tracks.get_area(node) == area - 5
-
-    # the edge IOUs have updated
-    assert tracks.get_iou(edge) < iou
-
-    # add pixels back to the segmentation
-    tracks.update_segmentations(nodes, pix_to_remove, added=True)
-    assert np.sum(segmentation_2d != tracks.segmentation) == 0
-
-    # the areas have updated
-    for node, area in zip(nodes, areas, strict=False):
-        assert tracks.get_area(node) == area
-
-    # the edge IOUs have updated
-    assert tracks.get_iou(edge) == pytest.approx(iou, abs=0.01)
 
 
 def test_save_load_delete(tmp_path, graph_2d, segmentation_2d):
