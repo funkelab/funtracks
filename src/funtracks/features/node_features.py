@@ -7,9 +7,9 @@ from ._base import (
 
 
 class Time(Feature):
-    def __init__(self):
+    def __init__(self, attr_name="time"):
         super().__init__(
-            attr_name="time",
+            attr_name=attr_name,
             value_names="Time",
             feature_type=FeatureType.NODE,
             valid_ndim=(3, 4),
@@ -41,6 +41,26 @@ class TrackID(Feature):
         super().__init__(
             attr_name=attr_name,
             value_names="Track ID",
+            feature_type=FeatureType.NODE,
+            valid_ndim=(3, 4),
+        )
+
+
+class NodeSelected(Feature):
+    def __init__(self, attr_name: str = "selected"):
+        super().__init__(
+            attr_name=attr_name,
+            value_names="Node Selected",
+            feature_type=FeatureType.NODE,
+            valid_ndim=(3, 4),
+        )
+
+
+class NodeSelectionPin(Feature):
+    def __init__(self, attr_name: str = "pin"):
+        super().__init__(
+            attr_name=attr_name,
+            value_names="Node Pinned",
             feature_type=FeatureType.NODE,
             valid_ndim=(3, 4),
         )

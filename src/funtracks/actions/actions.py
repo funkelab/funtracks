@@ -1,19 +1,3 @@
-"""This module contains all the low level actions used to control a Tracks object.
-Low level actions should control these aspects of Tracks:
-    - adding/removing nodes and edges to/from the segmentation and graph
-    - Updating the segmentation and graph attributes that are controlled by the
-      segmentation. Currently, position and area for nodes, and IOU for edges.
-    - Keeping track of information needed to undo the given action. For removing a node,
-    this means keeping track of the incident edges that were removed, along with their
-    attributes.
-
-The low level actions do not contain application logic, such as manipulating track ids,
-or validation of "allowed" actions.
-The actions should work on candidate graphs as well as solution graphs.
-Action groups can be constructed to represent application-level actions constructed
-from many low-level actions.
-"""
-
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -22,25 +6,21 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 from typing_extensions import override
 
-from .graph_attributes import NodeAttr
-from .solution_tracks import SolutionTracks
-from .tracks import Attrs, Edge, Node, SegMask, Tracks
+from ..features._base import Feature
+from ..project import Project
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
 
 class TracksAction:
-    def __init__(self, tracks: Tracks):
+    def __init__(self, project: Project):
         """An modular change that can be applied to the given Tracks. The tracks must
         be passed in at construction time so that metadata needed to invert the action
         can be extracted.
         The change should be applied in the init function.
-
-        Args:
-            tracks (Tracks): The tracks that this action will edit
         """
-        self.tracks = tracks
+        self.project = project
 
     def inverse(self) -> TracksAction:
         """Get the inverse of this action. Calling this function does undo the action,
@@ -59,7 +39,7 @@ class TracksAction:
 class ActionGroup(TracksAction):
     def __init__(
         self,
-        tracks: Tracks,
+        project: Project,
         actions: list[TracksAction],
     ):
         """A group of actions that is also an action, used to modify the given tracks.
@@ -71,16 +51,16 @@ class ActionGroup(TracksAction):
             actions (list[TracksAction]): A list of actions contained within the group,
                 in the order in which they should be executed.
         """
-        super().__init__(tracks)
+        super().__init__(project)
         self.actions = actions
 
     @override
     def inverse(self) -> ActionGroup:
         actions = [action.inverse() for action in self.actions[::-1]]
-        return ActionGroup(self.tracks, actions)
+        return ActionGroup(self.project, actions)
 
 
-class AddNodes(TracksAction):
+class AddNode(TracksAction):
     """Action for adding new nodes. If a segmentation should also be added, the
     pixels for each node should be provided. The label to set the pixels will
     be taken from the node id. The existing pixel values are assumed to be
@@ -90,66 +70,28 @@ class AddNodes(TracksAction):
 
     def __init__(
         self,
-        tracks: Tracks,
-        nodes: Iterable[Node],
-        attributes: Attrs,
-        pixels: Iterable[SegMask] | None = None,
+        project: Project,
+        node: int,
+        attributes: dict[Feature, Any],
+        pixels: SegMask | None = None,
     ):
-        """Create an action to add new nodes, with optional segmentation
-
-        Args:
-            tracks (Tracks): The Tracks to add the nodes to
-            nodes (Node): A list of node ids
-            attributes (Attrs): Includes times and optionally positions
-            pixels (list[SegMask] | None, optional): The segmentations associated with
-                each node. Defaults to None.
-        """
-        super().__init__(tracks)
-        self.nodes = nodes
-        user_attrs = attributes.copy()
-        self.times = attributes.pop(NodeAttr.TIME.value, None)
-        self.positions = attributes.pop(NodeAttr.POS.value, None)
+        super().__init__(project)
+        self.node = node
+        self.project.cand_graph.features.validate_new_node_features(attributes)
+        self.attributes = attributes
         self.pixels = pixels
-        self.attributes = user_attrs
         self._apply()
 
     def inverse(self):
         """Invert the action to delete nodes instead"""
-        return DeleteNodes(self.tracks, self.nodes)
+        return DeleteNode(self.project, self.node)
 
     def _apply(self):
         """Apply the action, and set segmentation if provided in self.pixels"""
         if self.pixels is not None:
-            self.tracks.set_pixels(self.pixels, self.nodes)
-        attrs = self.attributes
-        if attrs is None:
-            attrs = {}
-        self.tracks.graph.add_nodes_from(self.nodes)
-        self.tracks.set_times(self.nodes, self.times)
-        final_pos: np.ndarray
-        if self.tracks.segmentation is not None:
-            computed_attrs = self.tracks._compute_node_attrs(self.nodes, self.times)
-            if self.positions is None:
-                final_pos = np.array(computed_attrs[NodeAttr.POS.value])
-            else:
-                final_pos = self.positions
-            attrs[NodeAttr.AREA.value] = computed_attrs[NodeAttr.AREA.value]
-        elif self.positions is None:
-            raise ValueError("Must provide positions or segmentation and ids")
-        else:
-            final_pos = self.positions
-
-        self.tracks.set_positions(self.nodes, final_pos)
-        for attr, values in attrs.items():
-            self.tracks._set_nodes_attr(self.nodes, attr, values)
-
-        if isinstance(self.tracks, SolutionTracks):
-            for node, track_id in zip(
-                self.nodes, attrs[NodeAttr.TRACK_ID.value], strict=True
-            ):
-                if track_id not in self.tracks.track_id_to_node:
-                    self.tracks.track_id_to_node[track_id] = []
-                self.tracks.track_id_to_node[track_id].append(node)
+            self.project.set_pixels(self.pixels, self.node)
+        self.project.cand_graph.add_node(self.node, self.attributes)
+        # TODO: somehow  trigger recomputation of track id, position, area
 
 
 class DeleteNodes(TracksAction):

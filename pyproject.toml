@@ -32,6 +32,9 @@ dependencies =[
     "networkx",
     "psygnal",
     "scikit-image",
+    "motile-toolbox",
+    "motile",
+    "funlib.persistence",
 ]
 [project.optional-dependencies]
 testing =["pytest", "pytest-cov"]
@@ -94,6 +97,13 @@ exclude_also = [
 [tool.pixi.project]
 channels = ["conda-forge"]
 platforms = ["osx-arm64"]
+
+[tool.pixi.dependencies]
+python="<3.13"
+# funlib persistence dependency, tries to build from source if not explicitly specified
+psycopg2-binary = "*"
+# ilpy dependency, tries to build from source if not explicitly specified
+pyscipopt = "*"
 
 [tool.pixi.pypi-dependencies]
 funtracks = { path = ".", editable = true }
