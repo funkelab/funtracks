@@ -14,10 +14,7 @@ import numpy as np
 from psygnal import Signal
 from skimage import measure
 
-from ..features.edge_features import IoU
-from ..features.node_features import Area, Position, Time, TrackID
-from .compute_ious import _compute_ious
-from .graph_attributes import EdgeAttr, NodeAttr
+from ..features.compute_ious import compute_ious
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -32,21 +29,6 @@ Attrs: TypeAlias = dict[str, AttrValues]
 SegMask: TypeAlias = tuple[np.ndarray, ...]
 
 logger = logging.getLogger(__name__)
-
-
-def required_features(solution: bool, ndim: int) -> list[Feature]:
-    axes = ("z", "y", "x") if ndim == 4 else ("y", "x")
-    feats = [Time(), Position(axes=axes)]
-    if solution:
-        feats.append(TrackID())
-    return feats
-
-
-def optional_features(ndim: int, seg: bool) -> list[Feature]:
-    feats: list[Feature] = []
-    if seg:
-        feats.extend([Area(ndim=ndim), IoU()])
-    return feats
 
 
 class Tracks:
@@ -166,7 +148,7 @@ class Tracks:
             source_arr = self.segmentation[source_time] == source
             target_arr = self.segmentation[target_time] == target
 
-            iou_list = _compute_ious(source_arr, target_arr)  # list of (id1, id2, iou)
+            iou_list = compute_ious(source_arr, target_arr)  # list of (id1, id2, iou)
             iou = 0 if len(iou_list) == 0 else iou_list[0][2]
 
             attrs[EdgeAttr.IOU.value].append(iou)

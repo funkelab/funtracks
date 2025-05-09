@@ -32,4 +32,4 @@ Objects further than this cannot be matched, but making this value larger will i
         description=r"""Check this feature if objects disappear (e.g. exit the field of view, die)""",
     )
 
-    solver_params: SolverParams
+    solver_params: SolverParams = SolverParams()

@@ -4,17 +4,14 @@ from importlib.metadata import version
 
 import funlib.persistence as fp
 import numpy as np
-from motile_toolbox.candidate_graph.utils import add_cand_edges, nodes_from_segmentation
 from psygnal import Signal
 
 from funtracks.params.project_params import ProjectParams
 
+from .cand_graph_utils import nodes_from_segmentation
 from .tracking_graph import TrackingGraph
 
 logger = logging.getLogger(__name__)
-
-# note: tracks no longer has a segmentation inside
-# note: this should go in funtracks
 
 
 class Project:
@@ -29,8 +26,10 @@ class Project:
         cand_graph: TrackingGraph | None = None,
     ):
         # one of segmentation and points
-        assert segmentation is not None or cand_graph is not None
-        assert segmentation is None or cand_graph is None
+        if segmentation is None and cand_graph is None:
+            raise ValueError(
+                "At least one of segmentation or cand graph must be provided"
+            )
 
         self.name = name
         self.params = project_params
@@ -41,17 +40,11 @@ class Project:
             self.cand_graph = cand_graph
         else:
             # make a node only cand graph
-            self.cand_graph = nodes_from_segmentation(
-                self.segmentation.data, self.segmentation.voxel_size
-            )
+            self.cand_graph = nodes_from_segmentation(self.segmentation)
 
     @property
     def solution(self):
         return self.cand_graph.get_solution()
-
-    def recompute_cand_edges(self):
-        # TODO: make this remove edges that are no longer applicable
-        add_cand_edges(self.cand_graph, self.params.max_move_distance)
 
     def save(self, path):
         # solution is stored as an attribute on cand_graph
@@ -101,3 +94,11 @@ class Project:
         if self.segmentation is None:
             raise ValueError("Cannot set pixels when segmentation is None")
         self.segmentation[pixels] = value
+
+    def get_next_track_id(self) -> int:
+        # TODO
+        raise NotImplementedError()
+
+    def get_next_node_id(self) -> int:
+        # TODO
+        raise NotImplementedError()

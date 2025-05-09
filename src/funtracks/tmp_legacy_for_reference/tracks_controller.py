@@ -3,11 +3,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from warnings import warn
 
-from .action_history import ActionHistory
-from .actions import (
+from ..actions import (
     ActionGroup,
     AddEdges,
-    AddNodes,
     DeleteEdges,
     DeleteNodes,
     TracksAction,
@@ -15,9 +13,10 @@ from .actions import (
     UpdateNodeSegs,
     UpdateTrackID,
 )
+from ..actions.action_history import ActionHistory
+from ..actions.solution_tracks import SolutionTracks
+from ..actions.tracks import Attrs, Edge, Node, SegMask
 from .graph_attributes import NodeAttr
-from .solution_tracks import SolutionTracks
-from .tracks import Attrs, Edge, Node, SegMask
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -52,141 +51,6 @@ class TracksController:
             action, nodes = result
             self.action_history.add_new_action(action)
             self.tracks.refresh.emit(nodes[0] if nodes else None)
-
-    def _get_pred_and_succ(
-        self, track_id: int, time: int
-    ) -> tuple[Node | None, Node | None]:
-        """Get the last node with the given track id before time, and the first node
-        with the track id after time, if any. Does not assume that a node with
-        the given track_id and time is already in tracks, but it can be.
-
-        Args:
-            track_id (int): The track id to search for
-            time (int): The time point to find the immediate predecessor and successor
-                for
-
-        Returns:
-            tuple[Node | None, Node | None]: The last node before time with the given
-            track id, and the first node after time with the given track id,
-            or Nones if there are no such nodes.
-        """
-        if (
-            track_id not in self.tracks.track_id_to_node
-            or len(self.tracks.track_id_to_node[track_id]) == 0
-        ):
-            return None, None
-        candidates = self.tracks.track_id_to_node[track_id]
-        candidates.sort(key=lambda n: self.tracks.get_time(n))
-
-        pred = None
-        succ = None
-        for cand in candidates:
-            if self.tracks.get_time(cand) < time:
-                pred = cand
-            elif self.tracks.get_time(cand) > time:
-                succ = cand
-                break
-        return pred, succ
-
-    def _add_nodes(
-        self,
-        attributes: Attrs,
-        pixels: list[SegMask] | None = None,
-    ) -> tuple[TracksAction, list[Node]] | None:
-        """Add nodes to the graph. Includes all attributes and the segmentation.
-        Will return the actions needed to add the nodes, and the node ids generated for
-        the new nodes.
-        If there is a segmentation, the attributes must include:
-        - time
-        - node_id
-        - track_id
-        If there is not a segmentation, the attributes must include:
-        - time
-        - pos
-        - track_id
-
-        Logic of the function:
-        - remove edges (when we add a node in a track between two nodes
-            connected by a skip edge)
-        - add the nodes
-        - add edges (to connect each node to its immediate
-            predecessor and successor with the same track_id, if any)
-
-        Args:
-            attributes (Attrs): dictionary containing at least time and track id,
-                and either node_id (if pixels are provided) or position (if not)
-            pixels (list[SegMask] | None): A list of pixels associated with the node,
-                or None if there is no segmentation. These pixels will be updated
-                in the tracks.segmentation, set to the new node id
-        """
-        if NodeAttr.TIME.value not in attributes:
-            raise ValueError(
-                f"Cannot add nodes without times. Please add "
-                f"{NodeAttr.TIME.value} attribute"
-            )
-        if NodeAttr.TRACK_ID.value not in attributes:
-            raise ValueError(
-                "Cannot add nodes without track ids. Please add "
-                f"{NodeAttr.TRACK_ID.value} attribute"
-            )
-
-        times = attributes[NodeAttr.TIME.value]
-        track_ids = attributes[NodeAttr.TRACK_ID.value]
-        nodes: list[Node]
-        if pixels is not None:
-            nodes = attributes["node_id"]
-        else:
-            nodes = self._get_new_node_ids(len(times))
-        actions: list[TracksAction] = []
-
-        # remove skip edges that will be replaced by new edges after adding nodes
-        edges_to_remove = []
-        for time, track_id in zip(times, track_ids, strict=False):
-            pred, succ = self._get_pred_and_succ(track_id, time)
-            if pred is not None and succ is not None:
-                edges_to_remove.append((pred, succ))
-
-            # Find and remove edges to nodes with different track_ids (upstream division
-            # events)
-            if track_id in self.tracks.track_id_to_node:
-                track_id_nodes = self.tracks.track_id_to_node[track_id]
-                for node in track_id_nodes:
-                    if (
-                        self.tracks._get_node_attr(node, NodeAttr.TIME.value) <= time
-                        and self.tracks.graph.out_degree(node) == 2
-                    ):  # there is an upstream division event here
-                        warn(
-                            "Cannot add node here - upstream division event detected.",
-                            stacklevel=2,
-                        )
-                        self.tracks.refresh.emit()
-                        return None
-
-        if len(edges_to_remove) > 0:
-            actions.append(DeleteEdges(self.tracks, edges_to_remove))
-
-        # add nodes
-        actions.append(
-            AddNodes(
-                tracks=self.tracks,
-                nodes=nodes,
-                attributes=attributes,
-                pixels=pixels,
-            )
-        )
-
-        # add in edges to preds and succs with the same track id
-        edges_to_add = set()  # make it a set to avoid double adding edges when you add
-        # two nodes next to each other  in the same track
-        for node, time, track_id in zip(nodes, times, track_ids, strict=False):
-            pred, succ = self._get_pred_and_succ(track_id, time)
-            if pred is not None:
-                edges_to_add.add((pred, node))
-            if succ is not None:
-                edges_to_add.add((node, succ))
-        actions.append(AddEdges(self.tracks, list(edges_to_add)))
-
-        return ActionGroup(self.tracks, actions), nodes
 
     def delete_nodes(self, nodes: Iterable[Node]) -> None:
         """Calls the _delete_nodes function and then emits the refresh signal
@@ -339,39 +203,6 @@ class TracksController:
         """
         return UpdateNodeAttrs(self.tracks, nodes, attributes)
 
-    def _add_edges(self, edges: Iterable[Edge]) -> TracksAction:
-        """Add edges and attributes to the graph. Also update the track ids of the
-        target node tracks and potentially sibling tracks.
-
-        Args:
-            edges (Iterable[edge]): An iterable of edges, each with source and target
-                node ids
-
-        Returns:
-            A TracksAction containing all edits performed in this call
-        """
-        actions: list[TracksAction] = []
-        for edge in edges:
-            out_degree = self.tracks.graph.out_degree(edge[0])
-            if out_degree == 0:  # joining two segments
-                # assign the track id of the source node to the target and all out
-                # edges until end of track
-                new_track_id = self.tracks.get_track_id(edge[0])
-                actions.append(UpdateTrackID(self.tracks, edge[1], new_track_id))
-            elif out_degree == 1:  # creating a division
-                # assign a new track id to existing child
-                successor = next(iter(self.tracks.graph.successors(edge[0])))
-                actions.append(
-                    UpdateTrackID(self.tracks, successor, self.tracks.get_next_track_id())
-                )
-            else:
-                raise RuntimeError(
-                    f"Expected degree of 0 or 1 before adding edge, got {out_degree}"
-                )
-
-        actions.append(AddEdges(self.tracks, edges))
-        return ActionGroup(self.tracks, actions)
-
     def is_valid(self, edge: Edge) -> tuple[bool, TracksAction | None]:
         """Check if this edge is valid.
         Criteria:
@@ -456,87 +287,6 @@ class TracksController:
         action = self._delete_edges(edges)
         self.action_history.add_new_action(action)
         self.tracks.refresh.emit()
-
-    def _delete_edges(self, edges: Iterable[Edge]) -> ActionGroup:
-        actions: list[TracksAction] = [DeleteEdges(self.tracks, edges)]
-        for edge in edges:
-            out_degree = self.tracks.graph.out_degree(edge[0])
-            if out_degree == 0:  # removed a normal (non division) edge
-                new_track_id = self.tracks.get_next_track_id()
-                actions.append(UpdateTrackID(self.tracks, edge[1], new_track_id))
-            elif out_degree == 1:  # removed a division edge
-                sibling = next(self.tracks.graph.successors(edge[0]))
-                new_track_id = self.tracks.get_track_id(edge[0])
-                actions.append(UpdateTrackID(self.tracks, sibling, new_track_id))
-            else:
-                raise RuntimeError(
-                    f"Expected degree of 0 or 1 after removing edge, got {out_degree}"
-                )
-        return ActionGroup(self.tracks, actions)
-
-    def update_segmentations(
-        self,
-        to_remove: list[tuple[Node, SegMask]],
-        to_update_smaller: list[tuple[Node, SegMask]],
-        to_update_bigger: list[tuple[Node, SegMask]],
-        to_add: list[tuple[Node, int, SegMask]],
-        current_timepoint: int,
-    ) -> None:
-        """Handle a change in the segmentation mask, checking for node addition,
-        deletion, and attribute updates.
-        Args:
-            to_remove (list[tuple[Node, SegMask]]): (node_ids, pixels)
-            to_update_smaller (list[tuple[Node, SegMask]]): (node_id, pixels)
-            to_update_bigger (list[tuple[Node, SegMask]]): (node_id, pixels)
-            to_add (list[tuple[Node, int, SegMask]]): (node_id, track_id, pixels)
-            current_timepoint (int): the current time point in the viewer, used to set
-                the selected node.
-        """
-        actions: list[TracksAction] = []
-        node_to_select = None
-
-        if len(to_remove) > 0:
-            nodes = [node_id for node_id, _ in to_remove]
-            pixels = [pixels for _, pixels in to_remove]
-            actions.append(self._delete_nodes(nodes, pixels=pixels))
-        if len(to_update_smaller) > 0:
-            nodes = [node_id for node_id, _ in to_update_smaller]
-            pixels = [pixels for _, pixels in to_update_smaller]
-            actions.append(self._update_node_segs(nodes, pixels, added=False))
-        if len(to_update_bigger) > 0:
-            nodes = [node_id for node_id, _ in to_update_bigger]
-            pixels = [pixels for _, pixels in to_update_bigger]
-            actions.append(self._update_node_segs(nodes, pixels, added=True))
-        if len(to_add) > 0:
-            nodes = [node for node, _, _ in to_add]
-            pixels = [pix for _, _, pix in to_add]
-            track_ids = [
-                val if val is not None else self.tracks.get_next_track_id()
-                for _, val, _ in to_add
-            ]
-            times = [pix[0][0] for pix in pixels]
-            attributes = {
-                NodeAttr.TRACK_ID.value: track_ids,
-                NodeAttr.TIME.value: times,
-                "node_id": nodes,
-            }
-
-            result = self._add_nodes(attributes=attributes, pixels=pixels)
-            if result is None:
-                return
-            else:
-                action, nodes = result
-
-            actions.append(action)
-
-            # if this is the time point where the user added a node, select the new node
-            if current_timepoint in times:
-                index = times.index(current_timepoint)
-                node_to_select = nodes[index]
-
-        action_group = ActionGroup(self.tracks, actions)
-        self.action_history.add_new_action(action_group)
-        self.tracks.refresh.emit(node_to_select)
 
     def undo(self) -> bool:
         """Obtain the action to undo from the history, and invert.

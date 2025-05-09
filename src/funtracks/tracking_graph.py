@@ -1,16 +1,10 @@
 from __future__ import annotations
 
-import abc
-from collections.abc import Collection
-from typing import (
-    Any,
-)
-
-from .features._base import Feature
+from ._graph_interface import GraphInterface
 from .features.feature_set import FeatureSet
 
 
-class TrackingGraph(abc.ABC):
+class TrackingGraph(GraphInterface):
     """Abstract class for tracking graph with features on nodes and edges.
 
     Directed graph with edges going forward in time.
@@ -26,51 +20,85 @@ class TrackingGraph(abc.ABC):
      - in degree and out degree
      - connected components
 
-    Assumed to be a candidate graph. Solutions saved in the selected attribute on
-    edges.
     """
 
-    def __init__(self, pos_attr: str, time_attr: str, ndim: int, seg: bool = False):
-        self.features = FeatureSet(
-            ndim=ndim, pos_attr=pos_attr, time_attr=time_attr, seg=seg
-        )
+    def __new__(cls, injected_cls, *args):
+        # create a type that has name TrackingGraph and parent injected class
+        GraphType = type(cls.__name__, (cls, injected_cls), {})
+        # call Object.__new__ with the new class type (to avoid recursive calls to this
+        # function we are writing)
+        return super().__new__(GraphType)
 
+    def __init__(self, injected_cls, graph, features: FeatureSet):
+        super().__init__(graph)
+        self.features = features
+
+    # Getters
     def get_positions(self, nodes):
         return self.get_feature_values(nodes, self.features.position)
+
+    def get_position(self, node):
+        return self.get_feature_values(node, self.features.position)
 
     def get_times(self, nodes):
         return self.get_feature_values(nodes, self.features.time)
 
+    def get_time(self, node):
+        return self.get_feature_value(node, self.features.time)
+
+    def get_track_ids(self, nodes):
+        return self.get_feature_values(nodes, self.features.track_id)
+
+    def get_track_id(self, node):
+        return self.get_feature_value(node, self.features.track_id)
+
+    def get_distances(self, edges):
+        return self.get_feature_values(edges, self.features.distance)
+
+    def get_distance(self, edge):
+        return self.get_feature_value(edge, self.features.distance)
+
+    # setters
     def set_time(self, node, time: int):
         self.set_feature_value(node, self.features.time, time)
 
     def set_position(self, node, position):
         self.set_feature_value(node, self.features.position, position)
 
-    @abc.abstractmethod
-    def get_feature_values(self, ids, feature: Feature) -> Collection[Any]:
-        raise NotImplementedError()
+    def set_track_id(self, node: int, track_id: int):
+        self.set_feature_value(node, self.features.track_id, track_id)
 
-    @abc.abstractmethod
-    def set_feature_value(self, id, feature: Feature, value):
-        raise NotImplementedError()
+    def set_distance(self, edge, distance):
+        self.set_feature_value(edge, self.features.distance, distance)
 
-    @abc.abstractmethod
-    def get_elements_with_feature(self, feature: Feature, value):
-        raise NotImplementedError()
+    def get_track_neighbors(
+        self, track_id: int, time: int
+    ) -> tuple[int | None, int | None]:
+        """Get the last node with the given track id before time, and the first node
+        with the track id after time, if any. Does not assume that a node with
+        the given track_id and time is already in tracks, but it can be.
 
-    @abc.abstractmethod
-    def get_solution(self) -> TrackingGraph:  # a view only, I think
-        raise NotImplementedError()
+        Args:
+            track_id (int): The track id to search for
+            time (int): The time point to find the immediate predecessor and successor
+                for
 
-    @abc.abstractmethod
-    def predecessors(self, node):
-        raise NotImplementedError()
+        Returns:
+            tuple[Node | None, Node | None]: The last node before time with the given
+            track id, and the first node after time with the given track id,
+            or Nones if there are no such nodes.
+        """
+        candidates = self.get_elements_with_feature(self.features.track_id, track_id)
+        if len(candidates) == 0:
+            return None, None
+        candidates.sort(key=lambda n: self.get_time(n))
 
-    @abc.abstractmethod
-    def successors(self, node):
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def add_node(self, node, features: dict[Feature, Any]):
-        raise NotImplementedError
+        pred = None
+        succ = None
+        for cand in candidates:
+            if self.get_time(cand) < time:
+                pred = cand
+            elif self.get_time(cand) > time:
+                succ = cand
+                break
+        return pred, succ
