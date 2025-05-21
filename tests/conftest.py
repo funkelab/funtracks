@@ -121,12 +121,11 @@ def sphere(center, radius, shape):
 @pytest.fixture
 def segmentation_3d():
     frame_shape = (100, 100, 100)
-    total_shape = (4, *frame_shape)
+    total_shape = (5, *frame_shape)
     segmentation = np.zeros(total_shape, dtype="int32")
     # make frame with one cell in center with label 1
     mask = sphere(center=(50, 50, 50), radius=20, shape=frame_shape)
     segmentation[0][mask] = 1
-    segmentation[3][mask] = 4
 
     # make frame with two cells
     # first cell centered at (20, 50, 80) with label 2
@@ -135,6 +134,13 @@ def segmentation_3d():
     segmentation[1][mask] = 2
     mask = sphere(center=(60, 50, 45), radius=15, shape=frame_shape)
     segmentation[1][mask] = 3
+
+    # continue track 3 with squares from 0 to 4 in x and y with label 3
+    segmentation[2, 0:4, 0:4, 0:4] = 4
+    segmentation[4, 0:4, 0:4, 0:4] = 5
+
+    # unconnected node
+    segmentation[4, 96:100, 96:100, 96:100] = 6
 
     return segmentation
 
@@ -148,6 +154,7 @@ def graph_3d():
             {
                 "pos": [50, 50, 50],
                 "time": 0,
+                "track_id": 1,
             },
         ),
         (
@@ -155,6 +162,7 @@ def graph_3d():
             {
                 "pos": [20, 50, 80],
                 "time": 1,
+                "track_id": 2,
             },
         ),
         (
@@ -162,19 +170,40 @@ def graph_3d():
             {
                 "pos": [60, 50, 45],
                 "time": 1,
+                "track_id": 3,
             },
         ),
         (
             4,
             {
-                "pos": [50, 50, 50],
-                "time": 3,
+                "pos": [1.5, 1.5, 1.5],
+                "time": 2,
+                "track_id": 3,
+            },
+        ),
+        (
+            5,
+            {
+                "pos": [1.5, 1.5, 1.5],
+                "time": 4,
+                "track_id": 3,
+            },
+        ),
+        # unconnected node
+        (
+            6,
+            {
+                "pos": [97.5, 97.5, 97.5],
+                "time": 4,
+                "track_id": 5,
             },
         ),
     ]
     edges = [
         (1, 2, {"distance": 42.426}),
         (1, 3),
+        (3, 4),
+        (4, 5),
     ]
     graph.add_nodes_from(nodes)
     graph.add_edges_from(edges)

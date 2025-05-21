@@ -21,6 +21,7 @@ class Time(Feature):
             value_names="Time",
             feature_type=FeatureType.NODE,
             valid_ndim=(3, 4),
+            required=True,
         )
 
 
@@ -45,13 +46,14 @@ class ComputedPosition(Feature):
             regionprops_name="centroid",
         )
 
-    def update(self, project: Project, node: int):
+    def update(self, project: Project, node: int) -> list[float]:
+        # Note: assumes the time is already on the graph
         time = project.cand_graph.get_time(node)
         seg = project.segmentation[time] == node
         voxel_size = project.segmentation.voxel_size
         pos_scale = voxel_size[1:] if voxel_size is not None else None
-        pos = measure.centroid(seg, spacing=pos_scale)
-        project.cand_graph.set_feature_value(node, self, pos)
+        pos = measure.centroid(seg, spacing=pos_scale).tolist()
+        return pos
 
 
 class Area(Feature):
@@ -65,7 +67,7 @@ class Area(Feature):
             regionprops_name="area",
         )
 
-    def update(self, project: Project, node: int) -> None:
+    def update(self, project: Project, node: int) -> int:
         time = project.cand_graph.get_time(node)
         seg = project.segmentation[time] == node
         voxel_size = project.segmentation.voxel_size
@@ -73,7 +75,7 @@ class Area(Feature):
         area = np.sum(seg)
         if pos_scale is not None:
             area *= np.prod(pos_scale)
-        project.cand_graph.set_feature_value(node, self, area)
+        return area.tolist()
 
 
 class TrackID(Feature):
@@ -83,6 +85,7 @@ class TrackID(Feature):
             value_names="Track ID",
             feature_type=FeatureType.NODE,
             valid_ndim=(3, 4),
+            required=False,
         )
 
 

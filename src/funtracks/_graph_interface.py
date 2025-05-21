@@ -52,6 +52,7 @@ class GraphInterface(abc.ABC):
 
     @abc.abstractmethod
     def add_node(self, node: int, features: dict[Feature, Any]):
+        # At this point, it has to be all the static features in the FeatureSet
         raise NotImplementedError()
 
     @abc.abstractmethod

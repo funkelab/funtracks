@@ -1,7 +1,14 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from ._graph_interface import GraphInterface
 from .features.feature_set import FeatureSet
+
+if TYPE_CHECKING:
+    from typing import Any
+
+    from .features._base import Feature
 
 
 class TrackingGraph(GraphInterface):
@@ -38,7 +45,7 @@ class TrackingGraph(GraphInterface):
         return self.get_feature_values(nodes, self.features.position)
 
     def get_position(self, node):
-        return self.get_feature_values(node, self.features.position)
+        return self.get_feature_value(node, self.features.position)
 
     def get_times(self, nodes):
         return self.get_feature_values(nodes, self.features.time)
@@ -102,3 +109,10 @@ class TrackingGraph(GraphInterface):
                 succ = cand
                 break
         return pred, succ
+
+    def add_node(self, node, features: dict[Feature, Any]):
+        # ignore computed features, but get default value for static features
+        for feature in self.features.node_features:
+            if not feature.computed and feature not in features and not feature.required:
+                features[feature] = feature.default_value
+        super().add_node(node, features)

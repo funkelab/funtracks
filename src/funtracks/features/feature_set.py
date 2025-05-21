@@ -13,11 +13,10 @@ from .node_features import (
 )
 
 
-def extra_features(ndim: int, seg: bool) -> dict[str, Feature]:
-    feats = {}
+def extra_features(ndim: int, seg: bool) -> list[Feature]:
+    feats = []
     if seg:
-        feats["area"] = Area(ndim=ndim)
-        feats["iou"] = IoU()
+        feats.extend([Area(ndim=ndim), IoU()])
     return feats
 
 
@@ -37,9 +36,6 @@ class FeatureSet:
         pos_attr: str | None = None,
         time_attr: str | None = None,
     ):
-        self.node_features = {}
-        self.edge_features = {}
-
         self.time = Time(attr_name=time_attr)
         axes = ("z", "y", "x") if ndim == 4 else ("y", "x")
         self.position = (
@@ -55,25 +51,59 @@ class FeatureSet:
         self.node_selection_pin = NodeSelectionPin()
         self.edge_selection_pin = EdgeSelectionPin()
 
-        for name, feat in extra_features(ndim, seg).items():
-            self.add_feature(name, feat)
+        self._features: list[Feature] = [
+            self.time,
+            self.position,
+            self.track_id,
+            self.distance,
+            self.frame_span,
+            self.node_selected,
+            self.edge_selected,
+            self.node_selection_pin,
+            self.edge_selection_pin,
+        ]
 
-    def add_feature(self, name, feature):
-        if name in self.__dict__:
-            raise KeyError(f"Name {name} already in feature set")
-        self.__setattr__(name, feature)
+        for feat in extra_features(ndim, seg):
+            self.add_feature(feat)
 
-    def keys(self):
-        return self.__dict__.keys()
+    @property
+    def node_features(self):
+        return [f for f in self._features if f.feature_type == FeatureType.NODE]
 
-    def values(self):
-        return self.__dict__.values()
+    @property
+    def edge_features(self):
+        return [f for f in self._features if f.feature_type == FeatureType.EDGE]
 
-    def items(self):
-        return self.__dict__.items()
+    @property
+    def static_features(self):
+        return [f for f in self._features if not f.computed]
 
-    def validate_new_features(self, features: dict[str, Any], feature_type: FeatureType):
-        assert set(features).issubset(set(self.keys()))
-        for name, feature in self.items():
-            if feature.feature_type == feature_type and not feature.computed:
-                assert name in features
+    @property
+    def computed_features(self):
+        return [f for f in self._features if f.computed]
+
+    def add_feature(self, feature: Feature):
+        if feature.feature_type == FeatureType.NODE:
+            existing_features = self.node_features
+        elif feature.feature_type == FeatureType.EDGE:
+            existing_features = self.edge_features
+
+        if feature.attr_name in [f.attr_name for f in existing_features]:
+            raise KeyError(f"Name {feature.attr_name} already in feature set")
+        self._features.append(feature)
+
+    def validate_new_node_features(self, features: dict[Feature, Any]):
+        assert set(features).issubset(set(self.node_features)), (
+            f"Feature in {features} not in {self.node_features}"
+        )
+        for feature in self.node_features:
+            if not feature.computed and feature.required:
+                assert feature in features, f"Required feature {feature} not provided"
+
+    def validate_new_edge_features(self, features: dict[Feature, Any]):
+        assert set(features).issubset(set(self.edge_features)), (
+            f"Feature in {features} not in {self.edge_features}"
+        )
+        for feature in self.edge_features:
+            if not feature.computed and feature.required:
+                assert feature in features, f"Required feature {feature} not provided"

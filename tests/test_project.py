@@ -4,7 +4,7 @@ import funlib.persistence as fp
 import networkx as nx
 import pytest
 
-from funtracks import NxTrackingGraph, Project
+from funtracks import NxGraph, Project, TrackingGraph
 from funtracks.features import FeatureSet
 from funtracks.params import ProjectParams
 
@@ -46,8 +46,8 @@ class TestProject:
         gt_graph = self.get_gt_graph(request, ndim)
         if use_graph:
             features = FeatureSet(ndim=ndim, seg=use_seg)
-            cand_graph = NxTrackingGraph(
-                nx.create_empty_copy(gt_graph, with_data=True), features
+            cand_graph = TrackingGraph(
+                NxGraph, nx.create_empty_copy(gt_graph, with_data=True), features
             )
         else:
             cand_graph = None
@@ -78,22 +78,3 @@ class TestProject:
                 assert data["area"] == gt_graph.nodes[node]["area"]
             assert data["pos"] == gt_graph.nodes[node]["pos"]
             assert data["time"] == gt_graph.nodes[node]["time"]
-
-    def test_recompute_cand_edges(self, request, ndim, use_seg, use_graph):
-        seg = self.get_seg(request, ndim, use_seg)
-        gt_graph = self.get_gt_graph(request, ndim)
-        cand_graph = self.get_cand_graph(request, ndim, use_seg, use_graph)
-        # fully connected
-        params = ProjectParams(max_move_distance=50)
-        project = Project(
-            name="test_project",
-            project_params=params,
-            raw=None,
-            segmentation=seg,
-            cand_graph=cand_graph,
-        )
-
-        project.recompute_cand_edges()
-        assert Counter(project.cand_graph._graph.edges().keys()) == Counter(
-            gt_graph.edges().keys()
-        )

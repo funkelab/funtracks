@@ -2,7 +2,6 @@ import logging
 
 import funlib.persistence as fp
 import networkx as nx
-import numpy as np
 from skimage.measure import regionprops
 from tqdm import tqdm
 
@@ -42,13 +41,15 @@ def nodes_from_segmentation(
             node_id = regionprop.label
             attrs = {
                 features.time.attr_name: t,
-                features.position.attr_name: np.array(regionprop.centroid).tolist(),
             }
-            for feature in features.extra_features:
+            for feature in features.node_features:
                 if feature.computed and feature.regionprops_name is not None:
                     # to list gives floats/ints in the case of single items
-                    attrs[feature.attr_name] = getattr(
-                        regionprop, feature.regionprops_name
-                    ).tolist()
+                    value = getattr(regionprop, feature.regionprops_name)
+                    if isinstance(value, tuple):
+                        value = [i.tolist() for i in value]
+                    else:
+                        value = value.tolist()
+                    attrs[feature.attr_name] = value
             cand_graph.add_node(node_id, **attrs)
     return TrackingGraph(NxGraph, cand_graph, features)

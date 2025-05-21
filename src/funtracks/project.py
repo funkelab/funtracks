@@ -74,12 +74,10 @@ class Project:
         """
         if self.segmentation is None:
             return None
-        pix_list = []
         time = self.cand_graph.get_time(node)
         loc_pixels = np.nonzero(self.segmentation[time] == node)
         time_array = np.ones_like(loc_pixels[0]) * time
-        pix_list.append((time_array, *loc_pixels))
-        return pix_list
+        return (time_array, *loc_pixels)
 
     def set_pixels(self, pixels: tuple[np.ndarray, ...], value: int):
         """Set the given pixels in the segmentation to the given value.

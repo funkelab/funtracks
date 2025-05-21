@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 class CandGraph(TrackingGraph):
     def __init__(self, injected_cls, graph, features, params: CandGraphParams):
         super().__init__(injected_cls, graph, features)
+        self.injected_cls = injected_cls
         self.params = params
 
     def update_max_move_distance(self, value: float):
@@ -49,7 +50,7 @@ class CandGraph(TrackingGraph):
         to_remove = [
             edge
             for edge in to_remove
-            if not self.get_feature_value(edge, self.features.edge_pin)
+            if not self.get_feature_value(edge, self.features.edge_selection_pin)
         ]
         self.remove_edges(to_remove)
 
@@ -89,12 +90,11 @@ class CandGraph(TrackingGraph):
                 prev_idx, next_idx = pair
                 edge = (start_ids[prev_idx], end_ids[next_idx])
                 if not self.has_edge(edge):
-                    # TODO: features? IOU?
-                    # TODO: no _graph access
                     features = {
-                        "distance": distance,
-                        "frame_span": frame_span,
+                        self.features.frame_span: frame_span,
+                        self.features.distance: distance,
                     }
+                    # TODO: computed features
                     self.add_edge(edge, features)
 
             start_ids = end_ids
@@ -106,4 +106,4 @@ class CandGraph(TrackingGraph):
         selected_edges = self.get_elements_with_feature(self.features.edge_selected, True)
         # can't add or remove edges but can change attributes in a networkx subgraph
         subgraph = self.subgraph(selected_nodes, selected_edges)
-        return TrackingGraph(subgraph, self.features)
+        return TrackingGraph(self.injected_cls, subgraph, self.features)

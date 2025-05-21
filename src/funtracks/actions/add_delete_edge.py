@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..features._base import Feature, FeatureType
+from ..features._base import Feature
 from ..project import Project
 from ._base import TracksAction
 
@@ -11,12 +11,15 @@ class AddEdge(TracksAction):
     """Action for adding new edges"""
 
     def __init__(
-        self, project: Project, edge: tuple[int, int], attributes: dict[Feature, Any]
+        self,
+        project: Project,
+        edge: tuple[int, int],
+        provided_features: dict[Feature, Any],
     ):
         super().__init__(project)
         self.edge = edge
-        self.project.cand_graph.features.validate_new_edge_features(attributes)
-        self.attributes = attributes
+        self.project.cand_graph.features.validate_new_edge_features(provided_features)
+        self.provided_features = provided_features
         self._apply()
 
     def inverse(self):
@@ -34,7 +37,13 @@ class AddEdge(TracksAction):
                 raise KeyError(
                     f"Cannot add edge {self.edge}: endpoint {node} not in graph yet"
                 )
-        self.project.cand_graph.add_edge(self.edge, self.attributes)
+        self.project.cand_graph.add_edge(self.edge, self.provided_features)
+        for feature in self.project.cand_graph.features.edge_features:
+            if feature.computed:
+                print(feature)
+                value = feature.update(self.project, self.edge)
+                print(value)
+                self.project.cand_graph.set_feature_value(self.edge, feature, value)
 
 
 class DeleteEdge(TracksAction):
@@ -45,8 +54,7 @@ class DeleteEdge(TracksAction):
         self.edge = edge
         self.attributes = {
             feature: self.project.cand_graph.get_feature_value(self.edge, feature)
-            for feature in self.project.cand_graph.features
-            if feature.feature_type == FeatureType.EDGE
+            for feature in self.project.cand_graph.features.edge_features
         }
         self._apply()
 
@@ -60,6 +68,7 @@ class DeleteEdge(TracksAction):
         """
         if not self.project.cand_graph.has_edge(self.edge):
             raise KeyError(f"Edge {self.edge} not in the graph, and cannot be removed")
-        features = self.project.cand_graph.features
-        self.project.cand_graph.set_feature_value(self.edge, features.edge_pin, False)
+        # features = self.project.cand_graph.features
+        # self.project.cand_graph.set_feature_value(self.edge, features.edge_selection_pin, False)
+        self.project.cand_graph.remove_edge(self.edge)
         # TODO: trigger updates of solution, track id, etc.

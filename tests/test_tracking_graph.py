@@ -6,7 +6,6 @@ from funtracks.tracking_graph import TrackingGraph
 
 
 @pytest.mark.parametrize("ndim", [3, 4])
-# TODO: spatial graph
 class TestTrackingGraph:
     def get_gt_graph(self, request, ndim):
         graph_name = "graph_2d" if ndim == 3 else "graph_3d"

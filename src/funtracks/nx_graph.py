@@ -67,16 +67,14 @@ class NxGraph(GraphInterface):
         return list(self._graph.successors(node))
 
     def add_node(self, node: int, features: dict[Feature, Any]):
-        # TODO self.features.validate_new_node_features(features)
-        self._graph.add_node(node)
-        for feature, value in features.items():
-            self.set_feature_value(node, feature, value)
+        # expected to be all static features
+        attrs = {f.attr_name: value for f, value in features.items()}
+        self._graph.add_node(node, **attrs)
 
     def add_edge(self, edge: tuple[int, int], features: dict[Feature, Any]):
-        # TODO self.features.validate_new_edge_features(features)
-        self._graph.add_edge(*edge)
-        for feature, value in features.items():
-            self.set_feature_value(edge, feature, value)
+        # expected to be all static features
+        attrs = {f.attr_name: value for f, value in features.items()}
+        self._graph.add_edge(*edge, **attrs)
 
     def remove_node(self, node: int):
         self._graph.remove_node(node)
@@ -94,6 +92,8 @@ class NxGraph(GraphInterface):
         return self._graph.has_node(node)
 
     def has_edge(self, edge: tuple[int, int]) -> bool:
+        print(edge, self._graph.edges())
+        print(self._graph.has_edge(*edge))
         return self._graph.has_edge(*edge)
 
     def out_degree(self, node: int) -> int:
@@ -111,28 +111,28 @@ class NxGraphView(NxGraph):
 
     def __init__(self, graph, nodes, edges):
         super().__init__(graph)
-        self.nodes = set(nodes)
-        self.edges = set(edges)
+        self._nodes = set(nodes)
+        self._edges = set(edges)
 
     def predecessors(self, node):
         return [
             pred
             for pred in super().predecessors(node)
-            if pred in self.nodes and (pred, node) in self.edges
+            if pred in self._nodes and (pred, node) in self._edges
         ]
 
     def successors(self, node):
         return [
             succ
             for succ in super().successors(node)
-            if succ in self.nodes and (node, succ) in self.edges
+            if succ in self._nodes and (node, succ) in self._edges
         ]
 
     def has_node(self, node):
-        return node in self.nodes
+        return node in self._nodes
 
     def has_edge(self, edge):
-        return edge in self.edges
+        return edge in self._edges
 
     def in_degree(self, node):
         return len(self.predecessors(node))
@@ -149,18 +149,22 @@ class NxGraphView(NxGraph):
     def get_elements_with_feature(self, feature, value):
         all_elements = super().get_elements_with_feature(feature, value)
         if feature.feature_type == FeatureType.NODE:
-            return [elt for elt in all_elements if elt in self.nodes]
+            return [elt for elt in all_elements if elt in self._nodes]
         if feature.feature_type == FeatureType.EDGE:
-            return [elt for elt in all_elements if elt in self.edges]
+            return [elt for elt in all_elements if elt in self._edges]
 
     def get_feature_value(self, id, feature):
-        elements = self.nodes if feature.feature_type == FeatureType.NODE else self.edges
+        elements = (
+            self._nodes if feature.feature_type == FeatureType.NODE else self._edges
+        )
         if id not in elements:
             raise KeyError(f"{id} not in subgraph")
         return super().get_feature_value(id, feature)
 
     def get_feature_values(self, ids, feature):
-        elements = self.nodes if feature.feature_type == FeatureType.NODE else self.edges
+        elements = (
+            self._nodes if feature.feature_type == FeatureType.NODE else self._edges
+        )
         if ids not in elements:
             raise KeyError(f"{ids} not in subgraph")
         return super().get_feature_values(ids, feature)

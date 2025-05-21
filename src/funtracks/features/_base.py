@@ -27,4 +27,10 @@ class Feature(BaseModel):
     computed: bool = False
     regionprops_name: str | None = None
     default_value: Any = None
-    required: bool = True
+    required: bool = True  # If true, use default value. If false, throw error if missing
+
+    def __hash__(self):
+        return self.attr_name.__hash__()
+
+    def __repr__(self):
+        return self.feature_type.value + "_" + self.attr_name
