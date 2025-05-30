@@ -40,9 +40,7 @@ class AddEdge(TracksAction):
         self.project.cand_graph.add_edge(self.edge, self.provided_features)
         for feature in self.project.cand_graph.features.edge_features:
             if feature.computed:
-                print(feature)
                 value = feature.update(self.project, self.edge)
-                print(value)
                 self.project.cand_graph.set_feature_value(self.edge, feature, value)
 
 

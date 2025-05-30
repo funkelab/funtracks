@@ -1,4 +1,6 @@
-from typing import Any
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
 
 from ._base import Feature, FeatureType
 from .edge_features import Distance, EdgeSelected, EdgeSelectionPin, FrameSpan, IoU
@@ -11,6 +13,9 @@ from .node_features import (
     Time,
     TrackID,
 )
+
+if TYPE_CHECKING:
+    from ..actions._base import TracksAction
 
 
 def extra_features(ndim: int, seg: bool) -> list[Feature]:
@@ -74,13 +79,9 @@ class FeatureSet:
     def edge_features(self):
         return [f for f in self._features if f.feature_type == FeatureType.EDGE]
 
-    @property
-    def static_features(self):
-        return [f for f in self._features if not f.computed]
-
-    @property
-    def computed_features(self):
-        return [f for f in self._features if f.computed]
+    def get_features_to_compute(self, action: TracksAction):
+        return [f for f in self._features if f.computed]  # and
+        # any(map(partial(isinstance, action), f.compute_on))]
 
     def add_feature(self, feature: Feature):
         if feature.feature_type == FeatureType.NODE:

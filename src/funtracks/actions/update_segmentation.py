@@ -1,5 +1,6 @@
 import numpy as np
 
+from ..features._base import FeatureType
 from ..project import Project
 from ._base import TracksAction
 
@@ -16,9 +17,9 @@ class UpdateNodeSeg(TracksAction):
     ):
         """
         Args:
-            tracks (Tracks): The project to update the segmenatation for
-            nodes (list[Node]): The node with updated segmenatation
-            pixels (list[SegMask]): The pixels that were updated for each node
+            project (Project): The project to update the segmenatation for
+            node (int): The node with updated segmenatation
+            pixels (tuple[np.ndarray]): The pixels that were updated for the node
             added (bool, optional): If the provided pixels were added (True) or deleted
                 (False) from the node. Defaults to True.
         """
@@ -41,4 +42,21 @@ class UpdateNodeSeg(TracksAction):
         """Set new attributes"""
         value = self.node if self.added else 0
         self.project.set_pixels(self.pixels, value)
-        # TODO: trigger computation of node and edge attrs
+        for feature in self.project.cand_graph.features.get_features_to_compute(self):
+            if feature.feature_type == FeatureType.NODE:
+                value = feature.update(self.project, self.node)
+                self.project.cand_graph.set_feature_value(self.node, feature, value)
+            elif feature.feature_type == FeatureType.EDGE:
+                edges = [
+                    (pred, self.node)
+                    for pred in self.project.cand_graph.predecessors(self.node)
+                ]
+                edges.extend(
+                    [
+                        (self.node, succ)
+                        for succ in self.project.cand_graph.successors(self.node)
+                    ]
+                )
+                for edge in edges:
+                    value = feature.update(self.project, edge)
+                    self.project.cand_graph.set_feature_value(edge, feature, value)

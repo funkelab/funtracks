@@ -1,12 +1,9 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel
-
-if TYPE_CHECKING:
-    pass
 
 
 class FeatureType(Enum):

@@ -78,6 +78,10 @@ class TrackingGraph(GraphInterface):
     def set_distance(self, edge, distance):
         self.set_feature_value(edge, self.features.distance, distance)
 
+    def get_solution(self):
+        # TODO: finish
+        self.subgraph()
+
     def get_track_neighbors(
         self, track_id: int, time: int
     ) -> tuple[int | None, int | None]:

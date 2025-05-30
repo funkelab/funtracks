@@ -49,6 +49,7 @@ class ComputedPosition(Feature):
     def update(self, project: Project, node: int) -> list[float]:
         # Note: assumes the time is already on the graph
         time = project.cand_graph.get_time(node)
+        assert project.segmentations is not None
         seg = project.segmentation[time] == node
         voxel_size = project.segmentation.voxel_size
         pos_scale = voxel_size[1:] if voxel_size is not None else None
