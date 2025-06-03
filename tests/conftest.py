@@ -42,6 +42,7 @@ def graph_2d():
                 "time": 0,
                 "area": 1245,
                 "track_id": 1,
+                "selected": True,
             },
         ),
         (
@@ -51,6 +52,7 @@ def graph_2d():
                 "time": 1,
                 "track_id": 2,
                 "area": 305,
+                "selected": True,
             },
         ),
         (
@@ -60,6 +62,7 @@ def graph_2d():
                 "time": 1,
                 "area": 697,
                 "track_id": 3,
+                "selected": True,
             },
         ),
         (
@@ -69,6 +72,7 @@ def graph_2d():
                 "time": 2,
                 "area": 16,
                 "track_id": 3,
+                "selected": True,
             },
         ),
         (
@@ -78,6 +82,7 @@ def graph_2d():
                 "time": 4,
                 "area": 16,
                 "track_id": 3,
+                "selected": True,
             },
         ),
         # unconnected node
@@ -88,21 +93,22 @@ def graph_2d():
                 "time": 4,
                 "area": 16,
                 "track_id": 5,
+                "selected": True,
             },
         ),
     ]
     edges = [
-        (1, 2, {"iou": 0.0, "distance": 42.426}),
-        (1, 3, {"iou": 0.395, "distance": 14.142}),
+        (1, 2, {"iou": 0.0, "distance": 42.426, "selected": True}),
+        (1, 3, {"iou": 0.395, "distance": 14.142, "selected": True}),
         (
             3,
             4,
-            {"iou": 0.0, "distance": 70.032},
+            {"iou": 0.0, "distance": 70.032, "selected": True},
         ),
         (
             4,
             5,
-            {"iou": 1.0, "distance": 0},
+            {"iou": 1.0, "distance": 0, "selected": True},
         ),
     ]
     graph.add_nodes_from(nodes)
@@ -155,6 +161,7 @@ def graph_3d():
                 "pos": [50, 50, 50],
                 "time": 0,
                 "track_id": 1,
+                "selected": True,
             },
         ),
         (
@@ -163,6 +170,7 @@ def graph_3d():
                 "pos": [20, 50, 80],
                 "time": 1,
                 "track_id": 2,
+                "selected": True,
             },
         ),
         (
@@ -171,6 +179,7 @@ def graph_3d():
                 "pos": [60, 50, 45],
                 "time": 1,
                 "track_id": 3,
+                "selected": True,
             },
         ),
         (
@@ -179,15 +188,12 @@ def graph_3d():
                 "pos": [1.5, 1.5, 1.5],
                 "time": 2,
                 "track_id": 3,
+                "selected": True,
             },
         ),
         (
             5,
-            {
-                "pos": [1.5, 1.5, 1.5],
-                "time": 4,
-                "track_id": 3,
-            },
+            {"pos": [1.5, 1.5, 1.5], "time": 4, "track_id": 3, "selected": True,},
         ),
         # unconnected node
         (
@@ -196,14 +202,15 @@ def graph_3d():
                 "pos": [97.5, 97.5, 97.5],
                 "time": 4,
                 "track_id": 5,
+                "selected": True,
             },
         ),
     ]
     edges = [
-        (1, 2, {"distance": 42.426}),
-        (1, 3),
-        (3, 4),
-        (4, 5),
+        (1, 2, {"distance": 42.426, "selected": True}),
+        (1, 3, {"selected": True}),
+        (3, 4, {"selected": True}),
+        (4, 5, {"selected": True}),
     ]
     graph.add_nodes_from(nodes)
     graph.add_edges_from(edges)

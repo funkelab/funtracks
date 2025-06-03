@@ -48,16 +48,22 @@ class NxGraph(GraphInterface):
         # could store the dictionary for time specifically like before if this is
         # a bottleneck
         if feature.feature_type == FeatureType.NODE:
-            return [
-                node
-                for node, data in self._graph.nodes(data=True)
-                if data[feature.attr_name] == value
-            ]
+            items = self._graph.nodes(data=True)
         elif feature.feature_type == FeatureType.EDGE:
+            items = self._graph.edges(data=True)
+            items = [((u, v), data) for u, v, data in items]
+        else:
+            raise ValueError(
+                f"Feature type {feature.feature_type} not in valid set of types {FeatureType}"
+            )
+
+        if feature.required:
+            return [elt for elt, data in items if data[feature.attr_name] == value]
+        else:
             return [
-                edge
-                for edge, data in self._graph.edges(data=True)
-                if data[feature.attr_name] == value
+                elt
+                for elt, data in items
+                if data.get(feature.attr_name, feature.default_value) == value
             ]
 
     def predecessors(self, node):
