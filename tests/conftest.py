@@ -98,17 +98,17 @@ def graph_2d():
         ),
     ]
     edges = [
-        (1, 2, {"iou": 0.0, "distance": 42.426, "selected": True}),
-        (1, 3, {"iou": 0.395, "distance": 14.142, "selected": True}),
+        (1, 2, {"iou": 0.0, "distance": 42.426, "selected": True, "span": 1}),
+        (1, 3, {"iou": 0.39, "distance": 14.142, "selected": True, "span": 1}),
         (
             3,
             4,
-            {"iou": 0.0, "distance": 70.032, "selected": True},
+            {"iou": 0.0, "distance": 70.032, "selected": True, "span": 1},
         ),
         (
             4,
             5,
-            {"iou": 1.0, "distance": 0, "selected": True},
+            {"iou": 1.0, "distance": 0, "selected": True, "span": 2},
         ),
     ]
     graph.add_nodes_from(nodes)
@@ -193,7 +193,12 @@ def graph_3d():
         ),
         (
             5,
-            {"pos": [1.5, 1.5, 1.5], "time": 4, "track_id": 3, "selected": True,},
+            {
+                "pos": [1.5, 1.5, 1.5],
+                "time": 4,
+                "track_id": 3,
+                "selected": True,
+            },
         ),
         # unconnected node
         (
@@ -207,10 +212,10 @@ def graph_3d():
         ),
     ]
     edges = [
-        (1, 2, {"distance": 42.426, "selected": True}),
-        (1, 3, {"selected": True}),
-        (3, 4, {"selected": True}),
-        (4, 5, {"selected": True}),
+        (1, 2, {"distance": 42.426, "iou": 0.0, "selected": True, "span": 1}),
+        (1, 3, {"distance": 11.18, "iou": 0.302, "selected": True, "span": 1}),
+        (3, 4, {"distance": 87.56, "iou": 0.0, "selected": True, "span": 1}),
+        (4, 5, {"distance": 0.0, "iou": 1.0, "selected": True, "span": 2}),
     ]
     graph.add_nodes_from(nodes)
     graph.add_edges_from(edges)
