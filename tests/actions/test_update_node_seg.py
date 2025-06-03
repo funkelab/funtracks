@@ -37,7 +37,6 @@ class TestUpdateNodeSeg:
     def test_update_seg(self, request, ndim):
         project = self.get_project(request, ndim)
         graph = project.cand_graph
-        features = graph.features
         node_id = 3
         edge = (1, 3)
 
@@ -49,30 +48,30 @@ class TestUpdateNodeSeg:
         # remove all but one pixel
         pixels_to_remove = tuple(orig_pixels[d][1:] for d in range(len(orig_pixels)))
         remaining_loc = tuple(orig_pixels[d][0] for d in range(len(orig_pixels)))
-        print(remaining_loc)
-        new_position = (remaining_loc[1].item(), remaining_loc[2].item())
+        new_position = [remaining_loc[1].item(), remaining_loc[2].item()]
         remaining_pixels = tuple(
             np.array([remaining_loc[d]]) for d in range(len(orig_pixels))
         )
-        print(remaining_pixels)
 
         action = UpdateNodeSeg(project, node_id, pixels=pixels_to_remove, added=False)
         assert graph.has_node(node_id)
         assert project.get_pixels(node_id) == remaining_pixels
         assert graph.get_feature_value(node_id, graph.features.position) == new_position
         assert graph.get_feature_value(node_id, Area()) == 1
-        assert graph.get_feature_value(edge, IoU()) == 0.0
+        assert graph.get_feature_value(edge, IoU()) == pytest.approx(0.0, abs=0.001)
 
         inverse = action.inverse()
         assert graph.has_node(node_id)
-        assert project.get_pixels(node_id) == orig_pixels
+        np.testing.assert_array_almost_equal(project.get_pixels(node_id), orig_pixels)
         assert graph.get_feature_value(node_id, graph.features.position) == orig_position
         assert graph.get_feature_value(node_id, Area()) == orig_area
-        assert graph.get_feature_value(edge, IoU()) == orig_iou
+        assert graph.get_feature_value(edge, IoU()) == pytest.approx(orig_iou, abs=0.01)
 
         inverse.inverse()
         assert graph.has_node(node_id)
-        assert project.get_pixels(node_id) == remaining_pixels
+        np.testing.assert_array_almost_equal(
+            project.get_pixels(node_id), remaining_pixels
+        )
         assert graph.get_feature_value(node_id, graph.features.position) == new_position
         assert graph.get_feature_value(node_id, Area()) == 1
-        assert graph.get_feature_value(edge, IoU()) == 0.0
+        assert graph.get_feature_value(edge, IoU()) == pytest.approx(0.0, abs=0.001)

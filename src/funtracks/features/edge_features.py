@@ -33,7 +33,7 @@ class IoU(Feature):
             iou = 0.0
         else:
             assert len(ious) == 1
-            iou = ious[0]
+            _, _, iou = ious[0]
         return iou
 
 
