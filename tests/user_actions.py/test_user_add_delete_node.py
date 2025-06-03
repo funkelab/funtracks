@@ -6,7 +6,7 @@ from funtracks import NxGraph, Project, TrackingGraph
 from funtracks.features import FeatureSet
 from funtracks.features.node_features import Area
 from funtracks.params import ProjectParams
-from funtracks.user_actions import UserAddNode
+from funtracks.user_actions import UserAddNode, UserDeleteNode
 
 
 @pytest.mark.parametrize("ndim", [3, 4])
@@ -81,25 +81,41 @@ class TestUserAddDeleteNode:
             assert graph.get_feature_value(node_id, Area()) == 1
         # TODO: error if node already exists?
 
-    # def test_user_delete_node(self, request, ndim, use_seg, use_graph):
-    #     project = self.get_project(request, ndim, use_seg, use_graph)
-    #     features = project.cand_graph.features
-    #     if ndim == 4 and use_seg:
-    #         for feature in features._features:
-    #             if isinstance(feature, Area):
-    #                 area_feature = feature
-    #                 break
-    #         project.cand_graph.features._features.remove(area_feature)
-    #     node_id = 6
-    #     # track_id = 5
-    #     # time = 4
-    #     # position = [97.5, 97.5, 97.5] if ndim == 4 else [97.5, 97.5]
-    #     graph = project.cand_graph
-    #     assert graph.has_node(node_id)
-    #     action = DeleteNode(project, node_id)
-    #     assert not graph.has_node(node_id)
-    #     inverse = action.inverse()
-    #     assert graph.has_node(node_id)
-    #     inverse.inverse()
-    #     assert not graph.has_node(node_id)
-    #     # TODO: error if node doesn't exist?
+    def test_user_delete_node(self, request, ndim, use_seg):
+        project = self.get_project(request, ndim, use_seg)
+        features = project.cand_graph.features
+        if ndim == 4 and use_seg:
+            for feature in features._features:
+                if isinstance(feature, Area):
+                    area_feature = feature
+                    break
+            project.cand_graph.features._features.remove(area_feature)
+        # delete node in middle of track. Should skip-connect 3 and 5 with span 3
+        node_id = 4
+
+        graph: TrackingGraph = project.cand_graph
+        assert graph.has_node(node_id)
+        assert graph.has_edge((3, node_id))
+        assert graph.has_edge((node_id, 5))
+        assert not graph.has_edge((3, 5))
+
+        action = UserDeleteNode(project, node_id)
+        assert not graph.has_node(node_id)
+        assert not graph.has_edge((3, node_id))
+        assert not graph.has_edge((node_id, 5))
+        assert graph.has_edge((3, 5))
+        assert graph.get_feature_value((3, 5), graph.features.frame_span) == 3
+
+        inverse = action.inverse()
+        assert graph.has_node(node_id)
+        assert graph.has_edge((3, node_id))
+        assert graph.has_edge((node_id, 5))
+        assert not graph.has_edge((3, 5))
+
+        inverse.inverse()
+        assert not graph.has_node(node_id)
+        assert not graph.has_edge((3, node_id))
+        assert not graph.has_edge((node_id, 5))
+        assert graph.has_edge((3, 5))
+        assert graph.get_feature_value((3, 5), graph.features.frame_span) == 3
+        # TODO: error if node doesn't exist?
