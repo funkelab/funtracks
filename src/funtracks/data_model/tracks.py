@@ -92,6 +92,12 @@ class Tracks:
         else:
             return np.array(self.graph.out_degree())
 
+    def predecessors(self, node: int) -> list[int]:
+        return list(self.graph.predecessors(node))
+
+    def successors(self, node: int) -> list[int]:
+        return list(self.graph.successors(node))
+
     def get_positions(
         self, nodes: Iterable[Node], incl_time: bool = False
     ) -> np.ndarray:
