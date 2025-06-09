@@ -41,11 +41,10 @@ class Project:
         else:
             # make a node only cand graph
             self.cand_graph = nodes_from_segmentation(self.segmentation)
-        self._solution = self.cand_graph.get_solution()
 
     @property
     def solution(self):
-        return self._solution
+        return self.cand_graph.get_solution()
 
     def save(self, path):
         # solution is stored as an attribute on cand_graph

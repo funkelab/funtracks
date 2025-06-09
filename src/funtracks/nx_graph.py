@@ -147,22 +147,10 @@ class NxGraphView(NxGraph):
         return len(self.successors(node))
 
     def add_edge(self, edge):
-        # add edge to this solution view
-        self._edges.add(edge)
+        raise NotImplementedError()
 
     def add_node(self, node):
-        print(self._nodes)
-        # add node to this solution view
-        self._nodes.add(node)
-
-    def remove_edge(self, edge):
-        # remove edge from this solution view
-        self._edges.remove(edge)
-
-    def remove_node(self, node):
-        print(self._nodes)
-        # remove node from this solution view
-        self._nodes.remove(node)
+        raise NotImplementedError()
 
     def get_elements_with_feature(self, feature, value):
         all_elements = super().get_elements_with_feature(feature, value)
