@@ -94,8 +94,7 @@ class Project:
         self.segmentation[pixels] = value
 
     def get_next_track_id(self) -> int:
-        # TODO
-        raise NotImplementedError()
+        return self.cand_graph.get_next_track_id()
 
     def get_next_node_id(self) -> int:
         # TODO

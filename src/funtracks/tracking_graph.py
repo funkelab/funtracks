@@ -39,6 +39,9 @@ class TrackingGraph(GraphInterface):
     def __init__(self, injected_cls, graph, features: FeatureSet):
         super().__init__(graph)
         self.features = features
+        track_ids = [self.get_track_id(node) for node in self.nodes]
+        track_ids = [tid if tid is not None else 0 for tid in track_ids]
+        self.max_track_id: int | None = max(track_ids)  # will be 0 if no track
 
     # Getters
     def get_positions(self, nodes):
@@ -121,3 +124,8 @@ class TrackingGraph(GraphInterface):
             if not feature.computed and feature not in features and not feature.required:
                 features[feature] = feature.default_value
         super().add_node(node, features)
+
+    def get_next_track_id(self) -> int:
+        """Return the next available track_id and update self.max_track_id"""
+        self.max_track_id = self.max_track_id + 1
+        return self.max_track_id
