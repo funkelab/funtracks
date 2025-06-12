@@ -5,17 +5,19 @@ from collections import defaultdict
 from typing import TYPE_CHECKING, Any
 
 import geff.networkx
+import numpy as np
 import zarr
 from scipy.spatial import KDTree
 from tqdm import tqdm
 
-from .features.feature_set import FeatureSet
+from .features import FeatureSet
 from .nx_graph import NxGraph
 from .params.cand_graph_params import CandGraphParams
 from .tracking_graph import TrackingGraph
 
 if TYPE_CHECKING:
     from pathlib import Path
+
 logger = logging.getLogger(__name__)
 
 
@@ -39,7 +41,6 @@ class CandGraph(TrackingGraph):
             self.remove_cand_edges()
         elif value > prev:
             for span in range(prev + 1, value + 1):
-                print(span)
                 self.add_cand_edges(span)
 
     def remove_cand_edges(self):
@@ -63,14 +64,55 @@ class CandGraph(TrackingGraph):
         for span in range(1, self.params.max_frame_span + 1):
             self.add_cand_edges(span)
 
+    def get_candidate_edges(self, node) -> list[tuple[tuple[int, int], dict]]:
+        time = self.get_time(node)
+        edges = []
+        for frame in range(
+            time - self.params.max_frame_span - 1, time + self.params.max_frame_span + 1
+        ):
+            if frame == time:
+                continue
+            edges.extend(self.get_cand_edges_for_node(node, frame))
+        return edges
+
+    def get_cand_edges_for_node(
+        self, node, target_frame
+    ) -> list[tuple[tuple[int, int], dict]]:
+        time = self.get_time(node)
+        pos = self.get_position(node)
+        edges = []
+        frame_span = (
+            target_frame - time
+        )  # positive if node is source, negative if node is target
+        if frame_span == 0:
+            logger.warning(
+                f"Can't initialize edges from node {node} to target frame {target_frame}: node is in the same frame. Skipping."
+            )
+            return
+        potential_links = self.get_elements_with_feature(self.features.time, target_frame)
+        if len(potential_links) > 0:
+            potential_locs = self.get_positions(potential_links)
+            start_kdtree = KDTree(potential_locs)
+            indices = start_kdtree.query_ball_point(pos, r=self.params.max_move_distance)
+            for idx in indices:
+                endpoint_loc = potential_locs[idx]
+                distance = np.linalg.norm(np.array(endpoint_loc) - np.array(pos))
+                endpoint_id = potential_links[idx]
+                assert self.has_node(endpoint_id)
+                edge = (endpoint_id, node) if frame_span < 0 else (node, endpoint_id)
+                if not self.has_edge(edge):
+                    features = {
+                        self.features.frame_span: frame_span,
+                        self.features.distance: distance,
+                    }
+                    edges.append((edge, features))
+        return edges
+
     def add_cand_edges(self, frame_span):
-        # TODO: when we add a new node, need to add the candidate edges and compute features
-        logger.info("Extracting candidate edges")
         node_frame_dict: dict[int, list[Any]] = defaultdict(list)
         for node in self.nodes:
             time = self.get_time(node)
             node_frame_dict[time].append(node)
-        # mapping from time frame to kdtree (node ids same as in node frame dict)
         kdtree_dict: dict[int, KDTree] = {}
 
         frames = sorted(node_frame_dict.keys())
@@ -105,13 +147,6 @@ class CandGraph(TrackingGraph):
             start_ids = end_ids
             start_kdtree = end_kdtree
             del kdtree_dict[start_frame]
-
-    def get_solution(self) -> TrackingGraph:
-        selected_nodes = self.get_elements_with_feature(self.features.node_selected, True)
-        selected_edges = self.get_elements_with_feature(self.features.edge_selected, True)
-        # can't add or remove edges but can change attributes in a networkx subgraph
-        subgraph = self.subgraph(selected_nodes, selected_edges)
-        return TrackingGraph(self._injected_cls, subgraph, self.features)
 
     def save(self, path: Path):
         geff.networkx.write(

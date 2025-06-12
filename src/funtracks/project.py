@@ -139,6 +139,11 @@ class Project:
         """
         if self.segmentation is None:
             raise ValueError("Cannot set pixels when segmentation is None")
+        if len(self.segmentation.lazy_ops) > 0:
+            raise RuntimeError(
+                "Segmentation has lazy operations which is not compatible with "
+                "fancy indexing: please remove lazy operations from your funlib.persistence.Array"
+            )
         self.segmentation[pixels] = value
 
     def get_next_track_id(self) -> int:

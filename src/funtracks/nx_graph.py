@@ -98,8 +98,6 @@ class NxGraph(GraphInterface):
         return self._graph.has_node(node)
 
     def has_edge(self, edge: tuple[int, int]) -> bool:
-        print(edge, self._graph.edges())
-        print(self._graph.has_edge(*edge))
         return self._graph.has_edge(*edge)
 
     def out_degree(self, node: int) -> int:
@@ -115,7 +113,7 @@ class NxGraph(GraphInterface):
 class NxGraphView(NxGraph):
     """Filters the view of the graph to only the provided nodes and edges."""
 
-    def __init__(self, graph, nodes, edges):
+    def __init__(self, graph: nx.DiGraph, nodes, edges):
         super().__init__(graph)
         self._nodes = set(nodes)
         self._edges = set(edges)

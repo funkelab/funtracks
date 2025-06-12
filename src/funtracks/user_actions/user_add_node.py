@@ -24,6 +24,8 @@ class UserAddNode(ActionGroup):
         attributes[features.node_selected] = True
         attributes[features.node_selection_pin] = True
         self.actions.append(AddNode(project, node, attributes, pixels))
+        for edge, features in project.cand_graph.get_candidate_edges(node):
+            self.actions.append(AddEdge(project, edge, features))
         track_id = attributes[self.project.cand_graph.features.track_id]
         if track_id is not None:
             time = self.project.cand_graph.get_time(node)

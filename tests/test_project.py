@@ -122,3 +122,18 @@ class TestProjectUpdateSeg:
 
         retrieved = project.get_pixels(10)
         np.testing.assert_array_equal(retrieved, pixels)
+
+    def test_get_set_pixels_lazy(self, request, ndim):
+        project = self.get_project(request, ndim)
+        # note: setting pixels with fancy indexing currently not supported with
+        # lazy operations
+        project.segmentation.lazy_op(np.s_[:])
+        # set pixel [0, 0, 0, <0>] and [0, 1, 0, <0>] to 10
+        pixels = tuple(np.array([0, 0]) for _ in range(ndim))
+        pixels[1][1] = 1
+        value = 10
+        with pytest.raises(
+            RuntimeError,
+            match="Segmentation has lazy operations which is not compatible with",
+        ):
+            project.set_pixels(pixels, value)

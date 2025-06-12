@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import numpy as np
+
 from ..actions._base import ActionGroup
 from ..actions.add_delete_edge import AddEdge, DeleteEdge
 from ..actions.add_delete_node import DeleteNode
@@ -11,6 +13,7 @@ class UserDeleteNode(ActionGroup):
         self,
         project: Project,
         node: int,
+        pixels: None | tuple[np.ndarray, ...] = None,
     ):
         super().__init__(project, actions=[])
         # delete adjacent edges
@@ -28,6 +31,6 @@ class UserDeleteNode(ActionGroup):
                 self.actions.append(AddEdge(project, (pred, succ), {}))
 
         # delete node
-        self.actions.append(DeleteNode(project, node))
+        self.actions.append(DeleteNode(project, node, pixels=pixels))
 
         # TODO: relabel track ids if necessary (delete one child of division)

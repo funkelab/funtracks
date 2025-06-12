@@ -69,4 +69,3 @@ class DeleteEdge(TracksAction):
         # features = self.project.cand_graph.features
         # self.project.cand_graph.set_feature_value(self.edge, features.edge_selection_pin, False)
         self.project.cand_graph.remove_edge(self.edge)
-        # TODO: trigger updates of solution, track id, etc.
