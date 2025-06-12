@@ -7,14 +7,10 @@ import networkx as nx
 import numpy as np
 
 from ..data_model import SolutionTracks, Tracks
-from ..project import Project
 
 GRAPH_FILE = "graph.json"
 SEG_FILE = "seg.npy"
 ATTRS_FILE = "attrs.json"
-
-def save_project(project: Project, directory: Path):
-
 
 
 def save_tracks(tracks: Tracks, directory: Path):

@@ -1,15 +1,22 @@
-import json
+from __future__ import annotations
+
 import logging
 from importlib.metadata import version
+from typing import TYPE_CHECKING
 
 import funlib.persistence as fp
 import numpy as np
+import zarr
 from psygnal import Signal
 
-from funtracks.params.project_params import ProjectParams
+from funtracks.cand_graph import CandGraph
+from funtracks.params import CandGraphParams, ProjectParams, SolverParams
 
 from .cand_graph_utils import nodes_from_segmentation
 from .tracking_graph import TrackingGraph
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -30,35 +37,76 @@ class Project:
             raise ValueError(
                 "At least one of segmentation or cand graph must be provided"
             )
-
         self.name = name
         self.params = project_params
+        self.solver_params = SolverParams()
         self.raw = raw
         self.segmentation = segmentation
 
+        cand_graph_params = CandGraphParams()
         if cand_graph is not None:
-            self.cand_graph = cand_graph
+            self.cand_graph = CandGraph.from_tracking_graph(cand_graph, cand_graph_params)
         else:
             # make a node only cand graph
-            self.cand_graph = nodes_from_segmentation(self.segmentation)
+            self.cand_graph = nodes_from_segmentation(
+                self.segmentation, cand_graph_params
+            )
 
     @property
     def solution(self):
+        """Re-computing the solution every time you access it is a potential area
+        of inefficiency that could be improved if it bottlenecks performance
+        """
         return self.cand_graph.get_solution()
 
-    def save(self, path):
+    def _save_fp_array(self, path: Path, array: fp.Array):
+        raw_ds = fp.prepare_ds(
+            path,
+            shape=array.shape,
+            dtype=array.dtype,
+            offset=array.offset,
+            voxel_size=array.voxel_size,
+            axis_names=array.axis_names,
+            units=array.units,
+            types=array.types,
+        )
+        raw_ds[:] = array.data.compute()
+
+    def save(self, path: Path):
+        zroot = zarr.open(path, mode="a")
+        metadata = {"name": self.name, "version": version("funtracks")}
+        params = self.params.model_dump(mode="json")
+        zroot.attrs["project_metadata"] = metadata
+        zroot.attrs["project_params"] = params
+        zroot.attrs["solver_params"] = self.solver_params.model_dump(mode="json")
         # solution is stored as an attribute on cand_graph
         if self.cand_graph is not None:
             self.cand_graph.save(path / "cand_graph")
-        if self.solution is not None:
-            self.solution.save(path)
-        self.params.save(path / "params.json")
-        self._save_metadata(path / "metadata.json")
+        if self.raw is not None and "raw" not in zroot.group_keys():
+            self._save_fp_array(path / "raw", self.raw)
+        if self.segmentation is not None and "seg" not in zroot.group_keys():
+            self._save_fp_array(path / "seg", self.segmentation)
 
-    def _save_metadata(self, path):
-        metadata = {"name": self.name, "version": version("motile_tracker")}
-        with open(path, "w") as f:
-            json.dump(metadata, f)
+    @classmethod
+    def load(cls, path: Path):
+        zroot = zarr.open(path, mode="a")
+        if "cand_graph" in zroot.group_keys():
+            cand_graph = CandGraph.load(path / "cand_graph")
+        else:
+            cand_graph = None
+        metadata = zroot.attrs["project_metadata"]
+        params_dict = zroot.attrs["project_params"]
+        params = ProjectParams(**params_dict)
+        name = metadata["name"]
+        if "raw" in zroot.array_keys():
+            raw = fp.open_ds(path / "raw")
+        else:
+            raw = None
+        if "seg" in zroot.array_keys():
+            seg = fp.open_ds(path / "seg")
+        else:
+            seg = None
+        return Project(name, params, raw=raw, segmentation=seg, cand_graph=cand_graph)
 
     def get_pixels(self, node: int) -> tuple[np.ndarray, ...] | None:
         """Get the pixels corresponding to each node in the nodes list.

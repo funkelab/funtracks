@@ -2,21 +2,26 @@ from __future__ import annotations
 
 import logging
 from collections import defaultdict
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
+import geff.networkx
+import zarr
 from scipy.spatial import KDTree
 from tqdm import tqdm
 
+from .features.feature_set import FeatureSet
+from .nx_graph import NxGraph
 from .params.cand_graph_params import CandGraphParams
 from .tracking_graph import TrackingGraph
 
+if TYPE_CHECKING:
+    from pathlib import Path
 logger = logging.getLogger(__name__)
 
 
 class CandGraph(TrackingGraph):
     def __init__(self, injected_cls, graph, features, params: CandGraphParams):
         super().__init__(injected_cls, graph, features)
-        self.injected_cls = injected_cls
         self.params = params
 
     def update_max_move_distance(self, value: float):
@@ -106,4 +111,31 @@ class CandGraph(TrackingGraph):
         selected_edges = self.get_elements_with_feature(self.features.edge_selected, True)
         # can't add or remove edges but can change attributes in a networkx subgraph
         subgraph = self.subgraph(selected_nodes, selected_edges)
-        return TrackingGraph(self.injected_cls, subgraph, self.features)
+        return TrackingGraph(self._injected_cls, subgraph, self.features)
+
+    def save(self, path: Path):
+        geff.networkx.write(
+            self._graph, position_attr=self.features.position.attr_name, path=path
+        )
+        attrs = zarr.open(path).attrs
+        attrs["cand_graph_params"] = self.params.model_dump(mode="json")
+        attrs["features"] = self.features.dump_json()
+
+    @classmethod
+    def load(cls, path: Path) -> CandGraph:
+        nx_graph = geff.networkx.read(path)
+        attrs = zarr.open(path).attrs
+        cand_graph_params_dict = attrs["cand_graph_params"]
+        features_json = attrs["features"]
+        features = FeatureSet.from_json(features_json)
+        params = CandGraphParams(**cand_graph_params_dict)
+        return CandGraph(NxGraph, nx_graph, features, params)
+
+    @classmethod
+    def from_tracking_graph(cls, tracking_graph: TrackingGraph, params: CandGraphParams):
+        return CandGraph(
+            tracking_graph._injected_cls,
+            tracking_graph._graph,
+            tracking_graph.features,
+            params,
+        )

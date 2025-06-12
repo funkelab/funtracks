@@ -39,6 +39,7 @@ class TrackingGraph(GraphInterface):
     def __init__(self, injected_cls, graph, features: FeatureSet):
         super().__init__(graph)
         self.features = features
+        self._injected_cls = injected_cls
         track_ids = [self.get_track_id(node) for node in self.nodes]
         track_ids = [tid if tid is not None else 0 for tid in track_ids]
         self.max_track_id: int | None = max(track_ids)  # will be 0 if no track

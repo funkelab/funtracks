@@ -35,6 +35,7 @@ dependencies =[
     "motile-toolbox",
     "motile",
     "funlib.persistence",
+    "geff @ git+https://github.com/live-image-tracking-tools/geff.git@fef5c6c96a9c84804956510038bb951e82d49ced",
 ]
 [project.optional-dependencies]
 testing =["pytest", "pytest-cov"]

@@ -108,3 +108,33 @@ class FeatureSet:
         for feature in self.edge_features:
             if not feature.computed and feature.required:
                 assert feature in features, f"Required feature {feature} not provided"
+
+    def dump_json(self) -> dict:
+        return {"features": [feat.model_dump(mode="json") for feat in self._features]}
+
+    @classmethod
+    def from_json(cls, json_dict) -> FeatureSet:
+        features_list = [Feature(**feat) for feat in json_dict["features"]]
+        (
+            time,
+            position,
+            track_id,
+            distance,
+            frame_span,
+            node_selected,
+            edge_selected,
+            node_selection_pin,
+            edge_selection_pin,
+        ) = features_list[0:9]
+        features = FeatureSet.__new__(FeatureSet)
+        features.time = time
+        features.position = position
+        features.track_id = track_id
+        features.distance = distance
+        features.frame_span = frame_span
+        features.node_selected = node_selected
+        features.edge_selected = edge_selected
+        features.node_selection_pin = node_selection_pin
+        features.edge_selection_pin = edge_selection_pin
+        features._features = features_list
+        return features
