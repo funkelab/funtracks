@@ -2,6 +2,7 @@ from collections import Counter
 
 import funlib.persistence as fp
 import networkx as nx
+import numpy as np
 import pytest
 
 from funtracks import NxGraph, Project, TrackingGraph
@@ -26,7 +27,7 @@ def test_invalid_init():
         (True, True),
     ],
 )
-class TestProject:
+class TestProjectInit:
     def get_seg(self, request, ndim, use_seg):
         seg_name = "segmentation_2d" if ndim == 3 else "segmentation_3d"
         if use_seg:
@@ -78,3 +79,46 @@ class TestProject:
                 assert data["area"] == gt_graph.nodes[node]["area"]
             assert data["pos"] == gt_graph.nodes[node]["pos"]
             assert data["time"] == gt_graph.nodes[node]["time"]
+
+
+@pytest.mark.parametrize("ndim", [3, 4])
+class TestProjectUpdateSeg:
+    def get_seg(self, request, ndim):
+        seg_name = "segmentation_2d" if ndim == 3 else "segmentation_3d"
+        segmentation = request.getfixturevalue(seg_name)
+        axis_names = ["t", "z", "y", "x"] if ndim == 4 else ["t", "y", "x"]
+        return fp.Array(segmentation, axis_names=axis_names)
+
+    def get_project(self, request, ndim):
+        return Project(
+            "test_seg", ProjectParams(), segmentation=self.get_seg(request, ndim)
+        )
+
+    def test_get_set_pixels(self, request, ndim):
+        project = self.get_project(request, ndim)
+
+        # set pixel [0, 0, 0, <0>] and [0, 1, 0, <0>] to 10
+        pixels = tuple(np.array([0, 0]) for _ in range(ndim))
+        pixels[1][1] = 1
+        value = 10
+
+        # check that there are no 10s before we change
+        assert np.count_nonzero(project.segmentation.data == value).compute() == 0
+        project.set_pixels(pixels, value)
+
+        # check that no other pixels were changed
+        assert np.count_nonzero(project.segmentation.data == value).compute() == 2
+
+        first_pixel = project.segmentation[0][0][0]
+        second_pixel = project.segmentation[0][1][0]
+        if ndim == 4:
+            first_pixel = first_pixel[0]
+            second_pixel = second_pixel[0]
+        assert first_pixel == value
+        assert second_pixel == value
+
+        features = project.cand_graph.features
+        project.cand_graph.add_node(10, {features.time: 0})
+
+        retrieved = project.get_pixels(10)
+        np.testing.assert_array_equal(retrieved, pixels)
