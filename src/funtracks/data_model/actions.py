@@ -142,7 +142,7 @@ class DeleteNodes(TracksAction):
         self.attributes = {
             NodeAttr.TIME.value: self.tracks.get_times(nodes),
             self.tracks.pos_attr: self.tracks.get_positions(nodes),
-            NodeAttr.TRACK_ID.value: self.tracks._get_nodes_attr(
+            NodeAttr.TRACK_ID.value: self.tracks.get_nodes_attr(
                 nodes, NodeAttr.TRACK_ID.value
             ),
         }
@@ -243,7 +243,7 @@ class UpdateNodeAttrs(TracksAction):
                 raise ValueError(f"Cannot update attribute {attr} manually")
         self.nodes = nodes
         self.prev_attrs = {
-            attr: self.tracks._get_nodes_attr(nodes, attr) for attr in attrs
+            attr: self.tracks.get_nodes_attr(nodes, attr) for attr in attrs
         }
         self.new_attrs = attrs
         self._apply()
