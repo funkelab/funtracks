@@ -18,7 +18,7 @@
       
       
       <link rel="icon" href="../../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.11">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.14">
     
     
       
@@ -26,7 +26,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../../assets/stylesheets/main.4af4bdda.min.css">
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.342714a4.min.css">
       
         
         <link rel="stylesheet" href="../../../../assets/stylesheets/palette.06af60db.min.css">
@@ -2075,7 +2075,7 @@ operation for setting involved pixels to zero</p>
     <span class="bp">self</span><span class="o">.</span><span class="n">attributes</span> <span class="o">=</span> <span class="p">{</span>
         <span class="n">NodeAttr</span><span class="o">.</span><span class="n">TIME</span><span class="o">.</span><span class="n">value</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">tracks</span><span class="o">.</span><span class="n">get_times</span><span class="p">(</span><span class="n">nodes</span><span class="p">),</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">tracks</span><span class="o">.</span><span class="n">pos_attr</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">tracks</span><span class="o">.</span><span class="n">get_positions</span><span class="p">(</span><span class="n">nodes</span><span class="p">),</span>
-        <span class="n">NodeAttr</span><span class="o">.</span><span class="n">TRACK_ID</span><span class="o">.</span><span class="n">value</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">tracks</span><span class="o">.</span><span class="n">_get_nodes_attr</span><span class="p">(</span>
+        <span class="n">NodeAttr</span><span class="o">.</span><span class="n">TRACK_ID</span><span class="o">.</span><span class="n">value</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">tracks</span><span class="o">.</span><span class="n">get_nodes_attr</span><span class="p">(</span>
             <span class="n">nodes</span><span class="p">,</span> <span class="n">NodeAttr</span><span class="o">.</span><span class="n">TRACK_ID</span><span class="o">.</span><span class="n">value</span>
         <span class="p">),</span>
     <span class="p">}</span>
@@ -2452,7 +2452,7 @@ for the given nodes.</p>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cannot update attribute </span><span class="si">{</span><span class="n">attr</span><span class="si">}</span><span class="s2"> manually&quot;</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span> <span class="o">=</span> <span class="n">nodes</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">prev_attrs</span> <span class="o">=</span> <span class="p">{</span>
-        <span class="n">attr</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">tracks</span><span class="o">.</span><span class="n">_get_nodes_attr</span><span class="p">(</span><span class="n">nodes</span><span class="p">,</span> <span class="n">attr</span><span class="p">)</span> <span class="k">for</span> <span class="n">attr</span> <span class="ow">in</span> <span class="n">attrs</span>
+        <span class="n">attr</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">tracks</span><span class="o">.</span><span class="n">get_nodes_attr</span><span class="p">(</span><span class="n">nodes</span><span class="p">,</span> <span class="n">attr</span><span class="p">)</span> <span class="k">for</span> <span class="n">attr</span> <span class="ow">in</span> <span class="n">attrs</span>
     <span class="p">}</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">new_attrs</span> <span class="o">=</span> <span class="n">attrs</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_apply</span><span class="p">()</span>
@@ -2915,10 +2915,10 @@ with the same track id as this node will be updated.</p>
     
     
       
-      <script id="__config" type="application/json">{"base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.f8cc74c7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
     
     
-      <script src="../../../../assets/javascripts/bundle.c8b220af.min.js"></script>
+      <script src="../../../../assets/javascripts/bundle.13a4f30d.min.js"></script>
       
     
   </body>
