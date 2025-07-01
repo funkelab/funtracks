@@ -90,3 +90,7 @@ class GraphInterface(abc.ABC):
     @abc.abstractmethod
     def in_degree(self, node: int) -> int:
         raise NotImplementedError()
+
+    @abc.abstractmethod
+    def __len__(self) -> int:
+        raise NotImplementedError()

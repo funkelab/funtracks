@@ -109,6 +109,9 @@ class NxGraph(GraphInterface):
     def subgraph(self, nodes, edges):
         return NxGraphView(self._graph, nodes, edges)
 
+    def __len__(self):
+        return len(self._graph)
+
 
 class NxGraphView(NxGraph):
     """Filters the view of the graph to only the provided nodes and edges."""
