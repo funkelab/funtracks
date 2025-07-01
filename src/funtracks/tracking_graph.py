@@ -83,8 +83,8 @@ class TrackingGraph(GraphInterface):
         self.set_feature_value(edge, self.features.distance, distance)
 
     def get_solution(self):
-        selected_nodes = self.get_elements_with_feature(feature=self.features.node_selected, value=True)
-        selected_edges = self.get_elements_with_feature(feature=self.features.edge_selected, value=True)
+        selected_nodes = self.get_elements_with_feature(self.features.node_selected, True)
+        selected_edges = self.get_elements_with_feature(self.features.edge_selected, True)
         return self.subgraph(selected_nodes, selected_edges)
 
     def get_track_neighbors(
