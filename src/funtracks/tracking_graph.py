@@ -42,7 +42,7 @@ class TrackingGraph(GraphInterface):
         self._injected_cls = injected_cls
         track_ids = [self.get_track_id(node) for node in self.nodes]
         track_ids = [tid if tid is not None else 0 for tid in track_ids]
-        self.max_track_id: int | None = max(track_ids)  # will be 0 if no track
+        self.max_track_id: int | None = max(track_ids, default=0)  # will be 0 if no track
 
     # Getters
     def get_positions(self, nodes):
@@ -83,8 +83,8 @@ class TrackingGraph(GraphInterface):
         self.set_feature_value(edge, self.features.distance, distance)
 
     def get_solution(self):
-        selected_nodes = self.get_elements_with_feature(self.features.node_selected, True)
-        selected_edges = self.get_elements_with_feature(self.features.edge_selected, True)
+        selected_nodes = self.get_elements_with_feature(feature=self.features.node_selected, value=True)
+        selected_edges = self.get_elements_with_feature(feature=self.features.edge_selected, value=True)
         return self.subgraph(selected_nodes, selected_edges)
 
     def get_track_neighbors(
