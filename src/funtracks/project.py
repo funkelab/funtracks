@@ -31,6 +31,7 @@ class Project:
         raw: fp.Array | None = None,
         segmentation: fp.Array | None = None,
         cand_graph: TrackingGraph | None = None,
+        zarr_path: Path | None = None,
     ):
         # one of segmentation and points
         if segmentation is None and cand_graph is None:
@@ -42,6 +43,7 @@ class Project:
         self.solver_params = SolverParams()
         self.raw = raw
         self.segmentation = segmentation
+        self.zarr_path = zarr_path
 
         cand_graph_params = CandGraphParams()
         if cand_graph is not None:
@@ -72,8 +74,23 @@ class Project:
         )
         raw_ds[:] = array.data.compute()
 
-    def save(self, path: Path):
-        zroot = zarr.open(path, mode="a")
+    def save(self, zarr_path: Path | None = None):
+        """Save the project to the given path. If no path is provided, will try to save
+        to the path stored in the project. Path should be a zarr.
+
+        Args:
+            path (Path | None, optional): The path to save the project in. Defaults to
+                None, which then uses the path attribute of the project.
+
+        Raises:
+            ValueError: If the project has no path attribute and no path is provided.
+        """
+        # TODO: check for valid directory
+        if self.zarr_path is None and zarr_path is None:
+            raise ValueError("Must provide a path to save the project in")
+        elif zarr_path is None:
+            zarr_path = self.zarr_path
+        zroot = zarr.open(zarr_path, mode="a")
         metadata = {"name": self.name, "version": version("funtracks")}
         params = self.params.model_dump(mode="json")
         zroot.attrs["project_metadata"] = metadata
@@ -81,11 +98,11 @@ class Project:
         zroot.attrs["solver_params"] = self.solver_params.model_dump(mode="json")
         # solution is stored as an attribute on cand_graph
         if self.cand_graph is not None:
-            self.cand_graph.save(path / "cand_graph")
+            self.cand_graph.save(zarr_path / "cand_graph")
         if self.raw is not None and "raw" not in zroot.group_keys():
-            self._save_fp_array(path / "raw", self.raw)
+            self._save_fp_array(zarr_path / "raw", self.raw)
         if self.segmentation is not None and "seg" not in zroot.group_keys():
-            self._save_fp_array(path / "seg", self.segmentation)
+            self._save_fp_array(zarr_path / "seg", self.segmentation)
 
     @classmethod
     def load(cls, path: Path):
