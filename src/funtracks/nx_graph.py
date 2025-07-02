@@ -121,6 +121,14 @@ class NxGraphView(NxGraph):
         self._nodes = set(nodes)
         self._edges = set(edges)
 
+    @property
+    def nodes(self):
+        return self._nodes
+
+    @property
+    def edges(self):
+        return self._edges
+
     def predecessors(self, node):
         return [
             pred
@@ -175,3 +183,6 @@ class NxGraphView(NxGraph):
         if ids not in elements:
             raise KeyError(f"{ids} not in subgraph")
         return super().get_feature_values(ids, feature)
+
+    def __len__(self):
+        return len(self._nodes)
