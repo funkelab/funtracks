@@ -44,6 +44,22 @@ class Project:
         self.raw = raw
         self.segmentation = segmentation
         self.zarr_path = zarr_path
+        self.ndim: int
+        if self.raw is not None:
+            self.ndim = len(self.raw.physical_shape)
+        elif segmentation is not None:
+            self.ndim = len(self.segmentation.physical_shape)
+        else:
+            pos_feature = cand_graph.features.position
+            if isinstance(pos_feature.value_names, str):
+                if len(cand_graph) == 0:
+                    raise ValueError("Cannot infer ndim from empty data")
+                example_node = next(iter(cand_graph.nodes))
+                spatial_dims = len(cand_graph.get_position(example_node))
+            else:
+                spatial_dims = len(pos_feature.value_names)
+            # add 1 for time dimension
+            self.ndim = spatial_dims + 1
 
         cand_graph_params = CandGraphParams()
         if cand_graph is not None:
