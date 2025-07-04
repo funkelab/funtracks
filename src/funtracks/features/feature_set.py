@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Any
 from ._base import Feature, FeatureType
 from .edge_features import Distance, EdgeSelected, EdgeSelectionPin, FrameSpan, IoU
 from .node_features import (
-    Area,
     ComputedPosition,
     NodeSelected,
     NodeSelectionPin,
@@ -18,11 +17,11 @@ if TYPE_CHECKING:
     from ..actions._base import TracksAction
 
 
-def extra_features(ndim: int, seg: bool) -> list[Feature]:
-    feats = []
-    if seg:
-        feats.extend([Area(ndim=ndim), IoU()])
-    return feats
+# def extra_features(ndim: int, seg: bool) -> list[Feature]:
+#     feats = []
+#     if seg:
+#         feats.extend([Area(ndim=ndim), IoU()])
+#     return feats
 
 
 class FeatureSet:
@@ -68,8 +67,8 @@ class FeatureSet:
             self.edge_selection_pin,
         ]
 
-        for feat in extra_features(ndim, seg):
-            self.add_feature(feat)
+        # for feat in extra_features(ndim, seg):
+        #     self.add_feature(feat)
 
     @property
     def node_features(self):
@@ -90,7 +89,8 @@ class FeatureSet:
             existing_features = self.edge_features
 
         if feature.attr_name in [f.attr_name for f in existing_features]:
-            raise KeyError(f"Name {feature.attr_name} already in feature set")
+            return
+            # raise KeyError(f"Name {feature.attr_name} already in feature set")
         self._features.append(feature)
 
     def validate_new_node_features(self, features: dict[Feature, Any]):

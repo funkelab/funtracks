@@ -56,29 +56,6 @@ class ComputedPosition(Feature):
         pos = measure.centroid(seg, spacing=pos_scale).tolist()
         return pos
 
-
-class Area(Feature):
-    def __init__(self, ndim=3, attr_name=None):
-        super().__init__(
-            attr_name=attr_name if attr_name is not None else "area",
-            value_names="Area" if ndim == 3 else "Volume",
-            feature_type=FeatureType.NODE,
-            valid_ndim=(3, 4),
-            computed=True,
-            regionprops_name="area",
-        )
-
-    def update(self, project: Project, node: int) -> int:
-        time = project.cand_graph.get_time(node)
-        seg = project.segmentation[time] == node
-        voxel_size = project.segmentation.voxel_size
-        pos_scale = voxel_size[1:] if voxel_size is not None else None
-        area = np.sum(seg)
-        if pos_scale is not None:
-            area *= np.prod(pos_scale)
-        return area.tolist()
-
-
 class TrackID(Feature):
     def __init__(self, attr_name=None):
         super().__init__(

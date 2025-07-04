@@ -18,6 +18,7 @@ class Feature(BaseModel):
 
     attr_name: str  # where the attribute is stored on the graph
     # dtype :
+    display_name: str | None = None # name to display to the user
     value_names: str | list[str]  # the name of the values stored in the attribute
     feature_type: FeatureType
     valid_ndim: tuple[Literal[3, 4], ...]

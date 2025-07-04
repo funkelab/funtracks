@@ -10,6 +10,9 @@ from ._base import (
 )
 from .compute_ious import compute_ious
 
+import sys
+import inspect
+
 if TYPE_CHECKING:
     from ..project import Project
 
@@ -18,6 +21,7 @@ class IoU(Feature):
     def __init__(self, attr_name: str | None = None):
         super().__init__(
             attr_name=attr_name if attr_name is not None else "iou",
+            display_name="IoU",
             value_names="IoU",
             feature_type=FeatureType.EDGE,
             valid_ndim=(3, 4),
@@ -64,6 +68,7 @@ class Distance(Feature):
     def __init__(self, attr_name: str | None = None):
         super().__init__(
             attr_name=attr_name if attr_name is not None else "distance",
+            display_name="Distance",
             value_names="Distance",
             feature_type=FeatureType.EDGE,
             valid_ndim=(3, 4),
@@ -82,6 +87,7 @@ class FrameSpan(Feature):
     def __init__(self, attr_name: str | None = None):
         super().__init__(
             attr_name=attr_name if attr_name is not None else "span",
+            display_name="Frame span",
             value_names="Frame Span",
             feature_type=FeatureType.EDGE,
             valid_ndim=(3, 4),
@@ -93,3 +99,8 @@ class FrameSpan(Feature):
         source_time = project.cand_graph.get_time(source)
         target_time = project.cand_graph.get_time(target)
         return target_time - source_time
+
+edge_features = [
+    cls for name, cls in inspect.getmembers(sys.modules[__name__], inspect.isclass)
+    if issubclass(cls, Feature) and cls is not Feature and cls.__module__ == __name__
+]
