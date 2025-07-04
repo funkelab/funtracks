@@ -1,19 +1,17 @@
 from __future__ import annotations
 
+import inspect
+import sys
 from typing import TYPE_CHECKING
 
 import numpy as np
 
-import sys
-import inspect
+from funtracks.features.regionprops_extended import regionprops_extended
 
 from ._base import (
     Feature,
     FeatureType,
 )
-
-from funtracks.features.regionprops_extended import regionprops_extended
-
 
 if TYPE_CHECKING:
     from ..project import Project
@@ -58,7 +56,7 @@ class EllipsoidAxes(Feature):
         voxel_size = project.segmentation.voxel_size
         pos_scale = voxel_size[1:] if voxel_size is not None else None
         props = regionprops_extended(seg, spacing=pos_scale)
-        if props: 
+        if props:
             regionprop = props[0]
             # tolist gives floats/ints in the case of single items
             return getattr(regionprop, self.regionprops_name)
@@ -83,7 +81,7 @@ class Circularity(Feature):
         voxel_size = project.segmentation.voxel_size
         pos_scale = voxel_size[1:] if voxel_size is not None else None
         props = regionprops_extended(seg, spacing=pos_scale)
-        if props: 
+        if props:
             regionprop = props[0]
             # tolist gives floats/ints in the case of single items
             return getattr(regionprop, self.regionprops_name)
@@ -108,7 +106,7 @@ class Perimeter(Feature):
         voxel_size = project.segmentation.voxel_size
         pos_scale = voxel_size[1:] if voxel_size is not None else None
         props = regionprops_extended(seg, spacing=pos_scale)
-        if props: 
+        if props:
             regionprop = props[0]
             # tolist gives floats/ints in the case of single items
             return getattr(regionprop, self.regionprops_name)
@@ -130,7 +128,7 @@ class Intensity(Feature):
     def update(self, project: Project, node: int) -> int:
         time = project.cand_graph.get_time(node)
         seg = project.segmentation[time] == node
-        if len(project.raw.shape) > len(project.segmentation.shape): 
+        if len(project.raw.shape) > len(project.segmentation.shape):
             slc = [slice(None)] * project.raw.ndim
             slc[1] = time
             intensity_image = project.raw[tuple(slc)] if project.raw is not None else None
@@ -142,7 +140,7 @@ class Intensity(Feature):
             if intensity_image is not None:
                 mean_intensity = np.mean(intensity_image[seg])
                 return mean_intensity
-        
+
 
 measurement_features = [
     cls for name, cls in inspect.getmembers(sys.modules[__name__], inspect.isclass)

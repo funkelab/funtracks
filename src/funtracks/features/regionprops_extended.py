@@ -1,10 +1,8 @@
 import math
 
 import numpy as np
-import scipy.ndimage as spim
 from skimage.measure import marching_cubes, mesh_surface_area, regionprops
 from skimage.measure._regionprops import RegionProperties
-from skimage.morphology import ball
 
 
 class ExtendedRegionProperties(RegionProperties):
@@ -29,7 +27,7 @@ class ExtendedRegionProperties(RegionProperties):
 
             z, y, x = cell
 
-            # Center the coordinates and apply spacing 
+            # Center the coordinates and apply spacing
             z = (z - np.mean(z)) * self._spacing[0]
             y = (y - np.mean(y)) * self._spacing[1]
             x = (x - np.mean(x)) * self._spacing[2]
@@ -40,9 +38,9 @@ class ExtendedRegionProperties(RegionProperties):
             i_zz = np.sum(x ** 2 + y ** 2)
             i_xy = np.sum(x * y)
             i_xz = np.sum(x * z)
-            i_yz = np.sum(y * z)       
+            i_yz = np.sum(y * z)
             i = np.array([[i_xx, -i_xy, -i_xz], [-i_xy, i_yy, -i_yz], [-i_xz, -i_yz, i_zz]])
-            
+
             # Compute the eigenvalues and eigenvectors of the inertia tensor. The eigenvalues of the inertia tensor represent the principal moments of inertia, and the eigenvectors represent the directions of the principal axes.
             eig = np.linalg.eig(i)
             eigval = eig[0]
@@ -51,15 +49,15 @@ class ExtendedRegionProperties(RegionProperties):
             longaxis = np.where(np.min(eigval) == eigval)[0][0]
             shortaxis = np.where(np.max(eigval) == eigval)[0][0]
             midaxis = 0 if shortaxis != 0 and longaxis != 0 else 1 if shortaxis != 1 and longaxis != 1 else 2
-            
+
             # Calculate the lengths of the principal axes
             longr = math.sqrt(5.0 / 2.0 * (eigval[midaxis] + eigval[shortaxis] - eigval[longaxis]) / voxel_count)
             midr = math.sqrt(5.0 / 2.0 * (eigval[shortaxis] + eigval[longaxis] - eigval[midaxis]) / voxel_count)
             shortr = math.sqrt(5.0 / 2.0 * (eigval[longaxis] + eigval[midaxis] - eigval[shortaxis]) / voxel_count)
-            
+
             return (longr, midr, shortr)
-    
-        elif self._label_image.ndim == 2: 
+
+        elif self._label_image.ndim == 2:
             return (self.axis_major_length, self.axis_minor_length)
 
     @property
@@ -83,7 +81,7 @@ class ExtendedRegionProperties(RegionProperties):
             int: The number of pixels in the region.
         """
         return self.voxel_count
-    
+
     @property
     def surface_area(self):
         """

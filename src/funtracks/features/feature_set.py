@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from ._base import Feature, FeatureType
-from .edge_features import Distance, EdgeSelected, EdgeSelectionPin, FrameSpan, IoU
+from .edge_features import Distance, EdgeSelected, EdgeSelectionPin, FrameSpan
 from .node_features import (
     ComputedPosition,
     NodeSelected,

@@ -2,17 +2,18 @@ import logging
 
 import funlib.persistence as fp
 import networkx as nx
+import numpy as np
+import pandas as pd
 from tqdm import tqdm
 
-import pandas as pd
+from funtracks.features._base import Feature, FeatureType
+from funtracks.features.measurement_features import Intensity
+from funtracks.features.regionprops_extended import regionprops_extended
+
 from .cand_graph import CandGraph
 from .features.feature_set import FeatureSet
-from funtracks.features._base import Feature, FeatureType
 from .nx_graph import NxGraph
 from .params import CandGraphParams
-from funtracks.features.regionprops_extended import regionprops_extended
-import numpy as np 
-from funtracks.features.measurement_features import Intensity 
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +47,7 @@ def graph_from_points(
         }
 
         graph.add_node(_id + 1, **attrs)
-    
+
     return CandGraph(NxGraph, graph, feature_set, cand_graph_params)
 
 def graph_from_df(
@@ -90,11 +91,11 @@ def graph_from_df(
                 if n_channels == 1
                 else [f"Intensity_chan{chan}" for chan in range(n_channels)]
             )
-        if feature['include']: 
+        if feature['include']:
             feature_set.add_feature(feature["feature"])  # add the Feature instance from
         # the feature dict to the feature_set
 
-    graph = nx.DiGraph()       
+    graph = nx.DiGraph()
     for _, row in tqdm(df.iterrows(), total=len(df)):
         _id = int(row["id"])
         parent_id = row["parent_id"]
@@ -169,7 +170,7 @@ def graph_from_df(
                 f"Parent id {parent_id} of node {_id} not in graph yet"
             )
             graph.add_edge(parent_id, _id)
-      
+
     return CandGraph(NxGraph, graph, feature_set, cand_graph_params)
 
 
@@ -252,9 +253,9 @@ def graph_from_segmentation(
                         value = list(value)
                     attrs[feature.attr_name] = value
             graph.add_node(node_id, **attrs)
- 
+
     return CandGraph(NxGraph, graph, feature_set, cand_graph_params)
-    
+
 
 def nodes_from_segmentation(segmentation: fp.Array, params: CandGraphParams) -> CandGraph:
     """Extract candidate nodes from a segmentation.
