@@ -109,6 +109,9 @@ class NxGraph(GraphInterface):
     def subgraph(self, nodes, edges):
         return NxGraphView(self._graph, nodes, edges)
 
+    def __len__(self):
+        return len(self._graph)
+
 
 class NxGraphView(NxGraph):
     """Filters the view of the graph to only the provided nodes and edges."""
@@ -117,6 +120,14 @@ class NxGraphView(NxGraph):
         super().__init__(graph)
         self._nodes = set(nodes)
         self._edges = set(edges)
+
+    @property
+    def nodes(self):
+        return self._nodes
+
+    @property
+    def edges(self):
+        return self._edges
 
     def predecessors(self, node):
         return [
@@ -172,3 +183,6 @@ class NxGraphView(NxGraph):
         if ids not in elements:
             raise KeyError(f"{ids} not in subgraph")
         return super().get_feature_values(ids, feature)
+
+    def __len__(self):
+        return len(self._nodes)

@@ -271,7 +271,9 @@ def nodes_from_segmentation(segmentation: fp.Array, params: CandGraphParams) -> 
     spacing = tuple(scale[1:]) if scale is not None else None
 
     features = FeatureSet(ndim, seg=True)
-    for t in tqdm(range(len(segmentation.data))):
+    for t in tqdm(
+        range(len(segmentation.data)), desc="Extracting graph nodes from segmentation"
+    ):
         segs = segmentation[t]
         props = regionprops_extended(segs, spacing=spacing)
         for regionprop in props:

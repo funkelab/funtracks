@@ -66,6 +66,7 @@ class TestProjectInit:
             cand_graph=cand_graph,
         )
         assert project.name == "test_project"
+        assert project.ndim == ndim
         assert project.params == ProjectParams()
         assert project.raw is None
         if use_seg:
