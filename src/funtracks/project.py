@@ -46,7 +46,7 @@ class Project:
         self.zarr_path = zarr_path
         self.ndim: int
         if self.raw is not None:
-            self.ndim = len(self.raw.physical_shape)
+            self.ndim = len(self.raw[0].physical_shape)
         elif segmentation is not None:
             self.ndim = len(self.segmentation.physical_shape)
         else:
@@ -116,7 +116,8 @@ class Project:
         if self.cand_graph is not None:
             self.cand_graph.save(zarr_path / "cand_graph")
         if self.raw is not None and "raw" not in zroot.group_keys():
-            self._save_fp_array(zarr_path / "raw", self.raw)
+            for chan in range(len(self.raw)):
+                self._save_fp_array(zarr_path / f"raw/chan_{chan}", self.raw[chan])
         if self.segmentation is not None and "seg" not in zroot.group_keys():
             self._save_fp_array(zarr_path / "seg", self.segmentation)
 

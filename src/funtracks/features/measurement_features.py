@@ -128,18 +128,13 @@ class Intensity(Feature):
     def update(self, project: Project, node: int) -> int:
         time = project.cand_graph.get_time(node)
         seg = project.segmentation[time] == node
-        if len(project.raw.shape) > len(project.segmentation.shape):
-            slc = [slice(None)] * project.raw.ndim
-            slc[1] = time
-            intensity_image = project.raw[tuple(slc)] if project.raw is not None else None
-            if intensity_image is not None:
-                mean_intensity = [np.mean(channel[seg]) for channel in intensity_image]
-                return mean_intensity
-        else:
-            intensity_image = project.raw[time] if project.raw is not None else None
+        intensity = []
+        for chan in range(len(project.raw)):
+            intensity_image = project.raw[chan][time] if project.raw is not None else None
             if intensity_image is not None:
                 mean_intensity = np.mean(intensity_image[seg])
-                return mean_intensity
+                intensity.append(mean_intensity)
+        return intensity
 
 
 measurement_features = [
