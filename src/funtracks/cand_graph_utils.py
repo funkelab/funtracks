@@ -9,7 +9,7 @@ from tqdm import tqdm
 from funtracks.features._base import Feature, FeatureType
 from funtracks.features.measurement_features import Intensity
 from funtracks.features.regionprops_extended import regionprops_extended
-
+import dask.array as da
 from .cand_graph import CandGraph
 from .features.feature_set import FeatureSet
 from .nx_graph import NxGraph
@@ -53,7 +53,7 @@ def graph_from_points(
 def graph_from_df(
     df: pd.DataFrame,
     segmentation: fp.Array | None,
-    intensity_image: fp.Array | None,
+    intensity_image: list[fp.Array] | None,
     ndim: int,
     n_channels: int,
     scaling: list[float],
@@ -66,7 +66,7 @@ def graph_from_df(
     Args:
         df (pd.DataFrame): dataframe holding the tracks data.
         segmentation (fp.Array | None): segmentation data
-        intensity_image (fp.Array | None): intensity image
+        intensity_image (list[fp.Array] | None): intensity image list, one per channel
         ndim (int): number of dimensions of the dataset, 3,4,5
         n_channels (int): the size of the channel dimension.
         scaling (list[float]): spatial calibration for (z), y, x dimensions.
@@ -121,26 +121,23 @@ def graph_from_df(
         ]
 
         if len(features_to_recompute) > 0:
-            t = int(row["t"])
+            t = int(row["t"])            
             if intensity_image is not None:
-                if len(intensity_image.shape) > len(segmentation.shape):
-                    # intensity image has channels (should always be at index 0)
-                    slc = [slice(None)] * intensity_image.ndim
-                    slc[1] = t
-                    intensity = intensity_image[tuple(slc)].compute()
-                    # skimage.measure.regionprops wants the channel axis to be last,
-                    # so we need to transpose again
-                    indices = list(range(len(intensity.shape)))
-                    indices.append(indices.pop(0))  # move the channel from the first to
-                    # the last position
-                    intensity = np.transpose(intensity, indices)
-                else:
-                    intensity = intensity_image[t].compute()
+                int_stack = []
+                for int_img in intensity_image:
+                    if isinstance(int_img[t], da.Array):
+                        int_stack.append(int_img[t].compute())
+                    else: 
+                        int_stack.append(int_img[t])
+                intensity = np.stack(int_stack, axis=-1) # regionprops wants channel dim to be
+                # last
             else:
                 intensity = None
+
             # compute the feature
+            seg = segmentation[t].compute() if isinstance(segmentation, da.Array) else segmentation[t]
             props = regionprops_extended(
-                (segmentation[t].compute() == _id).astype(np.uint8),
+                (seg == _id).astype(np.uint8),
                 intensity_image=intensity,
                 spacing=scaling,
             )
@@ -176,7 +173,7 @@ def graph_from_df(
 
 def graph_from_segmentation(
     segmentation: fp.Array | None,
-    intensity_image: fp.Array | None,
+    intensity_image: list[fp.Array] | None,
     ndim: int,
     n_channels: int,
     scaling: list[float] | None,
@@ -188,7 +185,7 @@ def graph_from_segmentation(
 
     Args:
         segmentation (fp.Array | None): segmentation data
-        intensity_image (fp.Array | None): intensity image
+        intensity_image (list[fp.Array] | None): intensity image
         ndim (int): number of dimensions of the dataset, 3,4,5
         n_channels (int): the size of the channel dimension.
         scaling (list[float]): spatial calibration for (z), y, x dimensions.
@@ -219,25 +216,22 @@ def graph_from_segmentation(
 
     graph = nx.DiGraph()
     for t in tqdm(range(segmentation.shape[0])):
+        
         if intensity_image is not None:
-            if len(intensity_image.shape) > len(segmentation.shape):
-                # intensity image has channels (should always be at index 0)
-                slc = [slice(None)] * intensity_image.ndim
-                slc[1] = t
-                intensity = intensity_image[tuple(slc)].compute()
-                # skimage.measure.regionprops wants the channel axis to be last,
-                # so we need to transpose again
-                indices = list(range(len(intensity.shape)))
-                indices.append(indices.pop(0))  # move the channel from the first to
-                # the last position
-                intensity = np.transpose(intensity, indices)
-            else:
-                intensity = intensity_image[t].compute()
+            int_stack = []
+            for int_img in intensity_image:
+                if isinstance(int_img[t], da.Array):
+                    int_stack.append(int_img[t].compute())
+                else:
+                    int_stack.append(int_img[t])
+            intensity = np.stack(int_stack, axis=-1) # regionprops wants channel dim to be
+            # last
         else:
             intensity = None
 
+        seg = segmentation[t].compute() if isinstance(segmentation, da.Array) else segmentation[t]
         props = regionprops_extended(
-                (segmentation[t].compute()).astype(np.uint8),
+                seg,
                 intensity_image=intensity,
                 spacing=scaling)
         for regionprop in props:

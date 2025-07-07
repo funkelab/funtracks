@@ -28,7 +28,7 @@ class Project:
         self,
         name: str,
         project_params: ProjectParams,
-        raw: fp.Array | None = None,
+        raw: list[fp.Array] | None = None,
         segmentation: fp.Array | None = None,
         cand_graph: TrackingGraph | None = None,
     ):
