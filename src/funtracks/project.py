@@ -115,7 +115,8 @@ class Project:
         # solution is stored as an attribute on cand_graph
         if self.cand_graph is not None:
             self.cand_graph.save(zarr_path / "cand_graph")
-        if self.raw is not None and "raw" not in zroot.group_keys():
+        # save raw and seg, if not saved already.
+        if self.raw is not None and "raw" not in zroot:
             for chan in range(len(self.raw)):
                 self._save_fp_array(zarr_path / f"raw/chan_{chan}", self.raw[chan])
         if self.segmentation is not None and "seg" not in zroot.group_keys():
@@ -132,8 +133,12 @@ class Project:
         params_dict = zroot.attrs["project_params"]
         params = ProjectParams(**params_dict)
         name = metadata["name"]
-        if "raw" in zroot.array_keys():
-            raw = fp.open_ds(path / "raw")
+        if "raw" in zroot:
+            raw = []
+            raw_group = zroot["raw"]
+            for chan_key in raw_group.array_keys():
+                chan_path = path / "raw" / chan_key
+                raw.append(fp.open_ds(chan_path))
         else:
             raw = None
         if "seg" in zroot.array_keys():
