@@ -7,6 +7,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from funtracks.features._base import Feature, FeatureType
+from funtracks.features.edge_features import EdgeSelected, Distance, IoU, FrameSpan
 from funtracks.features.measurement_features import Intensity
 from funtracks.features.regionprops_extended import regionprops_extended
 import dask.array as da
@@ -14,6 +15,7 @@ from .cand_graph import CandGraph
 from .features.feature_set import FeatureSet
 from .nx_graph import NxGraph
 from .params import CandGraphParams
+from funtracks.features.compute_ious import compute_ious
 
 logger = logging.getLogger(__name__)
 
@@ -157,8 +159,23 @@ def graph_from_df(
         for feature in features_to_import_from_df:
             attrs[feature["feature"].attr_name] = row.get(feature["from_column"])
 
+        if "track_id" in df.columns:
+            attrs['track_id'] = row.get("track_id")
+
+        # Mark the node as selected (in solution)       
+        attrs[feature_set.node_selected.attr_name] = True
+
         # add the node to the graph
         graph.add_node(_id, **attrs)
+
+        # add additional edge features that should be recomputed
+        features_to_recompute = [
+            f["feature"]
+            for f in features
+            if f["include"]
+            and f["feature"].computed
+            and f["feature"].feature_type == FeatureType.EDGE
+        ]
 
         # add the edge to the graph, if the node has a parent
         # note: this loading format does not support edge attributes
@@ -166,7 +183,41 @@ def graph_from_df(
             assert parent_id in graph.nodes, (
                 f"Parent id {parent_id} of node {_id} not in graph yet"
             )
-            graph.add_edge(parent_id, _id)
+            edge_attrs = {}
+            edge_attrs[EdgeSelected().attr_name] = True
+            graph.add_edge(parent_id, _id, **edge_attrs)
+
+    for feature in features_to_recompute: 
+        if isinstance(feature, Distance):
+            for edge in graph.edges():
+                source, target = edge
+                source_loc = np.array(graph.nodes[source]["pos"])
+                target_loc = np.array(graph.nodes[target]["pos"])
+                dist = np.linalg.norm(target_loc - source_loc)
+                graph.edges[edge][feature.attr_name] = dist
+        elif isinstance(feature, FrameSpan):
+            for edge in graph.edges():
+                source, target = edge
+                source_time = graph.nodes[source]["t"]
+                target_time = graph.nodes[target]["t"]
+                graph.edges[edge][feature.attr_name] = target_time - source_time
+        elif isinstance(feature, IoU) and segmentation is not None:
+            for edge in graph.edges():
+                source, target = edge
+                if isinstance(segmentation, da.Array):
+                    source_seg = segmentation[graph.nodes[source]["t"]].compute() == source
+                    target_seg = segmentation[graph.nodes[target]["t"]].compute() == target
+                else:
+                    source_seg = segmentation[graph.nodes[source]["t"]] == source
+                    target_seg = segmentation[graph.nodes[target]["t"]] == target
+                
+                ious = compute_ious(source_seg, target_seg)
+                if len(ious) == 0:
+                    iou = 0.0
+                else:
+                    assert len(ious) == 1
+                    _, _, iou = ious[0]
+                graph.edges[edge][feature.attr_name] = iou
 
     return CandGraph(NxGraph, graph, feature_set, cand_graph_params)
 
