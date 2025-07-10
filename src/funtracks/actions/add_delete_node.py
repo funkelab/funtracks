@@ -26,7 +26,7 @@ class AddNode(TracksAction):
     ):
         super().__init__(project)
         self.node = node
-        self.project.cand_graph.features.validate_new_node_features(features)
+        self.project.graph.features.validate_new_node_features(features)
         self.provided_features = features
         self.pixels = pixels
         self._apply()
@@ -41,12 +41,12 @@ class AddNode(TracksAction):
             self.project.set_pixels(self.pixels, self.node)
 
         # add static features in add_node (get defaults in tracking graph)
-        self.project.cand_graph.add_node(self.node, self.provided_features)
+        self.project.graph.add_node(self.node, self.provided_features)
         # compute and add computed features, which can then assume static ones are there
-        for feature in self.project.cand_graph.features.node_features:
+        for feature in self.project.graph.features.node_features:
             if feature.computed:
                 value = feature.update(self.project, self.node)
-                self.project.cand_graph.set_feature_value(self.node, feature, value)
+                self.project.graph.set_feature_value(self.node, feature, value)
 
 
 class DeleteNode(TracksAction):
@@ -64,8 +64,8 @@ class DeleteNode(TracksAction):
         super().__init__(project)
         self.node = node
         self.attributes = {
-            feature: self.project.cand_graph.get_feature_value(self.node, feature)
-            for feature in self.project.cand_graph.features.node_features
+            feature: self.project.graph.get_feature_value(self.node, feature)
+            for feature in self.project.graph.features.node_features
         }
         self.pixels = self.project.get_pixels(node) if pixels is not None else pixels
         self._apply()
@@ -83,5 +83,5 @@ class DeleteNode(TracksAction):
         """
         if self.pixels is not None:
             self.project.set_pixels(self.pixels, 0)
-        self.project.cand_graph.remove_node(self.node)
+        self.project.graph.remove_node(self.node)
         # TODO: Somehow remove from solution graph

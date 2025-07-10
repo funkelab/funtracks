@@ -23,7 +23,7 @@ class UserDeleteEdge(ActionGroup):
             self.actions.append(UpdateTrackID(self.project, edge[1], new_track_id))
         elif out_degree == 1:  # removed a division edge
             sibling = next(iter(self.project.solution.successors(edge[0])))
-            new_track_id = self.project.cand_graph.get_track_id(edge[0])
+            new_track_id = self.project.graph.get_track_id(edge[0])
             self.actions.append(UpdateTrackID(self.project, sibling, new_track_id))
         else:
             raise RuntimeError(

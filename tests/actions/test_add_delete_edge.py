@@ -34,7 +34,7 @@ class TestAddDeleteEdge:
             cand_graph = TrackingGraph(NxGraph, gt_graph, features)
         else:
             cand_graph = None
-        return Project("test", params, segmentation=seg, cand_graph=cand_graph)
+        return Project("test", params, segmentation=seg, graph=cand_graph)
 
     def get_gt_graph(self, request, ndim):
         graph_name = "graph_2d" if ndim == 3 else "graph_3d"
@@ -43,9 +43,9 @@ class TestAddDeleteEdge:
 
     def test_add_edge(self, request, ndim, use_seg, use_graph):
         project = self.get_project(request, ndim, use_seg, use_graph)
-        features = project.cand_graph.features
+        features = project.graph.features
         edge_id = (4, 6)
-        graph = project.cand_graph
+        graph = project.graph
         assert not graph.has_edge(edge_id)
         attributes = {
             features.edge_selected: True,

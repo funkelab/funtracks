@@ -18,7 +18,7 @@ class AddEdge(TracksAction):
     ):
         super().__init__(project)
         self.edge = edge
-        self.project.cand_graph.features.validate_new_edge_features(provided_features)
+        self.project.graph.features.validate_new_edge_features(provided_features)
         self.provided_features = provided_features
         self._apply()
 
@@ -33,15 +33,15 @@ class AddEdge(TracksAction):
         - set feature values
         """
         for node in self.edge:
-            if not self.project.cand_graph.has_node(node):
+            if not self.project.graph.has_node(node):
                 raise KeyError(
                     f"Cannot add edge {self.edge}: endpoint {node} not in graph yet"
                 )
-        self.project.cand_graph.add_edge(self.edge, self.provided_features)
-        for feature in self.project.cand_graph.features.edge_features:
+        self.project.graph.add_edge(self.edge, self.provided_features)
+        for feature in self.project.graph.features.edge_features:
             if feature.computed:
                 value = feature.update(self.project, self.edge)
-                self.project.cand_graph.set_feature_value(self.edge, feature, value)
+                self.project.graph.set_feature_value(self.edge, feature, value)
 
 
 class DeleteEdge(TracksAction):
@@ -51,8 +51,8 @@ class DeleteEdge(TracksAction):
         super().__init__(project)
         self.edge = edge
         self.attributes = {
-            feature: self.project.cand_graph.get_feature_value(self.edge, feature)
-            for feature in self.project.cand_graph.features.edge_features
+            feature: self.project.graph.get_feature_value(self.edge, feature)
+            for feature in self.project.graph.features.edge_features
         }
         self._apply()
 
@@ -64,8 +64,8 @@ class DeleteEdge(TracksAction):
         """Steps:
         - Remove the edges from the graph
         """
-        if not self.project.cand_graph.has_edge(self.edge):
+        if not self.project.graph.has_edge(self.edge):
             raise KeyError(f"Edge {self.edge} not in the graph, and cannot be removed")
         # features = self.project.cand_graph.features
         # self.project.cand_graph.set_feature_value(self.edge, features.edge_selection_pin, False)
-        self.project.cand_graph.remove_edge(self.edge)
+        self.project.graph.remove_edge(self.edge)

@@ -13,7 +13,7 @@ class UpdateTrackID(TracksAction):
         """
         super().__init__(project)
         self.start_node = start_node
-        self.old_track_id = self.project.cand_graph.get_track_id(self.start_node)
+        self.old_track_id = self.project.graph.get_track_id(self.start_node)
         self.new_track_id = track_id
         self._apply()
 
@@ -24,9 +24,9 @@ class UpdateTrackID(TracksAction):
     def _apply(self):
         """Assign a new track id to the track starting with start_node."""
         curr_node = self.start_node
-        while self.project.cand_graph.get_track_id(curr_node) == self.old_track_id:
+        while self.project.graph.get_track_id(curr_node) == self.old_track_id:
             # update the track id
-            self.project.cand_graph.set_track_id(curr_node, self.new_track_id)
+            self.project.graph.set_track_id(curr_node, self.new_track_id)
             # getting the next node (picks one if there are two)
             successors = list(self.project.solution.successors(curr_node))
             if len(successors) == 0:

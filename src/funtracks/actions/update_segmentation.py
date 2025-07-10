@@ -42,21 +42,21 @@ class UpdateNodeSeg(TracksAction):
         """Set new attributes"""
         value = self.node if self.added else 0
         self.project.set_pixels(self.pixels, value)
-        for feature in self.project.cand_graph.features.get_features_to_compute(self):
+        for feature in self.project.graph.features.get_features_to_compute(self):
             if feature.feature_type == FeatureType.NODE:
                 value = feature.update(self.project, self.node)
-                self.project.cand_graph.set_feature_value(self.node, feature, value)
+                self.project.graph.set_feature_value(self.node, feature, value)
             elif feature.feature_type == FeatureType.EDGE:
                 edges = [
                     (pred, self.node)
-                    for pred in self.project.cand_graph.predecessors(self.node)
+                    for pred in self.project.graph.predecessors(self.node)
                 ]
                 edges.extend(
                     [
                         (self.node, succ)
-                        for succ in self.project.cand_graph.successors(self.node)
+                        for succ in self.project.graph.successors(self.node)
                     ]
                 )
                 for edge in edges:
                     value = feature.update(self.project, edge)
-                    self.project.cand_graph.set_feature_value(edge, feature, value)
+                    self.project.graph.set_feature_value(edge, feature, value)

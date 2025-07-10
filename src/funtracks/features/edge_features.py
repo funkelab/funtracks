@@ -26,8 +26,8 @@ class IoU(Feature):
 
     def update(self, project: Project, edge: tuple[int, int]) -> float:
         source, target = edge
-        source_seg = project.segmentation[project.cand_graph.get_time(source)] == source
-        target_seg = project.segmentation[project.cand_graph.get_time(target)] == target
+        source_seg = project.segmentation[project.graph.get_time(source)] == source
+        target_seg = project.segmentation[project.graph.get_time(target)] == target
         ious = compute_ious(source_seg, target_seg)
         if len(ious) == 0:
             iou = 0.0
@@ -72,8 +72,8 @@ class Distance(Feature):
 
     def update(self, project: Project, edge: tuple[int, int]) -> float:
         source, target = edge
-        source_loc = np.array(project.cand_graph.get_position(source))
-        target_loc = np.array(project.cand_graph.get_position(target))
+        source_loc = np.array(project.graph.get_position(source))
+        target_loc = np.array(project.graph.get_position(target))
         dist = np.linalg.norm(target_loc - source_loc)
         return dist
 
@@ -90,6 +90,6 @@ class FrameSpan(Feature):
 
     def update(self, project: Project, edge: tuple[int, int]) -> int:
         source, target = edge
-        source_time = project.cand_graph.get_time(source)
-        target_time = project.cand_graph.get_time(target)
+        source_time = project.graph.get_time(source)
+        target_time = project.graph.get_time(target)
         return target_time - source_time

@@ -18,7 +18,7 @@ class SetFeatureValues(TracksAction):
         self.provided_features = provided_features
 
         self.original_features = {
-            feature: self.project.cand_graph.get_feature_value(self.element, feature)
+            feature: self.project.graph.get_feature_value(self.element, feature)
             for feature in provided_features
         }
         self._apply()
@@ -29,4 +29,4 @@ class SetFeatureValues(TracksAction):
 
     def _apply(self):
         for feature, value in self.provided_features.items():
-            self.project.cand_graph.set_feature_value(self.element, feature, value)
+            self.project.graph.set_feature_value(self.element, feature, value)

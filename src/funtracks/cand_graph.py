@@ -4,14 +4,11 @@ import logging
 from collections import defaultdict
 from typing import TYPE_CHECKING, Any
 
-import geff.networkx
 import numpy as np
 import zarr
 from scipy.spatial import KDTree
 from tqdm import tqdm
 
-from .features import FeatureSet
-from .nx_graph import NxGraph
 from .params.cand_graph_params import CandGraphParams
 from .tracking_graph import TrackingGraph
 
@@ -22,6 +19,13 @@ logger = logging.getLogger(__name__)
 
 
 class CandGraph(TrackingGraph):
+    """Ensures candidate edges are present according to the CandGraphParams criteria.
+
+    This is an instance of a tracking graph that additionally keeps track of edges.
+    Actions should update the candidate edges as necessary, if they act on a
+    CandGraph instead of a TrackingGraph.
+
+    """
     def __init__(self, injected_cls, graph, features, params: CandGraphParams):
         super().__init__(injected_cls, graph, features)
         self.params = params
@@ -149,22 +153,17 @@ class CandGraph(TrackingGraph):
             del kdtree_dict[start_frame]
 
     def save(self, path: Path):
-        geff.networkx.write(
-            self._graph, position_attr=self.features.position.attr_name, path=path
-        )
+        super().save(path)
         attrs = zarr.open(path).attrs
         attrs["cand_graph_params"] = self.params.model_dump(mode="json")
-        attrs["features"] = self.features.dump_json()
 
     @classmethod
     def load(cls, path: Path) -> CandGraph:
-        nx_graph = geff.networkx.read(path)
+        tracking_graph = super().load(path)
         attrs = zarr.open(path).attrs
         cand_graph_params_dict = attrs["cand_graph_params"]
-        features_json = attrs["features"]
-        features = FeatureSet.from_json(features_json)
         params = CandGraphParams(**cand_graph_params_dict)
-        return CandGraph(NxGraph, nx_graph, features, params)
+        return CandGraph.from_tracking_graph(tracking_graph, params)
 
     @classmethod
     def from_tracking_graph(cls, tracking_graph: TrackingGraph, params: CandGraphParams):

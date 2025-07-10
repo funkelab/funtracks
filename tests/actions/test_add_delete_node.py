@@ -38,7 +38,7 @@ class TestAddDeleteNode:
             )
         else:
             cand_graph = None
-        return Project("test", params, segmentation=seg, cand_graph=cand_graph)
+        return Project("test", params, segmentation=seg, graph=cand_graph)
 
     def get_gt_graph(self, request, ndim):
         graph_name = "graph_2d" if ndim == 3 else "graph_3d"
@@ -47,7 +47,7 @@ class TestAddDeleteNode:
 
     def test_add_node(self, request, ndim, use_seg, use_graph):
         project = self.get_project(request, ndim, use_seg, use_graph)
-        features = project.cand_graph.features
+        features = project.graph.features
         node_id = 7
         track_id = 3
         time = 3
@@ -64,7 +64,7 @@ class TestAddDeleteNode:
             del attributes[features.position]
         else:
             pixels = None
-        graph = project.cand_graph
+        graph = project.graph
         assert not graph.has_node(node_id)
         action = AddNode(project, node_id, attributes, pixels=pixels)
         assert graph.has_node(node_id)
@@ -85,18 +85,18 @@ class TestAddDeleteNode:
 
     def test_delete_node(self, request, ndim, use_seg, use_graph):
         project = self.get_project(request, ndim, use_seg, use_graph)
-        features = project.cand_graph.features
+        features = project.graph.features
         if ndim == 4 and use_seg:
             for feature in features._features:
                 if isinstance(feature, Area):
                     area_feature = feature
                     break
-            project.cand_graph.features._features.remove(area_feature)
+            project.graph.features._features.remove(area_feature)
         node_id = 6
         # track_id = 5
         # time = 4
         # position = [97.5, 97.5, 97.5] if ndim == 4 else [97.5, 97.5]
-        graph = project.cand_graph
+        graph = project.graph
         assert graph.has_node(node_id)
         action = DeleteNode(project, node_id)
         assert not graph.has_node(node_id)

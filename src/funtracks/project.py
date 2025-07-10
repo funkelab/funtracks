@@ -10,7 +10,7 @@ import zarr
 from psygnal import Signal
 
 from funtracks.cand_graph import CandGraph
-from funtracks.params import CandGraphParams, ProjectParams, SolverParams
+from funtracks.params import ProjectParams, SolverParams
 
 from .cand_graph_utils import nodes_from_segmentation
 from .tracking_graph import TrackingGraph
@@ -30,11 +30,11 @@ class Project:
         project_params: ProjectParams,
         raw: list[fp.Array] | None = None,
         segmentation: fp.Array | None = None,
-        cand_graph: TrackingGraph | None = None,
+        graph: TrackingGraph | None = None,
         zarr_path: Path | None = None,
     ):
         # one of segmentation and points
-        if segmentation is None and cand_graph is None:
+        if segmentation is None and graph is None:
             raise ValueError(
                 "At least one of segmentation or cand graph must be provided"
             )
@@ -50,33 +50,30 @@ class Project:
         elif self.segmentation is not None:
             self.ndim = len(self.segmentation.physical_shape)
         else:
-            if cand_graph is None or len(cand_graph) == 0:
+            if graph is None or len(graph) == 0:
                 raise ValueError("Cannot infer ndim from empty data")
-            pos_feature = cand_graph.features.position
+            pos_feature = graph.features.position
             if isinstance(pos_feature.value_names, str):
-                example_node = next(iter(cand_graph.nodes))
-                spatial_dims = len(cand_graph.get_position(example_node))
+                example_node = next(iter(graph.nodes))
+                spatial_dims = len(graph.get_position(example_node))
             else:
                 spatial_dims = len(pos_feature.value_names)
             # add 1 for time dimension
             self.ndim = spatial_dims + 1
 
-        cand_graph_params = CandGraphParams()
-        self.cand_graph: TrackingGraph
-        if cand_graph is not None:
-            self.cand_graph = CandGraph.from_tracking_graph(cand_graph, cand_graph_params)
+        self.graph: TrackingGraph
+        if graph is not None:
+            self.graph = graph
         else:
             # make a node only cand graph
-            self.cand_graph = nodes_from_segmentation(
-                self.segmentation, cand_graph_params
-            )
+            self.graph = nodes_from_segmentation(self.segmentation)
 
     @property
     def solution(self):
         """Re-computing the solution every time you access it is a potential area
         of inefficiency that could be improved if it bottlenecks performance
         """
-        return self.cand_graph.get_solution()
+        return self.graph.get_solution()
 
     def _save_fp_array(self, path: Path, array: fp.Array):
         raw_ds = fp.prepare_ds(
@@ -114,8 +111,9 @@ class Project:
         zroot.attrs["project_params"] = params
         zroot.attrs["solver_params"] = self.solver_params.model_dump(mode="json")
         # solution is stored as an attribute on cand_graph
-        if self.cand_graph is not None:
-            self.cand_graph.save(zarr_path / "cand_graph")
+        graph_group = "graph"
+        if self.graph is not None:
+            self.graph.save(zarr_path / graph_group)
         if self.raw is not None:
             if "raw" not in zroot.group_keys():
                 raw_group = zroot.create_group("raw")
@@ -131,10 +129,14 @@ class Project:
     @classmethod
     def load(cls, path: Path):
         zroot = zarr.open(path, mode="a")
-        if "cand_graph" in zroot.group_keys():
-            cand_graph = CandGraph.load(path / "cand_graph")
+        graph_group = "graph"
+        if graph_group in zroot.group_keys():
+            if "cand_graph_params" in zroot[graph_group].attrs:
+                graph = CandGraph.load(path / graph_group)
+            else:
+                graph = TrackingGraph.load(path / graph_group)
         else:
-            cand_graph = None
+            graph = None
         metadata = zroot.attrs["project_metadata"]
         params_dict = zroot.attrs["project_params"]
         params = ProjectParams(**params_dict)
@@ -150,7 +152,7 @@ class Project:
             seg = fp.open_ds(path / "seg")
         else:
             seg = None
-        return Project(name, params, raw=raw, segmentation=seg, cand_graph=cand_graph)
+        return Project(name, params, raw=raw, segmentation=seg, graph=graph)
 
     def get_pixels(self, node: int) -> tuple[np.ndarray, ...] | None:
         """Get the pixels corresponding to each node in the nodes list.
@@ -166,7 +168,7 @@ class Project:
         """
         if self.segmentation is None:
             return None
-        time = self.cand_graph.get_time(node)
+        time = self.graph.get_time(node)
         loc_pixels = np.nonzero(self.segmentation[time] == node)
         time_array = np.ones_like(loc_pixels[0]) * time
         return (time_array, *loc_pixels)
@@ -191,7 +193,7 @@ class Project:
         self.segmentation[pixels] = value
 
     def get_next_track_id(self) -> int:
-        return self.cand_graph.get_next_track_id()
+        return self.graph.get_next_track_id()
 
     def get_next_node_id(self) -> int:
         # TODO

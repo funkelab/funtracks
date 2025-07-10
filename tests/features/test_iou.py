@@ -19,7 +19,7 @@ class TestIoU:
         gt_graph = self.get_gt_graph(request, ndim)
         features = FeatureSet(ndim=ndim, seg=seg)
         cand_graph = TrackingGraph(NxGraph, gt_graph, features)
-        return Project("test", params, segmentation=seg, cand_graph=cand_graph)
+        return Project("test", params, segmentation=seg, graph=cand_graph)
 
     def get_gt_graph(self, request, ndim):
         graph_name = "graph_2d" if ndim == 3 else "graph_3d"
@@ -29,8 +29,8 @@ class TestIoU:
     def test_iou_update(self, request, ndim):
         project = self.get_project(request, ndim)
         feat = IoU()
-        for edge in project.cand_graph.edges:
+        for edge in project.graph.edges:
             iou = feat.update(project, edge)
             assert iou == pytest.approx(
-                project.cand_graph.get_feature_value(edge, feat), abs=0.01
+                project.graph.get_feature_value(edge, feat), abs=0.01
             )

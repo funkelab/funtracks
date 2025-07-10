@@ -4,22 +4,21 @@ import funlib.persistence as fp
 import numpy as np
 import pytest
 
-from funtracks import NxGraph, Project, TrackingGraph
+from funtracks import CandGraph, NxGraph, Project, TrackingGraph
 from funtracks.features import FeatureSet
 from funtracks.features.edge_features import IoU
 from funtracks.features.node_features import Area
-from funtracks.params import ProjectParams
+from funtracks.params import CandGraphParams, ProjectParams
 from funtracks.user_actions import UserUpdateSegmentation
 
 
+# TODO: add area to the 4d testing graph
 @pytest.mark.parametrize(
     "ndim",
-    [
-        3,
-    ],
+    [3],
 )
 class TestUpdateNodeSeg:
-    def get_project(self, request, ndim):
+    def get_project(self, request, ndim, use_cand_graph=False):
         params = ProjectParams()
         seg_name = "segmentation_2d" if ndim == 3 else "segmentation_3d"
         segmentation = request.getfixturevalue(seg_name)
@@ -28,8 +27,11 @@ class TestUpdateNodeSeg:
 
         gt_graph = self.get_gt_graph(request, ndim)
         features = FeatureSet(ndim=ndim, seg=True)
-        cand_graph = TrackingGraph(NxGraph, gt_graph, features)
-        return Project("test", params, segmentation=seg, cand_graph=cand_graph)
+        if use_cand_graph:
+            cand_graph = CandGraph(NxGraph, gt_graph, features, CandGraphParams())
+        else:
+            cand_graph = TrackingGraph(NxGraph, gt_graph, features)
+        return Project("test", params, segmentation=seg, graph=cand_graph)
 
     def get_gt_graph(self, request, ndim):
         graph_name = "graph_2d" if ndim == 3 else "graph_3d"
@@ -38,14 +40,14 @@ class TestUpdateNodeSeg:
 
     def test_user_update_seg_smaller(self, request, ndim):
         project = self.get_project(request, ndim)
-        graph = project.cand_graph
+        graph = project.graph
         node_id = 3
         edge = (1, 3)
 
         orig_pixels = project.get_pixels(node_id)
-        orig_position = project.cand_graph.get_position(node_id)
-        orig_area = project.cand_graph.get_feature_value(node_id, Area())
-        orig_iou = project.cand_graph.get_feature_value(edge, IoU())
+        orig_position = project.graph.get_position(node_id)
+        orig_area = project.graph.get_feature_value(node_id, Area())
+        orig_iou = project.graph.get_feature_value(edge, IoU())
 
         # remove all but one pixel
         pixels_to_remove = tuple(orig_pixels[d][1:] for d in range(len(orig_pixels)))
@@ -86,14 +88,14 @@ class TestUpdateNodeSeg:
 
     def test_user_update_seg_bigger(self, request, ndim):
         project = self.get_project(request, ndim)
-        graph = project.cand_graph
+        graph = project.graph
         node_id = 3
         edge = (1, 3)
 
         orig_pixels = project.get_pixels(node_id)
-        orig_position = project.cand_graph.get_position(node_id)
-        orig_area = project.cand_graph.get_feature_value(node_id, Area())
-        orig_iou = project.cand_graph.get_feature_value(edge, IoU())
+        orig_position = project.graph.get_position(node_id)
+        orig_area = project.graph.get_feature_value(node_id, Area())
+        orig_iou = project.graph.get_feature_value(edge, IoU())
 
         # add one pixel
         pixels_to_add = tuple(
@@ -131,14 +133,14 @@ class TestUpdateNodeSeg:
 
     def test_user_erase_seg(self, request, ndim):
         project = self.get_project(request, ndim)
-        graph = project.cand_graph
+        graph = project.graph
         node_id = 3
         edge = (1, 3)
 
         orig_pixels = project.get_pixels(node_id)
-        orig_position = project.cand_graph.get_position(node_id)
-        orig_area = project.cand_graph.get_feature_value(node_id, Area())
-        orig_iou = project.cand_graph.get_feature_value(edge, IoU())
+        orig_position = project.graph.get_position(node_id)
+        orig_area = project.graph.get_feature_value(node_id, Area())
+        orig_iou = project.graph.get_feature_value(edge, IoU())
 
         # remove all pixels
         pixels_to_remove = orig_pixels
@@ -163,9 +165,10 @@ class TestUpdateNodeSeg:
         inverse.inverse()
         assert not graph.has_node(node_id)
 
-    def test_user_add_seg(self, request, ndim):
-        project = self.get_project(request, ndim)
-        graph = project.cand_graph
+    @pytest.mark.parametrize("use_cand_graph", [True, False])
+    def test_user_add_seg(self, request, ndim, use_cand_graph):
+        project = self.get_project(request, ndim, use_cand_graph=use_cand_graph)
+        graph = project.graph
         # draw a new node just like node 6 but in time 3 (instead of 4)
         old_node_id = 6
         node_id = 7
@@ -179,8 +182,8 @@ class TestUpdateNodeSeg:
             np.ones(shape=(pixels_to_add[0].shape), dtype=np.uint32) * time,
             *pixels_to_add[1:],
         )
-        position = project.cand_graph.get_position(old_node_id)
-        area = project.cand_graph.get_feature_value(old_node_id, Area())
+        position = project.graph.get_position(old_node_id)
+        area = project.graph.get_feature_value(old_node_id, Area())
         expected_cand_iou = 1.0
 
         assert not graph.has_node(node_id)
@@ -196,9 +199,10 @@ class TestUpdateNodeSeg:
         assert graph.get_feature_value(node_id, graph.features.node_selection_pin) is True
         assert graph.get_feature_value(node_id, graph.features.position) == position
         assert graph.get_feature_value(node_id, Area()) == area
-        assert graph.get_feature_value(cand_edge, IoU()) == pytest.approx(
-            expected_cand_iou, abs=0.01
-        )
+        if use_cand_graph:
+            assert graph.get_feature_value(cand_edge, IoU()) == pytest.approx(
+                expected_cand_iou, abs=0.01
+            )
 
         inverse = action.inverse()
         assert not graph.has_node(node_id)
@@ -209,6 +213,7 @@ class TestUpdateNodeSeg:
         assert graph.get_feature_value(node_id, graph.features.node_selection_pin) is True
         assert graph.get_feature_value(node_id, graph.features.position) == position
         assert graph.get_feature_value(node_id, Area()) == area
-        assert graph.get_feature_value(cand_edge, IoU()) == pytest.approx(
-            expected_cand_iou, abs=0.01
-        )
+        if use_cand_graph:
+            assert graph.get_feature_value(cand_edge, IoU()) == pytest.approx(
+                expected_cand_iou, abs=0.01
+            )

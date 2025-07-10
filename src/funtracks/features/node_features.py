@@ -48,7 +48,7 @@ class ComputedPosition(Feature):
 
     def update(self, project: Project, node: int) -> list[float]:
         # Note: assumes the time is already on the graph
-        time = project.cand_graph.get_time(node)
+        time = project.graph.get_time(node)
         assert project.segmentation is not None
         seg = project.segmentation[time] == node
         voxel_size = project.segmentation.voxel_size
@@ -69,7 +69,7 @@ class Area(Feature):
         )
 
     def update(self, project: Project, node: int) -> int:
-        time = project.cand_graph.get_time(node)
+        time = project.graph.get_time(node)
         seg = project.segmentation[time] == node
         voxel_size = project.segmentation.voxel_size
         pos_scale = voxel_size[1:] if voxel_size is not None else None

@@ -27,7 +27,7 @@ class TestUpdateNodeSeg:
         gt_graph = self.get_gt_graph(request, ndim)
         features = FeatureSet(ndim=ndim, seg=True)
         cand_graph = TrackingGraph(NxGraph, gt_graph, features)
-        return Project("test", params, segmentation=seg, cand_graph=cand_graph)
+        return Project("test", params, segmentation=seg, graph=cand_graph)
 
     def get_gt_graph(self, request, ndim):
         graph_name = "graph_2d" if ndim == 3 else "graph_3d"
@@ -36,14 +36,14 @@ class TestUpdateNodeSeg:
 
     def test_update_seg(self, request, ndim):
         project = self.get_project(request, ndim)
-        graph = project.cand_graph
+        graph = project.graph
         node_id = 3
         edge = (1, 3)
 
         orig_pixels = project.get_pixels(node_id)
-        orig_position = project.cand_graph.get_position(node_id)
-        orig_area = project.cand_graph.get_feature_value(node_id, Area())
-        orig_iou = project.cand_graph.get_feature_value(edge, IoU())
+        orig_position = project.graph.get_position(node_id)
+        orig_area = project.graph.get_feature_value(node_id, Area())
+        orig_iou = project.graph.get_feature_value(edge, IoU())
 
         # remove all but one pixel
         pixels_to_remove = tuple(orig_pixels[d][1:] for d in range(len(orig_pixels)))

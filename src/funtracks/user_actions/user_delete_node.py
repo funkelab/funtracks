@@ -17,16 +17,16 @@ class UserDeleteNode(ActionGroup):
     ):
         super().__init__(project, actions=[])
         # delete adjacent edges
-        for pred in self.project.cand_graph.predecessors(node):
+        for pred in self.project.graph.predecessors(node):
             self.actions.append(DeleteEdge(project, (pred, node)))
-        for succ in self.project.cand_graph.successors(node):
+        for succ in self.project.graph.successors(node):
             self.actions.append(DeleteEdge(project, (node, succ)))
 
         # connect child and parent in track, if applicable
-        track_id = self.project.cand_graph.get_track_id(node)
+        track_id = self.project.graph.get_track_id(node)
         if track_id is not None:
-            time = self.project.cand_graph.get_time(node)
-            pred, succ = self.project.cand_graph.get_track_neighbors(track_id, time)
+            time = self.project.graph.get_time(node)
+            pred, succ = self.project.graph.get_track_neighbors(track_id, time)
             if pred is not None and succ is not None:
                 self.actions.append(AddEdge(project, (pred, succ), {}))
 

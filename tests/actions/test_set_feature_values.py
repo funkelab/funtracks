@@ -23,7 +23,7 @@ class TestSetFeatureValues:
         gt_graph = self.get_gt_graph(request, ndim)
         features = FeatureSet(ndim=ndim, seg=use_seg)
         cand_graph = TrackingGraph(NxGraph, gt_graph, features)
-        return Project("test", params, segmentation=seg, cand_graph=cand_graph)
+        return Project("test", params, segmentation=seg, graph=cand_graph)
 
     def get_gt_graph(self, request, ndim):
         graph_name = "graph_2d" if ndim == 3 else "graph_3d"
@@ -33,7 +33,7 @@ class TestSetFeatureValues:
     def test_set_node_features(self, request, ndim, use_seg):
         # TODO: test edge cases
         project = self.get_project(request, ndim, use_seg)
-        features = project.cand_graph.features
+        features = project.graph.features
         mutable_feature = Feature(
             attr_name="test",
             value_names="Test mutability",
@@ -45,7 +45,7 @@ class TestSetFeatureValues:
         )
         features.add_feature(mutable_feature)
         node = 1
-        graph = project.cand_graph
+        graph = project.graph
         assert graph.get_feature_value(node, mutable_feature) == 0
         attributes = {
             mutable_feature: 1,
@@ -60,7 +60,7 @@ class TestSetFeatureValues:
     def test_set_edge_features(self, request, ndim, use_seg):
         # TODO: test edge cases
         project = self.get_project(request, ndim, use_seg)
-        features = project.cand_graph.features
+        features = project.graph.features
         mutable_feature = Feature(
             attr_name="test",
             value_names="Test mutability",
@@ -72,7 +72,7 @@ class TestSetFeatureValues:
         )
         features.add_feature(mutable_feature)
         edge = (1, 2)
-        graph = project.cand_graph
+        graph = project.graph
         assert graph.get_feature_value(edge, mutable_feature) == 0
         attributes = {
             mutable_feature: 1,

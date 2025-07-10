@@ -63,7 +63,7 @@ class TestProjectInit:
             name="test_project",
             project_params=ProjectParams(),
             segmentation=seg,
-            cand_graph=cand_graph,
+            graph=cand_graph,
         )
         assert project.name == "test_project"
         assert project.ndim == ndim
@@ -73,7 +73,7 @@ class TestProjectInit:
             assert isinstance(project.segmentation, fp.Array)
         else:
             assert project.segmentation is None
-        nodes_only = project.cand_graph._graph
+        nodes_only = project.graph._graph
         assert Counter(nodes_only.nodes.keys()) == Counter(gt_graph.nodes.keys())
         for node, data in nodes_only.nodes(data=True):
             if "area" in gt_graph.nodes[node]:
@@ -118,8 +118,8 @@ class TestProjectUpdateSeg:
         assert first_pixel == value
         assert second_pixel == value
 
-        features = project.cand_graph.features
-        project.cand_graph.add_node(10, {features.time: 0})
+        features = project.graph.features
+        project.graph.add_node(10, {features.time: 0})
 
         retrieved = project.get_pixels(10)
         np.testing.assert_array_equal(retrieved, pixels)

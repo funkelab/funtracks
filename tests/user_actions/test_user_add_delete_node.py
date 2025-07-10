@@ -25,7 +25,7 @@ class TestUserAddDeleteNode:
         gt_graph = self.get_gt_graph(request, ndim)
         features = FeatureSet(ndim=ndim, seg=use_seg)
         cand_graph = TrackingGraph(NxGraph, gt_graph, features)
-        return Project("test", params, segmentation=seg, cand_graph=cand_graph)
+        return Project("test", params, segmentation=seg, graph=cand_graph)
 
     def get_gt_graph(self, request, ndim):
         graph_name = "graph_2d" if ndim == 3 else "graph_3d"
@@ -34,7 +34,7 @@ class TestUserAddDeleteNode:
 
     def test_user_add_node(self, request, ndim, use_seg):
         project = self.get_project(request, ndim, use_seg)
-        features = project.cand_graph.features
+        features = project.graph.features
         # add a node to replace a skip edge between node 4 in time 2 and node 5 in time 4
         node_id = 7
         track_id = 3
@@ -52,7 +52,7 @@ class TestUserAddDeleteNode:
             del attributes[features.position]
         else:
             pixels = None
-        graph = project.cand_graph
+        graph = project.graph
         assert not graph.has_node(node_id)
         assert graph.has_edge((4, 5))
         action = UserAddNode(project, node_id, attributes, pixels=pixels)
@@ -83,17 +83,17 @@ class TestUserAddDeleteNode:
 
     def test_user_delete_node(self, request, ndim, use_seg):
         project = self.get_project(request, ndim, use_seg)
-        features = project.cand_graph.features
+        features = project.graph.features
         if ndim == 4 and use_seg:
             for feature in features._features:
                 if isinstance(feature, Area):
                     area_feature = feature
                     break
-            project.cand_graph.features._features.remove(area_feature)
+            project.graph.features._features.remove(area_feature)
         # delete node in middle of track. Should skip-connect 3 and 5 with span 3
         node_id = 4
 
-        graph: TrackingGraph = project.cand_graph
+        graph: TrackingGraph = project.graph
         assert graph.has_node(node_id)
         assert graph.has_edge((3, node_id))
         assert graph.has_edge((node_id, 5))

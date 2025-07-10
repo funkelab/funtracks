@@ -25,7 +25,7 @@ class UserUpdateSegmentation(ActionGroup):
                 before the change
         """
         super().__init__(project, actions=[])
-        pin_attrs = {self.project.cand_graph.features.node_selection_pin: True}
+        pin_attrs = {self.project.graph.features.node_selection_pin: True}
         for pixels, old_value in updated_pixels:
             ndim = len(pixels)
             if old_value == 0:
@@ -54,15 +54,15 @@ class UserUpdateSegmentation(ActionGroup):
                 "Can only update one time point at a time"
             )
             time = all_pixels[0][0]
-            if self.project.cand_graph.has_node(new_value):
+            if self.project.graph.has_node(new_value):
                 self.actions.append(
                     UpdateNodeSeg(project, new_value, all_pixels, added=True)
                 )
                 # pin the node that you edited the segmentation of to be selected
                 self.actions.append(SetFeatureValues(project, new_value, pin_attrs))
             else:
-                pin_attrs[self.project.cand_graph.features.time] = time
-                pin_attrs[self.project.cand_graph.features.node_selected] = True
+                pin_attrs[self.project.graph.features.time] = time
+                pin_attrs[self.project.graph.features.node_selected] = True
                 self.actions.append(
                     UserAddNode(
                         project, new_value, attributes=pin_attrs, pixels=all_pixels

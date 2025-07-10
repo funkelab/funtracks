@@ -2,10 +2,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import geff.networkx
+import zarr
+
 from ._graph_interface import GraphInterface
 from .features.feature_set import FeatureSet
+from .nx_graph import NxGraph
 
 if TYPE_CHECKING:
+    from pathlib import Path
     from typing import Any
 
     from .features._base import Feature
@@ -130,3 +135,18 @@ class TrackingGraph(GraphInterface):
         """Return the next available track_id and update self.max_track_id"""
         self.max_track_id = self.max_track_id + 1
         return self.max_track_id
+
+    def save(self, path: Path):
+        geff.networkx.write(
+            self._graph, position_attr=self.features.position.attr_name, path=path
+        )
+        attrs = zarr.open(path).attrs
+        attrs["features"] = self.features.dump_json()
+
+    @classmethod
+    def load(cls, path: Path) -> TrackingGraph:
+        nx_graph = geff.networkx.read(path)
+        attrs = zarr.open(path).attrs
+        features_json = attrs["features"]
+        features = FeatureSet.from_json(features_json)
+        return TrackingGraph(NxGraph, nx_graph, features)

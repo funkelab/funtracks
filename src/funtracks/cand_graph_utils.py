@@ -5,15 +5,14 @@ import networkx as nx
 from skimage.measure import regionprops
 from tqdm import tqdm
 
-from .cand_graph import CandGraph
+from .cand_graph import TrackingGraph
 from .features.feature_set import FeatureSet
 from .nx_graph import NxGraph
-from .params import CandGraphParams
 
 logger = logging.getLogger(__name__)
 
 
-def nodes_from_segmentation(segmentation: fp.Array, params: CandGraphParams) -> CandGraph:
+def nodes_from_segmentation(segmentation: fp.Array) -> TrackingGraph:
     """Extract candidate nodes from a segmentation.
 
     Args:
@@ -53,4 +52,4 @@ def nodes_from_segmentation(segmentation: fp.Array, params: CandGraphParams) -> 
                         value = value.tolist()
                     attrs[feature.attr_name] = value
             cand_graph.add_node(node_id, **attrs)
-    return CandGraph(NxGraph, cand_graph, features, params)
+    return TrackingGraph(NxGraph, cand_graph, features)

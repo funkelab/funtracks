@@ -31,7 +31,7 @@ class UserSelectEdge(ActionGroup):
             )
 
         # pin the endpoints to selected
-        features = project.cand_graph.features
+        features = project.graph.features
         node_attrs = {}
         node_attrs[features.node_selection_pin] = True
 
@@ -43,10 +43,8 @@ class UserSelectEdge(ActionGroup):
         if out_degree == 0:  # joining two segments
             # assign the track id of the source node to the target and all out
             # edges until end of track
-            new_track_id = self.project.cand_graph.get_track_id(source)
-            self.actions.append(
-                UpdateTrackID(self.project.cand_graph, edge[1], new_track_id)
-            )
+            new_track_id = self.project.graph.get_track_id(source)
+            self.actions.append(UpdateTrackID(self.project.graph, edge[1], new_track_id))
         elif out_degree == 1:  # creating a division
             # assign a new track id to existing child
             successor = next(iter(self.project.solution.successors(source)))
@@ -62,7 +60,7 @@ class UserSelectEdge(ActionGroup):
         # the edge to be selected and pin the selection
         attributes[features.edge_selected] = True
         attributes[features.edge_selection_pin] = True
-        if not self.project.cand_graph.has_edge(edge):
+        if not self.project.graph.has_edge(edge):
             self.actions.append(AddEdge(project, edge, attributes))
         else:
             self.actions.append(SetFeatureValues(project, edge, attributes))

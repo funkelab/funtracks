@@ -23,7 +23,7 @@ class TestUserAddDeleteEdge:
         gt_graph = self.get_gt_graph(request, ndim)
         features = FeatureSet(ndim=ndim, seg=use_seg)
         cand_graph = TrackingGraph(NxGraph, gt_graph, features)
-        return Project("test", params, segmentation=seg, cand_graph=cand_graph)
+        return Project("test", params, segmentation=seg, graph=cand_graph)
 
     def get_gt_graph(self, request, ndim):
         graph_name = "graph_2d" if ndim == 3 else "graph_3d"
@@ -35,7 +35,7 @@ class TestUserAddDeleteEdge:
         # add an edge from 4 to 6 (will make 4 a division and 5 will need to relabel track id)
         edge = (4, 6)
         attributes = {}
-        graph = project.cand_graph
+        graph = project.graph
         old_child = 5
         old_track_id = graph.get_feature_value(old_child, graph.features.track_id)
         assert not graph.has_edge(edge)
@@ -82,7 +82,7 @@ class TestUserAddDeleteEdge:
         edge = (1, 3)
         old_child = 2
 
-        graph: TrackingGraph = project.cand_graph
+        graph: TrackingGraph = project.graph
         old_track_id = graph.get_track_id(old_child)
         new_track_id = graph.get_track_id(1)
         assert graph.has_edge(edge)
@@ -109,7 +109,7 @@ class TestUserAddDeleteEdge:
         edge = (3, 4)
         old_child = 5
 
-        graph: TrackingGraph = project.cand_graph
+        graph: TrackingGraph = project.graph
         old_track_id = graph.get_track_id(old_child)
         assert graph.has_edge(edge)
         assert project.solution.has_edge(edge)
