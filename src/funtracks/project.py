@@ -28,7 +28,7 @@ class Project:
         self,
         name: str,
         project_params: ProjectParams,
-        raw: fp.Array | None = None,
+        raw: list[fp.Array] | None = None,
         segmentation: fp.Array | None = None,
         cand_graph: TrackingGraph | None = None,
         zarr_path: Path | None = None,
@@ -45,15 +45,15 @@ class Project:
         self.segmentation = segmentation
         self.zarr_path = zarr_path
         self.ndim: int
-        if self.raw is not None:
-            self.ndim = len(self.raw.physical_shape)
-        elif segmentation is not None:
+        if self.raw is not None and len(self.raw) != 0:
+            self.ndim = len(self.raw[0].physical_shape)
+        elif self.segmentation is not None:
             self.ndim = len(self.segmentation.physical_shape)
         else:
+            if cand_graph is None or len(cand_graph) == 0:
+                raise ValueError("Cannot infer ndim from empty data")
             pos_feature = cand_graph.features.position
             if isinstance(pos_feature.value_names, str):
-                if len(cand_graph) == 0:
-                    raise ValueError("Cannot infer ndim from empty data")
                 example_node = next(iter(cand_graph.nodes))
                 spatial_dims = len(cand_graph.get_position(example_node))
             else:
@@ -62,6 +62,7 @@ class Project:
             self.ndim = spatial_dims + 1
 
         cand_graph_params = CandGraphParams()
+        self.cand_graph: TrackingGraph
         if cand_graph is not None:
             self.cand_graph = CandGraph.from_tracking_graph(cand_graph, cand_graph_params)
         else:
@@ -115,8 +116,15 @@ class Project:
         # solution is stored as an attribute on cand_graph
         if self.cand_graph is not None:
             self.cand_graph.save(zarr_path / "cand_graph")
-        if self.raw is not None and "raw" not in zroot.group_keys():
-            self._save_fp_array(zarr_path / "raw", self.raw)
+        if self.raw is not None:
+            if "raw" not in zroot.group_keys():
+                raw_group = zroot.create_group("raw")
+            for channel in range(len(self.raw)):
+                channel_name = str(channel)
+                if channel_name not in raw_group.array_keys():
+                    self._save_fp_array(
+                        zarr_path / "raw" / channel_name, self.raw[channel]
+                    )
         if self.segmentation is not None and "seg" not in zroot.group_keys():
             self._save_fp_array(zarr_path / "seg", self.segmentation)
 
@@ -131,8 +139,11 @@ class Project:
         params_dict = zroot.attrs["project_params"]
         params = ProjectParams(**params_dict)
         name = metadata["name"]
-        if "raw" in zroot.array_keys():
-            raw = fp.open_ds(path / "raw")
+        if "raw" in zroot.group_keys():
+            raw = []
+            raw_group = zroot["raw"]
+            for channel_key in raw_group.array_keys():
+                raw.append(fp.open_ds(path / "raw" / channel_key))
         else:
             raw = None
         if "seg" in zroot.array_keys():

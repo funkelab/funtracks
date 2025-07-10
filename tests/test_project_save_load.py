@@ -26,7 +26,7 @@ class TestSaveLoadInternal:
 
         if use_raw:
             raw = np.zeros_like(segmentation)
-            raw = fp.Array(raw, axis_names=axis_names)
+            raw = [fp.Array(raw, axis_names=axis_names)]
         else:
             raw = None
 
@@ -50,17 +50,17 @@ class TestSaveLoadInternal:
         if use_seg:
             assert "seg" in zroot.array_keys()
             # more robust testing is the responsibility of funlib.persistence
-            np.testing.assert_array_almost_equal(
-                project.segmentation.data.compute(), zroot["seg"][:]
-            )
+            np.testing.assert_array_almost_equal(project.segmentation.data, zroot["seg"])
         else:
             assert "seg" not in zroot.array_keys()
         if use_raw:
-            assert "raw" in zroot.array_keys()
+            print(list(zroot.keys()))
+            assert "raw" in zroot.group_keys()
+            raw_group = zroot["raw"]
+            print(list(raw_group.array_keys()))
+            assert "0" in raw_group.array_keys()
             # more robust testing is the responsibility of funlib.persistence
-            np.testing.assert_array_almost_equal(
-                project.raw.data.compute(), zroot["raw"][:]
-            )
+            np.testing.assert_array_almost_equal(project.raw[0].data, zroot["raw/0"])
         else:
             assert "raw" not in zroot.array_keys()
 
@@ -112,7 +112,7 @@ class TestSaveLoadInternal:
         if use_raw:
             assert loaded.raw is not None
             np.testing.assert_array_almost_equal(
-                project.raw.data.compute(), loaded.raw.data.compute()
+                project.raw[0].data.compute(), loaded.raw[0][:]
             )
         else:
             assert loaded.raw is None
