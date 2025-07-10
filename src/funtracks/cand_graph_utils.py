@@ -8,6 +8,7 @@ from tqdm import tqdm
 
 from funtracks.features._base import Feature, FeatureType
 from funtracks.features.edge_features import EdgeSelected, Distance, IoU, FrameSpan
+from funtracks.features.node_features import TrackID
 from funtracks.features.measurement_features import Intensity
 from funtracks.features.regionprops_extended import regionprops_extended
 import dask.array as da
@@ -159,8 +160,8 @@ def graph_from_df(
         for feature in features_to_import_from_df:
             attrs[feature["feature"].attr_name] = row.get(feature["from_column"])
 
-        if "track_id" in df.columns:
-            attrs['track_id'] = row.get("track_id")
+        # if "track_id" in df.columns:
+        #     attrs['track_id'] = row.get("track_id")
 
         # Mark the node as selected (in solution)       
         attrs[feature_set.node_selected.attr_name] = True
@@ -219,7 +220,14 @@ def graph_from_df(
                     _, _, iou = ious[0]
                 graph.edges[edge][feature.attr_name] = iou
 
-    return CandGraph(NxGraph, graph, feature_set, cand_graph_params)
+    
+    cand_graph = CandGraph(NxGraph, graph, feature_set, cand_graph_params)
+   
+    # Initialize the track ids
+    TrackID().compute(cand_graph)
+
+
+    return cand_graph
 
 
 def graph_from_segmentation(
