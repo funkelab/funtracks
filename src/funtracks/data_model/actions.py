@@ -1,8 +1,8 @@
 """This module contains all the low level actions used to control a Tracks object.
 Low level actions should control these aspects of Tracks:
     - adding/removing nodes and edges to/from the segmentation and graph
-    - Updating the segmentation and graph attributes that are controlled by the segmentation.
-    Currently, position and area for nodes, and IOU for edges.
+    - Updating the segmentation and graph attributes that are controlled by the
+      segmentation. Currently, position and area for nodes, and IOU for edges.
     - Keeping track of information needed to undo the given action. For removing a node,
     this means keeping track of the incident edges that were removed, along with their
     attributes.
@@ -16,7 +16,11 @@ from many low-level actions.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any
+
+import numpy as np
+from typing_extensions import override
 
 from .graph_attributes import NodeAttr
 from .solution_tracks import SolutionTracks
@@ -70,6 +74,7 @@ class ActionGroup(TracksAction):
         super().__init__(tracks)
         self.actions = actions
 
+    @override
     def inverse(self) -> ActionGroup:
         actions = [action.inverse() for action in self.actions[::-1]]
         return ActionGroup(self.tracks, actions)
@@ -96,18 +101,14 @@ class AddNodes(TracksAction):
             tracks (Tracks): The Tracks to add the nodes to
             nodes (Node): A list of node ids
             attributes (Attrs): Includes times and optionally positions
-            pixels (list[SegMask] | None, optional): The segmentations associated with each node.
-                Defaults to None.
+            pixels (list[SegMask] | None, optional): The segmentations associated with
+                each node. Defaults to None.
         """
         super().__init__(tracks)
         self.nodes = nodes
         user_attrs = attributes.copy()
-        self.times = attributes.get(NodeAttr.TIME.value, None)
-        if NodeAttr.TIME.value in attributes:
-            del user_attrs[NodeAttr.TIME.value]
-        self.positions = attributes.get(NodeAttr.POS.value, None)
-        if NodeAttr.POS.value in attributes:
-            del user_attrs[NodeAttr.POS.value]
+        self.times = attributes.pop(NodeAttr.TIME.value, None)
+        self.positions = attributes.pop(NodeAttr.POS.value, None)
         self.pixels = pixels
         self.attributes = user_attrs
         self._apply()
@@ -120,9 +121,35 @@ class AddNodes(TracksAction):
         """Apply the action, and set segmentation if provided in self.pixels"""
         if self.pixels is not None:
             self.tracks.set_pixels(self.pixels, self.nodes)
-        self.tracks.add_nodes(
-            self.nodes, self.times, self.positions, attrs=self.attributes
-        )
+        attrs = self.attributes
+        if attrs is None:
+            attrs = {}
+        self.tracks.graph.add_nodes_from(self.nodes)
+        self.tracks.set_times(self.nodes, self.times)
+        final_pos: np.ndarray
+        if self.tracks.segmentation is not None:
+            computed_attrs = self.tracks._compute_node_attrs(self.nodes, self.times)
+            if self.positions is None:
+                final_pos = np.array(computed_attrs[NodeAttr.POS.value])
+            else:
+                final_pos = self.positions
+            attrs[NodeAttr.AREA.value] = computed_attrs[NodeAttr.AREA.value]
+        elif self.positions is None:
+            raise ValueError("Must provide positions or segmentation and ids")
+        else:
+            final_pos = self.positions
+
+        self.tracks.set_positions(self.nodes, final_pos)
+        for attr, values in attrs.items():
+            self.tracks._set_nodes_attr(self.nodes, attr, values)
+
+        if isinstance(self.tracks, SolutionTracks):
+            for node, track_id in zip(
+                self.nodes, attrs[NodeAttr.TRACK_ID.value], strict=True
+            ):
+                if track_id not in self.tracks.track_id_to_node:
+                    self.tracks.track_id_to_node[track_id] = []
+                self.tracks.track_id_to_node[track_id].append(node)
 
 
 class DeleteNodes(TracksAction):
@@ -155,8 +182,8 @@ class DeleteNodes(TracksAction):
         return AddNodes(self.tracks, self.nodes, self.attributes, pixels=self.pixels)
 
     def _apply(self):
-        """ASSUMES THERE ARE NO INCIDENT EDGES - raises valueerror if an edge will be removed
-        by this operation
+        """ASSUMES THERE ARE NO INCIDENT EDGES - raises valueerror if an edge will be
+        removed by this operation
         Steps:
         - For each node
             set pixels to 0 if self.pixels is provided
@@ -168,7 +195,11 @@ class DeleteNodes(TracksAction):
                 [0] * len(self.pixels),
             )
 
-        self.tracks.remove_nodes(self.nodes)
+        if isinstance(self.tracks, SolutionTracks):
+            for node in self.nodes:
+                self.tracks.track_id_to_node[self.tracks.get_track_id(node)].remove(node)
+
+        self.tracks.graph.remove_nodes_from(self.nodes)
 
 
 class UpdateNodeSegs(TracksAction):
@@ -208,7 +239,22 @@ class UpdateNodeSegs(TracksAction):
 
     def _apply(self):
         """Set new attributes"""
-        self.tracks.update_segmentations(self.nodes, self.pixels, self.added)
+        times = self.tracks.get_times(self.nodes)
+        values = self.nodes if self.added else [0 for _ in self.nodes]
+        self.tracks.set_pixels(self.pixels, values)
+        computed_attrs = self.tracks._compute_node_attrs(self.nodes, times)
+        positions = np.array(computed_attrs[NodeAttr.POS.value])
+        self.tracks.set_positions(self.nodes, positions)
+        self.tracks._set_nodes_attr(
+            self.nodes, NodeAttr.AREA.value, computed_attrs[NodeAttr.AREA.value]
+        )
+
+        incident_edges = list(self.tracks.graph.in_edges(self.nodes)) + list(
+            self.tracks.graph.out_edges(self.nodes)
+        )
+        for edge in incident_edges:
+            new_edge_attrs = self.tracks._compute_edge_attrs([edge])
+            self.tracks._set_edge_attributes([edge], new_edge_attrs)
 
 
 class UpdateNodeAttrs(TracksAction):
@@ -277,9 +323,20 @@ class AddEdges(TracksAction):
     def _apply(self):
         """
         Steps:
-        - add each edge to the graph. Assumes all edges are valid (they should be checked at this point already)
+        - add each edge to the graph. Assumes all edges are valid (they should be checked
+        at this point already)
         """
-        self.tracks.add_edges(self.edges)
+        attrs: dict[str, Sequence[Any]] = {}
+        attrs.update(self.tracks._compute_edge_attrs(self.edges))
+        for idx, edge in enumerate(self.edges):
+            for node in edge:
+                if not self.tracks.graph.has_node(node):
+                    raise KeyError(
+                        f"Cannot add edge {edge}: endpoint {node} not in graph yet"
+                    )
+            self.tracks.graph.add_edge(
+                edge[0], edge[1], **{key: vals[idx] for key, vals in attrs.items()}
+            )
 
 
 class DeleteEdges(TracksAction):
@@ -298,7 +355,11 @@ class DeleteEdges(TracksAction):
         """Steps:
         - Remove the edges from the graph
         """
-        self.tracks.remove_edges(self.edges)
+        for edge in self.edges:
+            if self.tracks.graph.has_edge(*edge):
+                self.tracks.graph.remove_edge(*edge)
+            else:
+                raise KeyError(f"Edge {edge} not in the graph, and cannot be removed")
 
 
 class UpdateTrackID(TracksAction):

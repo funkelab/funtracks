@@ -89,8 +89,7 @@ def test_update_node_segs(segmentation_2d, graph_2d):
     assert set(tracks.graph.nodes()) == set(graph_2d.nodes())
     assert tracks.graph.nodes[1][NodeAttr.AREA.value] == 1345
     assert (
-        tracks.graph.nodes[1][NodeAttr.POS.value]
-        != graph_2d.nodes[1][NodeAttr.POS.value]
+        tracks.graph.nodes[1][NodeAttr.POS.value] != graph_2d.nodes[1][NodeAttr.POS.value]
     )
     assert_array_almost_equal(tracks.segmentation, new_seg)
 
@@ -105,8 +104,7 @@ def test_update_node_segs(segmentation_2d, graph_2d):
     assert set(tracks.graph.nodes()) == set(graph_2d.nodes())
     assert tracks.graph.nodes[1][NodeAttr.AREA.value] == 1345
     assert (
-        tracks.graph.nodes[1][NodeAttr.POS.value]
-        != graph_2d.nodes[1][NodeAttr.POS.value]
+        tracks.graph.nodes[1][NodeAttr.POS.value] != graph_2d.nodes[1][NodeAttr.POS.value]
     )
     assert_array_almost_equal(tracks.segmentation, new_seg)
 

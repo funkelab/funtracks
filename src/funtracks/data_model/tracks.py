@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-import json
 import logging
+import warnings
 from collections.abc import Iterable, Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
     TypeAlias,
 )
+from warnings import warn
 
 import networkx as nx
 import numpy as np
@@ -54,9 +55,6 @@ class Tracks:
     """
 
     refresh = Signal(object)
-    GRAPH_FILE = "graph.json"
-    SEG_FILE = "seg.npy"
-    ATTRS_FILE = "attrs.json"
 
     def __init__(
         self,
@@ -98,9 +96,7 @@ class Tracks:
     def successors(self, node: int) -> list[int]:
         return list(self.graph.successors(node))
 
-    def get_positions(
-        self, nodes: Iterable[Node], incl_time: bool = False
-    ) -> np.ndarray:
+    def get_positions(self, nodes: Iterable[Node], incl_time: bool = False) -> np.ndarray:
         """Get the positions of nodes in the graph. Optionally include the
         time frame as the first dimension. Raises an error if any of the nodes
         are not in the graph.
@@ -116,16 +112,11 @@ class Tracks:
         """
         if isinstance(self.pos_attr, tuple | list):
             positions = np.stack(
-                [
-                    self.get_nodes_attr(nodes, dim, required=True)
-                    for dim in self.pos_attr
-                ],
+                [self.get_nodes_attr(nodes, dim, required=True) for dim in self.pos_attr],
                 axis=1,
             )
         else:
-            positions = np.array(
-                self.get_nodes_attr(nodes, self.pos_attr, required=True)
-            )
+            positions = np.array(self.get_nodes_attr(nodes, self.pos_attr, required=True))
 
         if incl_time:
             times = np.array(self.get_nodes_attr(nodes, self.time_attr, required=True))
@@ -156,7 +147,8 @@ class Tracks:
         if not isinstance(positions, np.ndarray):
             positions = np.array(positions)
         if incl_time:
-            self.set_times(nodes, positions[:, 0].tolist())
+            times = positions[:, 0].tolist()  # we know this is a list of ints
+            self.set_times(nodes, times)  # type: ignore
             positions = positions[:, 1:]
 
         if isinstance(self.pos_attr, tuple | list):
@@ -199,115 +191,6 @@ class Tracks:
 
         """
         self.set_times([node], [int(time)])
-
-    def add_nodes(
-        self,
-        nodes: Iterable[Node],
-        times: Iterable[int],
-        positions: np.ndarray | None = None,
-        attrs: Attrs | None = None,
-    ):
-        """Add a set of nodes to the tracks object. Includes computing node attributes
-        (position, area) from the segmentation if there is one. Does not include setting
-        the segmentation pixels - assumes this is already done.
-
-        Args:
-            nodes (Iterable[Node]): node ids to add
-            times (Iterable[int]): times of nodes to add
-            positions (np.ndarray | None, optional): The positions to set for each node,
-                if no segmentation is present. If segmentation is present, these provided
-                values will take precedence over the computed centroids. Defaults to None.
-            attrs (Attrs | None, optional): The additional attributes to add to each node.
-                Defaults to None.
-
-        Raises:
-            ValueError: If neither positions nor segmentations are provided
-        """
-        if attrs is None:
-            attrs = {}
-        self.graph.add_nodes_from(nodes)
-        self.set_times(nodes, times)
-        final_pos: np.ndarray
-        if self.segmentation is not None:
-            computed_attrs = self._compute_node_attrs(nodes, times)
-            if positions is None:
-                final_pos = np.array(computed_attrs[NodeAttr.POS.value])
-            else:
-                final_pos = positions
-            attrs[NodeAttr.AREA.value] = computed_attrs[NodeAttr.AREA.value]
-        elif positions is None:
-            raise ValueError("Must provide positions or segmentation and ids")
-        else:
-            final_pos = positions
-
-        self.set_positions(nodes, final_pos)
-        for attr, values in attrs.items():
-            self._set_nodes_attr(nodes, attr, values)
-
-    def add_node(
-        self,
-        node: Node,
-        time: int,
-        position: Sequence | None = None,
-        attrs: Attrs | None = None,
-    ):
-        """Add a node to the graph. Will update the internal mappings and generate the
-        segmentation-controlled attributes if there is a segmentation present.
-        The segmentation should have been previously updated, otherwise the
-        attributes will not update properly.
-
-        Args:
-            node (Node): The node id to add
-            time (int): the time frame of the node to add
-            position (Sequence | None): The spatial position of the node (excluding time).
-                Can be None if it should be automatically detected from the segmentation.
-                Either segmentation or position must be provided. Defaults to None.
-            attrs (Attrs | None, optional): The additional attributes to add to node.
-                Defaults to None.
-        """
-        pos = np.expand_dims(position, axis=0) if position is not None else None
-        attributes: dict[str, list[Any]] | None = (
-            {key: [val] for key, val in attrs.items()} if attrs is not None else None
-        )
-        self.add_nodes([node], [time], positions=pos, attrs=attributes)
-
-    def remove_nodes(self, nodes: Iterable[Node]):
-        self.graph.remove_nodes_from(nodes)
-
-    def remove_node(self, node: Node):
-        """Remove the node from the graph.
-        Does not update the segmentation if present.
-
-        Args:
-            node (Node): The node to remove from the graph
-        """
-        self.remove_nodes([node])
-
-    def add_edges(self, edges: Iterable[Edge]):
-        attrs: dict[str, Sequence[Any]] = {}
-        attrs.update(self._compute_edge_attrs(edges))
-        for idx, edge in enumerate(edges):
-            for node in edge:
-                if not self.graph.has_node(node):
-                    raise KeyError(
-                        f"Cannot add edge {edge}: endpoint {node} not in graph yet"
-                    )
-            self.graph.add_edge(
-                edge[0], edge[1], **{key: vals[idx] for key, vals in attrs.items()}
-            )
-
-    def add_edge(self, edge: Edge):
-        self.add_edges([edge])
-
-    def remove_edges(self, edges: Iterable[Edge]):
-        for edge in edges:
-            self.remove_edge(edge)
-
-    def remove_edge(self, edge: Edge):
-        if self.graph.has_edge(*edge):
-            self.graph.remove_edge(*edge)
-        else:
-            raise KeyError(f"Edge {edge} not in the graph, and cannot be removed")
 
     def get_areas(self, nodes: Iterable[Node]) -> Sequence[int | None]:
         """Get the area/volume of a given node. Raises a KeyError if the node
@@ -371,8 +254,8 @@ class Tracks:
         Args:
             pixels (Iterable[tuple[np.ndarray]]): The pixels that should be set,
                 formatted like the output of np.nonzero (each element of the tuple
-                represents one dimension, containing an array of indices in that dimension).
-                Can be used to directly index the segmentation.
+                represents one dimension, containing an array of indices in that
+                dimension). Can be used to directly index the segmentation.
             value (Iterable[int | None]): The value to set each pixel to
         """
         if self.segmentation is None:
@@ -381,29 +264,6 @@ class Tracks:
             if val is None:
                 raise ValueError("Cannot set pixels to None value")
             self.segmentation[pix] = val
-
-    def update_segmentations(
-        self, nodes: Iterable[Node], pixels: Iterable[SegMask], added: bool = True
-    ) -> None:
-        """Updates the segmentation of the given nodes. Also updates the
-        auto-computed attributes of the nodes and incident edges.
-        """
-        times = self.get_times(nodes)
-        values = nodes if added else [0 for _ in nodes]
-        self.set_pixels(pixels, values)
-        computed_attrs = self._compute_node_attrs(nodes, times)
-        positions = np.array(computed_attrs[NodeAttr.POS.value])
-        self.set_positions(nodes, positions)
-        self._set_nodes_attr(
-            nodes, NodeAttr.AREA.value, computed_attrs[NodeAttr.AREA.value]
-        )
-
-        incident_edges = list(self.graph.in_edges(nodes)) + list(
-            self.graph.out_edges(nodes)
-        )
-        for edge in incident_edges:
-            new_edge_attrs = self._compute_edge_attrs([edge])
-            self._set_edge_attributes([edge], new_edge_attrs)
 
     def _set_node_attributes(self, nodes: Iterable[Node], attributes: Attrs):
         """Update the attributes for given nodes"""
@@ -434,164 +294,6 @@ class Tracks:
             else:
                 logger.info("Edge %d not found in the graph.", edge)
 
-    def save(self, directory: Path):
-        """Save the tracks to the given directory.
-        Currently, saves the graph as a json file in networkx node link data format,
-        saves the segmentation as a numpy npz file, and saves the time and position
-        attributes and scale information in an attributes json file.
-
-        Args:
-            directory (Path): The directory to save the tracks in.
-        """
-        self._save_graph(directory)
-        self._save_seg(directory)
-        self._save_attrs(directory)
-
-    def _save_graph(self, directory: Path):
-        """Save the graph to file. Currently uses networkx node link data
-        format (and saves it as json).
-
-        Args:
-            directory (Path): The directory in which to save the graph file.
-        """
-        graph_file = directory / self.GRAPH_FILE
-        graph_data = nx.node_link_data(self.graph)
-
-        def convert_np_types(data):
-            """Recursively convert numpy types to native Python types."""
-
-            if isinstance(data, dict):
-                return {key: convert_np_types(value) for key, value in data.items()}
-            elif isinstance(data, list):
-                return [convert_np_types(item) for item in data]
-            elif isinstance(data, np.ndarray):
-                return data.tolist()  # Convert numpy arrays to Python lists
-            elif isinstance(data, np.integer):
-                return int(data)  # Convert numpy integers to Python int
-            elif isinstance(data, np.floating):
-                return float(data)  # Convert numpy floats to Python float
-            else:
-                return (
-                    data  # Return the data as-is if it's already a native Python type
-                )
-
-        graph_data = convert_np_types(graph_data)
-        with open(graph_file, "w") as f:
-            json.dump(graph_data, f)
-
-    def _save_seg(self, directory: Path):
-        """Save a segmentation as a numpy array using np.save. In the future,
-        could be changed to use zarr or other file types.
-
-        Args:
-            directory (Path): The directory in which to save the segmentation
-        """
-        if self.segmentation is not None:
-            out_path = directory / self.SEG_FILE
-            np.save(out_path, self.segmentation)
-
-    def _save_attrs(self, directory: Path):
-        """Save the time_attr, pos_attr, and scale in a json file in the given directory.
-
-        Args:
-            directory (Path):  The directory in which to save the attributes
-        """
-        out_path = directory / self.ATTRS_FILE
-        attrs_dict = {
-            "time_attr": self.time_attr,
-            "pos_attr": self.pos_attr
-            if not isinstance(self.pos_attr, np.ndarray)
-            else self.pos_attr.tolist(),
-            "scale": self.scale
-            if not isinstance(self.scale, np.ndarray)
-            else self.scale.tolist(),
-            "ndim": self.ndim,
-        }
-        with open(out_path, "w") as f:
-            json.dump(attrs_dict, f)
-
-    @classmethod
-    def load(cls, directory: Path, seg_required=False) -> Tracks:
-        """Load a Tracks object from the given directory. Looks for files
-        in the format generated by Tracks.save.
-
-        Args:
-            directory (Path): The directory containing tracks to load
-            seg_required (bool, optional): If true, raises a FileNotFoundError if the
-                segmentation file is not present in the directory. Defaults to False.
-
-        Returns:
-            Tracks: A tracks object loaded from the given directory
-        """
-        graph_file = directory / cls.GRAPH_FILE
-        graph = cls._load_graph(graph_file)
-
-        seg_file = directory / cls.SEG_FILE
-        seg = cls._load_seg(seg_file, seg_required=seg_required)
-
-        attrs_file = directory / cls.ATTRS_FILE
-        attrs = cls._load_attrs(attrs_file)
-
-        return cls(graph, seg, **attrs)
-
-    @staticmethod
-    def _load_graph(graph_file: Path) -> nx.DiGraph:
-        """Load the graph from the given json file. Expects networkx node_link_graph
-        formatted json.
-
-        Args:
-            graph_file (Path): The json file to load into a networkx graph
-
-        Raises:
-            FileNotFoundError: If the file does not exist
-
-        Returns:
-            nx.DiGraph: A networkx graph loaded from the file.
-        """
-        if graph_file.is_file():
-            with open(graph_file) as f:
-                json_graph = json.load(f)
-            return nx.node_link_graph(json_graph, directed=True)
-        else:
-            raise FileNotFoundError(f"No graph at {graph_file}")
-
-    @staticmethod
-    def _load_seg(seg_file: Path, seg_required: bool = False) -> np.ndarray | None:
-        """Load a segmentation from a file. If the file doesn't exist, either return
-        None or raise a FileNotFoundError depending on the seg_required flag.
-
-        Args:
-            seg_file (Path): The npz file to load.
-            seg_required (bool, optional): If true, raise a FileNotFoundError if the
-                segmentation is not present. Defaults to False.
-
-        Returns:
-            np.ndarray | None: The segmentation array, or None if it wasn't present and
-                seg_required was False.
-        """
-        if seg_file.is_file():
-            return np.load(seg_file)
-        elif seg_required:
-            raise FileNotFoundError(f"No segmentation at {seg_file}")
-        else:
-            return None
-
-    @staticmethod
-    def _load_attrs(attrs_file: Path) -> dict:
-        if attrs_file.is_file():
-            with open(attrs_file) as f:
-                return json.load(f)
-        else:
-            raise FileNotFoundError(f"No attributes at {attrs_file}")
-
-    @classmethod
-    def delete(cls, directory: Path):
-        # Lets be safe and remove the expected files and then the directory
-        (directory / cls.GRAPH_FILE).unlink()
-        (directory / cls.SEG_FILE).unlink()
-        (directory / cls.ATTRS_FILE).unlink()
-        directory.rmdir()
-
     def _compute_ndim(
         self,
         seg: np.ndarray | None,
@@ -604,12 +306,14 @@ class Tracks:
         ndims = [d for d in ndims if d is not None]
         if len(ndims) == 0:
             raise ValueError(
-                "Cannot compute dimensions from segmentation or scale: please provide ndim argument"
+                "Cannot compute dimensions from segmentation or scale: please provide "
+                "ndim argument"
             )
         ndim = ndims[0]
         if not all(d == ndim for d in ndims):
             raise ValueError(
-                f"Dimensions from segmentation {seg_ndim}, scale {scale_ndim}, and ndim {provided_ndim} must match"
+                f"Dimensions from segmentation {seg_ndim}, scale {scale_ndim}, and ndim "
+                f"{provided_ndim} must match"
             )
         return ndim
 
@@ -630,8 +334,24 @@ class Tracks:
         else:
             return self.graph.nodes[node].get(attr, None)
 
+    def _get_node_attr(self, node, attr, required=False):
+        warnings.warn(
+            "_get_node_attr deprecated in favor of public method get_node_attr",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.get_node_attr(node, attr, required=required)
+
     def get_nodes_attr(self, nodes: Iterable[Node], attr: str, required: bool = False):
         return [self.get_node_attr(node, attr, required=required) for node in nodes]
+
+    def _get_nodes_attr(self, nodes, attr, required=False):
+        warnings.warn(
+            "_get_nodes_attr deprecated in favor of public method get_nodes_attr",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.get_nodes_attr(nodes, attr, required=required)
 
     def _set_edge_attr(self, edge: Edge, attr: str, value: Any):
         self.graph.edge[edge][attr] = value
@@ -723,3 +443,59 @@ class Tracks:
 
             attrs[EdgeAttr.IOU.value].append(iou)
         return attrs
+
+    def save(self, directory: Path):
+        """Save the tracks to the given directory.
+        Currently, saves the graph as a json file in networkx node link data format,
+        saves the segmentation as a numpy npz file, and saves the time and position
+        attributes and scale information in an attributes json file.
+        Args:
+            directory (Path): The directory to save the tracks in.
+        """
+        warn(
+            "`Tracks.save` is deprecated and will be removed in 2.0, use "
+            "`funtracks.import_export.internal_format.save` instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        from ..import_export.internal_format import save_tracks
+
+        save_tracks(self, directory)
+
+    @classmethod
+    def load(cls, directory: Path, seg_required=False) -> Tracks:
+        """Load a Tracks object from the given directory. Looks for files
+        in the format generated by Tracks.save.
+        Args:
+            directory (Path): The directory containing tracks to load
+            seg_required (bool, optional): If true, raises a FileNotFoundError if the
+                segmentation file is not present in the directory. Defaults to False.
+        Returns:
+            Tracks: A tracks object loaded from the given directory
+        """
+        warn(
+            "`Tracks.load` is deprecated and will be removed in 2.0, use "
+            "`funtracks.import_export.internal_format.load` instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        from ..import_export.internal_format import load_tracks
+
+        return load_tracks(directory, seg_required=seg_required, solution=False)
+
+    @classmethod
+    def delete(cls, directory: Path):
+        """Delete the tracks in the given directory. Also deletes the directory.
+
+        Args:
+            directory (Path): Directory containing tracks to be deleted
+        """
+        warn(
+            "`Tracks.delete` is deprecated and will be removed in 2.0, use "
+            "`funtracks.import_export.internal_format.delete` instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        from ..import_export.internal_format import delete_tracks
+
+        delete_tracks(directory)

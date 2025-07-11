@@ -46,7 +46,7 @@ all = ["funtracks[testing,docs,dev]"]
 [tool.setuptools_scm]
 
 [tool.ruff]
-line-length = 88
+line-length = 90
 target-version = "py310"
 fix = true
 src = ["src"]
@@ -65,22 +65,27 @@ select = [
     "PIE", # flake8-pie
     "SIM", # flake8-simplify
     "T20", # flake-print
-]
-ignore = [
-    "UP006", "UP007", # type annotation. As using magicgui require runtime type annotation then we disable this.
-    "ISC001", # implicit string concatenation
-    "E501", # line too long
+    "D102", # undocumented public method
+    "D103", # undocumented public function
+    "D300", # enforces triple double quotes on docstrings
+    "D414", # empty/missing docstring section
+    "D417", # undocumented parameter
 ]
 
 unfixable = [
   "B905", # currently adds strict=False to zips. Should add strict=True (manually)
 ]
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D"]  # no docstrings in tests
+"src/funtracks/data_model/tracks.py" = ["D"]  # Remove this when refactoring tracks
+"src/funtracks/data_model/solution_tracks.py" = ["D"]  # Remove this when refactoring tracks
 
 # https://docs.astral.sh/ruff/formatter/
 [tool.ruff.format]
 
 [tool.mypy]
 ignore_missing_imports = true
+python_version = "3.10"
 
 [tool.coverage.report]
 exclude_also = [
@@ -95,11 +100,13 @@ funtracks = { path = ".", editable = true }
 
 [tool.pixi.environments]
 default = { solve-group = "default" }
-dev = { features = ["dev"], solve-group = "default" }
+dev = { features = ["dev", "testing"], solve-group = "default" }
 docs = { features = ["docs"], solve-group = "default" }
-testing = { features = ["testing"], solve-group = "default" }
 
 [tool.pixi.tasks]
 
-[tool.pixi.feature.testing.tasks]
+[tool.pixi.feature.dev.tasks]
+ruff-check = "ruff check --fix ."
+ruff-format = "ruff format ."
 test = "pytest --cov=funtracks tests/"
+mypy = "mypy src/"
