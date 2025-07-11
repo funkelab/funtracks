@@ -12,8 +12,10 @@ from ._base import (
 )
 from .compute_ious import compute_ious
 
+
 if TYPE_CHECKING:
-    from ..project import Project
+    from funtracks.tracking_graph import TrackingGraph
+    import funlib.persistence as fp
 
 
 class IoU(Feature):
@@ -26,19 +28,31 @@ class IoU(Feature):
             valid_ndim=(3, 4),
             computed=True,
         )
+    
+    def compute(self, graph: TrackingGraph, segmentation: fp.Array):
+        for edge in graph.edges:
+            source, target = edge
+            source_seg = segmentation[graph.get_time(source)] == source
+            target_seg = segmentation[graph.get_time(target)] == target
+            ious = compute_ious(source_seg, target_seg)
+            if len(ious) == 0:
+                iou = 0.0
+            else:
+                assert len(ious) == 1
+                _, _, iou = ious[0]
+            graph.edges[edge][self.attr_name] = iou
 
-    def update(self, project: Project, edge: tuple[int, int]) -> float:
+    def update(self, graph: TrackingGraph, segmentation: fp.Array, edge: tuple[int, int]):
         source, target = edge
-        source_seg = project.segmentation[project.cand_graph.get_time(source)] == source
-        target_seg = project.segmentation[project.cand_graph.get_time(target)] == target
+        source_seg = segmentation[graph.get_time(source)] == source
+        target_seg = segmentation[graph.get_time(target)] == target
         ious = compute_ious(source_seg, target_seg)
         if len(ious) == 0:
             iou = 0.0
         else:
             assert len(ious) == 1
             _, _, iou = ious[0]
-        return iou
-
+        graph.edges[edge][self.attr_name] = iou
 
 class EdgeSelected(Feature):
     def __init__(self, attr_name: str | None = None):
@@ -73,13 +87,21 @@ class Distance(Feature):
             valid_ndim=(3, 4),
             computed=True,
         )
+    
+    def compute(self, graph: TrackingGraph, **kwargs):
+        for edge in graph.edges:
+            source, target = edge
+            source_loc = np.array(graph.get_position(source))
+            target_loc = np.array(graph.get_position(target))
+            dist = np.linalg.norm(target_loc - source_loc)
+            graph.edges[edge][self.attr_name] = dist
 
-    def update(self, project: Project, edge: tuple[int, int]) -> float:
+    def update(self, graph: TrackingGraph, edge: tuple[int, int]):
         source, target = edge
-        source_loc = np.array(project.cand_graph.get_position(source))
-        target_loc = np.array(project.cand_graph.get_position(target))
+        source_loc = np.array(graph.get_position(source))
+        target_loc = np.array(graph.get_position(target))
         dist = np.linalg.norm(target_loc - source_loc)
-        return dist
+        graph.edges[edge][self.attr_name] = dist
 
 
 class FrameSpan(Feature):
@@ -93,12 +115,19 @@ class FrameSpan(Feature):
             computed=True,
         )
 
-    def update(self, project: Project, edge: tuple[int, int]) -> int:
+    def compute(self, graph: TrackingGraph, **kwargs):
+        for edge in graph.edges:
+            source, target = edge
+            source_time = graph.get_time(source)
+            target_time = graph.get_time(target)
+            graph.edges[edge][self.attr_name] = target_time - source_time
+    
+    def update(self, graph: TrackingGraph, edge: tuple[int, int]):
         source, target = edge
-        source_time = project.cand_graph.get_time(source)
-        target_time = project.cand_graph.get_time(target)
-        return target_time - source_time
-
+        source_time = graph.get_time(source)
+        target_time = graph.get_time(target)
+        graph.edges[edge][self.attr_name] = target_time - source_time
+    
 edge_features = [
     cls for name, cls in inspect.getmembers(sys.modules[__name__], inspect.isclass)
     if issubclass(cls, Feature) and cls is not Feature and cls.__module__ == __name__
