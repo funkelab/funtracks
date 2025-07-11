@@ -11,7 +11,7 @@ from ._base import (
 
 if TYPE_CHECKING:
     from ..project import Project
-    from funtracks.cand_graph import CandGraph
+    from funtracks.cand_graph import TrackingGraph
 class Time(Feature):
     def __init__(self, attr_name=None):
         super().__init__(
@@ -64,8 +64,12 @@ class TrackID(Feature):
             required=False,
         )
     
-    def compute(self, cand_graph: CandGraph):
+    def compute(self, graph: TrackingGraph):
 
+        # set track ids to None first, then update the values for the nodes in solution
+        for node in graph.nodes:
+            graph.nodes[node][self.attr_name] = None
+        
         parent = {}
 
         # Union-Find functions
@@ -81,20 +85,20 @@ class TrackID(Feature):
                 parent[pu] = pv
 
         # Union nodes if both are part of a linear segment
-        for u, v in cand_graph.edges():
-            if cand_graph.out_degree(u) == 1 and cand_graph.in_degree(v) == 1:
+        for u, v in graph.solution.edges():
+            if graph.out_degree(u) == 1 and graph.in_degree(v) == 1:
                 union(u, v)
 
         # Group nodes by root parent
         groups = {}
-        for node in cand_graph.nodes:
+        for node in graph.solution.nodes:
             root = find(node)
             groups.setdefault(root, []).append(node)
 
         # Assign track_ids
         for track_id, nodes in enumerate(groups.values(), start=1):
             for node in nodes:
-                cand_graph.nodes[node][self.attr_name] = track_id
+                graph.nodes[node][self.attr_name] = track_id
 
 
 class NodeSelected(Feature):
