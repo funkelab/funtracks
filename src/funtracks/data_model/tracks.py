@@ -679,7 +679,7 @@ class Tracks:
                 area *= np.prod(pos_scale)
             # only include the position if the segmentation was actually there
             pos = (
-                measure.centroid(seg, spacing=pos_scale)
+                measure.centroid(seg, spacing=pos_scale)  # type: ignore
                 if area > 0
                 else np.array(
                     [

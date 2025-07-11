@@ -158,7 +158,7 @@ class TracksController:
                             "Cannot add node here - upstream division event detected."
                         )
                         self.tracks.refresh.emit()
-                        return
+                        return  # type: ignore
 
         if len(edges_to_remove) > 0:
             actions.append(DeleteEdges(self.tracks, edges_to_remove))
