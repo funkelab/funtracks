@@ -15,7 +15,13 @@ from .node_features import (
 
 if TYPE_CHECKING:
     from ..actions._base import TracksAction
+    from ..project import Project
+    from funtracks.tracking_graph import TrackingGraph
+    from typing import Any
 
+import funlib.persistence as fp
+from funtracks.features.regionprops_extended import regionprops_extended
+import numpy as np 
 
 # def extra_features(ndim: int, seg: bool) -> list[Feature]:
 #     feats = []
@@ -108,6 +114,29 @@ class FeatureSet:
         for feature in self.edge_features:
             if not feature.computed and feature.required:
                 assert feature in features, f"Required feature {feature} not provided"
+
+    def compute_regionprops_features(self, graph: TrackingGraph, segmentation: fp.Array, raw: fp.Array):
+
+        features_to_compute = [f for f in self._features if f.computed and f.regionprops_name is not None]
+        print('these features should be computed', features_to_compute)
+        
+        for t in range(segmentation.shape[0]):          
+            if raw is not None: 
+                int_stack = []
+                for chan in raw:
+                    int_stack.append(chan[t])
+                intensity = np.stack(int_stack, axis=-1)
+            else: 
+                intensity = None
+            props = regionprops_extended(segmentation[t], intensity, spacing=segmentation.voxel_size)
+            if props:
+                for prop in props: 
+                    node = getattr(prop, 'label')
+                    for feature in self._features: 
+                        value = getattr(prop, feature.region_props_name)
+                        if isinstance(value, tuple):
+                            value = list(value)
+                        graph.nodes[node][feature.attr_name] = value
 
     def dump_json(self) -> dict:
         return {"features": [feat.model_dump(mode="json") for feat in self._features]}
