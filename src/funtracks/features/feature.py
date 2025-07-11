@@ -46,7 +46,7 @@ class Feature(BaseModel):
     default_value: Any = None
 
     def __hash__(self):
-        return self.key.__hash__()
+        return (self.feature_type.value, self.key).__hash__()
 
     def __str__(self) -> str:
         return self.feature_type.value + "_" + self.key

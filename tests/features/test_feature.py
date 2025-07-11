@@ -13,7 +13,7 @@ def test_base_feature():
     with pytest.raises(ValidationError):
         feat = Feature(key="test", feature_type=FeatureType.NODE)
     feat = Feature(key="test", feature_type=FeatureType.NODE, value_type=int)
-    assert hash(feat) == hash("test")
+    assert hash(feat) == hash(("node", "test"))
     assert str(feat) == "node_test"
 
     feat = Feature(
@@ -27,7 +27,7 @@ def test_base_feature():
         default_value=0.0,
     )
 
-    assert hash(feat) == hash("computed")
+    assert hash(feat) == hash(("edge", "computed"))
     assert feat.key == "computed"
     assert feat.feature_type == FeatureType.EDGE
     assert feat.value_type == np.float32
