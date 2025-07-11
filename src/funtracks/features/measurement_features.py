@@ -15,6 +15,10 @@ from ._base import (
 
 if TYPE_CHECKING:
     from ..project import Project
+    from funtracks.tracking_graph import TrackingGraph
+    from typing import Any
+
+import funlib.persistence as fp
 
 class Area(Feature):
     def __init__(self, attr_name=None, ndim=3, **attrs):
@@ -28,15 +32,27 @@ class Area(Feature):
             regionprops_name="area",
         )
 
-    def update(self, project: Project, node: int) -> int:
-        time = project.cand_graph.get_time(node)
-        seg = project.segmentation[time] == node
-        voxel_size = project.segmentation.voxel_size
+    def update(self, graph: TrackingGraph, segmentation: fp.Array, node: int, **kwargs):
+        time = graph.get_time(node)
+        seg = segmentation[time] == node
+        voxel_size = segmentation.voxel_size
         pos_scale = voxel_size[1:] if voxel_size is not None else None
         area = np.sum(seg)
         if pos_scale is not None:
             area *= np.prod(pos_scale)
-        return area.tolist()
+        graph.nodes[node][self.attr_name] = area.tolist()
+    
+    def compute(self, graph: TrackingGraph, segmentation: fp.Array, **kwargs):
+        for t in range(segmentation.shape[0]):
+            props = regionprops_extended(segmentation[t], spacing=segmentation.voxel_size)
+            if props:
+                for prop in props: 
+                    node = getattr(prop, 'label')
+                    value = getattr(prop, self.region_props_name)
+                    if isinstance(value, tuple):
+                        value = list(value)
+                    graph.nodes[node][self.attr_name] = value
+    
 
 class EllipsoidAxes(Feature):
     def __init__(self, attr_name=None, ndim=3, **attrs):
@@ -50,18 +66,30 @@ class EllipsoidAxes(Feature):
             regionprops_name="axes",
         )
 
-    def update(self, project: Project, node: int) -> int:
-        time = project.cand_graph.get_time(node)
-        seg = project.segmentation[time] == node
-        voxel_size = project.segmentation.voxel_size
+    def update(self, graph: TrackingGraph, segmentation: fp.Array, node: int, **kwargs):
+        time = graph.get_time(node)
+        seg = segmentation[time] == node
+        voxel_size = segmentation.voxel_size
         pos_scale = voxel_size[1:] if voxel_size is not None else None
         props = regionprops_extended(seg, spacing=pos_scale)
         if props:
             regionprop = props[0]
             # tolist gives floats/ints in the case of single items
-            return getattr(regionprop, self.regionprops_name)
+            value = getattr(regionprop, self.regionprops_name)
         else:
-            return None
+            value = None
+        graph.nodes[node][self.attr_name] = value
+    
+    def compute(self, graph: TrackingGraph, segmentation: fp.Array, **kwargs):
+        for t in range(segmentation.shape[0]):
+            props = regionprops_extended(segmentation[t], spacing=segmentation.voxel_size)
+            if props:
+                for prop in props: 
+                    node = getattr(prop, 'label')
+                    value = getattr(prop, self.region_props_name)
+                    if isinstance(value, tuple):
+                        value = list(value)
+                    graph.nodes[node][self.attr_name] = value
 
 class Circularity(Feature):
     def __init__(self, attr_name=None, ndim=3, **attrs):
@@ -75,19 +103,30 @@ class Circularity(Feature):
             regionprops_name="circularity" if ndim == 3 else "sphericity",
         )
 
-    def update(self, project: Project, node: int) -> int:
-        time = project.cand_graph.get_time(node)
-        seg = project.segmentation[time] == node
-        voxel_size = project.segmentation.voxel_size
+    def update(self, graph: TrackingGraph, segmentation: fp.Array, node: int, **kwargs):
+        time = graph.get_time(node)
+        seg = segmentation[time] == node
+        voxel_size = segmentation.voxel_size
         pos_scale = voxel_size[1:] if voxel_size is not None else None
         props = regionprops_extended(seg, spacing=pos_scale)
         if props:
             regionprop = props[0]
             # tolist gives floats/ints in the case of single items
-            return getattr(regionprop, self.regionprops_name)
+            value = getattr(regionprop, self.regionprops_name)
         else:
-            return None
-
+            value = None
+        graph.nodes[node][self.attr_name] = value
+    
+    def compute(self, graph: TrackingGraph, segmentation: fp.Array, **kwargs):
+        for t in range(segmentation.shape[0]):
+            props = regionprops_extended(segmentation[t], spacing=segmentation.voxel_size)
+            if props:
+                for prop in props: 
+                    node = getattr(prop, 'label')
+                    value = getattr(prop, self.region_props_name)
+                    if isinstance(value, tuple):
+                        value = list(value)
+                    graph.nodes[node][self.attr_name] = value
 class Perimeter(Feature):
     def __init__(self, attr_name=None, ndim=3, **attrs):
         super().__init__(
@@ -100,18 +139,30 @@ class Perimeter(Feature):
             regionprops_name="perimeter" if ndim == 3 else "surface_area",
         )
 
-    def update(self, project: Project, node: int) -> int:
-        time = project.cand_graph.get_time(node)
-        seg = project.segmentation[time] == node
-        voxel_size = project.segmentation.voxel_size
+    def update(self, graph: TrackingGraph, segmentation: fp.Array, node: int, **kwargs) -> int:
+        time = graph.get_time(node)
+        seg = segmentation[time] == node
+        voxel_size = segmentation.voxel_size
         pos_scale = voxel_size[1:] if voxel_size is not None else None
         props = regionprops_extended(seg, spacing=pos_scale)
         if props:
             regionprop = props[0]
             # tolist gives floats/ints in the case of single items
-            return getattr(regionprop, self.regionprops_name)
+            value = getattr(regionprop, self.regionprops_name)
         else:
-            return None
+            value = None
+        graph.nodes[node][self.attr_name] = value
+    
+    def compute(self, graph: TrackingGraph, segmentation: fp.Array, **kwargs):
+        for t in range(segmentation.shape[0]):
+            props = regionprops_extended(segmentation[t], spacing=segmentation.voxel_size)
+            if props:
+                for prop in props: 
+                    node = getattr(prop, 'label')
+                    value = getattr(prop, self.region_props_name)
+                    if isinstance(value, tuple):
+                        value = list(value)
+                    graph.nodes[node][self.attr_name] = value
 
 class Intensity(Feature):
     def __init__(self, attr_name=None, n_channels: int=1, **attrs):
@@ -125,16 +176,34 @@ class Intensity(Feature):
             regionprops_name="intensity_mean",
         )
 
-    def update(self, project: Project, node: int) -> int:
-        time = project.cand_graph.get_time(node)
-        seg = project.segmentation[time] == node
+    def update(self, graph: TrackingGraph, segmentation: fp.Array, raw: fp.Array, node: int, **kwargs):
+        time = graph.get_time(node)
+        seg = segmentation[time] == node
         intensity = []
-        for chan in range(len(project.raw)):
-            intensity_image = project.raw[chan][time] if project.raw is not None else None
+        for chan in range(len(raw)):
+            intensity_image = raw[chan][time] if raw is not None else None
             if intensity_image is not None:
                 mean_intensity = np.mean(intensity_image[seg])
                 intensity.append(mean_intensity)
-        return intensity
+        graph.nodes[node][self.attr_name] = intensity
+    
+    def compute(self, graph: TrackingGraph, segmentation: fp.Array, raw: fp.Array | None, **kwargs):
+        for t in range(segmentation.shape[0]):          
+            if raw is not None: 
+                int_stack = []
+                for chan in raw:
+                    int_stack.append(chan[t])
+                intensity = np.stack(int_stack, axis=-1)
+            else: 
+                intensity = None
+            props = regionprops_extended(segmentation[t], intensity, spacing=segmentation.voxel_size)
+            if props:
+                for prop in props: 
+                    node = getattr(prop, 'label')
+                    value = getattr(prop, self.region_props_name)
+                    if isinstance(value, tuple):
+                        value = list(value)
+                    graph.nodes[node][self.attr_name] = value
 
 
 measurement_features = [
