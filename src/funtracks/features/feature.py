@@ -42,7 +42,6 @@ class Feature(BaseModel):
     valid_ndim: tuple[Literal[3, 4], ...] = (3, 4)
     display_name: str | list[str] | None = None
     recompute: bool = False
-    regionprops_name: str | None = None
     required: bool = True
     default_value: Any = None
 
