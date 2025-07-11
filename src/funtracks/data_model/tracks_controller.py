@@ -152,7 +152,7 @@ class TracksController:
                 track_id_nodes = self.tracks.track_id_to_node[track_id]
                 for node in track_id_nodes:
                     if (
-                        self.tracks._get_node_attr(node, NodeAttr.TIME.value) <= time
+                        self.tracks.get_node_attr(node, NodeAttr.TIME.value) <= time
                         and self.tracks.graph.out_degree(node) == 2
                     ):  # there is an upstream division event here
                         warn(

@@ -71,6 +71,30 @@ class Tracks:
         self.scale = scale
         self.ndim = self._compute_ndim(segmentation, scale, ndim)
 
+    def nodes(self):
+        return np.array(self.graph.nodes())
+
+    def edges(self):
+        return np.array(self.graph.edges())
+
+    def in_degree(self, nodes: np.ndarray | None = None) -> np.ndarray:
+        if nodes is not None:
+            return np.array([self.graph.in_degree(node.item()) for node in nodes])
+        else:
+            return np.array(self.graph.in_degree())
+
+    def out_degree(self, nodes: np.ndarray | None = None) -> np.ndarray:
+        if nodes is not None:
+            return np.array([self.graph.out_degree(node.item()) for node in nodes])
+        else:
+            return np.array(self.graph.out_degree())
+
+    def predecessors(self, node: int) -> list[int]:
+        return list(self.graph.predecessors(node))
+
+    def successors(self, node: int) -> list[int]:
+        return list(self.graph.successors(node))
+
     def get_positions(self, nodes: Iterable[Node], incl_time: bool = False) -> np.ndarray:
         """Get the positions of nodes in the graph. Optionally include the
         time frame as the first dimension. Raises an error if any of the nodes
@@ -87,19 +111,14 @@ class Tracks:
         """
         if isinstance(self.pos_attr, tuple | list):
             positions = np.stack(
-                [
-                    self._get_nodes_attr(nodes, dim, required=True)
-                    for dim in self.pos_attr
-                ],
+                [self.get_nodes_attr(nodes, dim, required=True) for dim in self.pos_attr],
                 axis=1,
             )
         else:
-            positions = np.array(
-                self._get_nodes_attr(nodes, self.pos_attr, required=True)
-            )
+            positions = np.array(self.get_nodes_attr(nodes, self.pos_attr, required=True))
 
         if incl_time:
-            times = np.array(self._get_nodes_attr(nodes, self.time_attr, required=True))
+            times = np.array(self.get_nodes_attr(nodes, self.time_attr, required=True))
             positions = np.c_[times, positions]
 
         return positions
@@ -143,7 +162,7 @@ class Tracks:
         )
 
     def get_times(self, nodes: Iterable[Node]) -> Sequence[int]:
-        return self._get_nodes_attr(nodes, self.time_attr, required=True)
+        return self.get_nodes_attr(nodes, self.time_attr, required=True)
 
     def get_time(self, node: Node) -> int:
         """Get the time frame of a given node. Raises an error if the node
@@ -183,7 +202,7 @@ class Tracks:
         Returns:
             int: The area/volume of the node
         """
-        return self._get_nodes_attr(nodes, NodeAttr.AREA.value)
+        return self.get_nodes_attr(nodes, NodeAttr.AREA.value)
 
     def get_area(self, node: Node) -> int | None:
         """Get the area/volume of a given node. Raises a KeyError if the node
@@ -199,10 +218,10 @@ class Tracks:
         return self.get_areas([node])[0]
 
     def get_ious(self, edges: Iterable[Edge]):
-        return self._get_edges_attr(edges, EdgeAttr.IOU.value)
+        return self.get_edges_attr(edges, EdgeAttr.IOU.value)
 
     def get_iou(self, edge: Edge):
-        return self._get_edge_attr(edge, EdgeAttr.IOU.value)
+        return self.get_edge_attr(edge, EdgeAttr.IOU.value)
 
     def get_pixels(self, nodes: Iterable[Node]) -> list[tuple[np.ndarray, ...]] | None:
         """Get the pixels corresponding to each node in the nodes list.
@@ -308,14 +327,14 @@ class Tracks:
                 value = list(value)
             self.graph.nodes[node][attr] = value
 
-    def _get_node_attr(self, node: Node, attr: str, required: bool = False):
+    def get_node_attr(self, node: Node, attr: str, required: bool = False):
         if required:
             return self.graph.nodes[node][attr]
         else:
             return self.graph.nodes[node].get(attr, None)
 
-    def _get_nodes_attr(self, nodes: Iterable[Node], attr: str, required: bool = False):
-        return [self._get_node_attr(node, attr, required=required) for node in nodes]
+    def get_nodes_attr(self, nodes: Iterable[Node], attr: str, required: bool = False):
+        return [self.get_node_attr(node, attr, required=required) for node in nodes]
 
     def _set_edge_attr(self, edge: Edge, attr: str, value: Any):
         self.graph.edge[edge][attr] = value
@@ -324,14 +343,14 @@ class Tracks:
         for edge, value in zip(edges, values, strict=False):
             self.graph.edges[edge][attr] = value
 
-    def _get_edge_attr(self, edge: Edge, attr: str, required: bool = False):
+    def get_edge_attr(self, edge: Edge, attr: str, required: bool = False):
         if required:
             return self.graph.edges[edge][attr]
         else:
             return self.graph.edges[edge].get(attr, None)
 
-    def _get_edges_attr(self, edges: Iterable[Edge], attr: str, required: bool = False):
-        return [self._get_edge_attr(edge, attr, required=required) for edge in edges]
+    def get_edges_attr(self, edges: Iterable[Edge], attr: str, required: bool = False):
+        return [self.get_edge_attr(edge, attr, required=required) for edge in edges]
 
     def _compute_node_attrs(self, nodes: Iterable[Node], times: Iterable[int]) -> Attrs:
         """Get the segmentation controlled node attributes (area and position)
@@ -363,7 +382,7 @@ class Tracks:
                 area *= np.prod(pos_scale)
             # only include the position if the segmentation was actually there
             pos = (
-                measure.centroid(seg, spacing=pos_scale)
+                measure.centroid(seg, spacing=pos_scale)  # type: ignore
                 if area > 0
                 else np.array(
                     [
