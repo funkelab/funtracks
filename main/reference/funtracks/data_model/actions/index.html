@@ -962,6 +962,98 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_1_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_1_3" id="__nav_2_1_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>import export
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_2_1_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_1_3">
+            <span class="md-nav__icon md-icon"></span>
+            <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>import export
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../import_export/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    funtracks.import_export
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../import_export/internal_format/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    funtracks.import_export.internal_format
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1394,8 +1486,8 @@
         <p>This module contains all the low level actions used to control a Tracks object.
 Low level actions should control these aspects of Tracks:
     - adding/removing nodes and edges to/from the segmentation and graph
-    - Updating the segmentation and graph attributes that are controlled by the segmentation.
-    Currently, position and area for nodes, and IOU for edges.
+    - Updating the segmentation and graph attributes that are controlled by the
+      segmentation. Currently, position and area for nodes, and IOU for edges.
     - Keeping track of information needed to undo the given action. For removing a node,
     this means keeping track of the incident edges that were removed, along with their
     attributes.</p>
@@ -1549,11 +1641,7 @@ in the order in which they should be executed.</p>
 
                   <details class="quote">
                     <summary>Source code in <code>src/funtracks/data_model/actions.py</code></summary>
-                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">56</span>
-<span class="normal">57</span>
-<span class="normal">58</span>
-<span class="normal">59</span>
-<span class="normal">60</span>
+                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">60</span>
 <span class="normal">61</span>
 <span class="normal">62</span>
 <span class="normal">63</span>
@@ -1564,7 +1652,11 @@ in the order in which they should be executed.</p>
 <span class="normal">68</span>
 <span class="normal">69</span>
 <span class="normal">70</span>
-<span class="normal">71</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+<span class="normal">71</span>
+<span class="normal">72</span>
+<span class="normal">73</span>
+<span class="normal">74</span>
+<span class="normal">75</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">tracks</span><span class="p">:</span> <span class="n">Tracks</span><span class="p">,</span>
     <span class="n">actions</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">TracksAction</span><span class="p">],</span>
@@ -1646,10 +1738,10 @@ in the order in which they should be executed.</p>
 
                   <details class="quote">
                     <summary>Source code in <code>src/funtracks/data_model/actions.py</code></summary>
-                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">268</span>
-<span class="normal">269</span>
-<span class="normal">270</span>
-<span class="normal">271</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tracks</span><span class="p">:</span> <span class="n">Tracks</span><span class="p">,</span> <span class="n">edges</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Edge</span><span class="p">]):</span>
+                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">314</span>
+<span class="normal">315</span>
+<span class="normal">316</span>
+<span class="normal">317</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tracks</span><span class="p">:</span> <span class="n">Tracks</span><span class="p">,</span> <span class="n">edges</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Edge</span><span class="p">]):</span>
     <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">tracks</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">edges</span> <span class="o">=</span> <span class="n">edges</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_apply</span><span class="p">()</span>
@@ -1686,9 +1778,9 @@ in the order in which they should be executed.</p>
 
             <details class="quote">
               <summary>Source code in <code>src/funtracks/data_model/actions.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">273</span>
-<span class="normal">274</span>
-<span class="normal">275</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">inverse</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">319</span>
+<span class="normal">320</span>
+<span class="normal">321</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">inverse</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Delete edges&quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">DeleteEdges</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tracks</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">edges</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
@@ -1764,8 +1856,8 @@ using an UpdateNodes action if you want to be able to undo the action.</p>
 )
           –
           <div class="doc-md-description">
-            <p>The segmentations associated with each node.
-Defaults to None.</p>
+            <p>The segmentations associated with
+each node. Defaults to None.</p>
           </div>
         </li>
     </ul>
@@ -1794,12 +1886,7 @@ Defaults to None.</p>
 
                   <details class="quote">
                     <summary>Source code in <code>src/funtracks/data_model/actions.py</code></summary>
-                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 86</span>
-<span class="normal"> 87</span>
-<span class="normal"> 88</span>
-<span class="normal"> 89</span>
-<span class="normal"> 90</span>
-<span class="normal"> 91</span>
+                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 91</span>
 <span class="normal"> 92</span>
 <span class="normal"> 93</span>
 <span class="normal"> 94</span>
@@ -1821,7 +1908,8 @@ Defaults to None.</p>
 <span class="normal">110</span>
 <span class="normal">111</span>
 <span class="normal">112</span>
-<span class="normal">113</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+<span class="normal">113</span>
+<span class="normal">114</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">tracks</span><span class="p">:</span> <span class="n">Tracks</span><span class="p">,</span>
     <span class="n">nodes</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
@@ -1834,18 +1922,14 @@ Defaults to None.</p>
 <span class="sd">        tracks (Tracks): The Tracks to add the nodes to</span>
 <span class="sd">        nodes (Node): A list of node ids</span>
 <span class="sd">        attributes (Attrs): Includes times and optionally positions</span>
-<span class="sd">        pixels (list[SegMask] | None, optional): The segmentations associated with each node.</span>
-<span class="sd">            Defaults to None.</span>
+<span class="sd">        pixels (list[SegMask] | None, optional): The segmentations associated with</span>
+<span class="sd">            each node. Defaults to None.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">tracks</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span> <span class="o">=</span> <span class="n">nodes</span>
     <span class="n">user_attrs</span> <span class="o">=</span> <span class="n">attributes</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">times</span> <span class="o">=</span> <span class="n">attributes</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">NodeAttr</span><span class="o">.</span><span class="n">TIME</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">NodeAttr</span><span class="o">.</span><span class="n">TIME</span><span class="o">.</span><span class="n">value</span> <span class="ow">in</span> <span class="n">attributes</span><span class="p">:</span>
-        <span class="k">del</span> <span class="n">user_attrs</span><span class="p">[</span><span class="n">NodeAttr</span><span class="o">.</span><span class="n">TIME</span><span class="o">.</span><span class="n">value</span><span class="p">]</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">positions</span> <span class="o">=</span> <span class="n">attributes</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">NodeAttr</span><span class="o">.</span><span class="n">POS</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">NodeAttr</span><span class="o">.</span><span class="n">POS</span><span class="o">.</span><span class="n">value</span> <span class="ow">in</span> <span class="n">attributes</span><span class="p">:</span>
-        <span class="k">del</span> <span class="n">user_attrs</span><span class="p">[</span><span class="n">NodeAttr</span><span class="o">.</span><span class="n">POS</span><span class="o">.</span><span class="n">value</span><span class="p">]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">times</span> <span class="o">=</span> <span class="n">attributes</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">NodeAttr</span><span class="o">.</span><span class="n">TIME</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">positions</span> <span class="o">=</span> <span class="n">attributes</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">NodeAttr</span><span class="o">.</span><span class="n">POS</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">pixels</span> <span class="o">=</span> <span class="n">pixels</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">attributes</span> <span class="o">=</span> <span class="n">user_attrs</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_apply</span><span class="p">()</span>
@@ -1882,9 +1966,9 @@ Defaults to None.</p>
 
             <details class="quote">
               <summary>Source code in <code>src/funtracks/data_model/actions.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">115</span>
-<span class="normal">116</span>
-<span class="normal">117</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">inverse</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">116</span>
+<span class="normal">117</span>
+<span class="normal">118</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">inverse</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Invert the action to delete nodes instead&quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">DeleteNodes</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tracks</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
@@ -1944,10 +2028,10 @@ Defaults to None.</p>
 
                   <details class="quote">
                     <summary>Source code in <code>src/funtracks/data_model/actions.py</code></summary>
-                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">288</span>
-<span class="normal">289</span>
-<span class="normal">290</span>
-<span class="normal">291</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tracks</span><span class="p">:</span> <span class="n">Tracks</span><span class="p">,</span> <span class="n">edges</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Edge</span><span class="p">]):</span>
+                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">345</span>
+<span class="normal">346</span>
+<span class="normal">347</span>
+<span class="normal">348</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tracks</span><span class="p">:</span> <span class="n">Tracks</span><span class="p">,</span> <span class="n">edges</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Edge</span><span class="p">]):</span>
     <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">tracks</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">edges</span> <span class="o">=</span> <span class="n">edges</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_apply</span><span class="p">()</span>
@@ -1984,9 +2068,9 @@ Defaults to None.</p>
 
             <details class="quote">
               <summary>Source code in <code>src/funtracks/data_model/actions.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">293</span>
-<span class="normal">294</span>
-<span class="normal">295</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">inverse</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">350</span>
+<span class="normal">351</span>
+<span class="normal">352</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">inverse</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Restore edges and their attributes&quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">AddEdges</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tracks</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">edges</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
@@ -2048,23 +2132,23 @@ operation for setting involved pixels to zero</p>
 
                   <details class="quote">
                     <summary>Source code in <code>src/funtracks/data_model/actions.py</code></summary>
-                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">134</span>
-<span class="normal">135</span>
-<span class="normal">136</span>
-<span class="normal">137</span>
-<span class="normal">138</span>
-<span class="normal">139</span>
-<span class="normal">140</span>
-<span class="normal">141</span>
-<span class="normal">142</span>
-<span class="normal">143</span>
-<span class="normal">144</span>
-<span class="normal">145</span>
-<span class="normal">146</span>
-<span class="normal">147</span>
-<span class="normal">148</span>
-<span class="normal">149</span>
-<span class="normal">150</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">161</span>
+<span class="normal">162</span>
+<span class="normal">163</span>
+<span class="normal">164</span>
+<span class="normal">165</span>
+<span class="normal">166</span>
+<span class="normal">167</span>
+<span class="normal">168</span>
+<span class="normal">169</span>
+<span class="normal">170</span>
+<span class="normal">171</span>
+<span class="normal">172</span>
+<span class="normal">173</span>
+<span class="normal">174</span>
+<span class="normal">175</span>
+<span class="normal">176</span>
+<span class="normal">177</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">tracks</span><span class="p">:</span> <span class="n">Tracks</span><span class="p">,</span>
     <span class="n">nodes</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
@@ -2114,10 +2198,10 @@ operation for setting involved pixels to zero</p>
 
             <details class="quote">
               <summary>Source code in <code>src/funtracks/data_model/actions.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">152</span>
-<span class="normal">153</span>
-<span class="normal">154</span>
-<span class="normal">155</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">inverse</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">179</span>
+<span class="normal">180</span>
+<span class="normal">181</span>
+<span class="normal">182</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">inverse</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Invert this action, and provide inverse segmentation operation if given&quot;&quot;&quot;</span>
 
     <span class="k">return</span> <span class="n">AddNodes</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tracks</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">attributes</span><span class="p">,</span> <span class="n">pixels</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">pixels</span><span class="p">)</span>
@@ -2192,16 +2276,16 @@ The change should be applied in the init function.</p>
 
                   <details class="quote">
                     <summary>Source code in <code>src/funtracks/data_model/actions.py</code></summary>
-                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">30</span>
-<span class="normal">31</span>
-<span class="normal">32</span>
-<span class="normal">33</span>
-<span class="normal">34</span>
+                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">34</span>
 <span class="normal">35</span>
 <span class="normal">36</span>
 <span class="normal">37</span>
 <span class="normal">38</span>
-<span class="normal">39</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tracks</span><span class="p">:</span> <span class="n">Tracks</span><span class="p">):</span>
+<span class="normal">39</span>
+<span class="normal">40</span>
+<span class="normal">41</span>
+<span class="normal">42</span>
+<span class="normal">43</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tracks</span><span class="p">:</span> <span class="n">Tracks</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;An modular change that can be applied to the given Tracks. The tracks must</span>
 <span class="sd">    be passed in at construction time so that metadata needed to invert the action</span>
 <span class="sd">    can be extracted.</span>
@@ -2270,18 +2354,18 @@ back to the exact state it had before applying this action.</p>
 
             <details class="quote">
               <summary>Source code in <code>src/funtracks/data_model/actions.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">41</span>
-<span class="normal">42</span>
-<span class="normal">43</span>
-<span class="normal">44</span>
-<span class="normal">45</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">45</span>
 <span class="normal">46</span>
 <span class="normal">47</span>
 <span class="normal">48</span>
 <span class="normal">49</span>
 <span class="normal">50</span>
 <span class="normal">51</span>
-<span class="normal">52</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">inverse</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TracksAction</span><span class="p">:</span>
+<span class="normal">52</span>
+<span class="normal">53</span>
+<span class="normal">54</span>
+<span class="normal">55</span>
+<span class="normal">56</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">inverse</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TracksAction</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the inverse of this action. Calling this function does undo the action,</span>
 <span class="sd">    since the change is applied in the action constructor.</span>
 
@@ -2395,37 +2479,37 @@ for the given nodes.</p>
 
                   <details class="quote">
                     <summary>Source code in <code>src/funtracks/data_model/actions.py</code></summary>
-                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">219</span>
-<span class="normal">220</span>
-<span class="normal">221</span>
-<span class="normal">222</span>
-<span class="normal">223</span>
-<span class="normal">224</span>
-<span class="normal">225</span>
-<span class="normal">226</span>
-<span class="normal">227</span>
-<span class="normal">228</span>
-<span class="normal">229</span>
-<span class="normal">230</span>
-<span class="normal">231</span>
-<span class="normal">232</span>
-<span class="normal">233</span>
-<span class="normal">234</span>
-<span class="normal">235</span>
-<span class="normal">236</span>
-<span class="normal">237</span>
-<span class="normal">238</span>
-<span class="normal">239</span>
-<span class="normal">240</span>
-<span class="normal">241</span>
-<span class="normal">242</span>
-<span class="normal">243</span>
-<span class="normal">244</span>
-<span class="normal">245</span>
-<span class="normal">246</span>
-<span class="normal">247</span>
-<span class="normal">248</span>
-<span class="normal">249</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">265</span>
+<span class="normal">266</span>
+<span class="normal">267</span>
+<span class="normal">268</span>
+<span class="normal">269</span>
+<span class="normal">270</span>
+<span class="normal">271</span>
+<span class="normal">272</span>
+<span class="normal">273</span>
+<span class="normal">274</span>
+<span class="normal">275</span>
+<span class="normal">276</span>
+<span class="normal">277</span>
+<span class="normal">278</span>
+<span class="normal">279</span>
+<span class="normal">280</span>
+<span class="normal">281</span>
+<span class="normal">282</span>
+<span class="normal">283</span>
+<span class="normal">284</span>
+<span class="normal">285</span>
+<span class="normal">286</span>
+<span class="normal">287</span>
+<span class="normal">288</span>
+<span class="normal">289</span>
+<span class="normal">290</span>
+<span class="normal">291</span>
+<span class="normal">292</span>
+<span class="normal">293</span>
+<span class="normal">294</span>
+<span class="normal">295</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">tracks</span><span class="p">:</span> <span class="n">Tracks</span><span class="p">,</span>
     <span class="n">nodes</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
@@ -2489,13 +2573,13 @@ for the given nodes.</p>
 
             <details class="quote">
               <summary>Source code in <code>src/funtracks/data_model/actions.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">251</span>
-<span class="normal">252</span>
-<span class="normal">253</span>
-<span class="normal">254</span>
-<span class="normal">255</span>
-<span class="normal">256</span>
-<span class="normal">257</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">inverse</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">297</span>
+<span class="normal">298</span>
+<span class="normal">299</span>
+<span class="normal">300</span>
+<span class="normal">301</span>
+<span class="normal">302</span>
+<span class="normal">303</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">inverse</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Restore previous attributes&quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">UpdateNodeAttrs</span><span class="p">(</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">tracks</span><span class="p">,</span>
@@ -2602,27 +2686,27 @@ pixels in one action.</p>
 
                   <details class="quote">
                     <summary>Source code in <code>src/funtracks/data_model/actions.py</code></summary>
-                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">178</span>
-<span class="normal">179</span>
-<span class="normal">180</span>
-<span class="normal">181</span>
-<span class="normal">182</span>
-<span class="normal">183</span>
-<span class="normal">184</span>
-<span class="normal">185</span>
-<span class="normal">186</span>
-<span class="normal">187</span>
-<span class="normal">188</span>
-<span class="normal">189</span>
-<span class="normal">190</span>
-<span class="normal">191</span>
-<span class="normal">192</span>
-<span class="normal">193</span>
-<span class="normal">194</span>
-<span class="normal">195</span>
-<span class="normal">196</span>
-<span class="normal">197</span>
-<span class="normal">198</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">209</span>
+<span class="normal">210</span>
+<span class="normal">211</span>
+<span class="normal">212</span>
+<span class="normal">213</span>
+<span class="normal">214</span>
+<span class="normal">215</span>
+<span class="normal">216</span>
+<span class="normal">217</span>
+<span class="normal">218</span>
+<span class="normal">219</span>
+<span class="normal">220</span>
+<span class="normal">221</span>
+<span class="normal">222</span>
+<span class="normal">223</span>
+<span class="normal">224</span>
+<span class="normal">225</span>
+<span class="normal">226</span>
+<span class="normal">227</span>
+<span class="normal">228</span>
+<span class="normal">229</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">tracks</span><span class="p">:</span> <span class="n">Tracks</span><span class="p">,</span>
     <span class="n">nodes</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
@@ -2676,14 +2760,14 @@ pixels in one action.</p>
 
             <details class="quote">
               <summary>Source code in <code>src/funtracks/data_model/actions.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">200</span>
-<span class="normal">201</span>
-<span class="normal">202</span>
-<span class="normal">203</span>
-<span class="normal">204</span>
-<span class="normal">205</span>
-<span class="normal">206</span>
-<span class="normal">207</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">inverse</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">231</span>
+<span class="normal">232</span>
+<span class="normal">233</span>
+<span class="normal">234</span>
+<span class="normal">235</span>
+<span class="normal">236</span>
+<span class="normal">237</span>
+<span class="normal">238</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">inverse</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Restore previous attributes&quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">UpdateNodeSegs</span><span class="p">(</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">tracks</span><span class="p">,</span>
@@ -2777,20 +2861,20 @@ with the same track id as this node will be updated.</p>
 
                   <details class="quote">
                     <summary>Source code in <code>src/funtracks/data_model/actions.py</code></summary>
-                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">305</span>
-<span class="normal">306</span>
-<span class="normal">307</span>
-<span class="normal">308</span>
-<span class="normal">309</span>
-<span class="normal">310</span>
-<span class="normal">311</span>
-<span class="normal">312</span>
-<span class="normal">313</span>
-<span class="normal">314</span>
-<span class="normal">315</span>
-<span class="normal">316</span>
-<span class="normal">317</span>
-<span class="normal">318</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tracks</span><span class="p">:</span> <span class="n">SolutionTracks</span><span class="p">,</span> <span class="n">start_node</span><span class="p">:</span> <span class="n">Node</span><span class="p">,</span> <span class="n">track_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">366</span>
+<span class="normal">367</span>
+<span class="normal">368</span>
+<span class="normal">369</span>
+<span class="normal">370</span>
+<span class="normal">371</span>
+<span class="normal">372</span>
+<span class="normal">373</span>
+<span class="normal">374</span>
+<span class="normal">375</span>
+<span class="normal">376</span>
+<span class="normal">377</span>
+<span class="normal">378</span>
+<span class="normal">379</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tracks</span><span class="p">:</span> <span class="n">SolutionTracks</span><span class="p">,</span> <span class="n">start_node</span><span class="p">:</span> <span class="n">Node</span><span class="p">,</span> <span class="n">track_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Args:</span>
 <span class="sd">        tracks (Tracks): The tracks to update</span>
@@ -2837,9 +2921,9 @@ with the same track id as this node will be updated.</p>
 
             <details class="quote">
               <summary>Source code in <code>src/funtracks/data_model/actions.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">320</span>
-<span class="normal">321</span>
-<span class="normal">322</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">inverse</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TracksAction</span><span class="p">:</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">381</span>
+<span class="normal">382</span>
+<span class="normal">383</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">inverse</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TracksAction</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Restore the previous track_id&quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">UpdateTrackID</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tracks</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_node</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">old_track_id</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>

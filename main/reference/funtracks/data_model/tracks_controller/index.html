@@ -14,6 +14,8 @@
         <link rel="prev" href="../tracks/">
       
       
+        <link rel="next" href="../../import_export/">
+      
       
       <link rel="icon" href="../../../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.15">
@@ -804,6 +806,98 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_1_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_1_3" id="__nav_2_1_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>import export
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_2_1_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_1_3">
+            <span class="md-nav__icon md-icon"></span>
+            <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>import export
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../import_export/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    funtracks.import_export
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../import_export/internal_format/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    funtracks.import_export.internal_format
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1150,7 +1244,7 @@ All changes to the data should go through this API.</p>
             <b><code><a class="autorefs autorefs-internal" title="            add_nodes (funtracks.data_model.tracks_controller.TracksController.add_nodes)" href="#funtracks.data_model.tracks_controller.TracksController.add_nodes">add_nodes</a></code></b>
             –
             <div class="doc-md-description">
-              <p>Calls the _add_nodes function to add nodes. Calls the refresh signal when finished.</p>
+              <p>Calls the _add_nodes function to add nodes. Calls the refresh signal when</p>
             </div>
           </li>
           <li class="doc-section-item field-body">
@@ -1199,7 +1293,7 @@ All changes to the data should go through this API.</p>
             <b><code><a class="autorefs autorefs-internal" title="            update_segmentations (funtracks.data_model.tracks_controller.TracksController.update_segmentations)" href="#funtracks.data_model.tracks_controller.TracksController.update_segmentations">update_segmentations</a></code></b>
             –
             <div class="doc-md-description">
-              <p>Handle a change in the segmentation mask, checking for node addition, deletion, and attribute updates.</p>
+              <p>Handle a change in the segmentation mask, checking for node addition,</p>
             </div>
           </li>
     </ul>
@@ -1208,10 +1302,10 @@ All changes to the data should go through this API.</p>
 
                   <details class="quote">
                     <summary>Source code in <code>src/funtracks/data_model/tracks_controller.py</code></summary>
-                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">35</span>
-<span class="normal">36</span>
-<span class="normal">37</span>
-<span class="normal">38</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tracks</span><span class="p">:</span> <span class="n">SolutionTracks</span><span class="p">):</span>
+                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tracks</span><span class="p">:</span> <span class="n">SolutionTracks</span><span class="p">):</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">tracks</span> <span class="o">=</span> <span class="n">tracks</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">action_history</span> <span class="o">=</span> <span class="n">ActionHistory</span><span class="p">()</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">node_id_counter</span> <span class="o">=</span> <span class="mi">1</span>
@@ -1263,12 +1357,7 @@ node ids</p>
 
             <details class="quote">
               <summary>Source code in <code>src/funtracks/data_model/tracks_controller.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">284</span>
-<span class="normal">285</span>
-<span class="normal">286</span>
-<span class="normal">287</span>
-<span class="normal">288</span>
-<span class="normal">289</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">289</span>
 <span class="normal">290</span>
 <span class="normal">291</span>
 <span class="normal">292</span>
@@ -1287,7 +1376,12 @@ node ids</p>
 <span class="normal">305</span>
 <span class="normal">306</span>
 <span class="normal">307</span>
-<span class="normal">308</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">add_edges</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">edges</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Edge</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">308</span>
+<span class="normal">309</span>
+<span class="normal">310</span>
+<span class="normal">311</span>
+<span class="normal">312</span>
+<span class="normal">313</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">add_edges</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">edges</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Edge</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Add edges to the graph. Also update the track ids and</span>
 <span class="sd">    corresponding segmentations if applicable</span>
 
@@ -1331,7 +1425,8 @@ node ids</p>
 
     <div class="doc doc-contents ">
 
-        <p>Calls the _add_nodes function to add nodes. Calls the refresh signal when finished.</p>
+        <p>Calls the _add_nodes function to add nodes. Calls the refresh signal when
+finished.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -1341,7 +1436,8 @@ node ids</p>
 </h4>              (<code><span title="funtracks.data_model.tracks.Attrs">Attrs</span></code>)
           –
           <div class="doc-md-description">
-            <p>dictionary containing at least time and position attributes</p>
+            <p>dictionary containing at least time and position
+attributes</p>
           </div>
         </li>
         <li class="doc-section-item field-body">
@@ -1351,8 +1447,8 @@ node ids</p>
 )
           –
           <div class="doc-md-description">
-            <p>The pixels associated with each node,
-if a segmentation is present. Defaults to None.</p>
+            <p>The pixels associated with each
+node, if a segmentation is present. Defaults to None.</p>
           </div>
         </li>
     </ul>
@@ -1360,7 +1456,11 @@ if a segmentation is present. Defaults to None.</p>
 
             <details class="quote">
               <summary>Source code in <code>src/funtracks/data_model/tracks_controller.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">40</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span>
+<span class="normal">40</span>
 <span class="normal">41</span>
 <span class="normal">42</span>
 <span class="normal">43</span>
@@ -1374,19 +1474,19 @@ if a segmentation is present. Defaults to None.</p>
 <span class="normal">51</span>
 <span class="normal">52</span>
 <span class="normal">53</span>
-<span class="normal">54</span>
-<span class="normal">55</span>
-<span class="normal">56</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">add_nodes</span><span class="p">(</span>
+<span class="normal">54</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">add_nodes</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">attributes</span><span class="p">:</span> <span class="n">Attrs</span><span class="p">,</span>
     <span class="n">pixels</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">SegMask</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Calls the _add_nodes function to add nodes. Calls the refresh signal when finished.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Calls the _add_nodes function to add nodes. Calls the refresh signal when</span>
+<span class="sd">    finished.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        attributes (Attrs): dictionary containing at least time and position attributes</span>
-<span class="sd">        pixels (list[SegMask] | None, optional): The pixels associated with each node,</span>
-<span class="sd">            if a segmentation is present. Defaults to None.</span>
+<span class="sd">        attributes (Attrs): dictionary containing at least time and position</span>
+<span class="sd">            attributes</span>
+<span class="sd">        pixels (list[SegMask] | None, optional): The pixels associated with each</span>
+<span class="sd">            node, if a segmentation is present. Defaults to None.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_add_nodes</span><span class="p">(</span><span class="n">attributes</span><span class="p">,</span> <span class="n">pixels</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">result</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -1430,21 +1530,21 @@ if a segmentation is present. Defaults to None.</p>
 
             <details class="quote">
               <summary>Source code in <code>src/funtracks/data_model/tracks_controller.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">434</span>
-<span class="normal">435</span>
-<span class="normal">436</span>
-<span class="normal">437</span>
-<span class="normal">438</span>
-<span class="normal">439</span>
-<span class="normal">440</span>
-<span class="normal">441</span>
-<span class="normal">442</span>
-<span class="normal">443</span>
-<span class="normal">444</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">444</span>
 <span class="normal">445</span>
 <span class="normal">446</span>
 <span class="normal">447</span>
-<span class="normal">448</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">delete_edges</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">edges</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Edge</span><span class="p">]):</span>
+<span class="normal">448</span>
+<span class="normal">449</span>
+<span class="normal">450</span>
+<span class="normal">451</span>
+<span class="normal">452</span>
+<span class="normal">453</span>
+<span class="normal">454</span>
+<span class="normal">455</span>
+<span class="normal">456</span>
+<span class="normal">457</span>
+<span class="normal">458</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">delete_edges</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">edges</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Edge</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Delete edges from the graph.</span>
 
 <span class="sd">    Args:</span>
@@ -1454,7 +1554,7 @@ if a segmentation is present. Defaults to None.</p>
     <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">edges</span><span class="p">:</span>
         <span class="c1"># First check if the to be deleted edges exist</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">tracks</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">has_edge</span><span class="p">(</span><span class="n">edge</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">edge</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
-            <span class="n">show_warning</span><span class="p">(</span><span class="s2">&quot;Cannot delete non-existing edge!&quot;</span><span class="p">)</span>
+            <span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Cannot delete non-existing edge!&quot;</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
             <span class="k">return</span>
     <span class="n">action</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_delete_edges</span><span class="p">(</span><span class="n">edges</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">action_history</span><span class="o">.</span><span class="n">add_new_action</span><span class="p">(</span><span class="n">action</span><span class="p">)</span>
@@ -1496,16 +1596,16 @@ if a segmentation is present. Defaults to None.</p>
 
             <details class="quote">
               <summary>Source code in <code>src/funtracks/data_model/tracks_controller.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">189</span>
-<span class="normal">190</span>
-<span class="normal">191</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">191</span>
 <span class="normal">192</span>
 <span class="normal">193</span>
 <span class="normal">194</span>
 <span class="normal">195</span>
 <span class="normal">196</span>
 <span class="normal">197</span>
-<span class="normal">198</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">delete_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nodes</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Node</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">198</span>
+<span class="normal">199</span>
+<span class="normal">200</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">delete_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nodes</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Node</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Calls the _delete_nodes function and then emits the refresh signal</span>
 
 <span class="sd">    Args:</span>
@@ -1540,31 +1640,40 @@ Criteria:
 - not existing yet
 - no merges
 - no triple divisions
-- new edge should be the shortest possible connection between two nodes, given their track_ids.
-(no skipping/bypassing any nodes of the same track_id). Check if there are any nodes of the same source or target track_id between source and target</p>
+- new edge should be the shortest possible connection between two nodes, given
+    their track_ids (no skipping/bypassing any nodes of the same track_id).
+    Check if there are any nodes of the same source or target track_id between
+    source and target</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
     <ul>
         <li class="doc-section-item field-body">
 <h4 id="funtracks.data_model.tracks_controller.TracksController.is_valid(edge)" class="doc doc-heading doc-heading-parameter">              <b><code>edge</code></b>
-</h4>              (<code><span title="np.ndarray">ndarray</span>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a>, <a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a>]</code>)
+</h4>              (<code><span title="funtracks.data_model.tracks.Edge">Edge</span></code>)
           –
           <div class="doc-md-description">
             <p>edge to be validated</p>
           </div>
         </li>
     </ul>
-        <p>Returns:
-    True if the edge is valid, false if invalid</p>
+
+
+<p><span class="doc-section-title">Returns:</span></p>
+    <ul>
+        <li class="doc-section-item field-body">
+              <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#tuple">tuple</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a>, <a class="autorefs autorefs-internal" title="            TracksAction (funtracks.data_model.actions.TracksAction)" href="../actions/#funtracks.data_model.actions.TracksAction">TracksAction</a> | None]</code>
+          –
+          <div class="doc-md-description">
+            <p>True if the edge is valid, false if invalid</p>
+          </div>
+        </li>
+    </ul>
 
 
             <details class="quote">
               <summary>Source code in <code>src/funtracks/data_model/tracks_controller.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">372</span>
-<span class="normal">373</span>
-<span class="normal">374</span>
-<span class="normal">375</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">375</span>
 <span class="normal">376</span>
 <span class="normal">377</span>
 <span class="normal">378</span>
@@ -1621,18 +1730,31 @@ Criteria:
 <span class="normal">429</span>
 <span class="normal">430</span>
 <span class="normal">431</span>
-<span class="normal">432</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">is_valid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">edge</span><span class="p">:</span> <span class="n">Edge</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="n">TracksAction</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
+<span class="normal">432</span>
+<span class="normal">433</span>
+<span class="normal">434</span>
+<span class="normal">435</span>
+<span class="normal">436</span>
+<span class="normal">437</span>
+<span class="normal">438</span>
+<span class="normal">439</span>
+<span class="normal">440</span>
+<span class="normal">441</span>
+<span class="normal">442</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">is_valid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">edge</span><span class="p">:</span> <span class="n">Edge</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">bool</span><span class="p">,</span> <span class="n">TracksAction</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Check if this edge is valid.</span>
 <span class="sd">    Criteria:</span>
 <span class="sd">    - not horizontal</span>
 <span class="sd">    - not existing yet</span>
 <span class="sd">    - no merges</span>
 <span class="sd">    - no triple divisions</span>
-<span class="sd">    - new edge should be the shortest possible connection between two nodes, given their track_ids.</span>
-<span class="sd">    (no skipping/bypassing any nodes of the same track_id). Check if there are any nodes of the same source or target track_id between source and target</span>
+<span class="sd">    - new edge should be the shortest possible connection between two nodes, given</span>
+<span class="sd">        their track_ids (no skipping/bypassing any nodes of the same track_id).</span>
+<span class="sd">        Check if there are any nodes of the same source or target track_id between</span>
+<span class="sd">        source and target</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        edge (np.ndarray[(int, int)]: edge to be validated</span>
+<span class="sd">        edge (Edge): edge to be validated</span>
+
 <span class="sd">    Returns:</span>
 <span class="sd">        True if the edge is valid, false if invalid&quot;&quot;&quot;</span>
 
@@ -1647,28 +1769,32 @@ Criteria:
     <span class="c1"># do all checks</span>
     <span class="c1"># reject if edge already exists</span>
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tracks</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">has_edge</span><span class="p">(</span><span class="n">edge</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">edge</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
-        <span class="n">show_warning</span><span class="p">(</span><span class="s2">&quot;Edge is rejected because it exists already.&quot;</span><span class="p">)</span>
+        <span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Edge is rejected because it exists already.&quot;</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
         <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="n">action</span>
 
     <span class="c1"># reject if edge is horizontal</span>
     <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">tracks</span><span class="o">.</span><span class="n">get_time</span><span class="p">(</span><span class="n">edge</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">tracks</span><span class="o">.</span><span class="n">get_time</span><span class="p">(</span><span class="n">edge</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
-        <span class="n">show_warning</span><span class="p">(</span><span class="s2">&quot;Edge is rejected because it is horizontal.&quot;</span><span class="p">)</span>
+        <span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Edge is rejected because it is horizontal.&quot;</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
         <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="n">action</span>
 
     <span class="c1"># reject if target node already has an incoming edge</span>
     <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">tracks</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">in_degree</span><span class="p">(</span><span class="n">edge</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="n">show_warning</span><span class="p">(</span><span class="s2">&quot;Edge is rejected because merges are currently not allowed.&quot;</span><span class="p">)</span>
+        <span class="n">warn</span><span class="p">(</span>
+            <span class="s2">&quot;Edge is rejected because merges are currently not allowed.&quot;</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span>
+        <span class="p">)</span>
         <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="n">action</span>
 
     <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">tracks</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">out_degree</span><span class="p">(</span><span class="n">edge</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
-        <span class="n">show_warning</span><span class="p">(</span>
-            <span class="s2">&quot;Edge is rejected because triple divisions are currently not allowed.&quot;</span>
+        <span class="n">warn</span><span class="p">(</span>
+            <span class="s2">&quot;Edge is rejected because triple divisions are currently not allowed.&quot;</span><span class="p">,</span>
+            <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="n">action</span>
 
     <span class="k">elif</span> <span class="n">time2</span> <span class="o">-</span> <span class="n">time1</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
         <span class="n">track_id2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tracks</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">edge</span><span class="p">[</span><span class="mi">1</span><span class="p">]][</span><span class="n">NodeAttr</span><span class="o">.</span><span class="n">TRACK_ID</span><span class="o">.</span><span class="n">value</span><span class="p">]</span>
-        <span class="c1"># check whether there are already any nodes with the same track id between source and target (shortest path between equal track_ids rule)</span>
+        <span class="c1"># check whether there are already any nodes with the same track id between</span>
+        <span class="c1"># source and target (shortest path between equal track_ids rule)</span>
         <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">time1</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">time2</span><span class="p">):</span>
             <span class="n">nodes</span> <span class="o">=</span> <span class="p">[</span>
                 <span class="n">n</span>
@@ -1677,7 +1803,7 @@ Criteria:
                 <span class="ow">and</span> <span class="n">attr</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">NodeAttr</span><span class="o">.</span><span class="n">TRACK_ID</span><span class="o">.</span><span class="n">value</span><span class="p">)</span> <span class="o">==</span> <span class="n">track_id2</span>
             <span class="p">]</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="n">show_warning</span><span class="p">(</span><span class="s2">&quot;Please connect to the closest node&quot;</span><span class="p">)</span>
+                <span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Please connect to the closest node&quot;</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
                 <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="n">action</span>
 
     <span class="c1"># all checks passed!</span>
@@ -1708,16 +1834,16 @@ Returns:
 
             <details class="quote">
               <summary>Source code in <code>src/funtracks/data_model/tracks_controller.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">542</span>
-<span class="normal">543</span>
-<span class="normal">544</span>
-<span class="normal">545</span>
-<span class="normal">546</span>
-<span class="normal">547</span>
-<span class="normal">548</span>
-<span class="normal">549</span>
-<span class="normal">550</span>
-<span class="normal">551</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">redo</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">552</span>
+<span class="normal">553</span>
+<span class="normal">554</span>
+<span class="normal">555</span>
+<span class="normal">556</span>
+<span class="normal">557</span>
+<span class="normal">558</span>
+<span class="normal">559</span>
+<span class="normal">560</span>
+<span class="normal">561</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">redo</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Obtain the action to redo from the history</span>
 <span class="sd">    Returns:</span>
 <span class="sd">        bool: True if the action was re-done, False if there were no more actions</span>
@@ -1753,16 +1879,16 @@ Returns:
 
             <details class="quote">
               <summary>Source code in <code>src/funtracks/data_model/tracks_controller.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">531</span>
-<span class="normal">532</span>
-<span class="normal">533</span>
-<span class="normal">534</span>
-<span class="normal">535</span>
-<span class="normal">536</span>
-<span class="normal">537</span>
-<span class="normal">538</span>
-<span class="normal">539</span>
-<span class="normal">540</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">undo</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">541</span>
+<span class="normal">542</span>
+<span class="normal">543</span>
+<span class="normal">544</span>
+<span class="normal">545</span>
+<span class="normal">546</span>
+<span class="normal">547</span>
+<span class="normal">548</span>
+<span class="normal">549</span>
+<span class="normal">550</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">undo</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Obtain the action to undo from the history, and invert.</span>
 <span class="sd">    Returns:</span>
 <span class="sd">        bool: True if the action was undone, False if there were no more actions</span>
@@ -1819,18 +1945,18 @@ each node.</p>
 
             <details class="quote">
               <summary>Source code in <code>src/funtracks/data_model/tracks_controller.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">310</span>
-<span class="normal">311</span>
-<span class="normal">312</span>
-<span class="normal">313</span>
-<span class="normal">314</span>
-<span class="normal">315</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">315</span>
 <span class="normal">316</span>
 <span class="normal">317</span>
 <span class="normal">318</span>
 <span class="normal">319</span>
 <span class="normal">320</span>
-<span class="normal">321</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_node_attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nodes</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">attributes</span><span class="p">:</span> <span class="n">Attrs</span><span class="p">):</span>
+<span class="normal">321</span>
+<span class="normal">322</span>
+<span class="normal">323</span>
+<span class="normal">324</span>
+<span class="normal">325</span>
+<span class="normal">326</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_node_attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nodes</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span> <span class="n">attributes</span><span class="p">:</span> <span class="n">Attrs</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Update the user provided node attributes (not the managed attributes).</span>
 <span class="sd">    Also adds the action to the history and emits the refresh signal.</span>
 
@@ -1861,30 +1987,20 @@ each node.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Handle a change in the segmentation mask, checking for node addition, deletion, and attribute updates.
+        <p>Handle a change in the segmentation mask, checking for node addition,
+deletion, and attribute updates.
 Args:
-    updated_pixels (list[(tuple(np.ndarray, np.ndarray, np.ndarray), np.ndarray, int)]):
-        list holding the operations that updated the segmentation (directly from
-        the napari labels paint event).
-        Each element in the list consists of a tuple of np.ndarrays representing
-        indices for each dimension, an array of the previous values, and an array
-        or integer representing the new value(s)
-    current_timepoint (int): the current time point in the viewer, used to set the selected node.</p>
+    to_remove (list[tuple[Node, SegMask]]): (node_ids, pixels)
+    to_update_smaller (list[tuple[Node, SegMask]]): (node_id, pixels)
+    to_update_bigger (list[tuple[Node, SegMask]]): (node_id, pixels)
+    to_add (list[tuple[Node, int, SegMask]]): (node_id, track_id, pixels)
+    current_timepoint (int): the current time point in the viewer, used to set
+        the selected node.</p>
 
 
             <details class="quote">
               <summary>Source code in <code>src/funtracks/data_model/tracks_controller.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">467</span>
-<span class="normal">468</span>
-<span class="normal">469</span>
-<span class="normal">470</span>
-<span class="normal">471</span>
-<span class="normal">472</span>
-<span class="normal">473</span>
-<span class="normal">474</span>
-<span class="normal">475</span>
-<span class="normal">476</span>
-<span class="normal">477</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">477</span>
 <span class="normal">478</span>
 <span class="normal">479</span>
 <span class="normal">480</span>
@@ -1936,23 +2052,33 @@ Args:
 <span class="normal">526</span>
 <span class="normal">527</span>
 <span class="normal">528</span>
-<span class="normal">529</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_segmentations</span><span class="p">(</span>
+<span class="normal">529</span>
+<span class="normal">530</span>
+<span class="normal">531</span>
+<span class="normal">532</span>
+<span class="normal">533</span>
+<span class="normal">534</span>
+<span class="normal">535</span>
+<span class="normal">536</span>
+<span class="normal">537</span>
+<span class="normal">538</span>
+<span class="normal">539</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">update_segmentations</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
-    <span class="n">to_remove</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Node</span><span class="p">,</span> <span class="n">SegMask</span><span class="p">]],</span>  <span class="c1"># (node_ids, pixels)</span>
-    <span class="n">to_update_smaller</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Node</span><span class="p">,</span> <span class="n">SegMask</span><span class="p">]],</span>  <span class="c1"># (node_id, pixels)</span>
-    <span class="n">to_update_bigger</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Node</span><span class="p">,</span> <span class="n">SegMask</span><span class="p">]],</span>  <span class="c1"># (node_id, pixels)</span>
-    <span class="n">to_add</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Node</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="n">SegMask</span><span class="p">]],</span>  <span class="c1"># (node_id, track_id, pixels)</span>
+    <span class="n">to_remove</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Node</span><span class="p">,</span> <span class="n">SegMask</span><span class="p">]],</span>
+    <span class="n">to_update_smaller</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Node</span><span class="p">,</span> <span class="n">SegMask</span><span class="p">]],</span>
+    <span class="n">to_update_bigger</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Node</span><span class="p">,</span> <span class="n">SegMask</span><span class="p">]],</span>
+    <span class="n">to_add</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Node</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="n">SegMask</span><span class="p">]],</span>
     <span class="n">current_timepoint</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Handle a change in the segmentation mask, checking for node addition, deletion, and attribute updates.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Handle a change in the segmentation mask, checking for node addition,</span>
+<span class="sd">    deletion, and attribute updates.</span>
 <span class="sd">    Args:</span>
-<span class="sd">        updated_pixels (list[(tuple(np.ndarray, np.ndarray, np.ndarray), np.ndarray, int)]):</span>
-<span class="sd">            list holding the operations that updated the segmentation (directly from</span>
-<span class="sd">            the napari labels paint event).</span>
-<span class="sd">            Each element in the list consists of a tuple of np.ndarrays representing</span>
-<span class="sd">            indices for each dimension, an array of the previous values, and an array</span>
-<span class="sd">            or integer representing the new value(s)</span>
-<span class="sd">        current_timepoint (int): the current time point in the viewer, used to set the selected node.</span>
+<span class="sd">        to_remove (list[tuple[Node, SegMask]]): (node_ids, pixels)</span>
+<span class="sd">        to_update_smaller (list[tuple[Node, SegMask]]): (node_id, pixels)</span>
+<span class="sd">        to_update_bigger (list[tuple[Node, SegMask]]): (node_id, pixels)</span>
+<span class="sd">        to_add (list[tuple[Node, int, SegMask]]): (node_id, track_id, pixels)</span>
+<span class="sd">        current_timepoint (int): the current time point in the viewer, used to set</span>
+<span class="sd">            the selected node.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">actions</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">TracksAction</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">node_to_select</span> <span class="o">=</span> <span class="kc">None</span>

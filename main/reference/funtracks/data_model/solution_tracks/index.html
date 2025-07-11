@@ -635,6 +635,98 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_1_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_1_3" id="__nav_2_1_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>import export
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_2_1_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_1_3">
+            <span class="md-nav__icon md-icon"></span>
+            <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>import export
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../import_export/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    funtracks.import_export
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../import_export/internal_format/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    funtracks.import_export.internal_format
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -820,7 +912,8 @@
 
                   <details class="quote">
                     <summary>Source code in <code>src/funtracks/data_model/solution_tracks.py</code></summary>
-                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">22</span>
+                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">21</span>
+<span class="normal">22</span>
 <span class="normal">23</span>
 <span class="normal">24</span>
 <span class="normal">25</span>
@@ -837,8 +930,7 @@
 <span class="normal">36</span>
 <span class="normal">37</span>
 <span class="normal">38</span>
-<span class="normal">39</span>
-<span class="normal">40</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+<span class="normal">39</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">graph</span><span class="p">:</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">,</span>
     <span class="n">segmentation</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -893,7 +985,8 @@ Whether or not to include z is inferred from self.ndim</p>
 
             <details class="quote">
               <summary>Source code in <code>src/funtracks/data_model/solution_tracks.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">122</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">121</span>
+<span class="normal">122</span>
 <span class="normal">123</span>
 <span class="normal">124</span>
 <span class="normal">125</span>
@@ -917,8 +1010,7 @@ Whether or not to include z is inferred from self.ndim</p>
 <span class="normal">143</span>
 <span class="normal">144</span>
 <span class="normal">145</span>
-<span class="normal">146</span>
-<span class="normal">147</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">export_tracks</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">outfile</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span><span class="p">):</span>
+<span class="normal">146</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">export_tracks</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">outfile</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Export the tracks from this run to a csv with the following columns:</span>
 <span class="sd">    t,[z],y,x,id,parent_id,track_id</span>
 <span class="sd">    Cells without a parent_id will have an empty string for the parent_id.</span>
@@ -968,7 +1060,8 @@ Whether or not to include z is inferred from self.ndim</p>
 
             <details class="quote">
               <summary>Source code in <code>src/funtracks/data_model/solution_tracks.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">57</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">56</span>
+<span class="normal">57</span>
 <span class="normal">58</span>
 <span class="normal">59</span>
 <span class="normal">60</span>
@@ -976,8 +1069,7 @@ Whether or not to include z is inferred from self.ndim</p>
 <span class="normal">62</span>
 <span class="normal">63</span>
 <span class="normal">64</span>
-<span class="normal">65</span>
-<span class="normal">66</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_next_track_id</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="normal">65</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_next_track_id</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the next available track_id and update self.max_track_id&quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node_id_to_track_id</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
         <span class="n">computed_max</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node_id_to_track_id</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
