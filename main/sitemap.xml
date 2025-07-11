@@ -2,42 +2,42 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://funkelab.github.io/funtracks/main/</loc>
-         <lastmod>2025-06-23</lastmod>
+         <lastmod>2025-07-11</lastmod>
     </url>
     <url>
          <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/</loc>
-         <lastmod>2025-06-23</lastmod>
+         <lastmod>2025-07-11</lastmod>
     </url>
     <url>
          <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/data_model/</loc>
-         <lastmod>2025-06-23</lastmod>
+         <lastmod>2025-07-11</lastmod>
     </url>
     <url>
          <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/data_model/action_history/</loc>
-         <lastmod>2025-06-23</lastmod>
+         <lastmod>2025-07-11</lastmod>
     </url>
     <url>
          <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/data_model/actions/</loc>
-         <lastmod>2025-06-23</lastmod>
+         <lastmod>2025-07-11</lastmod>
     </url>
     <url>
          <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/data_model/compute_ious/</loc>
-         <lastmod>2025-06-23</lastmod>
+         <lastmod>2025-07-11</lastmod>
     </url>
     <url>
          <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/data_model/graph_attributes/</loc>
-         <lastmod>2025-06-23</lastmod>
+         <lastmod>2025-07-11</lastmod>
     </url>
     <url>
          <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/data_model/solution_tracks/</loc>
-         <lastmod>2025-06-23</lastmod>
+         <lastmod>2025-07-11</lastmod>
     </url>
     <url>
          <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/data_model/tracks/</loc>
-         <lastmod>2025-06-23</lastmod>
+         <lastmod>2025-07-11</lastmod>
     </url>
     <url>
          <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/data_model/tracks_controller/</loc>
-         <lastmod>2025-06-23</lastmod>
+         <lastmod>2025-07-11</lastmod>
     </url>
 </urlset>
