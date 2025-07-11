@@ -111,3 +111,6 @@ ruff-check = "ruff check --fix ."
 ruff-format = "ruff format ."
 test = "pytest --cov=funtracks tests/"
 mypy = "mypy src/"
+
+[tool.pixi.feature.docs.tasks]
+docs = "mkdocs serve"
