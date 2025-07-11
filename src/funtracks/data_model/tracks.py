@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import warnings
 from collections.abc import Iterable, Sequence
 from typing import (
     TYPE_CHECKING,
@@ -333,8 +334,24 @@ class Tracks:
         else:
             return self.graph.nodes[node].get(attr, None)
 
+    def _get_node_attr(self, node, attr, required=False):
+        warnings.warn(
+            "_get_node_attr deprecated in favor of public method get_node_attr",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.get_node_attr(node, attr, required=required)
+
     def get_nodes_attr(self, nodes: Iterable[Node], attr: str, required: bool = False):
         return [self.get_node_attr(node, attr, required=required) for node in nodes]
+
+    def _get_nodes_attr(self, nodes, attr, required=False):
+        warnings.warn(
+            "_get_nodes_attr deprecated in favor of public method get_nodes_attr",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.get_nodes_attr(nodes, attr, required=required)
 
     def _set_edge_attr(self, edge: Edge, attr: str, value: Any):
         self.graph.edge[edge][attr] = value
