@@ -79,6 +79,7 @@ unfixable = [
 "tests/*" = ["D"]  # no docstrings in tests
 "src/funtracks/data_model/tracks.py" = ["D"]  # Remove this when refactoring tracks
 "src/funtracks/data_model/solution_tracks.py" = ["D"]  # Remove this when refactoring tracks
+"__init__.py" = ["F401"]  # unused imports allowed in __init__.py
 
 # https://docs.astral.sh/ruff/formatter/
 [tool.ruff.format]
