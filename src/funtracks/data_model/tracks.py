@@ -62,18 +62,27 @@ class Tracks:
         self,
         graph: nx.DiGraph,
         segmentation: np.ndarray | None = None,
-        time_attr: str = NodeAttr.TIME.value,
-        pos_attr: str | tuple[str] | list[str] = NodeAttr.POS.value,
+        time_attr: str | None = NodeAttr.TIME.value,
+        pos_attr: str | tuple[str] | list[str] | None = NodeAttr.POS.value,
         scale: list[float] | None = None,
         ndim: int | None = None,
+        features: FeatureSet | None = None,
     ):
+        if features is not None and (time_attr is not None or pos_attr is not None):
+            warn(
+                "Provided both FeatureSet and pos_attr or time_attr: ignoring attr "
+                "arguments.",
+                stacklevel=2,
+            )
         self.graph = graph
         self.segmentation = segmentation
         self._time_attr = time_attr
         self._pos_attr = pos_attr
         self.scale = scale
         self.ndim = self._compute_ndim(segmentation, scale, ndim)
-        self.features = self._get_feature_set(time_attr, pos_attr)
+        self.features = (
+            self._get_feature_set(time_attr, pos_attr) if features is None else features
+        )
 
     @property
     def time_attr(self):
