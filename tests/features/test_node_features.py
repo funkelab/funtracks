@@ -1,6 +1,6 @@
 import pytest
 
-from funtracks.features import Position, Time
+from funtracks.features import Position, Time, ValueType
 
 
 @pytest.mark.parametrize("key", [None, "t"])
@@ -10,7 +10,7 @@ def test_time(key):
     assert feat.required
     assert not feat.recompute
     assert feat.display_name == "Time"
-    assert feat.value_type is int
+    assert feat.value_type == ValueType.int
 
 
 @pytest.mark.parametrize("key", [None, "location"])
@@ -22,5 +22,5 @@ def test_position(key, recompute, axes, num_values):
     assert feat.required
     assert feat.recompute == recompute
     assert feat.display_name == axes
-    assert feat.value_type is float
+    assert feat.value_type == ValueType.float
     assert feat.num_values == num_values
