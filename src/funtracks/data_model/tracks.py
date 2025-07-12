@@ -89,7 +89,7 @@ class Tracks:
     def pos_attr(self):
         warn(
             "Deprecating Tracks.pos_attr in favor of tracks.features.position."
-            "Will be removed in funtracks v2.0.",
+            " Will be removed in funtracks v2.0.",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -168,13 +168,18 @@ class Tracks:
             np.ndarray: A N x ndim numpy array holding the positions, where N is the
                 number of nodes passed in
         """
-        if isinstance(self.pos_attr, tuple | list):
+        if isinstance(self.features.position, list):
             positions = np.stack(
-                [self.get_nodes_attr(nodes, dim, required=True) for dim in self.pos_attr],
+                [
+                    self.get_nodes_attr(nodes, feat.key, required=True)
+                    for feat in self.features.position
+                ],
                 axis=1,
             )
         else:
-            positions = np.array(self.get_nodes_attr(nodes, self.pos_attr, required=True))
+            positions = np.array(
+                self.get_nodes_attr(nodes, self.features.position.key, required=True)
+            )
 
         if incl_time:
             times = np.array(
@@ -211,11 +216,11 @@ class Tracks:
             self.set_times(nodes, times)  # type: ignore
             positions = positions[:, 1:]
 
-        if isinstance(self.pos_attr, tuple | list):
-            for idx, attr in enumerate(self.pos_attr):
-                self._set_nodes_attr(nodes, attr, positions[:, idx].tolist())
+        if isinstance(self.features.position, list):
+            for idx, feat in enumerate(self.features.position):
+                self._set_nodes_attr(nodes, feat.key, positions[:, idx].tolist())
         else:
-            self._set_nodes_attr(nodes, self.pos_attr, positions.tolist())
+            self._set_nodes_attr(nodes, self.features.position.key, positions.tolist())
 
     def set_position(self, node: Node, position: list, incl_time=False):
         self.set_positions(
