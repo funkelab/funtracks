@@ -18,23 +18,29 @@ class FeatureSet:
     def __init__(
         self,
         time_feature: Feature,
-        pos_feature: Feature,
+        pos_feature: Feature | list[Feature],
         extra_features: list[Feature] | None = None,
     ):
         """
         Args:
             time_feature (Feature): The feature to use as the time. Usually Time(),
                 but can be given a different key.
-            pos_feature (Feature): The feature to use as the position.
-                Usually an instance of Position.
+            pos_feature (Feature | list[Feature]): The feature or list of features to use
+                as the position. If the individual axes are stored in different
+                attributes, this can be a list of Features. If the position is stored
+                in a single attribute, this will be a single Feature.
             extra_features (list[Feature] | None, optional): Extra features
                 to add to the set upon initalization. Defaults to None.
         """
         self.time = time_feature
-        self.position = pos_feature
+        self.position: Feature | list[Feature] = pos_feature
         self._features: list[Feature] = []
 
-        features = [self.time, self.position]
+        features = [self.time]
+        if isinstance(self.position, Feature):
+            features.append(self.position)
+        else:
+            features.extend(self.position)
         if extra_features is not None:
             features.extend(extra_features)
         for feat in features:
@@ -74,10 +80,21 @@ class FeatureSet:
 
         Returns:
             dict: A map from the key "FeatureSet" to a list of json representations of
-                the features in this FeatureSet. They must be in order:
-                [time, position, ...]
+                the features in this FeatureSet. The time and position are stored twice,
+                once to denote which features represent time and position, and again in
+                the generic list of all features.
         """
-        return {"FeatureSet": [feat.model_dump(mode="json") for feat in self._features]}
+        pos_value = (
+            self.position.model_dump(mode="json")
+            if isinstance(self.position, Feature)
+            else [feat.model_dump(mode="json") for feat in self.position]
+        )
+        set_dict = {
+            "position": pos_value,
+            "time": self.time.model_dump(mode="json"),
+            "features": [feat.model_dump(mode="json") for feat in self._features],
+        }
+        return {"FeatureSet": set_dict}
 
     @classmethod
     def from_json(cls, json_dict: dict) -> FeatureSet:
@@ -85,21 +102,25 @@ class FeatureSet:
 
         Args:
             json_dict (dict): A dictionary with the key "FeatureSet" mapping to a
-                list of json representation of features. They must be in order:
-                [time, position, ...]
+                list of json representation of features. The time and position are stored
+                twice, once to denote which features represent time and position, and
+                again in the generic list of all features.
 
         Returns:
             FeatureSet: A FeatureSet object containing the features from the dictionary
         """
-        features_list = [Feature(**feat) for feat in json_dict["FeatureSet"]]
-        (
-            time,
-            position,
-        ) = features_list[0:2]
+        feature_set = json_dict["FeatureSet"]
+        position_vals = feature_set["position"]
+        time_vals = feature_set["time"]
+        feature_vals = feature_set["features"]
+
         features = FeatureSet.__new__(FeatureSet)
-        features.time = time
-        features.position = position
-        features._features = features_list
+        features.time = Feature(**time_vals)
+        if isinstance(position_vals, list):
+            features.position = [Feature(**feat) for feat in position_vals]
+        else:
+            features.position = Feature(**position_vals)
+        features._features = [Feature(**feat) for feat in feature_vals]
         return features
 
     def __repr__(self):  # pragma: no cover
