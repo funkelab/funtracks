@@ -1179,15 +1179,24 @@
 
 
 <p><span class="doc-section-title">Classes:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-          <b><code><a class="autorefs autorefs-internal" title="            TracksController (funtracks.data_model.tracks_controller.TracksController)" href="#funtracks.data_model.tracks_controller.TracksController">TracksController</a></code></b>
-          –
-          <div class="doc-md-description">
-            <p>A set of high level functions to change the data model.</p>
-          </div>
-        </li>
-    </ul>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="            TracksController (funtracks.data_model.tracks_controller.TracksController)" href="#funtracks.data_model.tracks_controller.TracksController">TracksController</a></code></td>
+            <td>
+              <div class="doc-md-description">
+                <p>A set of high level functions to change the data model.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -1232,71 +1241,88 @@ All changes to the data should go through this API.</p>
 
 
 <p><span class="doc-section-title">Methods:</span></p>
-    <ul>
-          <li class="doc-section-item field-body">
-            <b><code><a class="autorefs autorefs-internal" title="            add_edges (funtracks.data_model.tracks_controller.TracksController.add_edges)" href="#funtracks.data_model.tracks_controller.TracksController.add_edges">add_edges</a></code></b>
-            –
-            <div class="doc-md-description">
-              <p>Add edges to the graph. Also update the track ids and</p>
-            </div>
-          </li>
-          <li class="doc-section-item field-body">
-            <b><code><a class="autorefs autorefs-internal" title="            add_nodes (funtracks.data_model.tracks_controller.TracksController.add_nodes)" href="#funtracks.data_model.tracks_controller.TracksController.add_nodes">add_nodes</a></code></b>
-            –
-            <div class="doc-md-description">
-              <p>Calls the _add_nodes function to add nodes. Calls the refresh signal when</p>
-            </div>
-          </li>
-          <li class="doc-section-item field-body">
-            <b><code><a class="autorefs autorefs-internal" title="            delete_edges (funtracks.data_model.tracks_controller.TracksController.delete_edges)" href="#funtracks.data_model.tracks_controller.TracksController.delete_edges">delete_edges</a></code></b>
-            –
-            <div class="doc-md-description">
-              <p>Delete edges from the graph.</p>
-            </div>
-          </li>
-          <li class="doc-section-item field-body">
-            <b><code><a class="autorefs autorefs-internal" title="            delete_nodes (funtracks.data_model.tracks_controller.TracksController.delete_nodes)" href="#funtracks.data_model.tracks_controller.TracksController.delete_nodes">delete_nodes</a></code></b>
-            –
-            <div class="doc-md-description">
-              <p>Calls the _delete_nodes function and then emits the refresh signal</p>
-            </div>
-          </li>
-          <li class="doc-section-item field-body">
-            <b><code><a class="autorefs autorefs-internal" title="            is_valid (funtracks.data_model.tracks_controller.TracksController.is_valid)" href="#funtracks.data_model.tracks_controller.TracksController.is_valid">is_valid</a></code></b>
-            –
-            <div class="doc-md-description">
-              <p>Check if this edge is valid.</p>
-            </div>
-          </li>
-          <li class="doc-section-item field-body">
-            <b><code><a class="autorefs autorefs-internal" title="            redo (funtracks.data_model.tracks_controller.TracksController.redo)" href="#funtracks.data_model.tracks_controller.TracksController.redo">redo</a></code></b>
-            –
-            <div class="doc-md-description">
-              <p>Obtain the action to redo from the history</p>
-            </div>
-          </li>
-          <li class="doc-section-item field-body">
-            <b><code><a class="autorefs autorefs-internal" title="            undo (funtracks.data_model.tracks_controller.TracksController.undo)" href="#funtracks.data_model.tracks_controller.TracksController.undo">undo</a></code></b>
-            –
-            <div class="doc-md-description">
-              <p>Obtain the action to undo from the history, and invert.</p>
-            </div>
-          </li>
-          <li class="doc-section-item field-body">
-            <b><code><a class="autorefs autorefs-internal" title="            update_node_attrs (funtracks.data_model.tracks_controller.TracksController.update_node_attrs)" href="#funtracks.data_model.tracks_controller.TracksController.update_node_attrs">update_node_attrs</a></code></b>
-            –
-            <div class="doc-md-description">
-              <p>Update the user provided node attributes (not the managed attributes).</p>
-            </div>
-          </li>
-          <li class="doc-section-item field-body">
-            <b><code><a class="autorefs autorefs-internal" title="            update_segmentations (funtracks.data_model.tracks_controller.TracksController.update_segmentations)" href="#funtracks.data_model.tracks_controller.TracksController.update_segmentations">update_segmentations</a></code></b>
-            –
-            <div class="doc-md-description">
-              <p>Handle a change in the segmentation mask, checking for node addition,</p>
-            </div>
-          </li>
-    </ul>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="            add_edges (funtracks.data_model.tracks_controller.TracksController.add_edges)" href="#funtracks.data_model.tracks_controller.TracksController.add_edges">add_edges</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Add edges to the graph. Also update the track ids and</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="            add_nodes (funtracks.data_model.tracks_controller.TracksController.add_nodes)" href="#funtracks.data_model.tracks_controller.TracksController.add_nodes">add_nodes</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Calls the _add_nodes function to add nodes. Calls the refresh signal when</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="            delete_edges (funtracks.data_model.tracks_controller.TracksController.delete_edges)" href="#funtracks.data_model.tracks_controller.TracksController.delete_edges">delete_edges</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Delete edges from the graph.</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="            delete_nodes (funtracks.data_model.tracks_controller.TracksController.delete_nodes)" href="#funtracks.data_model.tracks_controller.TracksController.delete_nodes">delete_nodes</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Calls the _delete_nodes function and then emits the refresh signal</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="            is_valid (funtracks.data_model.tracks_controller.TracksController.is_valid)" href="#funtracks.data_model.tracks_controller.TracksController.is_valid">is_valid</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Check if this edge is valid.</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="            redo (funtracks.data_model.tracks_controller.TracksController.redo)" href="#funtracks.data_model.tracks_controller.TracksController.redo">redo</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Obtain the action to redo from the history</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="            undo (funtracks.data_model.tracks_controller.TracksController.undo)" href="#funtracks.data_model.tracks_controller.TracksController.undo">undo</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Obtain the action to undo from the history, and invert.</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="            update_node_attrs (funtracks.data_model.tracks_controller.TracksController.update_node_attrs)" href="#funtracks.data_model.tracks_controller.TracksController.update_node_attrs">update_node_attrs</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Update the user provided node attributes (not the managed attributes).</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="            update_segmentations (funtracks.data_model.tracks_controller.TracksController.update_segmentations)" href="#funtracks.data_model.tracks_controller.TracksController.update_segmentations">update_segmentations</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Handle a change in the segmentation mask, checking for node addition,</p>
+                </div>
+              </td>
+            </tr>
+      </tbody>
+    </table>
 
 
 
@@ -1342,17 +1368,35 @@ corresponding segmentations if applicable</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-<h4 id="funtracks.data_model.tracks_controller.TracksController.add_edges(edges)" class="doc doc-heading doc-heading-parameter">              <b><code>edges</code></b>
-</h4>              (<code><a class="autorefs autorefs-external" title="collections.abc.Iterable" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable">Iterable</a>[<span title="funtracks.data_model.tracks.Edge">Edge</span>]</code>)
-          –
-          <div class="doc-md-description">
-            <p>An iterable of edges, each with source and target
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+<h4 id="funtracks.data_model.tracks_controller.TracksController.add_edges(edges)" class="doc doc-heading doc-heading-parameter">                  <code>edges</code>
+</h4>            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" title="collections.abc.Iterable" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable">Iterable</a>[<span title="funtracks.data_model.tracks.Edge">Edge</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>An iterable of edges, each with source and target
 node ids</p>
-          </div>
-        </li>
-    </ul>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
             <details class="quote">
@@ -1430,28 +1474,52 @@ finished.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-<h4 id="funtracks.data_model.tracks_controller.TracksController.add_nodes(attributes)" class="doc doc-heading doc-heading-parameter">              <b><code>attributes</code></b>
-</h4>              (<code><span title="funtracks.data_model.tracks.Attrs">Attrs</span></code>)
-          –
-          <div class="doc-md-description">
-            <p>dictionary containing at least time and position
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+<h4 id="funtracks.data_model.tracks_controller.TracksController.add_nodes(attributes)" class="doc doc-heading doc-heading-parameter">                  <code>attributes</code>
+</h4>            </td>
+            <td>
+                  <code><span title="funtracks.data_model.tracks.Attrs">Attrs</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>dictionary containing at least time and position
 attributes</p>
-          </div>
-        </li>
-        <li class="doc-section-item field-body">
-<h4 id="funtracks.data_model.tracks_controller.TracksController.add_nodes(pixels)" class="doc doc-heading doc-heading-parameter">              <b><code>pixels</code></b>
-</h4>              (<code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#list">list</a>[<span title="funtracks.data_model.tracks.SegMask">SegMask</span>] | None</code>, default:
-                  <code>None</code>
-)
-          –
-          <div class="doc-md-description">
-            <p>The pixels associated with each
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+<h4 id="funtracks.data_model.tracks_controller.TracksController.add_nodes(pixels)" class="doc doc-heading doc-heading-parameter">                  <code>pixels</code>
+</h4>            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#list">list</a>[<span title="funtracks.data_model.tracks.SegMask">SegMask</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The pixels associated with each
 node, if a segmentation is present. Defaults to None.</p>
-          </div>
-        </li>
-    </ul>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
             <details class="quote">
@@ -1516,16 +1584,34 @@ node, if a segmentation is present. Defaults to None.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-<h4 id="funtracks.data_model.tracks_controller.TracksController.delete_edges(edges)" class="doc doc-heading doc-heading-parameter">              <b><code>edges</code></b>
-</h4>              (<code><a class="autorefs autorefs-external" title="collections.abc.Iterable" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable">Iterable</a>[<span title="funtracks.data_model.tracks.Edge">Edge</span>]</code>)
-          –
-          <div class="doc-md-description">
-            <p>The Nx2 array of edges to be deleted</p>
-          </div>
-        </li>
-    </ul>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+<h4 id="funtracks.data_model.tracks_controller.TracksController.delete_edges(edges)" class="doc doc-heading doc-heading-parameter">                  <code>edges</code>
+</h4>            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" title="collections.abc.Iterable" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable">Iterable</a>[<span title="funtracks.data_model.tracks.Edge">Edge</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The Nx2 array of edges to be deleted</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
             <details class="quote">
@@ -1582,16 +1668,34 @@ node, if a segmentation is present. Defaults to None.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-<h4 id="funtracks.data_model.tracks_controller.TracksController.delete_nodes(nodes)" class="doc doc-heading doc-heading-parameter">              <b><code>nodes</code></b>
-</h4>              (<code><a class="autorefs autorefs-external" title="collections.abc.Iterable" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable">Iterable</a>[<span title="funtracks.data_model.tracks.Node">Node</span>]</code>)
-          –
-          <div class="doc-md-description">
-            <p>array of node_ids to be deleted</p>
-          </div>
-        </li>
-    </ul>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+<h4 id="funtracks.data_model.tracks_controller.TracksController.delete_nodes(nodes)" class="doc doc-heading doc-heading-parameter">                  <code>nodes</code>
+</h4>            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" title="collections.abc.Iterable" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable">Iterable</a>[<span title="funtracks.data_model.tracks.Node">Node</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>array of node_ids to be deleted</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
             <details class="quote">
@@ -1647,28 +1751,57 @@ Criteria:
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-<h4 id="funtracks.data_model.tracks_controller.TracksController.is_valid(edge)" class="doc doc-heading doc-heading-parameter">              <b><code>edge</code></b>
-</h4>              (<code><span title="funtracks.data_model.tracks.Edge">Edge</span></code>)
-          –
-          <div class="doc-md-description">
-            <p>edge to be validated</p>
-          </div>
-        </li>
-    </ul>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+<h4 id="funtracks.data_model.tracks_controller.TracksController.is_valid(edge)" class="doc doc-heading doc-heading-parameter">                  <code>edge</code>
+</h4>            </td>
+            <td>
+                  <code><span title="funtracks.data_model.tracks.Edge">Edge</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>edge to be validated</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
-<p><span class="doc-section-title">Returns:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-              <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#tuple">tuple</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a>, <a class="autorefs autorefs-internal" title="            TracksAction (funtracks.data_model.actions.TracksAction)" href="../actions/#funtracks.data_model.actions.TracksAction">TracksAction</a> | None]</code>
-          –
-          <div class="doc-md-description">
-            <p>True if the edge is valid, false if invalid</p>
-          </div>
-        </li>
-    </ul>
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#tuple">tuple</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a>, <a class="autorefs autorefs-internal" title="            TracksAction (funtracks.data_model.actions.TracksAction)" href="../actions/#funtracks.data_model.actions.TracksAction">TracksAction</a> | None]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>True if the edge is valid, false if invalid</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
             <details class="quote">
@@ -1922,25 +2055,51 @@ Also adds the action to the history and emits the refresh signal.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-<h4 id="funtracks.data_model.tracks_controller.TracksController.update_node_attrs(nodes)" class="doc doc-heading doc-heading-parameter">              <b><code>nodes</code></b>
-</h4>              (<code><a class="autorefs autorefs-external" title="collections.abc.Iterable" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable">Iterable</a>[<span title="funtracks.data_model.tracks.Node">Node</span>]</code>)
-          –
-          <div class="doc-md-description">
-            <p>The nodes to update the attributes for</p>
-          </div>
-        </li>
-        <li class="doc-section-item field-body">
-<h4 id="funtracks.data_model.tracks_controller.TracksController.update_node_attrs(attributes)" class="doc doc-heading doc-heading-parameter">              <b><code>attributes</code></b>
-</h4>              (<code><span title="funtracks.data_model.tracks.Attrs">Attrs</span></code>)
-          –
-          <div class="doc-md-description">
-            <p>A mapping from user-provided attributes to values for
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+<h4 id="funtracks.data_model.tracks_controller.TracksController.update_node_attrs(nodes)" class="doc doc-heading doc-heading-parameter">                  <code>nodes</code>
+</h4>            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" title="collections.abc.Iterable" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable">Iterable</a>[<span title="funtracks.data_model.tracks.Node">Node</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The nodes to update the attributes for</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+<h4 id="funtracks.data_model.tracks_controller.TracksController.update_node_attrs(attributes)" class="doc doc-heading doc-heading-parameter">                  <code>attributes</code>
+</h4>            </td>
+            <td>
+                  <code><span title="funtracks.data_model.tracks.Attrs">Attrs</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A mapping from user-provided attributes to values for
 each node.</p>
-          </div>
-        </li>
-    </ul>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
             <details class="quote">

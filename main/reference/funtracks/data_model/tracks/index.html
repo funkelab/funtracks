@@ -1359,15 +1359,24 @@
 
 
 <p><span class="doc-section-title">Classes:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-          <b><code><a class="autorefs autorefs-internal" title="            Tracks (funtracks.data_model.tracks.Tracks)" href="#funtracks.data_model.tracks.Tracks">Tracks</a></code></b>
-          –
-          <div class="doc-md-description">
-            <p>A set of tracks consisting of a graph and an optional segmentation.</p>
-          </div>
-        </li>
-    </ul>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="            Tracks (funtracks.data_model.tracks.Tracks)" href="#funtracks.data_model.tracks.Tracks">Tracks</a></code></td>
+            <td>
+              <div class="doc-md-description">
+                <p>A set of tracks consisting of a graph and an optional segmentation.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -1405,47 +1414,68 @@ position attribute. Edges in the graph represent links across time.</p>
 
 
 <p><span class="doc-section-title">Attributes:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-          <b><code><span title="funtracks.data_model.tracks.Tracks.graph">graph</span></code></b>
-              (<code><span title="networkx.DiGraph">DiGraph</span></code>)
-          –
-          <div class="doc-md-description">
-            <p>A graph with nodes representing detections and
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><span title="funtracks.data_model.tracks.Tracks.graph">graph</span></code></td>
+            <td>
+                  <code><span title="networkx.DiGraph">DiGraph</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A graph with nodes representing detections and
 and edges representing links across time.</p>
-          </div>
-        </li>
-        <li class="doc-section-item field-body">
-          <b><code><span title="funtracks.data_model.tracks.Tracks.segmentation">segmentation</span></code></b>
-              (<code>Optional(np.ndarray</code>)
-          –
-          <div class="doc-md-description">
-            <p>An optional segmentation that
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="funtracks.data_model.tracks.Tracks.segmentation">segmentation</span></code></td>
+            <td>
+                  <code>Optional(np.ndarray</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>An optional segmentation that
 accompanies the tracking graph. If a segmentation is provided,
 the node ids in the graph must match the segmentation labels.
 Defaults to None.</p>
-          </div>
-        </li>
-        <li class="doc-section-item field-body">
-          <b><code><span title="funtracks.data_model.tracks.Tracks.time_attr">time_attr</span></code></b>
-              (<code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>)
-          –
-          <div class="doc-md-description">
-            <p>The attribute in the graph that specifies the time
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="funtracks.data_model.tracks.Tracks.time_attr">time_attr</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The attribute in the graph that specifies the time
 frame each node is in.</p>
-          </div>
-        </li>
-        <li class="doc-section-item field-body">
-          <b><code><span title="funtracks.data_model.tracks.Tracks.pos_attr">pos_attr</span></code></b>
-              (<code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | <a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#tuple">tuple</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a>] | <a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a>]</code>)
-          –
-          <div class="doc-md-description">
-            <p>The attribute in the graph
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="funtracks.data_model.tracks.Tracks.pos_attr">pos_attr</span></code></td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | <a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#tuple">tuple</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a>] | <a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The attribute in the graph
 that specifies the position of each node. Can be a single attribute
 that holds a list, or a list of attribute keys.</p>
-          </div>
-        </li>
-    </ul>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
         <p>For bulk operations on attributes, a KeyError will be raised if a node or edge
 in the input set is not in the graph. All operations before the error node will
 be performed, and those after will not.</p>
@@ -1460,95 +1490,114 @@ be performed, and those after will not.</p>
 
 
 <p><span class="doc-section-title">Methods:</span></p>
-    <ul>
-          <li class="doc-section-item field-body">
-            <b><code><a class="autorefs autorefs-internal" title="            delete
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="            delete
 
 
   
       classmethod
-   (funtracks.data_model.tracks.Tracks.delete)" href="#funtracks.data_model.tracks.Tracks.delete">delete</a></code></b>
-            –
-            <div class="doc-md-description">
-              <p>Delete the tracks in the given directory. Also deletes the directory.</p>
-            </div>
-          </li>
-          <li class="doc-section-item field-body">
-            <b><code><a class="autorefs autorefs-internal" title="            get_area (funtracks.data_model.tracks.Tracks.get_area)" href="#funtracks.data_model.tracks.Tracks.get_area">get_area</a></code></b>
-            –
-            <div class="doc-md-description">
-              <p>Get the area/volume of a given node. Raises a KeyError if the node</p>
-            </div>
-          </li>
-          <li class="doc-section-item field-body">
-            <b><code><a class="autorefs autorefs-internal" title="            get_areas (funtracks.data_model.tracks.Tracks.get_areas)" href="#funtracks.data_model.tracks.Tracks.get_areas">get_areas</a></code></b>
-            –
-            <div class="doc-md-description">
-              <p>Get the area/volume of a given node. Raises a KeyError if the node</p>
-            </div>
-          </li>
-          <li class="doc-section-item field-body">
-            <b><code><a class="autorefs autorefs-internal" title="            get_pixels (funtracks.data_model.tracks.Tracks.get_pixels)" href="#funtracks.data_model.tracks.Tracks.get_pixels">get_pixels</a></code></b>
-            –
-            <div class="doc-md-description">
-              <p>Get the pixels corresponding to each node in the nodes list.</p>
-            </div>
-          </li>
-          <li class="doc-section-item field-body">
-            <b><code><a class="autorefs autorefs-internal" title="            get_positions (funtracks.data_model.tracks.Tracks.get_positions)" href="#funtracks.data_model.tracks.Tracks.get_positions">get_positions</a></code></b>
-            –
-            <div class="doc-md-description">
-              <p>Get the positions of nodes in the graph. Optionally include the</p>
-            </div>
-          </li>
-          <li class="doc-section-item field-body">
-            <b><code><a class="autorefs autorefs-internal" title="            get_time (funtracks.data_model.tracks.Tracks.get_time)" href="#funtracks.data_model.tracks.Tracks.get_time">get_time</a></code></b>
-            –
-            <div class="doc-md-description">
-              <p>Get the time frame of a given node. Raises an error if the node</p>
-            </div>
-          </li>
-          <li class="doc-section-item field-body">
-            <b><code><a class="autorefs autorefs-internal" title="            load
+   (funtracks.data_model.tracks.Tracks.delete)" href="#funtracks.data_model.tracks.Tracks.delete">delete</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Delete the tracks in the given directory. Also deletes the directory.</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="            get_area (funtracks.data_model.tracks.Tracks.get_area)" href="#funtracks.data_model.tracks.Tracks.get_area">get_area</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Get the area/volume of a given node. Raises a KeyError if the node</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="            get_areas (funtracks.data_model.tracks.Tracks.get_areas)" href="#funtracks.data_model.tracks.Tracks.get_areas">get_areas</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Get the area/volume of a given node. Raises a KeyError if the node</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="            get_pixels (funtracks.data_model.tracks.Tracks.get_pixels)" href="#funtracks.data_model.tracks.Tracks.get_pixels">get_pixels</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Get the pixels corresponding to each node in the nodes list.</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="            get_positions (funtracks.data_model.tracks.Tracks.get_positions)" href="#funtracks.data_model.tracks.Tracks.get_positions">get_positions</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Get the positions of nodes in the graph. Optionally include the</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="            get_time (funtracks.data_model.tracks.Tracks.get_time)" href="#funtracks.data_model.tracks.Tracks.get_time">get_time</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Get the time frame of a given node. Raises an error if the node</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="            load
 
 
   
       classmethod
-   (funtracks.data_model.tracks.Tracks.load)" href="#funtracks.data_model.tracks.Tracks.load">load</a></code></b>
-            –
-            <div class="doc-md-description">
-              <p>Load a Tracks object from the given directory. Looks for files</p>
-            </div>
-          </li>
-          <li class="doc-section-item field-body">
-            <b><code><a class="autorefs autorefs-internal" title="            save (funtracks.data_model.tracks.Tracks.save)" href="#funtracks.data_model.tracks.Tracks.save">save</a></code></b>
-            –
-            <div class="doc-md-description">
-              <p>Save the tracks to the given directory.</p>
-            </div>
-          </li>
-          <li class="doc-section-item field-body">
-            <b><code><a class="autorefs autorefs-internal" title="            set_pixels (funtracks.data_model.tracks.Tracks.set_pixels)" href="#funtracks.data_model.tracks.Tracks.set_pixels">set_pixels</a></code></b>
-            –
-            <div class="doc-md-description">
-              <p>Set the given pixels in the segmentation to the given value.</p>
-            </div>
-          </li>
-          <li class="doc-section-item field-body">
-            <b><code><a class="autorefs autorefs-internal" title="            set_positions (funtracks.data_model.tracks.Tracks.set_positions)" href="#funtracks.data_model.tracks.Tracks.set_positions">set_positions</a></code></b>
-            –
-            <div class="doc-md-description">
-              <p>Set the location of nodes in the graph. Optionally include the</p>
-            </div>
-          </li>
-          <li class="doc-section-item field-body">
-            <b><code><a class="autorefs autorefs-internal" title="            set_time (funtracks.data_model.tracks.Tracks.set_time)" href="#funtracks.data_model.tracks.Tracks.set_time">set_time</a></code></b>
-            –
-            <div class="doc-md-description">
-              <p>Set the time frame of a given node. Raises an error if the node</p>
-            </div>
-          </li>
-    </ul>
+   (funtracks.data_model.tracks.Tracks.load)" href="#funtracks.data_model.tracks.Tracks.load">load</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Load a Tracks object from the given directory. Looks for files</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="            save (funtracks.data_model.tracks.Tracks.save)" href="#funtracks.data_model.tracks.Tracks.save">save</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Save the tracks to the given directory.</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="            set_pixels (funtracks.data_model.tracks.Tracks.set_pixels)" href="#funtracks.data_model.tracks.Tracks.set_pixels">set_pixels</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Set the given pixels in the segmentation to the given value.</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="            set_positions (funtracks.data_model.tracks.Tracks.set_positions)" href="#funtracks.data_model.tracks.Tracks.set_positions">set_positions</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Set the location of nodes in the graph. Optionally include the</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="            set_time (funtracks.data_model.tracks.Tracks.set_time)" href="#funtracks.data_model.tracks.Tracks.set_time">set_time</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Set the time frame of a given node. Raises an error if the node</p>
+                </div>
+              </td>
+            </tr>
+      </tbody>
+    </table>
 
 
 
@@ -1619,16 +1668,34 @@ be performed, and those after will not.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-<h4 id="funtracks.data_model.tracks.Tracks.delete(directory)" class="doc doc-heading doc-heading-parameter">              <b><code>directory</code></b>
-</h4>              (<code><a class="autorefs autorefs-external" title="pathlib.Path" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a></code>)
-          –
-          <div class="doc-md-description">
-            <p>Directory containing tracks to be deleted</p>
-          </div>
-        </li>
-    </ul>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+<h4 id="funtracks.data_model.tracks.Tracks.delete(directory)" class="doc doc-heading doc-heading-parameter">                  <code>directory</code>
+</h4>            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" title="pathlib.Path" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Directory containing tracks to be deleted</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
             <details class="quote">
@@ -1689,28 +1756,57 @@ attribute.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-<h4 id="funtracks.data_model.tracks.Tracks.get_area(node)" class="doc doc-heading doc-heading-parameter">              <b><code>node</code></b>
-</h4>              (<code><span title="funtracks.data_model.tracks.Node">Node</span></code>)
-          –
-          <div class="doc-md-description">
-            <p>The node id to get the area/volume for</p>
-          </div>
-        </li>
-    </ul>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+<h4 id="funtracks.data_model.tracks.Tracks.get_area(node)" class="doc doc-heading doc-heading-parameter">                  <code>node</code>
+</h4>            </td>
+            <td>
+                  <code><span title="funtracks.data_model.tracks.Node">Node</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The node id to get the area/volume for</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
-<p><span class="doc-section-title">Returns:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-<b><code>int</code></b> (              <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a> | None</code>
-)          –
-          <div class="doc-md-description">
-            <p>The area/volume of the node</p>
-          </div>
-        </li>
-    </ul>
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+<th>Name</th>          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+<td><code>int</code></td>            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The area/volume of the node</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
             <details class="quote">
@@ -1763,28 +1859,57 @@ attribute.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-<h4 id="funtracks.data_model.tracks.Tracks.get_areas(node)" class="doc doc-heading doc-heading-parameter">              <b><code>node</code></b>
-</h4>              (<code><span title="funtracks.data_model.tracks.Node">Node</span></code>)
-          –
-          <div class="doc-md-description">
-            <p>The node id to get the area/volume for</p>
-          </div>
-        </li>
-    </ul>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+<h4 id="funtracks.data_model.tracks.Tracks.get_areas(node)" class="doc doc-heading doc-heading-parameter">                  <code>node</code>
+</h4>            </td>
+            <td>
+                  <code><span title="funtracks.data_model.tracks.Node">Node</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The node id to get the area/volume for</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
-<p><span class="doc-section-title">Returns:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-<b><code>int</code></b> (              <code><a class="autorefs autorefs-external" title="collections.abc.Sequence" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence">Sequence</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a> | None]</code>
-)          –
-          <div class="doc-md-description">
-            <p>The area/volume of the node</p>
-          </div>
-        </li>
-    </ul>
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+<th>Name</th>          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+<td><code>int</code></td>            <td>
+                  <code><a class="autorefs autorefs-external" title="collections.abc.Sequence" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Sequence">Sequence</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a> | None]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The area/volume of the node</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
             <details class="quote">
@@ -1835,49 +1960,87 @@ attribute.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-<h4 id="funtracks.data_model.tracks.Tracks.get_pixels(nodes)" class="doc doc-heading doc-heading-parameter">              <b><code>nodes</code></b>
-</h4>              (<code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#list">list</a>[<span title="funtracks.data_model.tracks.Node">Node</span>]</code>)
-          –
-          <div class="doc-md-description">
-            <p>A list of node to get the values for.</p>
-          </div>
-        </li>
-    </ul>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+<h4 id="funtracks.data_model.tracks.Tracks.get_pixels(nodes)" class="doc doc-heading doc-heading-parameter">                  <code>nodes</code>
+</h4>            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#list">list</a>[<span title="funtracks.data_model.tracks.Node">Node</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A list of node to get the values for.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
-<p><span class="doc-section-title">Returns:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-              <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#tuple">tuple</a>[<span title="numpy.ndarray">ndarray</span>, ...]] | None</code>
-          –
-          <div class="doc-md-description">
-            <p>list[tuple[np.ndarray, ...]] | None: A list of tuples, where each tuple</p>
-          </div>
-        </li>
-        <li class="doc-section-item field-body">
-              <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#tuple">tuple</a>[<span title="numpy.ndarray">ndarray</span>, ...]] | None</code>
-          –
-          <div class="doc-md-description">
-            <p>represents the pixels for one of the input nodes, or None if the segmentation</p>
-          </div>
-        </li>
-        <li class="doc-section-item field-body">
-              <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#tuple">tuple</a>[<span title="numpy.ndarray">ndarray</span>, ...]] | None</code>
-          –
-          <div class="doc-md-description">
-            <p>is None. The tuple will have length equal to the number of segmentation</p>
-          </div>
-        </li>
-        <li class="doc-section-item field-body">
-              <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#tuple">tuple</a>[<span title="numpy.ndarray">ndarray</span>, ...]] | None</code>
-          –
-          <div class="doc-md-description">
-            <p>dimensions, and can be used to index the segmentation.</p>
-          </div>
-        </li>
-    </ul>
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#tuple">tuple</a>[<span title="numpy.ndarray">ndarray</span>, ...]] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>list[tuple[np.ndarray, ...]] | None: A list of tuples, where each tuple</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#tuple">tuple</a>[<span title="numpy.ndarray">ndarray</span>, ...]] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>represents the pixels for one of the input nodes, or None if the segmentation</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#tuple">tuple</a>[<span title="numpy.ndarray">ndarray</span>, ...]] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>is None. The tuple will have length equal to the number of segmentation</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#list">list</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#tuple">tuple</a>[<span title="numpy.ndarray">ndarray</span>, ...]] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>dimensions, and can be used to index the segmentation.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
             <details class="quote">
@@ -1948,40 +2111,75 @@ are not in the graph.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-<h4 id="funtracks.data_model.tracks.Tracks.get_positions(node)" class="doc doc-heading doc-heading-parameter">              <b><code>node</code></b>
-</h4>              (<code><a class="autorefs autorefs-external" title="collections.abc.Iterable" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable">Iterable</a>[<span title="funtracks.data_model.tracks.Node">Node</span>]</code>)
-          –
-          <div class="doc-md-description">
-            <p>The node ids in the graph to get the positions of</p>
-          </div>
-        </li>
-        <li class="doc-section-item field-body">
-<h4 id="funtracks.data_model.tracks.Tracks.get_positions(incl_time)" class="doc doc-heading doc-heading-parameter">              <b><code>incl_time</code></b>
-</h4>              (<code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></code>, default:
-                  <code>False</code>
-)
-          –
-          <div class="doc-md-description">
-            <p>If true, include the time as the
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+<h4 id="funtracks.data_model.tracks.Tracks.get_positions(node)" class="doc doc-heading doc-heading-parameter">                  <code>node</code>
+</h4>            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" title="collections.abc.Iterable" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable">Iterable</a>[<span title="funtracks.data_model.tracks.Node">Node</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The node ids in the graph to get the positions of</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+<h4 id="funtracks.data_model.tracks.Tracks.get_positions(incl_time)" class="doc doc-heading doc-heading-parameter">                  <code>incl_time</code>
+</h4>            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If true, include the time as the
 first element of each position array. Defaults to False.</p>
-          </div>
-        </li>
-    </ul>
+              </div>
+            </td>
+            <td>
+                  <code>False</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
-<p><span class="doc-section-title">Returns:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-              <code><span title="numpy.ndarray">ndarray</span></code>
-          –
-          <div class="doc-md-description">
-            <p>np.ndarray: A N x ndim numpy array holding the positions, where N is the
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>np.ndarray: A N x ndim numpy array holding the positions, where N is the
 number of nodes passed in</p>
-          </div>
-        </li>
-    </ul>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
             <details class="quote">
@@ -2063,28 +2261,57 @@ is not in the graph.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-<h4 id="funtracks.data_model.tracks.Tracks.get_time(node)" class="doc doc-heading doc-heading-parameter">              <b><code>node</code></b>
-</h4>              (<code><a class="autorefs autorefs-external" title="typing.Any" href="https://docs.python.org/3/library/typing.html#typing.Any">Any</a></code>)
-          –
-          <div class="doc-md-description">
-            <p>The node id to get the time frame for</p>
-          </div>
-        </li>
-    </ul>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+<h4 id="funtracks.data_model.tracks.Tracks.get_time(node)" class="doc doc-heading doc-heading-parameter">                  <code>node</code>
+</h4>            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" title="typing.Any" href="https://docs.python.org/3/library/typing.html#typing.Any">Any</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The node id to get the time frame for</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
-<p><span class="doc-section-title">Returns:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-<b><code>int</code></b> (              <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>
-)          –
-          <div class="doc-md-description">
-            <p>The time frame that the node is in</p>
-          </div>
-        </li>
-    </ul>
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+<th>Name</th>          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+<td><code>int</code></td>            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The time frame that the node is in</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
             <details class="quote">
@@ -2269,27 +2496,53 @@ Args:
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-<h4 id="funtracks.data_model.tracks.Tracks.set_pixels(pixels)" class="doc doc-heading doc-heading-parameter">              <b><code>pixels</code></b>
-</h4>              (<code><a class="autorefs autorefs-external" title="collections.abc.Iterable" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable">Iterable</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#tuple">tuple</a>[<span title="numpy.ndarray">ndarray</span>]]</code>)
-          –
-          <div class="doc-md-description">
-            <p>The pixels that should be set,
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+<h4 id="funtracks.data_model.tracks.Tracks.set_pixels(pixels)" class="doc doc-heading doc-heading-parameter">                  <code>pixels</code>
+</h4>            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" title="collections.abc.Iterable" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable">Iterable</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#tuple">tuple</a>[<span title="numpy.ndarray">ndarray</span>]]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The pixels that should be set,
 formatted like the output of np.nonzero (each element of the tuple
 represents one dimension, containing an array of indices in that
 dimension). Can be used to directly index the segmentation.</p>
-          </div>
-        </li>
-        <li class="doc-section-item field-body">
-<h4 id="funtracks.data_model.tracks.Tracks.set_pixels(value)" class="doc doc-heading doc-heading-parameter">              <b><code>value</code></b>
-</h4>              (<code><a class="autorefs autorefs-external" title="collections.abc.Iterable" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable">Iterable</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a> | None]</code>)
-          –
-          <div class="doc-md-description">
-            <p>The value to set each pixel to</p>
-          </div>
-        </li>
-    </ul>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+<h4 id="funtracks.data_model.tracks.Tracks.set_pixels(value)" class="doc doc-heading doc-heading-parameter">                  <code>value</code>
+</h4>            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" title="collections.abc.Iterable" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable">Iterable</a>[<a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a> | None]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The value to set each pixel to</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
             <details class="quote">
@@ -2354,35 +2607,67 @@ are not in the graph.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-<h4 id="funtracks.data_model.tracks.Tracks.set_positions(nodes)" class="doc doc-heading doc-heading-parameter">              <b><code>nodes</code></b>
-</h4>              (<code><a class="autorefs autorefs-external" title="collections.abc.Iterable" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable">Iterable</a>[<span title="node">node</span>]</code>)
-          –
-          <div class="doc-md-description">
-            <p>The node ids in the graph to set the location of.</p>
-          </div>
-        </li>
-        <li class="doc-section-item field-body">
-<h4 id="funtracks.data_model.tracks.Tracks.set_positions(positions)" class="doc doc-heading doc-heading-parameter">              <b><code>positions</code></b>
-</h4>              (<code><span title="numpy.ndarray">ndarray</span></code>)
-          –
-          <div class="doc-md-description">
-            <p>An (ndim, num_nodes) shape array of positions to set.</p>
-          </div>
-        </li>
-        <li class="doc-section-item field-body">
-<h4 id="funtracks.data_model.tracks.Tracks.set_positions(incl_time)" class="doc doc-heading doc-heading-parameter">              <b><code>incl_time</code></b>
-</h4>              (<code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></code>, default:
-                  <code>False</code>
-)
-          –
-          <div class="doc-md-description">
-            <p>If true, include the time as the
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+<h4 id="funtracks.data_model.tracks.Tracks.set_positions(nodes)" class="doc doc-heading doc-heading-parameter">                  <code>nodes</code>
+</h4>            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" title="collections.abc.Iterable" href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Iterable">Iterable</a>[<span title="node">node</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The node ids in the graph to set the location of.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+<h4 id="funtracks.data_model.tracks.Tracks.set_positions(positions)" class="doc doc-heading doc-heading-parameter">                  <code>positions</code>
+</h4>            </td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>An (ndim, num_nodes) shape array of positions to set.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+<h4 id="funtracks.data_model.tracks.Tracks.set_positions(incl_time)" class="doc doc-heading doc-heading-parameter">                  <code>incl_time</code>
+</h4>            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If true, include the time as the
 first column of the position array. Defaults to False.</p>
-          </div>
-        </li>
-    </ul>
+              </div>
+            </td>
+            <td>
+                  <code>False</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
             <details class="quote">
@@ -2468,24 +2753,50 @@ is not in the graph.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-<h4 id="funtracks.data_model.tracks.Tracks.set_time(node)" class="doc doc-heading doc-heading-parameter">              <b><code>node</code></b>
-</h4>              (<code><a class="autorefs autorefs-external" title="typing.Any" href="https://docs.python.org/3/library/typing.html#typing.Any">Any</a></code>)
-          –
-          <div class="doc-md-description">
-            <p>The node id to set the time frame for</p>
-          </div>
-        </li>
-        <li class="doc-section-item field-body">
-<h4 id="funtracks.data_model.tracks.Tracks.set_time(time)" class="doc doc-heading doc-heading-parameter">              <b><code>time</code></b>
-</h4>              (<code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>)
-          –
-          <div class="doc-md-description">
-            <p>The time to set</p>
-          </div>
-        </li>
-    </ul>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+<h4 id="funtracks.data_model.tracks.Tracks.set_time(node)" class="doc doc-heading doc-heading-parameter">                  <code>node</code>
+</h4>            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" title="typing.Any" href="https://docs.python.org/3/library/typing.html#typing.Any">Any</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The node id to set the time frame for</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+<h4 id="funtracks.data_model.tracks.Tracks.set_time(time)" class="doc doc-heading doc-heading-parameter">                  <code>time</code>
+</h4>            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#int">int</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The time to set</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
             <details class="quote">

@@ -855,15 +855,24 @@
 
 
 <p><span class="doc-section-title">Classes:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-          <b><code><a class="autorefs autorefs-internal" title="            ActionHistory (funtracks.data_model.action_history.ActionHistory)" href="#funtracks.data_model.action_history.ActionHistory">ActionHistory</a></code></b>
-          –
-          <div class="doc-md-description">
-            <p>An action history implementing the ideas from this blog:</p>
-          </div>
-        </li>
-    </ul>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code><a class="autorefs autorefs-internal" title="            ActionHistory (funtracks.data_model.action_history.ActionHistory)" href="#funtracks.data_model.action_history.ActionHistory">ActionHistory</a></code></td>
+            <td>
+              <div class="doc-md-description">
+                <p>An action history implementing the ideas from this blog:</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 
@@ -911,29 +920,40 @@ the undone actions)</p>
 
 
 <p><span class="doc-section-title">Methods:</span></p>
-    <ul>
-          <li class="doc-section-item field-body">
-            <b><code><a class="autorefs autorefs-internal" title="            add_new_action (funtracks.data_model.action_history.ActionHistory.add_new_action)" href="#funtracks.data_model.action_history.ActionHistory.add_new_action">add_new_action</a></code></b>
-            –
-            <div class="doc-md-description">
-              <p>Add a newly performed action to the history.</p>
-            </div>
-          </li>
-          <li class="doc-section-item field-body">
-            <b><code><a class="autorefs autorefs-internal" title="            redo (funtracks.data_model.action_history.ActionHistory.redo)" href="#funtracks.data_model.action_history.ActionHistory.redo">redo</a></code></b>
-            –
-            <div class="doc-md-description">
-              <p>Redo the last undone action</p>
-            </div>
-          </li>
-          <li class="doc-section-item field-body">
-            <b><code><a class="autorefs autorefs-internal" title="            undo (funtracks.data_model.action_history.ActionHistory.undo)" href="#funtracks.data_model.action_history.ActionHistory.undo">undo</a></code></b>
-            –
-            <div class="doc-md-description">
-              <p>Undo the last performed action</p>
-            </div>
-          </li>
-    </ul>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="            add_new_action (funtracks.data_model.action_history.ActionHistory.add_new_action)" href="#funtracks.data_model.action_history.ActionHistory.add_new_action">add_new_action</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Add a newly performed action to the history.</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="            redo (funtracks.data_model.action_history.ActionHistory.redo)" href="#funtracks.data_model.action_history.ActionHistory.redo">redo</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Redo the last undone action</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="            undo (funtracks.data_model.action_history.ActionHistory.undo)" href="#funtracks.data_model.action_history.ActionHistory.undo">undo</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Undo the last performed action</p>
+                </div>
+              </td>
+            </tr>
+      </tbody>
+    </table>
 
 
 
@@ -1022,23 +1042,37 @@ Args:
         <p>Redo the last undone action</p>
 
 
-<p><span class="doc-section-title">Returns:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-<b><code>bool</code></b> (              <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></code>
-)          –
-          <div class="doc-md-description">
-            <p>True if an action was redone, and False</p>
-          </div>
-        </li>
-        <li class="doc-section-item field-body">
-              <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></code>
-          –
-          <div class="doc-md-description">
-            <p>if there was no undone action to redo.</p>
-          </div>
-        </li>
-    </ul>
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+<th>Name</th>          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+<td><code>bool</code></td>            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>True if an action was redone, and False</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+<td></td>            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>if there was no undone action to redo.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
             <details class="quote">
@@ -1094,23 +1128,37 @@ Args:
         <p>Undo the last performed action</p>
 
 
-<p><span class="doc-section-title">Returns:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-<b><code>bool</code></b> (              <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></code>
-)          –
-          <div class="doc-md-description">
-            <p>True if an action was undone, and False</p>
-          </div>
-        </li>
-        <li class="doc-section-item field-body">
-              <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></code>
-          –
-          <div class="doc-md-description">
-            <p>if there was no previous action to undo.</p>
-          </div>
-        </li>
-    </ul>
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+<th>Name</th>          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+<td><code>bool</code></td>            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>True if an action was undone, and False</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+<td></td>            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>if there was no previous action to undo.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
             <details class="quote">

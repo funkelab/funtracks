@@ -969,29 +969,40 @@
 
 
 <p><span class="doc-section-title">Functions:</span></p>
-    <ul>
-          <li class="doc-section-item field-body">
-            <b><code><a class="autorefs autorefs-internal" title="            delete_tracks (funtracks.import_export.internal_format.delete_tracks)" href="#funtracks.import_export.internal_format.delete_tracks">delete_tracks</a></code></b>
-            –
-            <div class="doc-md-description">
-              <p>Delete the tracks in the given directory. Also deletes the directory.</p>
-            </div>
-          </li>
-          <li class="doc-section-item field-body">
-            <b><code><a class="autorefs autorefs-internal" title="            load_tracks (funtracks.import_export.internal_format.load_tracks)" href="#funtracks.import_export.internal_format.load_tracks">load_tracks</a></code></b>
-            –
-            <div class="doc-md-description">
-              <p>Load a Tracks object from the given directory. Looks for files</p>
-            </div>
-          </li>
-          <li class="doc-section-item field-body">
-            <b><code><a class="autorefs autorefs-internal" title="            save_tracks (funtracks.import_export.internal_format.save_tracks)" href="#funtracks.import_export.internal_format.save_tracks">save_tracks</a></code></b>
-            –
-            <div class="doc-md-description">
-              <p>Save the tracks to the given directory.</p>
-            </div>
-          </li>
-    </ul>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="            delete_tracks (funtracks.import_export.internal_format.delete_tracks)" href="#funtracks.import_export.internal_format.delete_tracks">delete_tracks</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Delete the tracks in the given directory. Also deletes the directory.</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="            load_tracks (funtracks.import_export.internal_format.load_tracks)" href="#funtracks.import_export.internal_format.load_tracks">load_tracks</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Load a Tracks object from the given directory. Looks for files</p>
+                </div>
+              </td>
+            </tr>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="            save_tracks (funtracks.import_export.internal_format.save_tracks)" href="#funtracks.import_export.internal_format.save_tracks">save_tracks</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Save the tracks to the given directory.</p>
+                </div>
+              </td>
+            </tr>
+      </tbody>
+    </table>
 
 
 
@@ -1024,16 +1035,34 @@
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-<h3 id="funtracks.import_export.internal_format.delete_tracks(directory)" class="doc doc-heading doc-heading-parameter">              <b><code>directory</code></b>
-</h3>              (<code><a class="autorefs autorefs-external" title="pathlib.Path" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a> | <a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>)
-          –
-          <div class="doc-md-description">
-            <p>Path to a directory containing tracks</p>
-          </div>
-        </li>
-    </ul>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+<h3 id="funtracks.import_export.internal_format.delete_tracks(directory)" class="doc doc-heading doc-heading-parameter">                  <code>directory</code>
+</h3>            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" title="pathlib.Path" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a> | <a class="autorefs autorefs-external" href="https://docs.python.org/3/library/stdtypes.html#str">str</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Path to a directory containing tracks</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
             <details class="quote">
@@ -1085,50 +1114,91 @@ in the format generated by Tracks.save.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-<h3 id="funtracks.import_export.internal_format.load_tracks(directory)" class="doc doc-heading doc-heading-parameter">              <b><code>directory</code></b>
-</h3>              (<code><a class="autorefs autorefs-external" title="pathlib.Path" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a></code>)
-          –
-          <div class="doc-md-description">
-            <p>The directory containing tracks to load</p>
-          </div>
-        </li>
-        <li class="doc-section-item field-body">
-<h3 id="funtracks.import_export.internal_format.load_tracks(seg_required)" class="doc doc-heading doc-heading-parameter">              <b><code>seg_required</code></b>
-</h3>              (<code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></code>, default:
-                  <code>False</code>
-)
-          –
-          <div class="doc-md-description">
-            <p>If true, raises a FileNotFoundError if the
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+<h3 id="funtracks.import_export.internal_format.load_tracks(directory)" class="doc doc-heading doc-heading-parameter">                  <code>directory</code>
+</h3>            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" title="pathlib.Path" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The directory containing tracks to load</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+<h3 id="funtracks.import_export.internal_format.load_tracks(seg_required)" class="doc doc-heading doc-heading-parameter">                  <code>seg_required</code>
+</h3>            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If true, raises a FileNotFoundError if the
 segmentation file is not present in the directory. Defaults to False.</p>
-          </div>
-        </li>
-        <li class="doc-section-item field-body">
-<h3 id="funtracks.import_export.internal_format.load_tracks(solution)" class="doc doc-heading doc-heading-parameter">              <b><code>solution</code></b>
-</h3>              (<code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></code>, default:
+              </div>
+            </td>
+            <td>
                   <code>False</code>
-)
-          –
-          <div class="doc-md-description">
-            <p>If true, returns a SolutionTracks object, otherwise
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+<h3 id="funtracks.import_export.internal_format.load_tracks(solution)" class="doc doc-heading doc-heading-parameter">                  <code>solution</code>
+</h3>            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" href="https://docs.python.org/3/library/functions.html#bool">bool</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If true, returns a SolutionTracks object, otherwise
 reutrns a normal Tracks object. Defaults to False.</p>
-          </div>
-        </li>
-    </ul>
+              </div>
+            </td>
+            <td>
+                  <code>False</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
-<p><span class="doc-section-title">Returns:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-<b><code>Tracks</code></b> (              <code><a class="autorefs autorefs-internal" title="            Tracks (funtracks.data_model.Tracks)" href="../../data_model/tracks/#funtracks.data_model.tracks.Tracks">Tracks</a> | <a class="autorefs autorefs-internal" title="            SolutionTracks (funtracks.data_model.SolutionTracks)" href="../../data_model/solution_tracks/#funtracks.data_model.solution_tracks.SolutionTracks">SolutionTracks</a></code>
-)          –
-          <div class="doc-md-description">
-            <p>A tracks object loaded from the given directory</p>
-          </div>
-        </li>
-    </ul>
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+<th>Name</th>          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+<td><code>Tracks</code></td>            <td>
+                  <code><a class="autorefs autorefs-internal" title="            Tracks (funtracks.data_model.Tracks)" href="../../data_model/tracks/#funtracks.data_model.tracks.Tracks">Tracks</a> | <a class="autorefs autorefs-internal" title="            SolutionTracks (funtracks.data_model.SolutionTracks)" href="../../data_model/solution_tracks/#funtracks.data_model.solution_tracks.SolutionTracks">SolutionTracks</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A tracks object loaded from the given directory</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
             <details class="quote">
@@ -1217,24 +1287,50 @@ Will make the directory if it doesn't exist.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
-    <ul>
-        <li class="doc-section-item field-body">
-<h3 id="funtracks.import_export.internal_format.save_tracks(tracks)" class="doc doc-heading doc-heading-parameter">              <b><code>tracks</code></b>
-</h3>              (<code><a class="autorefs autorefs-internal" title="            Tracks (funtracks.data_model.Tracks)" href="../../data_model/tracks/#funtracks.data_model.tracks.Tracks">Tracks</a></code>)
-          –
-          <div class="doc-md-description">
-            <p>the tracks to save</p>
-          </div>
-        </li>
-        <li class="doc-section-item field-body">
-<h3 id="funtracks.import_export.internal_format.save_tracks(directory)" class="doc doc-heading doc-heading-parameter">              <b><code>directory</code></b>
-</h3>              (<code><a class="autorefs autorefs-external" title="pathlib.Path" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a></code>)
-          –
-          <div class="doc-md-description">
-            <p>The directory to save the tracks in.</p>
-          </div>
-        </li>
-    </ul>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+<h3 id="funtracks.import_export.internal_format.save_tracks(tracks)" class="doc doc-heading doc-heading-parameter">                  <code>tracks</code>
+</h3>            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="            Tracks (funtracks.data_model.Tracks)" href="../../data_model/tracks/#funtracks.data_model.tracks.Tracks">Tracks</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the tracks to save</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+<h3 id="funtracks.import_export.internal_format.save_tracks(directory)" class="doc doc-heading doc-heading-parameter">                  <code>directory</code>
+</h3>            </td>
+            <td>
+                  <code><a class="autorefs autorefs-external" title="pathlib.Path" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The directory to save the tracks in.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
             <details class="quote">
