@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING
 
 import networkx as nx
 
+from funtracks.features import FeatureSet
+
 from .graph_attributes import NodeAttr
 from .tracks import Tracks
 
@@ -22,10 +24,11 @@ class SolutionTracks(Tracks):
         self,
         graph: nx.DiGraph,
         segmentation: np.ndarray | None = None,
-        time_attr: str = NodeAttr.TIME.value,
-        pos_attr: str | tuple[str] | list[str] = NodeAttr.POS.value,
+        time_attr: str | None = NodeAttr.TIME.value,
+        pos_attr: str | tuple[str] | list[str] | None = NodeAttr.POS.value,
         scale: list[float] | None = None,
         ndim: int | None = None,
+        features: FeatureSet | None = None,
     ):
         super().__init__(
             graph,
@@ -34,6 +37,7 @@ class SolutionTracks(Tracks):
             pos_attr=pos_attr,
             scale=scale,
             ndim=ndim,
+            features=features,
         )
         self.max_track_id: int
         self._initialize_track_ids()
@@ -43,10 +47,11 @@ class SolutionTracks(Tracks):
         return cls(
             tracks.graph,
             segmentation=tracks.segmentation,
-            time_attr=tracks.time_attr,
-            pos_attr=tracks.pos_attr,
+            time_attr=None,
+            pos_attr=None,
             scale=tracks.scale,
             ndim=tracks.ndim,
+            features=tracks.features,
         )
 
     @property

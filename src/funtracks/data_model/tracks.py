@@ -15,6 +15,8 @@ import numpy as np
 from psygnal import Signal
 from skimage import measure
 
+from funtracks.features import Feature, FeatureSet, FeatureType, Position, Time
+
 from .compute_ious import _compute_ious
 from .graph_attributes import EdgeAttr, NodeAttr
 
@@ -60,17 +62,82 @@ class Tracks:
         self,
         graph: nx.DiGraph,
         segmentation: np.ndarray | None = None,
-        time_attr: str = NodeAttr.TIME.value,
-        pos_attr: str | tuple[str] | list[str] = NodeAttr.POS.value,
+        time_attr: str | None = NodeAttr.TIME.value,
+        pos_attr: str | tuple[str] | list[str] | None = NodeAttr.POS.value,
         scale: list[float] | None = None,
         ndim: int | None = None,
+        features: FeatureSet | None = None,
     ):
+        if features is not None and (time_attr is not None or pos_attr is not None):
+            warn(
+                "Provided both FeatureSet and pos_attr or time_attr: ignoring attr "
+                "arguments ({pos_attr=}, {time_attr=}).",
+                stacklevel=2,
+            )
         self.graph = graph
         self.segmentation = segmentation
-        self.time_attr = time_attr
-        self.pos_attr = pos_attr
+        self._time_attr = time_attr
+        self._pos_attr = pos_attr
         self.scale = scale
         self.ndim = self._compute_ndim(segmentation, scale, ndim)
+        self.features = (
+            self._get_feature_set(time_attr, pos_attr) if features is None else features
+        )
+
+    @property
+    def time_attr(self):
+        warn(
+            "Deprecating Tracks.time_attr in favor of tracks.features.time."
+            " Will be removed in funtracks v2.0.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self._time_attr
+
+    @property
+    def pos_attr(self):
+        warn(
+            "Deprecating Tracks.pos_attr in favor of tracks.features.position."
+            " Will be removed in funtracks v2.0.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self._pos_attr
+
+    def _get_feature_set(
+        self, time_attr: str | None, pos_attr: str | tuple[str] | list[str] | None
+    ):
+        time = Time(key=time_attr)
+        recompute = self.segmentation is not None
+        if isinstance(pos_attr, tuple | list):
+            pos_feature = [
+                Feature(
+                    key=attr,
+                    feature_type=FeatureType.NODE,
+                    value_type=float,
+                    required=True,
+                    recompute=recompute,
+                )
+                for attr in pos_attr
+            ]
+        else:
+            axis_names = ["z", "y", "x"] if self.ndim == 4 else ["y", "x"]
+            pos_feature = Position(key=pos_attr, axes=axis_names, recompute=recompute)
+
+        # TODO: use RegionpropsAnnotator to add area feature and others to the feature set
+        extra_features = []
+        if self.segmentation is not None:
+            area_name = "Area" if self.ndim == 3 else "Volume"
+            extra_features.append(
+                Feature(
+                    key=NodeAttr.AREA.value,
+                    display_name=area_name,
+                    feature_type=FeatureType.NODE,
+                    value_type=float,
+                    recompute=True,
+                )
+            )
+        return FeatureSet(time, pos_feature, extra_features)
 
     def nodes(self):
         return np.array(self.graph.nodes())
@@ -110,16 +177,23 @@ class Tracks:
             np.ndarray: A N x ndim numpy array holding the positions, where N is the
                 number of nodes passed in
         """
-        if isinstance(self.pos_attr, tuple | list):
+        if isinstance(self.features.position, list):
             positions = np.stack(
-                [self.get_nodes_attr(nodes, dim, required=True) for dim in self.pos_attr],
+                [
+                    self.get_nodes_attr(nodes, feat.key, required=True)
+                    for feat in self.features.position
+                ],
                 axis=1,
             )
         else:
-            positions = np.array(self.get_nodes_attr(nodes, self.pos_attr, required=True))
+            positions = np.array(
+                self.get_nodes_attr(nodes, self.features.position.key, required=True)
+            )
 
         if incl_time:
-            times = np.array(self.get_nodes_attr(nodes, self.time_attr, required=True))
+            times = np.array(
+                self.get_nodes_attr(nodes, self.features.time.key, required=True)
+            )
             positions = np.c_[times, positions]
 
         return positions
@@ -151,11 +225,11 @@ class Tracks:
             self.set_times(nodes, times)  # type: ignore
             positions = positions[:, 1:]
 
-        if isinstance(self.pos_attr, tuple | list):
-            for idx, attr in enumerate(self.pos_attr):
-                self._set_nodes_attr(nodes, attr, positions[:, idx].tolist())
+        if isinstance(self.features.position, list):
+            for idx, feat in enumerate(self.features.position):
+                self._set_nodes_attr(nodes, feat.key, positions[:, idx].tolist())
         else:
-            self._set_nodes_attr(nodes, self.pos_attr, positions.tolist())
+            self._set_nodes_attr(nodes, self.features.position.key, positions.tolist())
 
     def set_position(self, node: Node, position: list, incl_time=False):
         self.set_positions(
@@ -163,7 +237,7 @@ class Tracks:
         )
 
     def get_times(self, nodes: Iterable[Node]) -> Sequence[int]:
-        return self.get_nodes_attr(nodes, self.time_attr, required=True)
+        return self.get_nodes_attr(nodes, self.features.time.key, required=True)
 
     def get_time(self, node: Node) -> int:
         """Get the time frame of a given node. Raises an error if the node
@@ -179,7 +253,7 @@ class Tracks:
 
     def set_times(self, nodes: Iterable[Node], times: Iterable[int]):
         times = [int(t) for t in times]
-        self._set_nodes_attr(nodes, self.time_attr, times)
+        self._set_nodes_attr(nodes, self.features.time.key, times)
 
     def set_time(self, node: Any, time: int):
         """Set the time frame of a given node. Raises an error if the node

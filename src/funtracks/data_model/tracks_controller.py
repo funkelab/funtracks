@@ -424,15 +424,15 @@ class TracksController:
             return False, action
 
         elif time2 - time1 > 1:
-            track_id2 = self.tracks.graph.nodes[edge[1]][NodeAttr.TRACK_ID.value]
+            track_id2 = self.tracks.get_track_id(edge[1])
             # check whether there are already any nodes with the same track id between
             # source and target (shortest path between equal track_ids rule)
             for t in range(time1 + 1, time2):
                 nodes = [
                     n
-                    for n, attr in self.tracks.graph.nodes(data=True)
-                    if attr.get(self.tracks.time_attr) == t
-                    and attr.get(NodeAttr.TRACK_ID.value) == track_id2
+                    for n in self.tracks.nodes()
+                    if self.tracks.get_time(n) == t
+                    and self.tracks.get_track_id(n) == track_id2
                 ]
                 if len(nodes) > 0:
                     warn("Please connect to the closest node", stacklevel=2)
