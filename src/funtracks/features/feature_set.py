@@ -66,7 +66,7 @@ class FeatureSet:
             existing_features = self.edge_features
 
         if feature.key in [f.key for f in existing_features]:
-            raise KeyError(f"Name {feature.key} already in feature set")
+            raise KeyError(f"Key {feature.key} already in feature set")
         self._features.append(feature)
 
     def dump_json(self) -> dict:
@@ -101,3 +101,6 @@ class FeatureSet:
         features.position = position
         features._features = features_list
         return features
+
+    def __repr__(self):
+        return str([repr(feature) for feature in self._features])
