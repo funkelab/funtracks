@@ -41,16 +41,16 @@ class FeatureSet:
             self.add_feature(feat)
 
     @property
-    def node_features(self):
+    def node_features(self) -> list[Feature]:
         """A list of all features present on nodes"""
         return [f for f in self._features if f.feature_type == FeatureType.NODE]
 
     @property
-    def edge_features(self):
+    def edge_features(self) -> list[Feature]:
         """A list of all features present on edges"""
         return [f for f in self._features if f.feature_type == FeatureType.EDGE]
 
-    def add_feature(self, feature: Feature):
+    def add_feature(self, feature: Feature) -> None:
         """Add the given feature to this set of features. Checks for key collision.
 
         Args:
@@ -102,5 +102,5 @@ class FeatureSet:
         features._features = features_list
         return features
 
-    def __repr__(self):
+    def __repr__(self):  # pragma: no cover
         return str([repr(feature) for feature in self._features])
