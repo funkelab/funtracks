@@ -1,3 +1,5 @@
+import json
+
 import pytest
 from networkx.utils import graphs_equal
 from numpy.testing import assert_array_almost_equal
@@ -74,3 +76,23 @@ def test_delete(
     delete_tracks(tracks_path)
     with pytest.raises(StopIteration):
         next(tmp_path.iterdir())
+
+
+# for backward compatibility
+def test_load_without_features(tmp_path, graph_2d):
+    tracks = Tracks(graph_2d, ndim=3)
+    tracks_path = tmp_path / "test_tracks"
+    save_tracks(tracks, tracks_path)
+    attrs_path = tracks_path / "attrs.json"
+    with open(attrs_path) as f:
+        attrs = json.load(f)
+
+    del attrs["features"]
+    attrs["time_attr"] = "time"
+    attrs["pos_attr"] = "pos"
+    with open(attrs_path, "w") as f:
+        json.dump(attrs, f)
+
+    imported_tracks = load_tracks(tracks_path)
+    assert imported_tracks.features.time.key == "time"
+    assert imported_tracks.features.position.key == "pos"

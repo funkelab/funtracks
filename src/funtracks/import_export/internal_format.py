@@ -6,6 +6,8 @@ from pathlib import Path
 import networkx as nx
 import numpy as np
 
+from funtracks.features import FeatureSet
+
 from ..data_model import SolutionTracks, Tracks
 
 GRAPH_FILE = "graph.json"
@@ -76,7 +78,7 @@ def _save_seg(tracks: Tracks, directory: Path):
 
 
 def _save_attrs(tracks: Tracks, directory: Path):
-    """Save the time_attr, pos_attr, and scale in a json file in the given directory.
+    """Save the and scale, ndim, and features in a json file in the given directory.
 
     Args:
         tracks (Tracks): the tracks to save the attributes of
@@ -84,14 +86,11 @@ def _save_attrs(tracks: Tracks, directory: Path):
     """
     out_path = directory / ATTRS_FILE
     attrs_dict = {
-        "time_attr": tracks.time_attr,
-        "pos_attr": tracks.pos_attr
-        if not isinstance(tracks.pos_attr, np.ndarray)
-        else tracks.pos_attr.tolist(),
         "scale": tracks.scale
         if not isinstance(tracks.scale, np.ndarray)
         else tracks.scale.tolist(),
         "ndim": tracks.ndim,
+        "features": tracks.features.dump_json(),
     }
     with open(out_path, "w") as f:
         json.dump(attrs_dict, f)
@@ -173,7 +172,11 @@ def _load_seg(seg_file: Path, seg_required: bool = False) -> np.ndarray | None:
 def _load_attrs(attrs_file: Path) -> dict:
     if attrs_file.is_file():
         with open(attrs_file) as f:
-            return json.load(f)
+            json_dict = json.load(f)
+        if "features" in json_dict:
+            json_dict["features"] = FeatureSet.from_json(json_dict["features"])
+        return json_dict
+
     else:
         raise FileNotFoundError(f"No attributes at {attrs_file}")
 
