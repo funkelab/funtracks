@@ -107,17 +107,17 @@ class AddNodes(TracksAction):
         super().__init__(tracks)
         self.nodes = nodes
         user_attrs = attributes.copy()
-        self.times = attributes.pop(NodeAttr.TIME.value, None)
+        self.times = attributes.pop(NodeAttr.TIME.value)
         self.positions = attributes.pop(NodeAttr.POS.value, None)
         self.pixels = pixels
         self.attributes = user_attrs
         self._apply()
 
-    def inverse(self):
+    def inverse(self) -> TracksAction:
         """Invert the action to delete nodes instead"""
         return DeleteNodes(self.tracks, self.nodes)
 
-    def _apply(self):
+    def _apply(self) -> None:
         """Apply the action, and set segmentation if provided in self.pixels"""
         if self.pixels is not None:
             self.tracks.set_pixels(self.pixels, self.nodes)
@@ -167,8 +167,8 @@ class DeleteNodes(TracksAction):
         super().__init__(tracks)
         self.nodes = nodes
         self.attributes = {
-            NodeAttr.TIME.value: self.tracks.get_times(nodes),
-            self.tracks.pos_attr: self.tracks.get_positions(nodes),
+            self.tracks.features.time.key: self.tracks.get_times(nodes),
+            NodeAttr.POS.value: self.tracks.get_positions(nodes),
             NodeAttr.TRACK_ID.value: self.tracks.get_nodes_attr(
                 nodes, NodeAttr.TRACK_ID.value
             ),
@@ -280,7 +280,7 @@ class UpdateNodeAttrs(TracksAction):
         """
         super().__init__(tracks)
         protected_attrs = [
-            tracks.time_attr,
+            tracks.features.time.key,
             NodeAttr.AREA.value,
             NodeAttr.TRACK_ID.value,
         ]
@@ -316,11 +316,11 @@ class AddEdges(TracksAction):
         self.edges = edges
         self._apply()
 
-    def inverse(self):
+    def inverse(self) -> TracksAction:
         """Delete edges"""
         return DeleteEdges(self.tracks, self.edges)
 
-    def _apply(self):
+    def _apply(self) -> None:
         """
         Steps:
         - add each edge to the graph. Assumes all edges are valid (they should be checked

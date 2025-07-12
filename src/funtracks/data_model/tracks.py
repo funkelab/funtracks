@@ -71,7 +71,7 @@ class Tracks:
         if features is not None and (time_attr is not None or pos_attr is not None):
             warn(
                 "Provided both FeatureSet and pos_attr or time_attr: ignoring attr "
-                "arguments.",
+                "arguments ({pos_attr=}, {time_attr=}).",
                 stacklevel=2,
             )
         self.graph = graph

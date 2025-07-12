@@ -36,8 +36,8 @@ def test_save_load(
     solution = bool(issubclass(track_type, SolutionTracks))
     loaded = load_tracks(tmp_path, solution=solution)
     assert loaded.ndim == tracks.ndim
-    assert loaded.pos_attr == tracks.pos_attr
-    assert loaded.time_attr == tracks.time_attr
+    assert loaded.features.position.model_dump() == tracks.features.position.model_dump()
+    assert loaded.features.time.model_dump() == tracks.features.time.model_dump()
     assert loaded.scale == tracks.scale
     assert loaded.ndim == tracks.ndim
 
