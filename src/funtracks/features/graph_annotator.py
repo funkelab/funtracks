@@ -15,24 +15,22 @@ class GraphAnnotator:
     to Tracks objects.
     """
 
-    def __init__(self, features: list[Feature]):
+    def __init__(self, tracks: Tracks, features: list[Feature]):
         """
         Args:
+            tracks (Tracks): The tracks to manage features for.
             features (list[Feature]): A list of features that this annotator is
                 responsible for computing and updating.
         """
+        self.tracks = tracks
         self.features = features
 
-    def compute(self, tracks: Tracks, features: Feature | list[Feature]) -> None:
-        """Compute a set of features and add them to the given tracks.
+    def compute(self) -> None:
+        """Compute a set of features and add them to the tracks.
 
-        This involves both updating the node/edge attributes for the tracks.graph
+        This involves both updating the node/edge attributes on the tracks.graph
         and adding the features to the FeatureSet, if necessary. This is distinct
         from `update` to allow more efficient bulk computation of features.
-
-        Args:
-            tracks (Tracks): The tracks to add the features to
-            features (Feature | list[Feature]): The feature or features to compute
 
         Raises:
             NotImplementedError: If not implemented in subclass and you attempt to call
@@ -42,20 +40,16 @@ class GraphAnnotator:
 
     def update(
         self,
-        tracks: Tracks,
-        features: Feature | list[Feature],
         element: int | tuple[int, int],
     ) -> None:
         """Update a set of features for a given node or edge.
 
-        This involves both updating the node or edge attributes for the tracks.graph
+        This involves both updating the node or edge attributes on the tracks.graph
         and adding the features to the FeatureSet, if necessary. This is distinct
         from `compute` to allow more efficient computation of features for single
         elements.
 
         Args:
-            tracks (Tracks): The tracks to update
-            features (Feature | list[Feature]): The feature or features to update
             element (int | tuple[int, int]): The node or edge to update the features for
 
         Raises:
