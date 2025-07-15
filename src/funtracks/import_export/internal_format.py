@@ -13,6 +13,7 @@ from ..data_model import SolutionTracks, Tracks
 
 GRAPH_FILE = "graph.json"
 SEG_FILE = "seg.npy"
+RAW_FILE = "raw.npy"
 ATTRS_FILE = "attrs.json"
 
 
@@ -30,6 +31,7 @@ def save_tracks(tracks: Tracks, directory: Path) -> None:
     directory.mkdir(exist_ok=True, parents=True)
     _save_graph(tracks, directory)
     _save_seg(tracks, directory)
+    _save_raw(tracks, directory)
     _save_attrs(tracks, directory)
 
 
@@ -77,6 +79,17 @@ def _save_seg(tracks: Tracks, directory: Path) -> None:
         out_path = directory / SEG_FILE
         np.save(out_path, tracks.segmentation)
 
+def _save_raw(tracks: Tracks, directory: Path) -> None:
+    """Save a intensity image data as a numpy array using np.save. In the future,
+    could be changed to use zarr or other file types.
+
+    Args:
+        tracks (Tracks): the tracks to save the segmentation of
+        directory (Path): The directory in which to save the segmentation
+    """
+    if tracks.intensity_image is not None:
+        out_path = directory / RAW_FILE
+        np.save(out_path, tracks.intensity_image)
 
 def _save_attrs(tracks: Tracks, directory: Path) -> None:
     """Save the and scale, ndim, and features in a json file in the given directory.
@@ -119,6 +132,9 @@ def load_tracks(
     seg_file = directory / SEG_FILE
     seg = _load_seg(seg_file, seg_required=seg_required)
 
+    raw_file = directory / RAW_FILE
+    raw = _load_raw(raw_file)
+
     attrs_file = directory / ATTRS_FILE
     attrs = _load_attrs(attrs_file)
 
@@ -133,9 +149,9 @@ def load_tracks(
         )
         tracks: Tracks
         if solution:
-            tracks = SolutionTracks(graph, seg, **attrs)
+            tracks = SolutionTracks(graph, seg, raw, **attrs)
         else:
-            tracks = Tracks(graph, seg, **attrs)
+            tracks = Tracks(graph, seg, raw, **attrs)
     return tracks
 
 
@@ -180,6 +196,19 @@ def _load_seg(seg_file: Path, seg_required: bool = False) -> np.ndarray | None:
     else:
         return None
 
+def _load_raw(raw_file: Path) -> np.ndarray | None:
+    """Load an intensity image from a file. Returns NOne if the file doesn't exist.
+
+    Args:
+        raw_file (Path): The npz file to load.
+
+    Returns:
+        np.ndarray | None: The intensity imgage array, or None if it wasn't present.
+    """
+    if raw_file.is_file():
+        return np.load(raw_file)
+    else:
+        return None
 
 def _load_attrs(attrs_file: Path) -> dict:
     if attrs_file.is_file():

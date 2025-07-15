@@ -24,6 +24,7 @@ class SolutionTracks(Tracks):
         self,
         graph: nx.DiGraph,
         segmentation: np.ndarray | None = None,
+        intensity_image: np.ndarray | None = None,
         time_attr: str | None = NodeAttr.TIME.value,
         pos_attr: str | tuple[str] | list[str] | None = NodeAttr.POS.value,
         scale: list[float] | None = None,
@@ -33,6 +34,7 @@ class SolutionTracks(Tracks):
         super().__init__(
             graph,
             segmentation=segmentation,
+            intensity_image=intensity_image,
             time_attr=time_attr,
             pos_attr=pos_attr,
             scale=scale,
@@ -47,6 +49,7 @@ class SolutionTracks(Tracks):
         return cls(
             tracks.graph,
             segmentation=tracks.segmentation,
+            intensity_image=tracks.intensity_image,
             time_attr=None,
             pos_attr=None,
             scale=tracks.scale,
