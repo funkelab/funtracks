@@ -175,7 +175,9 @@ class ExtendedRegionProperties(RegionProperties):
 
 
 def regionprops_extended(
-    img: np.ndarray, spacing: tuple[float], intensity_image: np.ndarray | None = None
+    img: np.ndarray,
+    spacing: tuple[float, ...] | None,
+    intensity_image: np.ndarray | None = None,
 ) -> list[ExtendedRegionProperties]:
     """
     Create instances of ExtendedRegionProperties that extend
@@ -183,7 +185,8 @@ def regionprops_extended(
 
     Args:
         img (np.ndarray): The labeled image.
-        spacing (tuple[float]): The spacing between voxels in each dimension.
+        spacing (tuple[float, ...]| None): The spacing between voxels in each dimension.
+            If None, each voxel is assumed to be 1 in all dimensions.
         intensity_image (np.ndarray, optional): The intensity image.
 
     Returns:

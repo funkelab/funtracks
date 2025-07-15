@@ -11,8 +11,9 @@ if TYPE_CHECKING:
 class GraphAnnotator:
     """A base class for adding and updating graph features.
 
-    This class holds a set of features that is responsible for adding and updating
-    to Tracks objects.
+    This class holds a set of features that it is responsible for. The annotator will
+    compute these features and add them to the Tracks initially, and update them when
+    necessary. The set of features will all be computed and updated together.
     """
 
     def __init__(self, tracks: Tracks, features: list[Feature]):
@@ -23,7 +24,15 @@ class GraphAnnotator:
                 responsible for computing and updating.
         """
         self.tracks = tracks
-        self.features = features
+        self._features = features
+
+    @property
+    def features(self):
+        """The list of features that this annotator controls.
+
+        Can be overridden in subclasses, e.g. to filter the list by user selection.
+        """
+        return self._features
 
     def compute(self) -> None:
         """Compute a set of features and add them to the tracks.
