@@ -1,4 +1,6 @@
 import numpy as np
+from itertools import product
+import numpy as np
 
 
 def _compute_ious(frame1: np.ndarray, frame2: np.ndarray) -> list[tuple[int, int, float]]:
@@ -33,3 +35,43 @@ def _compute_ious(frame1: np.ndarray, frame2: np.ndarray) -> list[tuple[int, int
         union = frame1_label_sizes[id1] + frame2_label_sizes[id2] - intersection
         ious.append((id1, id2, intersection / union))
     return ious
+
+def _get_iou_dict(segmentation, multiseg=False) -> dict[int, dict[int, float]]:
+    """Get all ious values for the provided segmentations (all frames).
+    Will return as map from node_id -> dict[node_id] -> iou for easy
+    navigation when adding to candidate graph.
+
+    Args:
+        segmentation (np.ndarray): Segmentations that were used to create cand_graph.
+            Has shape ([h], t, [z], y, x), where h is the number of hypotheses
+            if multiseg is True.
+        multiseg (bool): Flag indicating if the provided segmentation contains
+            multiple hypothesis segmentations. Defaults to False.
+
+    Returns:
+        dict[int, dict[int, float]]: A map from node id to another dictionary, which
+            contains node_ids to iou values.
+    """
+    iou_dict: dict[int, dict[int, float]] = {}
+    hypo_pairs: list[tuple[int, ...]] = [(0, 0)]
+    if multiseg:
+        num_hypotheses = segmentation.shape[0]
+        if num_hypotheses > 1:
+            hypo_pairs = list(product(range(num_hypotheses), repeat=2))
+    else:
+        segmentation = np.expand_dims(segmentation, 0)
+
+    for frame in range(segmentation.shape[1] - 1):
+        for hypo1, hypo2 in hypo_pairs:
+            seg1 = segmentation[hypo1][frame]
+            seg2 = segmentation[hypo2][frame + 1]
+            ious = _compute_ious(seg1, seg2)
+            for label1, label2, iou in ious:
+                if label1 not in iou_dict:
+                    iou_dict[label1] = {}
+                iou_dict[label1][label2] = iou
+    return iou_dict
+
+
+
+
