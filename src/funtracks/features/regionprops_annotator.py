@@ -30,6 +30,15 @@ class Area(RPFeature):
             regionprops_name="area",
         )
 
+class Intensity(RPFeature):
+    def __init__(self, ndim=3):
+        super().__init__(
+            key="intensity",
+            value_type=float,
+            display_name="Intensity",
+            valid_ndim=(3, 4),
+            regionprops_name="intensity_mean",
+        )
 
 class EllipsoidAxes(RPFeature):
     def __init__(self, ndim=3):
@@ -135,6 +144,7 @@ class RegionpropsAnnotator(GraphAnnotator):
         ndim = tracks.ndim
         features = [
             Area(ndim=ndim),
+            Intensity(ndim=ndim),
             EllipsoidAxes(ndim=ndim),
             Circularity(ndim=ndim),
             Perimeter(ndim=ndim),
