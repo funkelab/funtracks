@@ -16,13 +16,10 @@ from psygnal import Signal
 from skimage import measure
 
 from funtracks.features import Feature, FeatureSet, FeatureType, Position, Time
+from funtracks.import_export.export_to_geff import export_to_geff
 
 from .compute_ious import _compute_ious
 from .graph_attributes import EdgeAttr, NodeAttr
-
-import geff
-from pathlib import Path
-
 if TYPE_CHECKING:
     from pathlib import Path
 
@@ -543,8 +540,8 @@ class Tracks:
     
     def export_to_geff(self, directory: Path):
         """Export the tracks graph to geff"""
-        axis_names = ["y", "x"] if len(self.scale) == 3 else ["z", "y", "x"]
-        geff.write_nx(self.graph, directory, self.pos_attr, axis_names) 
+
+        export_to_geff(self, directory)
 
     @classmethod
     def load(cls, directory: Path, seg_required=False, solution: bool=False) -> Tracks:
