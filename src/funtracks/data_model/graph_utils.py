@@ -226,12 +226,14 @@ def add_cand_edges(
         next_kdtree = create_kdtree(cand_graph, next_node_ids, pos_key)
 
         matched_indices = prev_kdtree.query_ball_tree(next_kdtree, max_edge_distance)
+        print('node frame dict', node_frame_dict)
 
         for prev_node_id, next_node_indices in zip(
             prev_node_ids, matched_indices, strict=False
         ):
             for next_node_index in next_node_indices:
                 next_node_id = next_node_ids[next_node_index]
+                print('adding an edge between node', prev_node_id, 'and', next_node_id)
                 cand_graph.add_edge(prev_node_id, next_node_id)
 
         prev_node_ids = next_node_ids
