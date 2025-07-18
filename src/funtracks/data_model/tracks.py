@@ -15,10 +15,9 @@ import numpy as np
 from psygnal import Signal
 from skimage import measure
 
-from funtracks.import_export.export_to_geff import export_to_geff
-
 from .compute_ious import _compute_ious
 from .graph_attributes import EdgeAttr, NodeAttr
+
 if TYPE_CHECKING:
     from pathlib import Path
 
@@ -462,11 +461,6 @@ class Tracks:
         from ..import_export.internal_format import save_tracks
 
         save_tracks(self, directory)
-    
-    def export_to_geff(self, directory: Path):
-        """Export the tracks graph to geff"""
-
-        export_to_geff(self, directory)
 
     @classmethod
     def load(cls, directory: Path, seg_required=False) -> Tracks:
