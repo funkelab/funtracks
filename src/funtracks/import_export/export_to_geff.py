@@ -30,8 +30,6 @@ def export_to_geff(tracks: Tracks, directory: Path, overwrite: bool = False):
     parent = directory.parent
     if not parent.exists():
         raise ValueError(f"Parent directory {parent} does not exist.")
-    if not parent.is_dir():
-        raise ValueError(f"Parent path {parent} is not a directory.")
 
     # Check target directory
     if directory.exists():

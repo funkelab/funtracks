@@ -22,6 +22,11 @@ def test_export_to_geff(
     z = zarr.open(tmp_path.as_posix(), mode="r")
     assert isinstance(z, zarr.Group)
 
+    # test taht providing a non existing parent dir raises error
+    file_path = tmp_path / "nonexisting" / "target.zarr"
+    with pytest.raises(ValueError, match="does not exist"):
+        export_to_geff(tracks, file_path)
+
     # test that providing a nondirectory path raises error
     file_path = tmp_path / "not_a_dir"
     file_path.write_text("test")
