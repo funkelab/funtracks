@@ -18,4 +18,4 @@ def test_export_to_geff(
     tracks = track_type(graph, ndim=ndim + 1)
     export_to_geff(tracks, tmp_path)
     z = zarr.open(tmp_path.as_posix(), mode="r")
-    assert isinstance(z, zarr.hierarchy.Group)
+    assert isinstance(z, zarr.Group)
