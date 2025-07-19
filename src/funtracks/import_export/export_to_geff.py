@@ -5,6 +5,7 @@ from typing import (
 )
 
 import geff
+import networkx as nx
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -43,5 +44,44 @@ def export_to_geff(tracks: Tracks, directory: Path, overwrite: bool = False):
         # Create dir
         directory.mkdir()
 
-    axis_names = ["y", "x"] if tracks.ndim == 3 else ["z", "y", "x"]
-    geff.write_nx(tracks.graph, directory, tracks.pos_attr, axis_names)
+    # update the graph to split the position into separate attrs, if they are currently
+    # together in a list
+    if isinstance(tracks.pos_attr, str):
+        graph = split_position_attr(tracks)
+    else:
+        graph = tracks.graph
+
+    axis_names = (
+        [tracks.time_attr, "y", "x"]
+        if tracks.ndim == 3
+        else [tracks.time_attr, "z", "y", "x"]
+    )
+    geff.write_nx(graph, directory, axis_names=axis_names)
+
+
+def split_position_attr(tracks: Tracks) -> nx.DiGraph:
+    """Spread the spatial coordinates to separate node attrs in order to export to geff
+    format.
+
+    Args:
+        tracks (funtracks.data_model.Tracks): tracks object holding the graph to be
+          converted.
+
+    Returns:
+        nx.DiGraph with a separate positional attribute for each coordinate.
+
+    """
+    new_graph = tracks.graph.copy()
+
+    for _, attrs in new_graph.nodes(data=True):
+        pos = attrs.pop(tracks.pos_attr)
+
+        if len(pos) == 2:
+            attrs["y"] = pos[0]
+            attrs["x"] = pos[1]
+        elif len(pos) == 3:
+            attrs["z"] = pos[0]
+            attrs["y"] = pos[1]
+            attrs["x"] = pos[2]
+
+    return new_graph
