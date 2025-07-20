@@ -56,7 +56,13 @@ def export_to_geff(tracks: Tracks, directory: Path, overwrite: bool = False):
         if tracks.ndim == 3
         else [tracks.time_attr, "z", "y", "x"]
     )
-    geff.write_nx(graph, directory, axis_names=axis_names)
+
+    axis_types = (
+        ["time", "space", "space"]
+        if tracks.ndim == 3
+        else ["time", "space", "space", "space"]
+    )
+    geff.write_nx(graph, directory, axis_names=axis_names, axis_types=axis_types)
 
 
 def split_position_attr(tracks: Tracks) -> nx.DiGraph:
