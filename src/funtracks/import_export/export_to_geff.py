@@ -48,14 +48,14 @@ def export_to_geff(tracks: Tracks, directory: Path, overwrite: bool = False):
     # together in a list
     if isinstance(tracks.pos_attr, str):
         graph = split_position_attr(tracks)
+        axis_names = (
+            [tracks.time_attr, "y", "x"]
+            if tracks.ndim == 3
+            else [tracks.time_attr, "z", "y", "x"]
+        )
     else:
         graph = tracks.graph
-
-    axis_names = (
-        [tracks.time_attr, "y", "x"]
-        if tracks.ndim == 3
-        else [tracks.time_attr, "z", "y", "x"]
-    )
+        axis_names = list(tracks.pos_attr)
 
     axis_types = (
         ["time", "space", "space"]
