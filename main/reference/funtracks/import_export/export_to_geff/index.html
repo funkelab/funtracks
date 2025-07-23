@@ -1123,7 +1123,8 @@
 <span class="normal">62</span>
 <span class="normal">63</span>
 <span class="normal">64</span>
-<span class="normal">65</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">export_to_geff</span><span class="p">(</span><span class="n">tracks</span><span class="p">:</span> <span class="n">Tracks</span><span class="p">,</span> <span class="n">directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">overwrite</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
+<span class="normal">65</span>
+<span class="normal">66</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">export_to_geff</span><span class="p">(</span><span class="n">tracks</span><span class="p">:</span> <span class="n">Tracks</span><span class="p">,</span> <span class="n">directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">overwrite</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Export the Tracks nxgraph to geff.</span>
 
 <span class="sd">    Args:</span>
@@ -1166,6 +1167,7 @@
     <span class="k">else</span><span class="p">:</span>
         <span class="n">graph</span> <span class="o">=</span> <span class="n">tracks</span><span class="o">.</span><span class="n">graph</span>
         <span class="n">axis_names</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">tracks</span><span class="o">.</span><span class="n">pos_attr</span><span class="p">)</span>
+        <span class="n">axis_names</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">tracks</span><span class="o">.</span><span class="n">time_attr</span><span class="p">)</span>
 
     <span class="n">axis_types</span> <span class="o">=</span> <span class="p">(</span>
         <span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">,</span> <span class="s2">&quot;space&quot;</span><span class="p">,</span> <span class="s2">&quot;space&quot;</span><span class="p">]</span>
@@ -1253,8 +1255,7 @@ converted.</p>
 
             <details class="quote">
               <summary>Source code in <code>src/funtracks/import_export/export_to_geff.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">68</span>
-<span class="normal">69</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">69</span>
 <span class="normal">70</span>
 <span class="normal">71</span>
 <span class="normal">72</span>
@@ -1278,7 +1279,8 @@ converted.</p>
 <span class="normal">90</span>
 <span class="normal">91</span>
 <span class="normal">92</span>
-<span class="normal">93</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">split_position_attr</span><span class="p">(</span><span class="n">tracks</span><span class="p">:</span> <span class="n">Tracks</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">:</span>
+<span class="normal">93</span>
+<span class="normal">94</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">split_position_attr</span><span class="p">(</span><span class="n">tracks</span><span class="p">:</span> <span class="n">Tracks</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Spread the spatial coordinates to separate node attrs in order to export to geff</span>
 <span class="sd">    format.</span>
 
