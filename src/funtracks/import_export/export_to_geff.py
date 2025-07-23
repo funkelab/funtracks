@@ -56,6 +56,7 @@ def export_to_geff(tracks: Tracks, directory: Path, overwrite: bool = False):
     else:
         graph = tracks.graph
         axis_names = list(tracks.pos_attr)
+        axis_names.insert(0, tracks.time_attr)
 
     axis_types = (
         ["time", "space", "space"]
