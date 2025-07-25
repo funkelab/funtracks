@@ -6,6 +6,12 @@ from typing import (
 
 import geff
 import networkx as nx
+import numpy as np
+import zarr
+from geff.affine import Affine
+from geff.metadata_schema import GeffMetadata
+
+from funtracks.data_model.graph_attributes import NodeAttr
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -56,13 +62,51 @@ def export_to_geff(tracks: Tracks, directory: Path, overwrite: bool = False):
     else:
         graph = tracks.graph
         axis_names = list(tracks.pos_attr)
+        axis_names.insert(0, tracks.time_attr)
 
     axis_types = (
         ["time", "space", "space"]
         if tracks.ndim == 3
         else ["time", "space", "space", "space"]
     )
-    geff.write_nx(graph, directory, axis_names=axis_names, axis_types=axis_types)
+
+    # calculate affine matrix
+    if tracks.scale is None:
+        tracks.scale = (1.0,) * tracks.ndim
+    linear_matrix = np.diag(tracks.scale)
+    offset = 0.0  # no offset or translation
+    affine = Affine.from_matrix_offset(linear_matrix, offset)
+
+    # Create metadata and add the affine matrix. Axes will be added automatically.
+    metadata = GeffMetadata(
+        geff_version=geff.__version__,
+        directed=isinstance(graph, nx.DiGraph),
+        affine=affine,
+    )
+
+    # Save segmentation if present
+    if tracks.segmentation is not None:
+        seg_path = directory / "segmentation"
+        seg_path.mkdir(exist_ok=True)
+        zarr.save_array(str(seg_path), np.asarray(tracks.segmentation))
+        metadata.related_objects = [
+            {
+                "path": "../segmentation",
+                "type": "labels",
+                "label_prop": NodeAttr.SEG_ID.value,
+            }
+        ]
+
+    # Save the graph in a 'tracks' folder
+    tracks_path = directory / "tracks"
+    tracks_path.mkdir(exist_ok=True)
+    geff.write_nx(
+        graph=graph,
+        store=tracks_path,
+        metadata=metadata,
+        axis_names=axis_names,
+        axis_types=axis_types,
+    )
 
 
 def split_position_attr(tracks: Tracks) -> nx.DiGraph:
