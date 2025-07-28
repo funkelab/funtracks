@@ -38,8 +38,11 @@ class SolutionTracks(Tracks):
         )
         self.max_track_id: int
 
-        # double check
-        has_track_id = NodeAttr.TRACK_ID.value in graph.nodes[next(iter(graph.nodes))]
+        # recompute track_id if requested or missing
+        if graph.number_of_nodes() == 0:
+            has_track_id = False
+        else:
+            has_track_id = NodeAttr.TRACK_ID.value in graph.nodes[next(iter(graph.nodes))]
         if recompute_track_ids or not has_track_id:
             self._initialize_track_ids()
 
