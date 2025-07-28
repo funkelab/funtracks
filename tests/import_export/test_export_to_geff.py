@@ -4,14 +4,16 @@ import zarr
 
 from funtracks.data_model.solution_tracks import SolutionTracks
 from funtracks.data_model.tracks import Tracks
-from funtracks.import_export.export_to_geff import export_to_geff
+from funtracks.import_export.export_to_geff import export_to_geff, split_position_attr
 
 
 @pytest.mark.parametrize("ndim", [2, 3])
 @pytest.mark.parametrize("track_type", (Tracks, SolutionTracks))
+@pytest.mark.parametrize("pos_attr_type", (str, list))
 def test_export_to_geff(
     ndim,
     track_type,
+    pos_attr_type,
     tmp_path,
     request,
 ):
@@ -23,6 +25,12 @@ def test_export_to_geff(
         segmentation = request.getfixturevalue("segmentation_3d")
 
     tracks = track_type(graph, segmentation=segmentation, ndim=ndim + 1)
+
+    # in the case the pos_attr_type is a list, split the position values over multiple
+    # attributes to create a list type pos_attr.
+    if pos_attr_type is list:
+        tracks.graph = split_position_attr(tracks)
+        tracks.pos_attr = ["y", "x"] if ndim == 2 else ["z", "y", "x"]
     export_to_geff(tracks, tmp_path)
     z = zarr.open((tmp_path / "tracks").as_posix(), mode="r")
     assert isinstance(z, zarr.Group)
