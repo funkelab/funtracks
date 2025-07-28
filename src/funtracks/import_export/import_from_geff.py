@@ -182,13 +182,13 @@ def import_from_geff(
                     f"- {e}" for e in errors
                 )
                 raise ValueError(error_msg)
-            seg_id = group["nodes"]["props"][name_map[NodeAttr.SEG_ID.value]]["values"][
-                -1
-            ]
+            seg_id = int(
+                group["nodes"]["props"][name_map[NodeAttr.SEG_ID.value]]["values"][-1]
+            )
         else:
             # assign the node id as seg_id instead and check in the next step if this is
             #  valid.
-            seg_id = group["nodes"]["ids"][-1]
+            seg_id = int(group["nodes"]["ids"][-1])
 
         # Get the coordinates for the last node.
         t = group["nodes"]["props"][name_map[NodeAttr.TIME.value]]["values"][-1]
