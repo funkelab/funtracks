@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 import zarr
 
@@ -18,19 +19,34 @@ def test_export_to_geff(
 ):
     if ndim == 2:
         graph = request.getfixturevalue("graph_2d")
+        segmentation = request.getfixturevalue("segmentation_2d")
     else:
         graph = request.getfixturevalue("graph_3d")
-    tracks = track_type(graph, ndim=ndim + 1)
+        segmentation = request.getfixturevalue("segmentation_3d")
+
+    tracks = track_type(graph, segmentation=segmentation, ndim=ndim + 1)
 
     # in the case the pos_attr_type is a list, split the position values over multiple
     # attributes to create a list type pos_attr.
     if pos_attr_type is list:
         tracks.graph = split_position_attr(tracks)
         tracks.pos_attr = ["y", "x"] if ndim == 2 else ["z", "y", "x"]
-
     export_to_geff(tracks, tmp_path)
-    z = zarr.open(tmp_path.as_posix(), mode="r")
+    z = zarr.open((tmp_path / "tracks").as_posix(), mode="r")
     assert isinstance(z, zarr.Group)
+
+    # Check that segmentation was saved
+    seg_path = tmp_path / "segmentation"
+    seg_zarr = zarr.open(str(seg_path), mode="r")
+    assert isinstance(seg_zarr, zarr.Array)
+    np.testing.assert_array_equal(seg_zarr[:], segmentation)
+
+    # Check that affine is present in metadata
+    attrs = dict(z.attrs)
+    assert "geff" in attrs
+    assert "affine" in attrs["geff"]
+    affine = attrs["geff"]["affine"]
+    assert affine is None or isinstance(affine, dict)
 
     # test that providing a non existing parent dir raises error
     file_path = tmp_path / "nonexisting" / "target.zarr"
@@ -57,5 +73,10 @@ def test_export_to_geff(
     (export_dir / "existing_file.txt").write_text("already here")
 
     export_to_geff(tracks, export_dir, overwrite=True)
-    z = zarr.open(export_dir.as_posix(), mode="r")
+    z = zarr.open((export_dir / "tracks").as_posix(), mode="r")
     assert isinstance(z, zarr.Group)
+
+    seg_path = export_dir / "segmentation"
+    seg_zarr = zarr.open(str(seg_path), mode="r")
+    assert isinstance(seg_zarr, zarr.Array)
+    np.testing.assert_array_equal(seg_zarr[:], segmentation)
