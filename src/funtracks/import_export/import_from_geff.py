@@ -221,9 +221,11 @@ def import_from_geff(
         # If the provided segmentation has seg ids that are not identical to node ids,
         # relabel it now.
         if group["nodes"]["ids"][-1] != seg_id:
-            times = group["nodes"]["props"][name_map[NodeAttr.TIME.value]]["values"]
-            ids = group["nodes"]["ids"]
-            seg_ids = group["nodes"]["props"][name_map[NodeAttr.SEG_ID.value]]["values"]
+            times = group["nodes"]["props"][name_map[NodeAttr.TIME.value]]["values"][:]
+            ids = group["nodes"]["ids"][:]
+            seg_ids = group["nodes"]["props"][name_map[NodeAttr.SEG_ID.value]]["values"][
+                :
+            ]
 
             if not len(times) == len(ids) == len(seg_ids):
                 raise ValueError(
