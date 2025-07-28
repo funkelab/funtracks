@@ -26,6 +26,7 @@ class SolutionTracks(Tracks):
         pos_attr: str | tuple[str] | list[str] = NodeAttr.POS.value,
         scale: list[float] | None = None,
         ndim: int | None = None,
+        recompute_track_ids: bool = True,
     ):
         super().__init__(
             graph,
@@ -36,7 +37,11 @@ class SolutionTracks(Tracks):
             ndim=ndim,
         )
         self.max_track_id: int
-        self._initialize_track_ids()
+
+        # double check
+        has_track_id = NodeAttr.TRACK_ID.value in graph.nodes[next(iter(graph.nodes))]
+        if recompute_track_ids or not has_track_id:
+            self._initialize_track_ids()
 
     @classmethod
     def from_tracks(cls, tracks: Tracks):

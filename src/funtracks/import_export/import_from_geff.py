@@ -238,6 +238,7 @@ def import_from_geff(
     if name_map.get(NodeAttr.TRACK_ID.value) is not None:
         for _, data in graph.nodes(data=True):
             data[NodeAttr.TRACK_ID.value] = data.pop(name_map[NodeAttr.TRACK_ID.value])
+    recompute_track_ids = NodeAttr.TRACK_ID.value not in selected_attrs
 
     # Add optional extra features.
     if extra_features is None:
@@ -263,6 +264,7 @@ def import_from_geff(
         time_attr=time_attr,
         ndim=ndims,
         scale=scale,
+        recompute_track_ids=recompute_track_ids,
     )
     # compute the 'area' attribute if needed
     if tracks.segmentation is not None and extra_features.get("area"):
