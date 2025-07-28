@@ -1,3 +1,4 @@
+import dask.array as da
 import numpy as np
 import pytest
 import tifffile
@@ -93,16 +94,16 @@ def test_segmentation_axes_mismatch(valid_store_and_attrs, tmp_path):
     # Provide a segmentation with wrong shape
     wrong_seg = np.zeros((2, 20, 200), dtype=np.uint16)
     seg_path = tmp_path / "wrong_seg.npy"
-    np.save(seg_path, wrong_seg)
+    tifffile.imwrite(seg_path, wrong_seg)
     with pytest.raises(ValueError, match="out of bounds"):
-        import_from_geff(store, name_map, segmentation=seg_path)
+        import_from_geff(store, name_map, segmentation_path=seg_path)
 
     # Provide a segmentation with a different number of dimensions than the graph.
     wrong_seg = np.zeros((2, 20, 200, 200), dtype=np.uint16)
     seg_path = tmp_path / "wrong_seg2.npy"
-    np.save(seg_path, wrong_seg)
+    tifffile.imwrite(seg_path, wrong_seg)
     with pytest.raises(ValueError, match="Axes in the geff do not match"):
-        import_from_geff(store, name_map, segmentation=seg_path)
+        import_from_geff(store, name_map, segmentation_path=seg_path)
 
 
 def test_tracks_with_segmentation(
@@ -121,7 +122,7 @@ def test_tracks_with_segmentation(
     tracks = import_from_geff(
         store,
         name_map,
-        segmentation=valid_segmentation_path,
+        segmentation_path=valid_segmentation_path,
         scale=scale,
         extra_features=extra_features,
     )
@@ -155,7 +156,7 @@ def test_tracks_with_segmentation(
     tracks = import_from_geff(
         store,
         name_map,
-        segmentation=valid_segmentation_path,
+        segmentation_path=valid_segmentation_path,
         scale=scale,
         extra_features=extra_features,
     )
@@ -167,12 +168,51 @@ def test_tracks_with_segmentation(
     # incorrect
     with pytest.raises(ValueError):
         tracks = import_from_geff(
-            store, name_map, segmentation=valid_segmentation_path, scale=None
+            store, name_map, segmentation_path=valid_segmentation_path, scale=None
         )
 
     # Test that import fails with ValueError when invalid seg_ids are provided.
     store, _ = invalid_store_and_attrs
     with pytest.raises(ValueError):
         tracks = import_from_geff(
-            store, name_map, segmentation=valid_segmentation_path, scale=scale
+            store, name_map, segmentation_path=valid_segmentation_path, scale=scale
         )
+
+
+@pytest.mark.parametrize("segmentation_format", ["single_tif", "tif_folder", "zarr"])
+def test_segmentation_loading_formats(
+    segmentation_format, valid_store_and_attrs, valid_segmentation, tmp_path
+):
+    """Test loading segmentation from different formats using magic_imread."""
+    store, _ = valid_store_and_attrs
+    name_map = {"time": "t", "y": "y", "x": "x", "seg_id": "seg_id"}
+    scale = [1, 1, 1 / 100]
+    seg = valid_segmentation
+
+    if segmentation_format == "single_tif":
+        path = tmp_path / "segmentation.tif"
+        tifffile.imwrite(path, seg)
+
+    elif segmentation_format == "tif_folder":
+        path = tmp_path / "tif_series"
+        path.mkdir()
+        for i, frame in enumerate(seg):
+            tifffile.imwrite(path / f"seg_{i:03}.tif", frame)
+
+    elif segmentation_format == "zarr":
+        path = tmp_path / "segmentation.zarr"
+        da.from_array(seg, chunks=(1, *seg.shape[1:])).to_zarr(path)
+
+    else:
+        raise ValueError(f"Unknown format: {segmentation_format}")
+
+    tracks = import_from_geff(
+        store,
+        name_map,
+        segmentation_path=path,
+        scale=scale,
+        extra_features={"area": False, "random_feature": False},
+    )
+
+    assert hasattr(tracks, "segmentation")
+    assert np.array(tracks.segmentation).shape == seg.shape

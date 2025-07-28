@@ -7,9 +7,6 @@ from typing import (
 import geff
 import numpy as np
 import zarr
-from finn_builtins.io._read import (
-    magic_imread,
-)
 from geff.affine import Affine
 from geff.validators.segmentation_validators import (
     axes_match_seg_dims,
@@ -20,6 +17,7 @@ from geff.validators.validators import validate_lineages, validate_tracklets
 from numpy.typing import ArrayLike
 
 from funtracks.data_model.graph_attributes import NodeAttr
+from funtracks.import_export.magic_imread import magic_imread
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -57,7 +55,7 @@ def relabel_seg_id_to_node_id(
 def import_from_geff(
     directory: Path,
     name_map: dict[str, str],
-    segmentation: Path | None = None,
+    segmentation_path: Path | None = None,
     scale: list[float] | None = None,
     extra_features: dict[str, bool] | None = None,
 ):
@@ -84,7 +82,7 @@ def import_from_geff(
                 (seg_id), if a segmentation is provided
                 (tracklet_id), optional, if it is a solution
                 (lineage_id), optional, if it is a solution
-        segmentation (Path | None = None): (Relative) path to segmentation data.
+        segmentation_path (Path | None = None): (Relative) path to segmentation data.
         scale (list[float]): scaling information (pixel to world coordinates).
         extra_features (dict[str: bool] | None=None): optional features to include in the
             Tracks object. The keys are the feature names, and the boolean value indicates
@@ -160,9 +158,9 @@ def import_from_geff(
             selected_attrs.append(name_map["lineage_id"])
 
     # Try to load the segmentation data, if it was provided.
-    if segmentation is not None:
+    if segmentation_path is not None:
         segmentation = magic_imread(
-            segmentation, use_dask=True
+            segmentation_path, use_dask=True
         )  # change to in memory later
 
         # check if the axes information in the metadata matches the segmentation
