@@ -4,7 +4,7 @@ from typing import Any
 
 import numpy as np
 
-from funtracks.data_model import NodeAttr, SolutionTracks  # import CandGraph, Project
+from funtracks.data_model import NodeAttr, SolutionTracks
 
 from ..actions._base import ActionGroup
 from ..actions.add_delete_edge import AddEdge, DeleteEdge
