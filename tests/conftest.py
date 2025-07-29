@@ -1,6 +1,8 @@
 import networkx as nx
 import numpy as np
 import pytest
+import tracksdata as td
+from rustworkx import networkx_converter
 from skimage.draw import disk
 
 from funtracks.data_model import EdgeAttr, NodeAttr
@@ -35,7 +37,7 @@ def segmentation_2d():
 
 @pytest.fixture
 def graph_2d():
-    graph = nx.DiGraph()
+    graph_nx = nx.DiGraph()
     nodes = [
         (
             1,
@@ -107,9 +109,12 @@ def graph_2d():
             {EdgeAttr.IOU.value: 1.0},
         ),
     ]
-    graph.add_nodes_from(nodes)
-    graph.add_edges_from(edges)
-    return graph
+    graph_nx.add_nodes_from(nodes)
+    graph_nx.add_edges_from(edges)
+    graph_rx = networkx_converter(graph_nx, keep_attributes=True)
+    node_id_map = {node: i for i, node in enumerate(graph_nx.nodes)}
+    graph_td = td.graph.IndexedRXGraph(graph_rx, node_id_map=node_id_map)
+    return graph_td
 
 
 def sphere(center, radius, shape):
@@ -142,7 +147,7 @@ def segmentation_3d():
 
 @pytest.fixture
 def graph_3d():
-    graph = nx.DiGraph()
+    graph_nx = nx.DiGraph()
     nodes = [
         (
             1,
@@ -170,6 +175,12 @@ def graph_3d():
         (1, 2),
         (1, 3),
     ]
-    graph.add_nodes_from(nodes)
-    graph.add_edges_from(edges)
-    return graph
+    graph_nx.add_nodes_from(nodes)
+    graph_nx.add_edges_from(edges)
+
+    graph_rx = networkx_converter(graph_nx, keep_attributes=True)
+
+    node_id_map = {node: i for i, node in enumerate(graph_nx.nodes)}
+    graph_td = td.graph.IndexedRXGraph(graph_rx, node_id_map=node_id_map)
+
+    return graph_td

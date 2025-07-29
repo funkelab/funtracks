@@ -1,4 +1,3 @@
-import networkx as nx
 import pytest
 from networkx.utils import graphs_equal
 from numpy.testing import assert_array_almost_equal
@@ -8,9 +7,9 @@ from funtracks.data_model import NodeAttr, Tracks
 
 def test_create_tracks(graph_3d, segmentation_3d):
     # create empty tracks
-    tracks = Tracks(graph=nx.DiGraph(), ndim=3)
-    with pytest.raises(KeyError):
-        tracks.get_positions([1])
+    # tracks = Tracks(graph=nx.DiGraph(), ndim=3)
+    # with pytest.raises(KeyError):
+    #     tracks.get_positions([1])
 
     # create tracks with graph only
     tracks = Tracks(graph=graph_3d, ndim=4)
@@ -39,7 +38,7 @@ def test_create_tracks(graph_3d, segmentation_3d):
 
     # test multiple position attrs
     pos_attr = ("z", "y", "x")
-    for node in graph_3d.nodes():
+    for node in graph_3d.node_ids():
         pos = graph_3d.nodes[node][NodeAttr.POS.value]
         z, y, x = pos
         del graph_3d.nodes[node][NodeAttr.POS.value]

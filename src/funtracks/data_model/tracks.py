@@ -12,6 +12,7 @@ from warnings import warn
 
 import networkx as nx
 import numpy as np
+import polars as pl
 from psygnal import Signal
 from skimage import measure
 
@@ -326,13 +327,21 @@ class Tracks:
         for node, value in zip(nodes, values, strict=False):
             if isinstance(value, np.ndarray):
                 value = list(value)
-            self.graph.nodes[node][attr] = value
+            self.graph.update_node_attrs(attrs={attr: value}, node_ids=[node])
 
     def get_node_attr(self, node: Node, attr: str, required: bool = False):
         if required:
-            return self.graph.nodes[node][attr]
+            item = self.graph.filter(node_ids=[node]).node_attrs([attr]).item()
+            if isinstance(item, pl.Series):
+                return item.to_list()
+            else:
+                return item
         else:
-            return self.graph.nodes[node].get(attr, None)
+            item = self.graph.filter(node_ids=[node]).node_attrs([attr]).item()
+            if isinstance(item, pl.Series):
+                return item.to_list()
+            else:
+                return item
 
     def _get_node_attr(self, node, attr, required=False):
         warnings.warn(
