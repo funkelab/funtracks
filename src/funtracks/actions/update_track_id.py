@@ -28,7 +28,7 @@ class UpdateTrackID(TracksAction):
         """Restore the previous track_id"""
         return UpdateTrackID(self.tracks, self.start_node, self.old_track_id)
 
-    def _apply(self):
+    def _apply(self) -> None:
         """Assign a new track id to the track starting with start_node."""
         old_track_id = self.tracks.get_track_id(self.start_node)
         curr_node = self.start_node

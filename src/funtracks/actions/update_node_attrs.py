@@ -48,7 +48,7 @@ class UpdateNodeAttrs(TracksAction):
         self.new_attrs = attrs
         self._apply()
 
-    def inverse(self):
+    def inverse(self) -> TracksAction:
         """Restore previous attributes"""
         return UpdateNodeAttrs(
             self.tracks,
@@ -56,7 +56,7 @@ class UpdateNodeAttrs(TracksAction):
             self.prev_attrs,
         )
 
-    def _apply(self):
+    def _apply(self) -> None:
         """Set new attributes"""
         for attr, value in self.new_attrs.items():
             self.tracks._set_node_attr(self.node, attr, value)

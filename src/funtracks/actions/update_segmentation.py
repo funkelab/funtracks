@@ -40,7 +40,7 @@ class UpdateNodeSeg(TracksAction):
         self.added = added
         self._apply()
 
-    def inverse(self):
+    def inverse(self) -> TracksAction:
         """Restore previous attributes"""
         return UpdateNodeSeg(
             self.tracks,
@@ -49,7 +49,7 @@ class UpdateNodeSeg(TracksAction):
             added=not self.added,
         )
 
-    def _apply(self):
+    def _apply(self) -> None:
         """Set new attributes"""
         times = self.tracks.get_time(self.node)
         value = self.node if self.added else 0

@@ -3,11 +3,7 @@ from collections import Counter
 import numpy as np
 import pytest
 
-from funtracks import CandGraph, NxGraph, Project, TrackingGraph
-from funtracks.features import FeatureSet
-from funtracks.features.edge_features import IoU
-from funtracks.features.node_features import Area
-from funtracks.params import CandGraphParams, ProjectParams
+from funtracks.data_model import EdgeAttr, NodeAttr, SolutionTracks
 from funtracks.user_actions import UserUpdateSegmentation
 
 
@@ -17,18 +13,13 @@ from funtracks.user_actions import UserUpdateSegmentation
     [3],
 )
 class TestUpdateNodeSeg:
-    def get_project(self, request, ndim, use_cand_graph=False):
-        params = ProjectParams()
+    def get_tracks(self, request, ndim) -> SolutionTracks:
         seg_name = "segmentation_2d" if ndim == 3 else "segmentation_3d"
         seg = request.getfixturevalue(seg_name)
 
         gt_graph = self.get_gt_graph(request, ndim)
-        features = FeatureSet(ndim=ndim, seg=True)
-        if use_cand_graph:
-            cand_graph = CandGraph(NxGraph, gt_graph, features, CandGraphParams())
-        else:
-            cand_graph = TrackingGraph(NxGraph, gt_graph, features)
-        return Project("test", params, segmentation=seg, graph=cand_graph)
+        tracks = SolutionTracks(gt_graph, segmentation=seg, ndim=ndim)
+        return tracks
 
     def get_gt_graph(self, request, ndim):
         graph_name = "graph_2d" if ndim == 3 else "graph_3d"
@@ -36,15 +27,14 @@ class TestUpdateNodeSeg:
         return gt_graph
 
     def test_user_update_seg_smaller(self, request, ndim):
-        project = self.get_project(request, ndim)
-        graph = project.graph
+        tracks: SolutionTracks = self.get_tracks(request, ndim)
         node_id = 3
         edge = (1, 3)
 
-        orig_pixels = project.get_pixels(node_id)
-        orig_position = project.graph.get_position(node_id)
-        orig_area = project.graph.get_feature_value(node_id, Area())
-        orig_iou = project.graph.get_feature_value(edge, IoU())
+        orig_pixels = tracks.get_pixels(node_id)
+        orig_position = tracks.get_position(node_id)
+        orig_area = tracks.get_node_attr(node_id, NodeAttr.AREA.value)
+        orig_iou = tracks.get_edge_attr(edge, EdgeAttr.IOU.value)
 
         # remove all but one pixel
         pixels_to_remove = tuple(orig_pixels[d][1:] for d in range(len(orig_pixels)))
@@ -55,44 +45,45 @@ class TestUpdateNodeSeg:
         )
 
         action = UserUpdateSegmentation(
-            project, new_value=0, updated_pixels=[(pixels_to_remove, node_id)]
+            tracks, new_value=0, updated_pixels=[(pixels_to_remove, node_id)]
         )
-        assert graph.has_node(node_id)
-        assert graph.get_feature_value(node_id, graph.features.node_selection_pin) is True
-        assert self.pixel_equals(project.get_pixels(node_id), remaining_pixels)
-        assert graph.get_feature_value(node_id, graph.features.position) == new_position
-        assert graph.get_feature_value(node_id, Area()) == 1
-        assert graph.get_feature_value(edge, IoU()) == pytest.approx(0.0, abs=0.001)
+        assert tracks.graph.has_node(node_id)
+        assert self.pixel_equals(tracks.get_pixels(node_id), remaining_pixels)
+        assert tracks.get_position(node_id) == new_position
+        assert tracks.get_area(node_id) == 1
+        assert tracks.get_edge_attr(edge, EdgeAttr.IOU.value) == pytest.approx(
+            0.0, abs=0.01
+        )
 
         inverse = action.inverse()
-        assert graph.has_node(node_id)
-        assert graph.get_feature_value(node_id, graph.features.node_selection_pin) is None
-        assert self.pixel_equals(project.get_pixels(node_id), orig_pixels)
-        assert graph.get_feature_value(node_id, graph.features.position) == orig_position
-        assert graph.get_feature_value(node_id, Area()) == orig_area
-        assert graph.get_feature_value(edge, IoU()) == pytest.approx(orig_iou, abs=0.01)
+        assert tracks.graph.has_node(node_id)
+        assert self.pixel_equals(tracks.get_pixels(node_id), orig_pixels)
+        assert tracks.get_position(node_id) == orig_position
+        assert tracks.get_area(node_id) == orig_area
+        assert tracks.get_edge_attr(edge, EdgeAttr.IOU.value) == pytest.approx(
+            orig_iou, abs=0.01
+        )
 
         inverse.inverse()
-        assert graph.has_node(node_id)
-        assert graph.get_feature_value(node_id, graph.features.node_selection_pin) is True
-        assert self.pixel_equals(project.get_pixels(node_id), remaining_pixels)
-        assert graph.get_feature_value(node_id, graph.features.position) == new_position
-        assert graph.get_feature_value(node_id, Area()) == 1
-        assert graph.get_feature_value(edge, IoU()) == pytest.approx(0.0, abs=0.001)
+        assert self.pixel_equals(tracks.get_pixels(node_id), remaining_pixels)
+        assert tracks.get_position(node_id) == new_position
+        assert tracks.get_area(node_id) == 1
+        assert tracks.get_edge_attr(edge, EdgeAttr.IOU.value) == pytest.approx(
+            0.0, abs=0.01
+        )
 
     def pixel_equals(self, pixels1, pixels2):
-        return Counter(zip(*pixels1)) == Counter(zip(*pixels2))
+        return Counter(zip(*pixels1, strict=True)) == Counter(zip(*pixels2, strict=True))
 
     def test_user_update_seg_bigger(self, request, ndim):
-        project = self.get_project(request, ndim)
-        graph = project.graph
+        tracks: SolutionTracks = self.get_tracks(request, ndim)
         node_id = 3
         edge = (1, 3)
 
-        orig_pixels = project.get_pixels(node_id)
-        orig_position = project.graph.get_position(node_id)
-        orig_area = project.graph.get_feature_value(node_id, Area())
-        orig_iou = project.graph.get_feature_value(edge, IoU())
+        orig_pixels = tracks.get_pixels(node_id)
+        orig_position = tracks.get_position(node_id)
+        orig_area = tracks.get_area(node_id)
+        orig_iou = tracks.get_edge_attr(edge, EdgeAttr.IOU.value)
 
         # add one pixel
         pixels_to_add = tuple(
@@ -105,112 +96,93 @@ class TestUpdateNodeSeg:
         )
 
         action = UserUpdateSegmentation(
-            project, new_value=3, updated_pixels=[(pixels_to_add, 0)]
+            tracks, new_value=3, updated_pixels=[(pixels_to_add, 0)]
         )
-        assert graph.has_node(node_id)
-        assert self.pixel_equals(all_pixels, project.get_pixels(node_id))
-        assert graph.get_feature_value(node_id, graph.features.node_selection_pin) is True
-        assert graph.get_feature_value(node_id, Area()) == orig_area + 1
-        assert graph.get_feature_value(edge, IoU()) != orig_iou
+        assert tracks.graph.has_node(node_id)
+        assert self.pixel_equals(all_pixels, tracks.get_pixels(node_id))
+        assert tracks.get_area(node_id) == orig_area + 1
+        assert tracks.get_edge_attr(edge, EdgeAttr.IOU.value) != orig_iou
 
         inverse = action.inverse()
-        assert graph.has_node(node_id)
-        assert graph.get_feature_value(node_id, graph.features.node_selection_pin) is None
-        assert self.pixel_equals(orig_pixels, project.get_pixels(node_id))
-        assert graph.get_feature_value(node_id, graph.features.position) == orig_position
-        assert graph.get_feature_value(node_id, Area()) == orig_area
-        assert graph.get_feature_value(edge, IoU()) == pytest.approx(orig_iou, abs=0.01)
+        assert tracks.graph.has_node(node_id)
+        assert self.pixel_equals(orig_pixels, tracks.get_pixels(node_id))
+        assert tracks.get_position(node_id) == orig_position
+        assert tracks.get_area(node_id) == orig_area
+        assert tracks.get_edge_attr(edge, EdgeAttr.IOU.value) == pytest.approx(
+            orig_iou, abs=0.01
+        )
 
         inverse.inverse()
-        assert graph.has_node(node_id)
-        assert graph.get_feature_value(node_id, graph.features.node_selection_pin) is True
-        assert self.pixel_equals(all_pixels, project.get_pixels(node_id))
-        assert graph.get_feature_value(node_id, Area()) == orig_area + 1
-        assert graph.get_feature_value(edge, IoU()) != orig_iou
+        assert tracks.graph.has_node(node_id)
+        assert self.pixel_equals(all_pixels, tracks.get_pixels(node_id))
+        assert tracks.get_area(node_id) == orig_area + 1
+        assert tracks.get_edge_attr(edge, EdgeAttr.IOU.value) != orig_iou
 
     def test_user_erase_seg(self, request, ndim):
-        project = self.get_project(request, ndim)
-        graph = project.graph
+        tracks: SolutionTracks = self.get_tracks(request, ndim)
         node_id = 3
         edge = (1, 3)
 
-        orig_pixels = project.get_pixels(node_id)
-        orig_position = project.graph.get_position(node_id)
-        orig_area = project.graph.get_feature_value(node_id, Area())
-        orig_iou = project.graph.get_feature_value(edge, IoU())
+        orig_pixels = tracks.get_pixels(node_id)
+        orig_position = tracks.get_position(node_id)
+        orig_area = tracks.get_area(node_id)
+        orig_iou = tracks.get_edge_attr(edge, EdgeAttr.IOU.value)
 
         # remove all pixels
         pixels_to_remove = orig_pixels
         # set the pixels in the array first
         # (to reflect that the user directly changes the segmentation array)
-        project.set_pixels(pixels_to_remove, 0)
+        tracks.set_pixels(pixels_to_remove, 0)
         action = UserUpdateSegmentation(
-            project, new_value=0, updated_pixels=[(pixels_to_remove, node_id)]
+            tracks, new_value=0, updated_pixels=[(pixels_to_remove, node_id)]
         )
-        assert not graph.has_node(node_id)
+        assert not tracks.graph.has_node(node_id)
 
-        project.set_pixels(pixels_to_remove, node_id)
+        tracks.set_pixels(pixels_to_remove, node_id)
         inverse = action.inverse()
-        assert graph.has_node(node_id)
-        assert graph.get_feature_value(node_id, graph.features.node_selection_pin) is None
-        self.pixel_equals(project.get_pixels(node_id), orig_pixels)
-        assert graph.get_feature_value(node_id, graph.features.position) == orig_position
-        assert graph.get_feature_value(node_id, Area()) == orig_area
-        assert graph.get_feature_value(edge, IoU()) == pytest.approx(orig_iou, abs=0.01)
+        assert tracks.graph.has_node(node_id)
+        self.pixel_equals(tracks.get_pixels(node_id), orig_pixels)
+        assert tracks.get_position(node_id) == orig_position
+        assert tracks.get_area(node_id) == orig_area
+        assert tracks.get_edge_attr(edge, EdgeAttr.IOU.value) == pytest.approx(
+            orig_iou, abs=0.01
+        )
 
-        project.set_pixels(pixels_to_remove, 0)
+        tracks.set_pixels(pixels_to_remove, 0)
         inverse.inverse()
-        assert not graph.has_node(node_id)
+        assert not tracks.graph.has_node(node_id)
 
-    @pytest.mark.parametrize("use_cand_graph", [True, False])
-    def test_user_add_seg(self, request, ndim, use_cand_graph):
-        project = self.get_project(request, ndim, use_cand_graph=use_cand_graph)
-        graph = project.graph
+    def test_user_add_seg(self, request, ndim):
+        tracks: SolutionTracks = self.get_tracks(request, ndim)
         # draw a new node just like node 6 but in time 3 (instead of 4)
         old_node_id = 6
         node_id = 7
         time = 3
 
-        # TODO: add candidate edges when you add nodes to candidate graph
-        cand_edge = (7, 6)
-
-        pixels_to_add = project.get_pixels(old_node_id)
+        pixels_to_add = tracks.get_pixels(old_node_id)
         pixels_to_add = (
             np.ones(shape=(pixels_to_add[0].shape), dtype=np.uint32) * time,
             *pixels_to_add[1:],
         )
-        position = project.graph.get_position(old_node_id)
-        area = project.graph.get_feature_value(old_node_id, Area())
-        expected_cand_iou = 1.0
+        position = tracks.get_position(old_node_id)
+        area = tracks.get_area(old_node_id)
 
-        assert not graph.has_node(node_id)
+        assert not tracks.graph.has_node(node_id)
 
-        assert np.sum(project.segmentation.data == node_id).compute() == 0
-        project.set_pixels(pixels_to_add, node_id)
+        assert np.sum(tracks.segmentation == node_id) == 0
+        tracks.set_pixels(pixels_to_add, node_id)
         action = UserUpdateSegmentation(
-            project, new_value=node_id, updated_pixels=[(pixels_to_add, 0)]
+            tracks, new_value=node_id, updated_pixels=[(pixels_to_add, 0)]
         )
-        assert np.sum(project.segmentation.data == node_id) == len(pixels_to_add[0])
-        assert graph.has_node(node_id)
-        assert project.solution.has_node(node_id)
-        assert graph.get_feature_value(node_id, graph.features.node_selection_pin) is True
-        assert graph.get_feature_value(node_id, graph.features.position) == position
-        assert graph.get_feature_value(node_id, Area()) == area
-        if use_cand_graph:
-            assert graph.get_feature_value(cand_edge, IoU()) == pytest.approx(
-                expected_cand_iou, abs=0.01
-            )
+        assert np.sum(tracks.segmentation == node_id) == len(pixels_to_add[0])
+        assert tracks.graph.has_node(node_id)
+        assert tracks.get_position(node_id) == position
+        assert tracks.get_area(node_id) == area
 
         inverse = action.inverse()
-        assert not graph.has_node(node_id)
+        assert not tracks.graph.has_node(node_id)
 
         inverse.inverse()
-        assert graph.has_node(node_id)
-        assert project.solution.has_node(node_id)
-        assert graph.get_feature_value(node_id, graph.features.node_selection_pin) is True
-        assert graph.get_feature_value(node_id, graph.features.position) == position
-        assert graph.get_feature_value(node_id, Area()) == area
-        if use_cand_graph:
-            assert graph.get_feature_value(cand_edge, IoU()) == pytest.approx(
-                expected_cand_iou, abs=0.01
-            )
+        assert tracks.graph.has_node(node_id)
+        assert tracks.get_position(node_id) == position
+        assert tracks.get_area(node_id) == area

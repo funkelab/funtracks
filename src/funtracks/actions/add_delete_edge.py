@@ -18,11 +18,11 @@ class AddEdge(TracksAction):
         self.edge = edge
         self._apply()
 
-    def inverse(self):
+    def inverse(self) -> TracksAction:
         """Delete edges"""
         return DeleteEdge(self.tracks, self.edge)
 
-    def _apply(self):
+    def _apply(self) -> None:
         """
         Steps:
         - add each edge to the graph. Assumes all edges are valid (they should be checked
@@ -46,11 +46,11 @@ class DeleteEdge(TracksAction):
         self.edge = edge
         self._apply()
 
-    def inverse(self):
+    def inverse(self) -> TracksAction:
         """Restore edges and their attributes"""
         return AddEdge(self.tracks, self.edge)
 
-    def _apply(self):
+    def _apply(self) -> None:
         """Steps:
         - Remove the edges from the graph
         """
