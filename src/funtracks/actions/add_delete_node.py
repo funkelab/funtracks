@@ -12,7 +12,8 @@ from ._base import TracksAction
 if TYPE_CHECKING:
     from typing import Any
 
-    from funtracks.data_model.tracks import Node, SegMask, Tracks
+    from funtracks.data_model import SolutionTracks
+    from funtracks.data_model.tracks import Node, SegMask
 
 
 class AddNode(TracksAction):
@@ -25,7 +26,7 @@ class AddNode(TracksAction):
 
     def __init__(
         self,
-        tracks: Tracks,
+        tracks: SolutionTracks,
         node: Node,
         attributes: dict[str, Any],
         pixels: SegMask | None = None,
@@ -93,7 +94,7 @@ class DeleteNode(TracksAction):
 
     def __init__(
         self,
-        tracks: Tracks,
+        tracks: SolutionTracks,
         node: Node,
         pixels: SegMask | None = None,
     ):

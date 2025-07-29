@@ -9,7 +9,8 @@ from funtracks.data_model.graph_attributes import NodeAttr
 from ._base import TracksAction
 
 if TYPE_CHECKING:
-    from funtracks.data_model.tracks import Node, SegMask, Tracks
+    from funtracks.data_model import SolutionTracks
+    from funtracks.data_model.tracks import Node, SegMask
 
 
 class UpdateNodeSeg(TracksAction):
@@ -19,7 +20,7 @@ class UpdateNodeSeg(TracksAction):
 
     def __init__(
         self,
-        tracks: Tracks,
+        tracks: SolutionTracks,
         node: Node,
         pixels: SegMask,
         added: bool = True,
