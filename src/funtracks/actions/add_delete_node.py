@@ -10,12 +10,12 @@ from funtracks.data_model.solution_tracks import SolutionTracks
 from ._base import TracksAction
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from typing import Any
 
-    from funtracks.data_model.tracks import Attrs, Node, SegMask, Tracks
+    from funtracks.data_model.tracks import Node, SegMask, Tracks
 
 
-class AddNodes(TracksAction):
+class AddNode(TracksAction):
     """Action for adding new nodes. If a segmentation should also be added, the
     pixels for each node should be provided. The label to set the pixels will
     be taken from the node id. The existing pixel values are assumed to be
@@ -26,68 +26,66 @@ class AddNodes(TracksAction):
     def __init__(
         self,
         tracks: Tracks,
-        nodes: Iterable[Node],
-        attributes: Attrs,
-        pixels: Iterable[SegMask] | None = None,
+        node: Node,
+        attributes: dict[str, Any],
+        pixels: SegMask | None = None,
     ):
-        """Create an action to add new nodes, with optional segmentation
+        """Create an action to add a new node, with optional segmentation
 
         Args:
-            tracks (Tracks): The Tracks to add the nodes to
-            nodes (Node): A list of node ids
+            tracks (Tracks): The Tracks to add the node to
+            node (Node): A node id
             attributes (Attrs): Includes times and optionally positions
-            pixels (list[SegMask] | None, optional): The segmentations associated with
-                each node. Defaults to None.
+            pixels (SegMask | None, optional): The segmentation associated with
+                the node. Defaults to None.
         """
         super().__init__(tracks)
-        self.nodes = nodes
+        self.node = node
         user_attrs = attributes.copy()
-        self.times = attributes.pop(NodeAttr.TIME.value, None)
-        self.positions = attributes.pop(NodeAttr.POS.value, None)
+        self.time = attributes.pop(NodeAttr.TIME.value, None)
+        self.position = attributes.pop(NodeAttr.POS.value, None)
         self.pixels = pixels
         self.attributes = user_attrs
         self._apply()
 
     def inverse(self):
         """Invert the action to delete nodes instead"""
-        return DeleteNodes(self.tracks, self.nodes)
+        return DeleteNode(self.tracks, self.node)
 
     def _apply(self):
         """Apply the action, and set segmentation if provided in self.pixels"""
         if self.pixels is not None:
-            self.tracks.set_pixels(self.pixels, self.nodes)
+            self.tracks.set_pixels(self.pixels, self.node)
         attrs = self.attributes
         if attrs is None:
             attrs = {}
-        self.tracks.graph.add_nodes_from(self.nodes)
-        self.tracks.set_times(self.nodes, self.times)
+        self.tracks.graph.add_node(self.node)
+        self.tracks.set_time(self.node, self.time)
         final_pos: np.ndarray
         if self.tracks.segmentation is not None:
-            computed_attrs = self.tracks._compute_node_attrs(self.nodes, self.times)
-            if self.positions is None:
+            computed_attrs = self.tracks._compute_node_attrs(self.node, self.time)
+            if self.position is None:
                 final_pos = np.array(computed_attrs[NodeAttr.POS.value])
             else:
-                final_pos = self.positions
+                final_pos = self.position
             attrs[NodeAttr.AREA.value] = computed_attrs[NodeAttr.AREA.value]
-        elif self.positions is None:
+        elif self.position is None:
             raise ValueError("Must provide positions or segmentation and ids")
         else:
-            final_pos = self.positions
+            final_pos = self.position
 
-        self.tracks.set_positions(self.nodes, final_pos)
+        self.tracks.set_position(self.node, final_pos)
         for attr, values in attrs.items():
-            self.tracks._set_nodes_attr(self.nodes, attr, values)
+            self.tracks._set_node_attr(self.node, attr, values)
 
         if isinstance(self.tracks, SolutionTracks):
-            for node, track_id in zip(
-                self.nodes, attrs[NodeAttr.TRACK_ID.value], strict=True
-            ):
-                if track_id not in self.tracks.track_id_to_node:
-                    self.tracks.track_id_to_node[track_id] = []
-                self.tracks.track_id_to_node[track_id].append(node)
+            track_id = attrs[NodeAttr.TRACK_ID.value]
+            if track_id not in self.tracks.track_id_to_node:
+                self.tracks.track_id_to_node[track_id] = []
+            self.tracks.track_id_to_node[track_id].append(self.node)
 
 
-class DeleteNodes(TracksAction):
+class DeleteNode(TracksAction):
     """Action of deleting existing nodes
     If the tracks contain a segmentation, this action also constructs a reversible
     operation for setting involved pixels to zero
@@ -96,25 +94,25 @@ class DeleteNodes(TracksAction):
     def __init__(
         self,
         tracks: Tracks,
-        nodes: Iterable[Node],
-        pixels: Iterable[SegMask] | None = None,
+        node: Node,
+        pixels: SegMask | None = None,
     ):
         super().__init__(tracks)
-        self.nodes = nodes
+        self.node = node
         self.attributes = {
-            NodeAttr.TIME.value: self.tracks.get_times(nodes),
-            self.tracks.pos_attr: self.tracks.get_positions(nodes),
-            NodeAttr.TRACK_ID.value: self.tracks.get_nodes_attr(
-                nodes, NodeAttr.TRACK_ID.value
+            NodeAttr.TIME.value: self.tracks.get_time(node),
+            self.tracks.pos_attr: self.tracks.get_position(node),
+            NodeAttr.TRACK_ID.value: self.tracks.get_node_attr(
+                node, NodeAttr.TRACK_ID.value
             ),
         }
-        self.pixels = self.tracks.get_pixels(nodes) if pixels is None else pixels
+        self.pixels = self.tracks.get_pixels(node) if pixels is None else pixels
         self._apply()
 
     def inverse(self):
         """Invert this action, and provide inverse segmentation operation if given"""
 
-        return AddNodes(self.tracks, self.nodes, self.attributes, pixels=self.pixels)
+        return AddNode(self.tracks, self.node, self.attributes, pixels=self.pixels)
 
     def _apply(self):
         """ASSUMES THERE ARE NO INCIDENT EDGES - raises valueerror if an edge will be
@@ -125,13 +123,11 @@ class DeleteNodes(TracksAction):
         - Remove nodes from graph
         """
         if self.pixels is not None:
-            self.tracks.set_pixels(
-                self.pixels,
-                [0] * len(self.pixels),
-            )
+            self.tracks.set_pixels(self.pixels, 0)
 
         if isinstance(self.tracks, SolutionTracks):
-            for node in self.nodes:
-                self.tracks.track_id_to_node[self.tracks.get_track_id(node)].remove(node)
+            self.tracks.track_id_to_node[self.tracks.get_track_id(self.node)].remove(
+                self.node
+            )
 
-        self.tracks.graph.remove_nodes_from(self.nodes)
+        self.tracks.graph.remove_node(self.node)

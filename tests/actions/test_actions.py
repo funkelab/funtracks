@@ -4,9 +4,10 @@ import pytest
 from numpy.testing import assert_array_almost_equal
 
 from funtracks.actions import (
-    AddEdges,
-    AddNodes,
-    UpdateNodeSegs,
+    ActionGroup,
+    AddEdge,
+    AddNode,
+    UpdateNodeSeg,
 )
 from funtracks.data_model import Tracks
 from funtracks.data_model.graph_attributes import EdgeAttr, NodeAttr
@@ -21,32 +22,15 @@ class TestAddDeleteNodes:
         empty_seg = np.zeros_like(segmentation_2d) if use_seg else None
         tracks = Tracks(empty_graph, segmentation=empty_seg, ndim=3)
         # add all the nodes from graph_2d/seg_2d
+
         nodes = list(graph_2d.nodes())
-        attrs = {}
-        attrs[NodeAttr.TIME.value] = [
-            graph_2d.nodes[node][NodeAttr.TIME.value] for node in nodes
-        ]
-        attrs[NodeAttr.POS.value] = [
-            graph_2d.nodes[node][NodeAttr.POS.value] for node in nodes
-        ]
-        attrs[NodeAttr.TRACK_ID.value] = [
-            graph_2d.nodes[node][NodeAttr.TRACK_ID.value] for node in nodes
-        ]
-        if use_seg:
-            pixels = [
-                np.nonzero(segmentation_2d[time] == node_id)
-                for time, node_id in zip(attrs[NodeAttr.TIME.value], nodes, strict=True)
-            ]
-            pixels = [
-                (np.ones_like(pix[0]) * time, *pix)
-                for time, pix in zip(attrs[NodeAttr.TIME.value], pixels, strict=True)
-            ]
-        else:
-            pixels = None
-            attrs[NodeAttr.AREA.value] = [
-                graph_2d.nodes[node][NodeAttr.AREA.value] for node in nodes
-            ]
-        add_nodes = AddNodes(tracks, nodes, attributes=attrs, pixels=pixels)
+        actions = []
+        for node in nodes:
+            pixels = np.nonzero(segmentation_2d == node) if use_seg else None
+            actions.append(
+                AddNode(tracks, node, dict(graph_2d.nodes[node]), pixels=pixels)
+            )
+        action = ActionGroup(tracks=tracks, actions=actions)
 
         assert set(tracks.graph.nodes()) == set(graph_2d.nodes())
         for node, data in tracks.graph.nodes(data=True):
@@ -56,7 +40,7 @@ class TestAddDeleteNodes:
             assert_array_almost_equal(tracks.segmentation, segmentation_2d)
 
         # invert the action to delete all the nodes
-        del_nodes = add_nodes.inverse()
+        del_nodes = action.inverse()
         assert set(tracks.graph.nodes()) == set(empty_graph.nodes())
         if use_seg:
             assert_array_almost_equal(tracks.segmentation, empty_seg)
@@ -76,15 +60,14 @@ class TestAddDeleteNodes:
 
 def test_update_node_segs(segmentation_2d, graph_2d):
     tracks = Tracks(graph_2d.copy(), segmentation=segmentation_2d.copy())
-    nodes = list(graph_2d.nodes())
 
     # add a couple pixels to the first node
     new_seg = segmentation_2d.copy()
     new_seg[0][0] = 1
-    nodes = [1]
+    node = 1
 
-    pixels = [np.nonzero(segmentation_2d != new_seg)]
-    action = UpdateNodeSegs(tracks, nodes, pixels=pixels, added=True)
+    pixels = np.nonzero(segmentation_2d != new_seg)
+    action = UpdateNodeSeg(tracks, node, pixels=pixels, added=True)
 
     assert set(tracks.graph.nodes()) == set(graph_2d.nodes())
     assert tracks.graph.nodes[1][NodeAttr.AREA.value] == 1345
@@ -115,7 +98,7 @@ def test_add_delete_edges(graph_2d, segmentation_2d):
 
     edges = [[1, 2], [1, 3], [3, 4], [4, 5]]
 
-    action = AddEdges(tracks, edges)
+    action = ActionGroup(tracks=tracks, actions=[AddEdge(tracks, edge) for edge in edges])
     # TODO: What if adding an edge that already exists?
     # TODO: test all the edge cases, invalid operations, etc. for all actions
     assert set(tracks.graph.nodes()) == set(graph_2d.nodes())
