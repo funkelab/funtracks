@@ -233,26 +233,19 @@ def import_from_geff(
                 )
             segmentation = relabel_seg_id_to_node_id(times, ids, seg_ids, segmentation)
 
+    # Add optional extra features.
+    if extra_features is None:
+        extra_features = {}
+    selected_attrs.extend(extra_features.keys())
+
     # All pre-checks have passed, load the graph now.
-    graph, _ = geff.read_nx(directory)
+    graph, _ = geff.read_nx(directory, node_props=selected_attrs)
 
     # Relabel track_id attr to NodeAttr.TRACK_ID.value.
     if name_map.get(NodeAttr.TRACK_ID.value) is not None:
         for _, data in graph.nodes(data=True):
             data[NodeAttr.TRACK_ID.value] = data.pop(name_map[NodeAttr.TRACK_ID.value])
     recompute_track_ids = NodeAttr.TRACK_ID.value not in selected_attrs
-
-    # Add optional extra features.
-    if extra_features is None:
-        extra_features = {}
-    selected_attrs.extend(extra_features.keys())
-
-    # Drop all node attributes not in selected_attrs.
-    for node in graph.nodes:
-        attrs = graph.nodes[node]
-        for key in list(attrs.keys()):
-            if key not in selected_attrs:
-                del attrs[key]
 
     # Put segmentation data in memory now.
     if segmentation is not None and isinstance(segmentation, da.Array):
