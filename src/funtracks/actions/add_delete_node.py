@@ -49,11 +49,11 @@ class AddNode(TracksAction):
         self.attributes = user_attrs
         self._apply()
 
-    def inverse(self):
+    def inverse(self) -> TracksAction:
         """Invert the action to delete nodes instead"""
         return DeleteNode(self.tracks, self.node)
 
-    def _apply(self):
+    def _apply(self) -> None:
         """Apply the action, and set segmentation if provided in self.pixels"""
         if self.pixels is not None:
             self.tracks.set_pixels(self.pixels, self.node)
@@ -101,7 +101,7 @@ class DeleteNode(TracksAction):
         self.node = node
         self.attributes = {
             NodeAttr.TIME.value: self.tracks.get_time(node),
-            self.tracks.pos_attr: self.tracks.get_position(node),
+            NodeAttr.POS.value: self.tracks.get_position(node),
             NodeAttr.TRACK_ID.value: self.tracks.get_node_attr(
                 node, NodeAttr.TRACK_ID.value
             ),
@@ -109,12 +109,12 @@ class DeleteNode(TracksAction):
         self.pixels = self.tracks.get_pixels(node) if pixels is None else pixels
         self._apply()
 
-    def inverse(self):
+    def inverse(self) -> TracksAction:
         """Invert this action, and provide inverse segmentation operation if given"""
 
         return AddNode(self.tracks, self.node, self.attributes, pixels=self.pixels)
 
-    def _apply(self):
+    def _apply(self) -> None:
         """ASSUMES THERE ARE NO INCIDENT EDGES - raises valueerror if an edge will be
         removed by this operation
         Steps:
