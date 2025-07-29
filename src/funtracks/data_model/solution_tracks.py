@@ -144,3 +144,38 @@ class SolutionTracks(Tracks):
                 ]
                 f.write("\n")
                 f.write(",".join(map(str, row)))
+
+    def get_track_neighbors(
+        self, track_id: int, time: int
+    ) -> tuple[Node | None, Node | None]:
+        """Get the last node with the given track id before time, and the first node
+        with the track id after time, if any. Does not assume that a node with
+        the given track_id and time is already in tracks, but it can be.
+
+        Args:
+            track_id (int): The track id to search for
+            time (int): The time point to find the immediate predecessor and successor
+                for
+
+        Returns:
+            tuple[Node | None, Node | None]: The last node before time with the given
+            track id, and the first node after time with the given track id,
+            or Nones if there are no such nodes.
+        """
+        if (
+            track_id not in self.track_id_to_node
+            or len(self.track_id_to_node[track_id]) == 0
+        ):
+            return None, None
+        candidates = self.track_id_to_node[track_id]
+        candidates.sort(key=lambda n: self.get_time(n))
+
+        pred = None
+        succ = None
+        for cand in candidates:
+            if self.get_time(cand) < time:
+                pred = cand
+            elif self.get_time(cand) > time:
+                succ = cand
+                break
+        return pred, succ
