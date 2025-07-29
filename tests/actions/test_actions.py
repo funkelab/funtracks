@@ -3,12 +3,12 @@ import numpy as np
 import pytest
 from numpy.testing import assert_array_almost_equal
 
-from funtracks.data_model import Tracks
-from funtracks.data_model.actions import (
+from funtracks.actions import (
     AddEdges,
     AddNodes,
     UpdateNodeSegs,
 )
+from funtracks.data_model import Tracks
 from funtracks.data_model.graph_attributes import EdgeAttr, NodeAttr
 
 
