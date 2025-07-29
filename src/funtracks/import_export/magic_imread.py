@@ -25,27 +25,15 @@ def read_zarr_dataset(path: Path) -> tuple[ArrayLike | list[ArrayLike], tuple[in
     if (path / ".zarray").exists():
         image = da.from_zarr(path)
         shape = image.shape
-    elif (path / ".zgroup").exists():
-        image = [
-            read_zarr_dataset(subpath)[0]
-            for subpath in sorted(path.iterdir())
-            if not subpath.name.startswith(".") and subpath.is_dir()
-        ]
-        if not image:
-            raise ValueError(f"No arrays found in zarr group: {path}")
-        shape = image[0].shape
     elif (path / "zarr.json").exists():
         data = zarr.open(store=path)
         if isinstance(data, zarr.Array):
             image = da.from_zarr(data)
             shape = image.shape
         else:
-            image = [data[k] for k in sorted(data)]
-            if not image:
-                raise ValueError(f"No arrays found in zarr group: {path}")
-            shape = image[0].shape
+            raise ValueError(f"Not a valid zarr dataset: {path}")
     else:
-        raise ValueError(f"Not a valid zarr dataset or group: {path}")
+        raise ValueError(f"Not a valid zarr dataset: {path}")
     return image, shape
 
 
