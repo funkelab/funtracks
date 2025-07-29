@@ -36,7 +36,7 @@ class AddNode(TracksAction):
         Args:
             tracks (Tracks): The Tracks to add the node to
             node (Node): A node id
-            attributes (Attrs): Includes times and optionally positions
+            attributes (Attrs): Includes times, track_ids, and optionally positions
             pixels (SegMask | None, optional): The segmentation associated with
                 the node. Defaults to None.
         """
@@ -79,11 +79,10 @@ class AddNode(TracksAction):
         for attr, values in attrs.items():
             self.tracks._set_node_attr(self.node, attr, values)
 
-        if isinstance(self.tracks, SolutionTracks):
-            track_id = attrs[NodeAttr.TRACK_ID.value]
-            if track_id not in self.tracks.track_id_to_node:
-                self.tracks.track_id_to_node[track_id] = []
-            self.tracks.track_id_to_node[track_id].append(self.node)
+        track_id = attrs[NodeAttr.TRACK_ID.value]
+        if track_id not in self.tracks.track_id_to_node:
+            self.tracks.track_id_to_node[track_id] = []
+        self.tracks.track_id_to_node[track_id].append(self.node)
 
 
 class DeleteNode(TracksAction):
