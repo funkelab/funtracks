@@ -6,13 +6,14 @@ from typing import TYPE_CHECKING, Any
 from ._base import TracksAction
 
 if TYPE_CHECKING:
-    from funtracks.data_model.tracks import Edge, Tracks
+    from funtracks.data_model import SolutionTracks
+    from funtracks.data_model.tracks import Edge
 
 
 class AddEdge(TracksAction):
     """Action for adding new edges"""
 
-    def __init__(self, tracks: Tracks, edge: Edge):
+    def __init__(self, tracks: SolutionTracks, edge: Edge):
         super().__init__(tracks)
         self.edge = edge
         self._apply()
@@ -40,7 +41,7 @@ class AddEdge(TracksAction):
 class DeleteEdge(TracksAction):
     """Action for deleting edges"""
 
-    def __init__(self, tracks: Tracks, edge: Edge):
+    def __init__(self, tracks: SolutionTracks, edge: Edge):
         super().__init__(tracks)
         self.edge = edge
         self._apply()

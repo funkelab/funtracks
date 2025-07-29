@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .actions import TracksAction  # noqa
+    from ._base import TracksAction  # noqa
 
 
 class ActionHistory:
