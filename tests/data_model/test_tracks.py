@@ -61,9 +61,9 @@ def test_pixels_and_seg_id(graph_3d, segmentation_3d):
     tracks = Tracks(graph=graph_3d, segmentation=segmentation_3d)
 
     # changing a segmentation id changes it in the mapping
-    pix = tracks.get_pixels([1])
+    pix = tracks.get_pixels(1)
     new_seg_id = 10
-    tracks.set_pixels(pix, [new_seg_id])
+    tracks.set_pixels(pix, new_seg_id)
 
     with pytest.raises(KeyError):
         tracks.get_positions(["0"])
