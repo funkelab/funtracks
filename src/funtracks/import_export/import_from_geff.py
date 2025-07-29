@@ -52,6 +52,89 @@ def relabel_seg_id_to_node_id(
     return new_segmentation
 
 
+def validate_graph_seg_match(
+    directory: Path,
+    segmentation: ArrayLike,
+    name_map: dict[str, str],
+    scale: list[float],
+    position_attr: list[str],
+) -> bool:
+    """Validate if the given geff matches the provided segmentation data. Raises a value
+    error if no valid seg ids are provided, if the metadata axes do not match the
+    segmentation shape, or if the seg_id value of the last node does not match the pixel
+    value at the (scaled) node coordinates. Returns a boolean indicating whether
+    relabeling of the segmentation to match it to node id values is required.
+
+    Args:
+        directory (Path): path to the geff tracks data or its parent folder.
+        name_map (dict[str,str]): dictionary mapping required fields to node properties.
+        segmentation (ArrayLike): segmentation data.
+        scale (list[float]): scaling information (pixel to world coordinates).
+        position_attr (list[str]): position keys in the geff tracks data
+
+    Returns:
+        bool: True if relabeling from seg_id to node_id is required.
+    """
+
+    group = zarr.open_group(directory, mode="r")
+    # check if the axes information in the metadata matches the segmentation
+    # dimensions
+    axes_match, errors = axes_match_seg_dims(directory, segmentation)
+    if not axes_match:
+        error_msg = "Axes in the geff do not match segmentation:\n" + "\n".join(
+            f"- {e}" for e in errors
+        )
+        raise ValueError(error_msg)
+
+    # Check if valid seg_ids are provided
+    if name_map.get(NodeAttr.SEG_ID.value) is not None:
+        seg_ids_valid, errors = has_valid_seg_id(
+            directory, name_map[NodeAttr.SEG_ID.value]
+        )
+        if not seg_ids_valid:
+            error_msg = "Error in validating the segmentation ids:\n" + "\n".join(
+                f"- {e}" for e in errors
+            )
+            raise ValueError(error_msg)
+        seg_id = int(
+            group["nodes"]["props"][name_map[NodeAttr.SEG_ID.value]]["values"][-1]
+        )
+    else:
+        # assign the node id as seg_id instead and check in the next step if this is
+        #  valid.
+        seg_id = int(group["nodes"]["ids"][-1])
+
+    # Get the coordinates for the last node.
+    t = group["nodes"]["props"][name_map[NodeAttr.TIME.value]]["values"][-1]
+    z = (
+        group["nodes"]["props"][name_map["z"]]["values"][-1]
+        if len(position_attr) == 3
+        else None
+    )
+    y = group["nodes"]["props"][name_map["y"]]["values"][-1]
+    x = group["nodes"]["props"][name_map["x"]]["values"][-1]
+
+    coord = []
+    coord.append(t)
+    if z is not None:
+        coord.append(z)
+    coord.append(y)
+    coord.append(x)
+
+    # Check if the segmentation pixel value at the coordinates of the last node
+    # matches the seg id. Since the scale factor was used to convert from pixels to
+    # world coordinates, we need to invert this scale factor to get the pixel
+    # coordinates.
+    seg_id_at_coord, errors = has_seg_ids_at_coords(
+        segmentation, [coord], [seg_id], tuple(1 / s for s in scale)
+    )
+    if not seg_id_at_coord:
+        error_msg = "Error testing seg id:\n" + "\n".join(f"- {e}" for e in errors)
+        raise ValueError(error_msg)
+
+    return group["nodes"]["ids"][-1] != seg_id
+
+
 def import_from_geff(
     directory: Path,
     name_map: dict[str, str],
@@ -82,7 +165,7 @@ def import_from_geff(
                 (seg_id), if a segmentation is provided
                 (tracklet_id), optional, if it is a solution
                 (lineage_id), optional, if it is a solution
-        segmentation_path (Path | None = None): (Relative) path to segmentation data.
+        segmentation_path (Path | None = None): path to segmentation data.
         scale (list[float]): scaling information (pixel to world coordinates).
         extra_features (dict[str: bool] | None=None): optional features to include in the
             Tracks object. The keys are the feature names, and the boolean value indicates
@@ -163,64 +246,13 @@ def import_from_geff(
             segmentation_path, use_dask=True
         )  # change to in memory later
 
-        # check if the axes information in the metadata matches the segmentation
-        # dimensions
-        axes_match, errors = axes_match_seg_dims(directory, segmentation)
-        if not axes_match:
-            error_msg = "Axes in the geff do not match segmentation:\n" + "\n".join(
-                f"- {e}" for e in errors
-            )
-            raise ValueError(error_msg)
-
-        # Check if valid seg_ids are provided
-        if name_map.get(NodeAttr.SEG_ID.value) is not None:
-            seg_ids_valid, errors = has_valid_seg_id(
-                directory, name_map[NodeAttr.SEG_ID.value]
-            )
-            if not seg_ids_valid:
-                error_msg = "Error in validating the segmentation ids:\n" + "\n".join(
-                    f"- {e}" for e in errors
-                )
-                raise ValueError(error_msg)
-            seg_id = int(
-                group["nodes"]["props"][name_map[NodeAttr.SEG_ID.value]]["values"][-1]
-            )
-        else:
-            # assign the node id as seg_id instead and check in the next step if this is
-            #  valid.
-            seg_id = int(group["nodes"]["ids"][-1])
-
-        # Get the coordinates for the last node.
-        t = group["nodes"]["props"][name_map[NodeAttr.TIME.value]]["values"][-1]
-        z = (
-            group["nodes"]["props"][name_map["z"]]["values"][-1]
-            if len(position_attr) == 3
-            else None
+        relabel = validate_graph_seg_match(
+            directory, segmentation, name_map, scale, position_attr
         )
-        y = group["nodes"]["props"][name_map["y"]]["values"][-1]
-        x = group["nodes"]["props"][name_map["x"]]["values"][-1]
-
-        coord = []
-        coord.append(t)
-        if z is not None:
-            coord.append(z)
-        coord.append(y)
-        coord.append(x)
-
-        # Check if the segmentation pixel value at the coordinates of the last node
-        # matches the seg id. Since the scale factor was used to convert from pixels to
-        # world coordinates, we need to invert this scale factor to get the pixel
-        # coordinates.
-        seg_id_at_coord, errors = has_seg_ids_at_coords(
-            segmentation, [coord], [seg_id], tuple(1 / s for s in scale)
-        )
-        if not seg_id_at_coord:
-            error_msg = "Error testing seg id:\n" + "\n".join(f"- {e}" for e in errors)
-            raise ValueError(error_msg)
 
         # If the provided segmentation has seg ids that are not identical to node ids,
         # relabel it now.
-        if group["nodes"]["ids"][-1] != seg_id:
+        if relabel:
             times = group["nodes"]["props"][name_map[NodeAttr.TIME.value]]["values"][:]
             ids = group["nodes"]["ids"][:]
             seg_ids = group["nodes"]["props"][name_map[NodeAttr.SEG_ID.value]]["values"][
