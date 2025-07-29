@@ -1,7 +1,7 @@
 import networkx as nx
 
-from funtracks.actions.action_history import ActionHistory
 from funtracks.actions import AddNode
+from funtracks.actions.action_history import ActionHistory
 from funtracks.data_model.tracks import Tracks
 
 # https://github.com/zaboople/klonk/blob/master/TheGURQ.md
@@ -10,9 +10,7 @@ from funtracks.data_model.tracks import Tracks
 def test_action_history():
     history = ActionHistory()
     tracks = Tracks(nx.DiGraph(), ndim=3)
-    action1 = AddNode(
-        tracks, node=0, attributes={"time": 0, "pos": [0, 1]}
-    )
+    action1 = AddNode(tracks, node=0, attributes={"time": 0, "pos": [0, 1]})
 
     # empty history has no undo or redo
     assert not history.undo()

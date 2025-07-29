@@ -6,8 +6,6 @@ from typing import TYPE_CHECKING, Any
 from ._base import TracksAction
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
-
     from funtracks.data_model.tracks import Edge, Tracks
 
 
@@ -42,7 +40,7 @@ class AddEdge(TracksAction):
 class DeleteEdge(TracksAction):
     """Action for deleting edges"""
 
-    def __init__(self, tracks: Tracks, edge: Iterable[Edge]):
+    def __init__(self, tracks: Tracks, edge: Edge):
         super().__init__(tracks)
         self.edge = edge
         self._apply()
