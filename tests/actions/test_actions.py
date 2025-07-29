@@ -9,7 +9,7 @@ from funtracks.actions import (
     AddNode,
     UpdateNodeSeg,
 )
-from funtracks.data_model import Tracks
+from funtracks.data_model import SolutionTracks
 from funtracks.data_model.graph_attributes import EdgeAttr, NodeAttr
 
 
@@ -20,7 +20,7 @@ class TestAddDeleteNodes:
         # start with an empty Tracks
         empty_graph = nx.DiGraph()
         empty_seg = np.zeros_like(segmentation_2d) if use_seg else None
-        tracks = Tracks(empty_graph, segmentation=empty_seg, ndim=3)
+        tracks = SolutionTracks(empty_graph, segmentation=empty_seg, ndim=3)
         # add all the nodes from graph_2d/seg_2d
 
         nodes = list(graph_2d.nodes())
@@ -59,7 +59,7 @@ class TestAddDeleteNodes:
 
 
 def test_update_node_segs(segmentation_2d, graph_2d):
-    tracks = Tracks(graph_2d.copy(), segmentation=segmentation_2d.copy())
+    tracks = SolutionTracks(graph_2d.copy(), segmentation=segmentation_2d.copy())
 
     # add a couple pixels to the first node
     new_seg = segmentation_2d.copy()
@@ -94,7 +94,7 @@ def test_update_node_segs(segmentation_2d, graph_2d):
 
 def test_add_delete_edges(graph_2d, segmentation_2d):
     node_graph = nx.create_empty_copy(graph_2d, with_data=True)
-    tracks = Tracks(node_graph, segmentation_2d)
+    tracks = SolutionTracks(node_graph, segmentation_2d)
 
     edges = [[1, 2], [1, 3], [3, 4], [4, 5]]
 
