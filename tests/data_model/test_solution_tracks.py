@@ -30,7 +30,7 @@ def test_export_to_csv(graph_2d, graph_3d, tmp_path):
     with open(temp_file) as f:
         lines = f.readlines()
 
-    assert len(lines) == tracks.graph.number_of_nodes() + 1  # add header
+    assert len(lines) == tracks.graph.num_nodes + 1  # add header
 
     header = ["t", "y", "x", "id", "parent_id", "track_id"]
     assert lines[0].strip().split(",") == header
@@ -41,7 +41,7 @@ def test_export_to_csv(graph_2d, graph_3d, tmp_path):
     with open(temp_file) as f:
         lines = f.readlines()
 
-    assert len(lines) == tracks.graph.number_of_nodes() + 1  # add header
+    assert len(lines) == tracks.graph.num_nodes + 1  # add header
 
     header = ["t", "z", "y", "x", "id", "parent_id", "track_id"]
     assert lines[0].strip().split(",") == header

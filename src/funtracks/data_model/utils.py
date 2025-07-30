@@ -1,17 +1,20 @@
-from typing import Sequence
+from collections.abc import Sequence
 
-import polars as pl
-import tracksdata as td
 import numpy as np
+import polars as pl
 import rustworkx as rx
+import tracksdata as td
+
 
 def td_get_single_attr_from_node(graph, node_ids: Sequence[int], attrs: Sequence[str]):
+    """Get a single attribute from a node in a tracksdata graph."""
     item = graph.filter(node_ids=node_ids).node_attrs(attrs).item()
     if isinstance(item, pl.Series):
         return item.to_list()
     else:
         return item
-    
+
+
 def convert_np_types(data):
     """Recursively convert numpy and polars types to native Python types."""
     if isinstance(data, dict):
@@ -31,42 +34,57 @@ def convert_np_types(data):
 
 
 def td_to_dict(graph) -> dict:
-    """Convert the tracks graph to a dictionary format similar to networkx.node_link_data."""
-    node_attr_names = graph.node_attrs().columns
+    """Convert the tracks graph to a dictionary format similar to
+    networkx.node_link_data.
+
+    This is used within Tracks.save to save the graph to a json file.
+    """
+    node_attr_names = graph.node_attr_keys.copy()
+    node_attr_names.insert(0, "node_id")
+    node_data_all = graph.node_attrs()
     nodes = []
-    for node_index in range(len(graph.node_ids())):
-        node_data = graph.node_attrs()[node_index]
-        node_data_dict = {node_attr_names[i]: convert_np_types(node_data[node_attr_names[i]].item()) for i in range(len(node_attr_names))}
-        node_dict = {'id': graph.node_ids()[node_index]}
-        node_dict.update(node_data_dict)  # Add all attributes to the dictionary
-        node_dict.pop('id')
-        nodes.append(node_dict)
-    
-    edge_attr_names = graph.edge_attrs().columns
-    edges = []
-    for edge_index in range(len(graph.edge_ids())):
-        edge_data = graph.edge_attrs()[edge_index]
-        edge_data_dict = {edge_attr_names[i]: convert_np_types(edge_data[edge_attr_names[i]].item()) for i in range(len(edge_attr_names))}
-        edge_dict = {
-            'source': edge_data_dict['source_id'],
-            'target': edge_data_dict['target_id']
+    for i, node in enumerate(graph.node_ids()):
+        node_data = node_data_all[i]
+        node_data_dict = {
+            node_attr_names[i]: convert_np_types(node_data[node_attr_names[i]].item())
+            for i in range(len(node_attr_names))
         }
-        # edge_data_dict.pop('edge_id') #keep edge, needed for rx>td conversion in td_from_dict loading script
-        edge_data_dict.pop('source_id')
-        edge_data_dict.pop('target_id')
+        node_dict = {"id": node}
+        node_dict.update(node_data_dict)  # Add all attributes to the dictionary
+        node_dict.pop("id")
+        nodes.append(node_dict)
+
+    edge_attr_names = graph.edge_attr_keys.copy()
+    edge_attr_names.insert(0, "edge_id")
+    edge_attr_names.insert(1, "source_id")
+    edge_attr_names.insert(2, "target_id")
+    edges = []
+    edge_data_all = graph.edge_attrs()
+    for i, _ in enumerate(graph.edge_ids()):
+        edge_data = edge_data_all[i]
+        edge_data_dict = {
+            edge_attr_names[i]: convert_np_types(edge_data[edge_attr_names[i]].item())
+            for i in range(len(edge_attr_names))
+        }
+        edge_dict = {
+            "source": edge_data_dict["source_id"],
+            "target": edge_data_dict["target_id"],
+        }
+        edge_data_dict.pop("source_id")
+        edge_data_dict.pop("target_id")
         edge_dict.update(edge_data_dict)  # Add all attributes to the dictionary
         edges.append(edge_dict)
 
-    edges = sorted(edges, key=lambda edge: edge['edge_id'])
-
+    edges = sorted(edges, key=lambda edge: edge["edge_id"])
 
     return {
-        'directed': True, #all TracksData graphs are directed
-        'multigraph': False, #all TracksData garphs are not multigraphs (TODO: check this!)
-        'graph': {},  # Add any graph-level attributes if needed
-        'nodes': nodes,
-        'edges': edges
+        "directed": True,  # all TracksData graphs are directed
+        "multigraph": False,  # all TracksData garphs are not multigraphs
+        "graph": {},  # Add any graph-level attributes if needed
+        "nodes": nodes,
+        "edges": edges,
     }
+
 
 def td_from_dict(graph_dict):
     """Convert a dictionary to a rustworkx graph."""
@@ -75,23 +93,24 @@ def td_from_dict(graph_dict):
 
     # Add nodes
     node_id_map = {}
-    for node in graph_dict['nodes']:
+    for node in graph_dict["nodes"]:
         node_id = graph_rx.add_node(node)
-        node_id_map[node['node_id']] = node_id
+        node_id_map[node["node_id"]] = node_id
 
     # Add edges
-    for edge in graph_dict['edges']:
-        source_id = node_id_map[edge['source']]
-        target_id = node_id_map[edge['target']]
+    for edge in graph_dict["edges"]:
+        source_id = node_id_map[edge["source"]]
+        target_id = node_id_map[edge["target"]]
         # Remove source and target from edge attributes if they exist
-        edge_data = {k: v for k, v in edge.items() if k not in ['source', 'target']}
+        edge_data = {k: v for k, v in edge.items() if k not in ["source", "target"]}
         graph_rx.add_edge(source_id, target_id, edge_data)
-    
-    node_ids = [node['node_id'] for node in graph_dict['nodes']]
+
+    node_ids = [node["node_id"] for node in graph_dict["nodes"]]
     node_id_map = {node: i for i, node in enumerate(node_ids)}
     graph_td = td.graph.IndexedRXGraph(graph_rx, node_id_map=node_id_map)
 
     return graph_td
+
 
 # Usage
 # graph_dict = { ... }  # Your dictionary representation of the graph

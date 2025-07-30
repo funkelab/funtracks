@@ -10,8 +10,8 @@ from typing import (
 )
 from warnings import warn
 
-import networkx as nx
 import numpy as np
+import tracksdata as td
 from psygnal import Signal
 from skimage import measure
 
@@ -38,7 +38,7 @@ class Tracks:
     position attribute. Edges in the graph represent links across time.
 
     Attributes:
-        graph (nx.DiGraph): A graph with nodes representing detections and
+        graph (td.graph): A graph with nodes representing detections and
             and edges representing links across time.
         segmentation (Optional(np.ndarray)): An optional segmentation that
             accompanies the tracking graph. If a segmentation is provided,
@@ -59,7 +59,7 @@ class Tracks:
 
     def __init__(
         self,
-        graph: nx.DiGraph,
+        graph: td.graph,
         segmentation: np.ndarray | None = None,
         time_attr: str = NodeAttr.TIME.value,
         pos_attr: str | tuple[str] | list[str] = NodeAttr.POS.value,
@@ -74,10 +74,10 @@ class Tracks:
         self.ndim = self._compute_ndim(segmentation, scale, ndim)
 
     def nodes(self):
-        return np.array(self.graph.nodes())
+        return np.array(self.graph.node_ids())
 
     def edges(self):
-        return np.array(self.graph.edges())
+        return np.array(self.graph.edge_ids())
 
     def in_degree(self, nodes: np.ndarray | None = None) -> np.ndarray:
         if nodes is not None:
@@ -272,7 +272,9 @@ class Tracks:
         for idx, node in enumerate(nodes):
             if node in self.graph:
                 for key, values in attributes.items():
-                    self.graph.nodes[node][key] = values[idx]
+                    self.graph.update_node_attrs(
+                        attrs={key: values[idx]}, node_ids=[node]
+                    )
             else:
                 logger.info("Node %d not found in the graph.", node)
 
@@ -321,7 +323,7 @@ class Tracks:
     def _set_node_attr(self, node: Node, attr: str, value: Any):
         if isinstance(value, np.ndarray):
             value = list(value)
-        self.graph.nodes[node][attr] = value
+        self.graph.update_node_attrs(attrs={attr: value}, node_ids=[node])
 
     def _set_nodes_attr(self, nodes: Iterable[Node], attr: str, values: Iterable[Any]):
         for node, value in zip(nodes, values, strict=False):
