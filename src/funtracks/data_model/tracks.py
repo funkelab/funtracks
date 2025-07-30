@@ -12,12 +12,12 @@ from warnings import warn
 
 import networkx as nx
 import numpy as np
-import polars as pl
 from psygnal import Signal
 from skimage import measure
 
 from .compute_ious import _compute_ious
 from .graph_attributes import EdgeAttr, NodeAttr
+from .utils import td_get_single_attr_from_node
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -331,17 +331,9 @@ class Tracks:
 
     def get_node_attr(self, node: Node, attr: str, required: bool = False):
         if required:
-            item = self.graph.filter(node_ids=[node]).node_attrs([attr]).item()
-            if isinstance(item, pl.Series):
-                return item.to_list()
-            else:
-                return item
+            return td_get_single_attr_from_node(self.graph, node_ids=[node], attrs=[attr])
         else:
-            item = self.graph.filter(node_ids=[node]).node_attrs([attr]).item()
-            if isinstance(item, pl.Series):
-                return item.to_list()
-            else:
-                return item
+            return td_get_single_attr_from_node(self.graph, node_ids=[node], attrs=[attr])
 
     def _get_node_attr(self, node, attr, required=False):
         warnings.warn(

@@ -3,6 +3,7 @@ from networkx.utils import graphs_equal
 from numpy.testing import assert_array_almost_equal
 
 from funtracks.data_model import NodeAttr, Tracks
+from funtracks.data_model.utils import td_get_single_attr_from_node
 
 
 def test_create_tracks(graph_3d, segmentation_3d):
@@ -38,13 +39,17 @@ def test_create_tracks(graph_3d, segmentation_3d):
 
     # test multiple position attrs
     pos_attr = ("z", "y", "x")
+    graph_3d.add_node_attr_key(key="z", default_value=0)
+    graph_3d.add_node_attr_key(key="y", default_value=0)
+    graph_3d.add_node_attr_key(key="x", default_value=0)
     for node in graph_3d.node_ids():
-        pos = graph_3d.nodes[node][NodeAttr.POS.value]
+        pos = td_get_single_attr_from_node(
+            graph_3d, node_ids=[node], attrs=[NodeAttr.POS.value]
+        )
         z, y, x = pos
-        del graph_3d.nodes[node][NodeAttr.POS.value]
-        graph_3d.nodes[node]["z"] = z
-        graph_3d.nodes[node]["y"] = y
-        graph_3d.nodes[node]["x"] = x
+        # del graph_3d.nodes[node][NodeAttr.POS.value]
+        graph_3d.update_node_attrs(attrs={"z": z, "y": y, "x": x}, node_ids=[node])
+    # remove node attr pos
 
     tracks = Tracks(graph=graph_3d, pos_attr=pos_attr, ndim=4)
     assert tracks.get_positions([1]).tolist() == [[50, 50, 50]]
