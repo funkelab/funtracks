@@ -229,7 +229,7 @@ def import_from_geff(
         )
         if valid_track_ids:
             selected_attrs.append(NodeAttr.TRACK_ID.value)
-        recompute_track_ids = NodeAttr.TRACK_ID.value not in selected_attrs
+    recompute_track_ids = NodeAttr.TRACK_ID.value not in selected_attrs
 
     # Check if a lineage_id was provided, and if it is valid add it to list of selected
     # attributes. If it is not provided, it will be a static feature (for now).
