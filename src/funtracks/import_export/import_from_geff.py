@@ -178,6 +178,7 @@ def import_from_geff(
     group = zarr.open_group(directory, mode="r")
     metadata = dict(group.attrs)
     selected_attrs = []
+    segmentation = None
 
     # Check that the spatiotemporal key mapping does not contain None or duplicate values.
     # It is allowed to not include z, but it is not allowed to include z with a None or
@@ -228,6 +229,7 @@ def import_from_geff(
         )
         if valid_track_ids:
             selected_attrs.append(NodeAttr.TRACK_ID.value)
+    recompute_track_ids = NodeAttr.TRACK_ID.value not in selected_attrs
 
     # Check if a lineage_id was provided, and if it is valid add it to list of selected
     # attributes. If it is not provided, it will be a static feature (for now).
@@ -273,11 +275,16 @@ def import_from_geff(
     # All pre-checks have passed, load the graph now.
     graph, _ = geff.read_nx(directory, node_props=selected_attrs)
 
-    # Relabel track_id attr to NodeAttr.TRACK_ID.value.
-    if name_map.get(NodeAttr.TRACK_ID.value) is not None:
+    # Relabel track_id attr to NodeAttr.TRACK_ID.value (unless we should recompute)
+    if name_map.get(NodeAttr.TRACK_ID.value) is not None and not recompute_track_ids:
         for _, data in graph.nodes(data=True):
-            data[NodeAttr.TRACK_ID.value] = data.pop(name_map[NodeAttr.TRACK_ID.value])
-    recompute_track_ids = NodeAttr.TRACK_ID.value not in selected_attrs
+            try:
+                data[NodeAttr.TRACK_ID.value] = data.pop(
+                    name_map[NodeAttr.TRACK_ID.value]
+                )
+            except KeyError:
+                recompute_track_ids = True
+                break
 
     # Put segmentation data in memory now.
     if segmentation is not None and isinstance(segmentation, da.Array):
