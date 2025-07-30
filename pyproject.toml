@@ -33,6 +33,7 @@ dependencies =[
     "psygnal",
     "scikit-image",
     "geff",
+    "dask",
     "tracksdata@git+https://github.com/royerlab/tracksdata",
 ]
 [project.optional-dependencies]
