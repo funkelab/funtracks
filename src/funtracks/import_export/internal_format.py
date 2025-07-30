@@ -7,6 +7,7 @@ import networkx as nx
 import numpy as np
 
 from ..data_model import SolutionTracks, Tracks
+from ..data_model.utils import td_from_dict, td_to_dict
 
 GRAPH_FILE = "graph.json"
 SEG_FILE = "seg.npy"
@@ -39,7 +40,8 @@ def _save_graph(tracks: Tracks, directory: Path):
         directory (Path): The directory in which to save the graph file.
     """
     graph_file = directory / GRAPH_FILE
-    graph_data = nx.node_link_data(tracks.graph, edges="links")
+    # graph_data = nx.node_link_data(tracks.graph, edges="links")
+    graph_data = td_to_dict(tracks.graph)
 
     def convert_np_types(data):
         """Recursively convert numpy types to native Python types."""
@@ -144,7 +146,8 @@ def _load_graph(graph_file: Path) -> nx.DiGraph:
     if graph_file.is_file():
         with open(graph_file) as f:
             json_graph = json.load(f)
-        return nx.node_link_graph(json_graph, directed=True, edges="links")
+        return td_from_dict(json_graph)
+        # return nx.node_link_graph(json_graph, directed=True, edges="links")
     else:
         raise FileNotFoundError(f"No graph at {graph_file}")
 
