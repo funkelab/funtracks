@@ -178,6 +178,7 @@ def import_from_geff(
     group = zarr.open_group(directory, mode="r")
     metadata = dict(group.attrs)
     selected_attrs = []
+    segmentation = None
 
     # Check that the spatiotemporal key mapping does not contain None or duplicate values.
     # It is allowed to not include z, but it is not allowed to include z with a None or
