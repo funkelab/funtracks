@@ -99,12 +99,12 @@ class SolutionTracks(Tracks):
                         self.track_id_to_node[track_id] = []
                     self.track_id_to_node[track_id].append(node)
 
-    def _assign_tracklet_ids(self):
+    def _assign_tracklet_ids(self) -> None:
         """Add a track_id attribute to a graph by removing division edges,
         assigning one id to each connected component.
         Also sets the max_track_id and initializes a dictionary from track_id to nodes
         """
-        graph_copy = self.graph.copy()
+        graph_copy = nx.DiGraph(self.graph.copy())
 
         parents = [node for node, degree in self.graph.out_degree() if degree >= 2]
         intertrack_edges = []
