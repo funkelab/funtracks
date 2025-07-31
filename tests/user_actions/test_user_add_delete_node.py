@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 from funtracks.data_model import NodeAttr, SolutionTracks
+from funtracks.exceptions import InvalidActionError
 from funtracks.user_actions import UserAddNode, UserDeleteNode
 
 
@@ -20,6 +21,31 @@ class TestUserAddDeleteNode:
         graph_name = "graph_2d" if ndim == 3 else "graph_3d"
         gt_graph = request.getfixturevalue(graph_name)
         return gt_graph
+
+    def test_user_add_invalid_node(self, request, ndim, use_seg):
+        tracks = self.get_tracks(request, ndim, use_seg=use_seg)
+        # duplicate node
+        with pytest.raises(ValueError, match="Node .* already exists"):
+            attrs = {"time": 5, "track_id": 1}
+            UserAddNode(tracks, node=1, attributes=attrs)
+
+        # no time
+        with pytest.raises(ValueError, match="Cannot add node without time"):
+            attrs = {"track_id": 1}
+            UserAddNode(tracks, node=7, attributes=attrs)
+
+        # no track_id
+        with pytest.raises(ValueError, match="Cannot add node without track id"):
+            attrs = {"time": 1}
+            UserAddNode(tracks, node=7, attributes=attrs)
+
+        # upstream division
+        with pytest.raises(
+            InvalidActionError,
+            match="Cannot add node here - upstream division event detected",
+        ):
+            attrs = {"time": 2, "track_id": 1}
+            UserAddNode(tracks, node=7, attributes=attrs)
 
     def test_user_add_node(self, request, ndim, use_seg):
         tracks = self.get_tracks(request, ndim, use_seg)

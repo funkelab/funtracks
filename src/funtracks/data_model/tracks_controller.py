@@ -1,19 +1,24 @@
 from __future__ import annotations
 
+import warnings
 from typing import TYPE_CHECKING
 from warnings import warn
 
-from .action_history import ActionHistory
-from .actions import (
+from funtracks.exceptions import InvalidActionError
+
+from ..actions import (
     ActionGroup,
     AddEdges,
-    AddNodes,
     DeleteEdges,
     DeleteNodes,
     TracksAction,
     UpdateNodeAttrs,
     UpdateNodeSegs,
     UpdateTrackID,
+)
+from ..actions.action_history import ActionHistory
+from ..user_actions import (
+    UserAddNode,
 )
 from .graph_attributes import NodeAttr
 from .solution_tracks import SolutionTracks
@@ -29,6 +34,13 @@ class TracksController:
     """
 
     def __init__(self, tracks: SolutionTracks):
+        warnings.warn(
+            "TracksController deprecated in favor of directly calling UserActions and"
+            "will be removed in funtracks v2. You will need to keep the action history "
+            "in your application and emit the tracks refresh.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.tracks = tracks
         self.action_history = ActionHistory()
         self.node_id_counter = 1
@@ -52,41 +64,6 @@ class TracksController:
             action, nodes = result
             self.action_history.add_new_action(action)
             self.tracks.refresh.emit(nodes[0] if nodes else None)
-
-    def _get_pred_and_succ(
-        self, track_id: int, time: int
-    ) -> tuple[Node | None, Node | None]:
-        """Get the last node with the given track id before time, and the first node
-        with the track id after time, if any. Does not assume that a node with
-        the given track_id and time is already in tracks, but it can be.
-
-        Args:
-            track_id (int): The track id to search for
-            time (int): The time point to find the immediate predecessor and successor
-                for
-
-        Returns:
-            tuple[Node | None, Node | None]: The last node before time with the given
-            track id, and the first node after time with the given track id,
-            or Nones if there are no such nodes.
-        """
-        if (
-            track_id not in self.tracks.track_id_to_node
-            or len(self.tracks.track_id_to_node[track_id]) == 0
-        ):
-            return None, None
-        candidates = self.tracks.track_id_to_node[track_id]
-        candidates.sort(key=lambda n: self.tracks.get_time(n))
-
-        pred = None
-        succ = None
-        for cand in candidates:
-            if self.tracks.get_time(cand) < time:
-                pred = cand
-            elif self.tracks.get_time(cand) > time:
-                succ = cand
-                break
-        return pred, succ
 
     def _add_nodes(
         self,
@@ -119,74 +96,29 @@ class TracksController:
                 or None if there is no segmentation. These pixels will be updated
                 in the tracks.segmentation, set to the new node id
         """
-        if NodeAttr.TIME.value not in attributes:
-            raise ValueError(
-                f"Cannot add nodes without times. Please add "
-                f"{NodeAttr.TIME.value} attribute"
-            )
-        if NodeAttr.TRACK_ID.value not in attributes:
-            raise ValueError(
-                "Cannot add nodes without track ids. Please add "
-                f"{NodeAttr.TRACK_ID.value} attribute"
-            )
-
         times = attributes[NodeAttr.TIME.value]
-        track_ids = attributes[NodeAttr.TRACK_ID.value]
         nodes: list[Node]
         if pixels is not None:
             nodes = attributes["node_id"]
         else:
             nodes = self._get_new_node_ids(len(times))
         actions: list[TracksAction] = []
+        nodes_added = []
+        for i in range(len(nodes)):
+            try:
+                actions.append(
+                    UserAddNode(
+                        self.tracks,
+                        node=nodes[i],
+                        attributes={key: val[i] for key, val in attributes.items()},
+                        pixels=pixels[i] if pixels is not None else None,
+                    )
+                )
+                nodes_added.append(nodes[i])
+            except InvalidActionError as e:
+                warnings.warn(f"Failed to add node: {e.message}", stacklevel=2)
 
-        # remove skip edges that will be replaced by new edges after adding nodes
-        edges_to_remove = []
-        for time, track_id in zip(times, track_ids, strict=False):
-            pred, succ = self._get_pred_and_succ(track_id, time)
-            if pred is not None and succ is not None:
-                edges_to_remove.append((pred, succ))
-
-            # Find and remove edges to nodes with different track_ids (upstream division
-            # events)
-            if track_id in self.tracks.track_id_to_node:
-                track_id_nodes = self.tracks.track_id_to_node[track_id]
-                for node in track_id_nodes:
-                    if (
-                        self.tracks.get_node_attr(node, NodeAttr.TIME.value) <= time
-                        and self.tracks.graph.out_degree(node) == 2
-                    ):  # there is an upstream division event here
-                        warn(
-                            "Cannot add node here - upstream division event detected.",
-                            stacklevel=2,
-                        )
-                        self.tracks.refresh.emit()
-                        return None
-
-        if len(edges_to_remove) > 0:
-            actions.append(DeleteEdges(self.tracks, edges_to_remove))
-
-        # add nodes
-        actions.append(
-            AddNodes(
-                tracks=self.tracks,
-                nodes=nodes,
-                attributes=attributes,
-                pixels=pixels,
-            )
-        )
-
-        # add in edges to preds and succs with the same track id
-        edges_to_add = set()  # make it a set to avoid double adding edges when you add
-        # two nodes next to each other  in the same track
-        for node, time, track_id in zip(nodes, times, track_ids, strict=False):
-            pred, succ = self._get_pred_and_succ(track_id, time)
-            if pred is not None:
-                edges_to_add.add((pred, node))
-            if succ is not None:
-                edges_to_add.add((node, succ))
-        actions.append(AddEdges(self.tracks, list(edges_to_add)))
-
-        return ActionGroup(self.tracks, actions), nodes
+        return ActionGroup(self.tracks, actions), nodes_added
 
     def delete_nodes(self, nodes: Iterable[Node]) -> None:
         """Calls the _delete_nodes function and then emits the refresh signal
