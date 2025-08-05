@@ -20,6 +20,7 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
+import tracksdata as td
 from typing_extensions import override
 
 from .graph_attributes import NodeAttr
@@ -124,8 +125,7 @@ class AddNodes(TracksAction):
         attrs = self.attributes
         if attrs is None:
             attrs = {}
-        self.tracks.graph.add_nodes_from(self.nodes)
-        self.tracks.set_times(self.nodes, self.times)
+
         final_pos: np.ndarray
         if self.tracks.segmentation is not None:
             computed_attrs = self.tracks._compute_node_attrs(self.nodes, self.times)
@@ -139,9 +139,21 @@ class AddNodes(TracksAction):
         else:
             final_pos = self.positions
 
-        self.tracks.set_positions(self.nodes, final_pos)
-        for attr, values in attrs.items():
-            self.tracks._set_nodes_attr(self.nodes, attr, values)
+        self.attributes[NodeAttr.POS.value] = final_pos
+
+        # Add nodes to td graph (include networkx_node attribute,
+        required_attrs = self.tracks.graph.node_attr_keys
+        for attr in required_attrs:
+            if attr not in attrs:
+                attrs[attr] = [None] * len(self.nodes)
+
+        node_dicts = []
+        for i in range(len(self.nodes)):
+            node_dict = {attr: values[i] for attr, values in attrs.items()}
+            node_dicts.append(node_dict)
+
+        for node_dict in node_dicts:
+            self.tracks.graph.add_node(node_dict)
 
         if isinstance(self.tracks, SolutionTracks):
             for node, track_id in zip(
@@ -328,14 +340,23 @@ class AddEdges(TracksAction):
         """
         attrs: dict[str, Sequence[Any]] = {}
         attrs.update(self.tracks._compute_edge_attrs(self.edges))
+        attrs[td.DEFAULT_ATTR_KEYS.SOLUTION] = [1] * len(self.edges)
+
+        required_attrs = self.tracks.graph.edge_attr_keys
+        for attr in required_attrs:
+            if attr not in attrs:
+                attrs[attr] = [None] * len(self.edges)
+
         for idx, edge in enumerate(self.edges):
             for node in edge:
-                if not self.tracks.graph.has_node(node):
+                if node not in self.tracks.graph.node_ids():
                     raise KeyError(
                         f"Cannot add edge {edge}: endpoint {node} not in graph yet"
                     )
             self.tracks.graph.add_edge(
-                edge[0], edge[1], **{key: vals[idx] for key, vals in attrs.items()}
+                source_id=edge[0],
+                target_id=edge[1],
+                attrs={key: vals[idx] for key, vals in attrs.items()},
             )
 
 
@@ -356,10 +377,28 @@ class DeleteEdges(TracksAction):
         - Remove the edges from the graph
         """
         for edge in self.edges:
-            if self.tracks.graph.has_edge(*edge):
-                self.tracks.graph.remove_edge(*edge)
+            existing_edges = (
+                self.tracks.graph.edge_attrs()
+                .select(["source_id", "target_id"])
+                .to_numpy()
+                .tolist()
+            )
+            edge = list(edge)
+            if edge in existing_edges:
+                index = existing_edges.index(list(edge))
+                edge_id = self.tracks.graph.edge_ids()[index]
+                self.tracks.graph.update_edge_attrs(
+                    edge_ids=[edge_id], attrs={td.DEFAULT_ATTR_KEYS.SOLUTION: [0]}
+                )
             else:
                 raise KeyError(f"Edge {edge} not in the graph, and cannot be removed")
+
+        # refilter the graph to keep only the edges and nodes that are in the solution
+        # necessary because edges have been removed (ie. solution is set to 0)
+        self.tracks.graph = self.tracks.graph.filter(
+            td.NodeAttr(td.DEFAULT_ATTR_KEYS.SOLUTION) == 1,
+            td.EdgeAttr(td.DEFAULT_ATTR_KEYS.SOLUTION) == 1,
+        ).subgraph()
 
 
 class UpdateTrackID(TracksAction):

@@ -43,9 +43,7 @@ class SolutionTracks(Tracks):
         if graph.num_nodes == 0:
             has_track_id = False
         else:
-            has_track_id = (
-                NodeAttr.TRACK_ID.value in graph.nodes[next(iter(graph.node_ids))]
-            )
+            has_track_id = NodeAttr.TRACK_ID.value in graph.node_attr_keys
         if recompute_track_ids or not has_track_id:
             self._initialize_track_ids()
 
@@ -62,7 +60,8 @@ class SolutionTracks(Tracks):
 
     @property
     def node_id_to_track_id(self) -> dict[Node, int]:
-        return nx.get_node_attributes(self.graph, NodeAttr.TRACK_ID.value)
+        all_track_ids = self.graph.node_attrs()[NodeAttr.TRACK_ID.value]
+        return dict(zip(self.graph.node_ids(), all_track_ids, strict=True))
 
     def get_next_track_id(self) -> int:
         """Return the next available track_id and update self.max_track_id"""

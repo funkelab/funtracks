@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from warnings import warn
 
+import tracksdata as td
+
 from .action_history import ActionHistory
 from .actions import (
     ActionGroup,
@@ -128,6 +130,11 @@ class TracksController:
             raise ValueError(
                 "Cannot add nodes without track ids. Please add "
                 f"{NodeAttr.TRACK_ID.value} attribute"
+            )
+        if td.DEFAULT_ATTR_KEYS.SOLUTION not in attributes:
+            raise ValueError(
+                f"Cannot add nodes without solution attribute. Please add "
+                f"{td.DEFAULT_ATTR_KEYS.SOLUTION} attribute"
             )
 
         times = attributes[NodeAttr.TIME.value]
@@ -573,7 +580,7 @@ class TracksController:
         ids = [self.node_id_counter + i for i in range(n)]
         self.node_id_counter += n
         for idx, _id in enumerate(ids):
-            while self.tracks.graph.has_node(_id):
+            while _id in self.tracks.graph.node_ids():
                 _id = self.node_id_counter
                 self.node_id_counter += 1
             ids[idx] = _id

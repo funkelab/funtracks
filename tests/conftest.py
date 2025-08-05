@@ -40,78 +40,77 @@ def graph_2d():
     graph_nx = nx.DiGraph()
     nodes = [
         (
-            1,
+            0,
             {
                 NodeAttr.POS.value: [50, 50],
                 NodeAttr.TIME.value: 0,
                 NodeAttr.AREA.value: 1245,
                 NodeAttr.TRACK_ID.value: 1,
+                td.DEFAULT_ATTR_KEYS.SOLUTION: 1,
             },
         ),
         (
-            2,
+            1,
             {
                 NodeAttr.POS.value: [20, 80],
                 NodeAttr.TIME.value: 1,
                 NodeAttr.TRACK_ID.value: 2,
                 NodeAttr.AREA.value: 305,
+                td.DEFAULT_ATTR_KEYS.SOLUTION: 1,
             },
         ),
         (
-            3,
+            2,
             {
                 NodeAttr.POS.value: [60, 45],
                 NodeAttr.TIME.value: 1,
                 NodeAttr.AREA.value: 697,
                 NodeAttr.TRACK_ID.value: 3,
+                td.DEFAULT_ATTR_KEYS.SOLUTION: 1,
             },
         ),
         (
-            4,
+            3,
             {
                 NodeAttr.POS.value: [1.5, 1.5],
                 NodeAttr.TIME.value: 2,
                 NodeAttr.AREA.value: 16,
                 NodeAttr.TRACK_ID.value: 3,
+                td.DEFAULT_ATTR_KEYS.SOLUTION: 1,
             },
         ),
         (
-            5,
+            4,
             {
                 NodeAttr.POS.value: [1.5, 1.5],
                 NodeAttr.TIME.value: 4,
                 NodeAttr.AREA.value: 16,
                 NodeAttr.TRACK_ID.value: 3,
+                td.DEFAULT_ATTR_KEYS.SOLUTION: 1,
             },
         ),
         # unconnected node
         (
-            6,
+            5,
             {
                 NodeAttr.POS.value: [97.5, 97.5],
                 NodeAttr.TIME.value: 4,
                 NodeAttr.AREA.value: 16,
                 NodeAttr.TRACK_ID.value: 5,
+                td.DEFAULT_ATTR_KEYS.SOLUTION: 1,
             },
         ),
     ]
     edges = [
-        (1, 2, {EdgeAttr.IOU.value: 0.0}),
-        (1, 3, {EdgeAttr.IOU.value: 0.395}),
-        (
-            3,
-            4,
-            {EdgeAttr.IOU.value: 0.0},
-        ),
-        (
-            4,
-            5,
-            {EdgeAttr.IOU.value: 1.0},
-        ),
+        (0, 1, {EdgeAttr.IOU.value: 0.0, td.DEFAULT_ATTR_KEYS.SOLUTION: 1}),
+        (0, 2, {EdgeAttr.IOU.value: 0.395, td.DEFAULT_ATTR_KEYS.SOLUTION: 1}),
+        (2, 3, {EdgeAttr.IOU.value: 0.0, td.DEFAULT_ATTR_KEYS.SOLUTION: 1}),
+        (3, 4, {EdgeAttr.IOU.value: 1.0, td.DEFAULT_ATTR_KEYS.SOLUTION: 1}),
     ]
     graph_nx.add_nodes_from(nodes)
     graph_nx.add_edges_from(edges)
     graph_rx = networkx_converter(graph_nx, keep_attributes=True)
+
     node_id_map = {node: i for i, node in enumerate(graph_nx.nodes)}
     graph_td = td.graph.IndexedRXGraph(graph_rx, node_id_map=node_id_map)
     return graph_td
