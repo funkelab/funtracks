@@ -17,7 +17,7 @@ from skimage import measure
 
 from .compute_ious import _compute_ious
 from .graph_attributes import EdgeAttr, NodeAttr
-from .utils import td_get_single_attr_from_node
+from .utils import td_get_single_attr_from_node, td_graph_has_edge
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -291,7 +291,7 @@ class Tracks:
                 update the values.
         """
         for idx, edge in enumerate(edges):
-            if self.graph.has_edge(*edge):
+            if td_graph_has_edge(self.graph, edge):
                 for key, value in attributes.items():
                     self.graph.edges[edge][key] = value[idx]
             else:

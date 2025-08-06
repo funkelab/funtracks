@@ -4,6 +4,7 @@ import tracksdata as td
 from funtracks.data_model.graph_attributes import NodeAttr
 from funtracks.data_model.solution_tracks import SolutionTracks
 from funtracks.data_model.tracks_controller import TracksController
+from funtracks.data_model.utils import td_graph_has_edge
 
 
 def test__add_nodes_no_seg(graph_2d):
@@ -46,12 +47,8 @@ def test__add_nodes_no_seg(graph_2d):
     node2 = node_ids[1]
     assert tracks.get_position(node1) == [1, 3]
     assert tracks.get_track_id(node1) == 2
-    assert [1, node1] in tracks.graph.edge_attrs().select(
-        ["source_id", "target_id"]
-    ).to_numpy().tolist()
-    assert [node1, node2] in tracks.graph.edge_attrs().select(
-        ["source_id", "target_id"]
-    ).to_numpy().tolist()
+    assert td_graph_has_edge(tracks.graph, [1, node1])
+    assert td_graph_has_edge(tracks.graph, [node1, node2])
 
     # add node to middle of existing track
     attrs = {
@@ -67,16 +64,9 @@ def test__add_nodes_no_seg(graph_2d):
     assert tracks.get_position(node) == [1, 3]
     assert tracks.get_track_id(node) == 3
 
-    # TODO: clean-up by defining graph.has_edge
-    assert [3, node] in tracks.graph.edge_attrs().select(
-        ["source_id", "target_id"]
-    ).to_numpy().tolist()
-    assert [node, 4] in tracks.graph.edge_attrs().select(
-        ["source_id", "target_id"]
-    ).to_numpy().tolist()
-    assert [4, 5] not in tracks.graph.edge_attrs().select(
-        ["source_id", "target_id"]
-    ).to_numpy().tolist()
+    assert td_graph_has_edge(tracks.graph, [3, node])
+    assert td_graph_has_edge(tracks.graph, [node, 4])
+    assert not td_graph_has_edge(tracks.graph, [4, 5])
 
 
 def test__add_nodes_with_seg(graph_2d, segmentation_2d):
@@ -149,8 +139,8 @@ def test__add_nodes_with_seg(graph_2d, segmentation_2d):
     assert tracks.get_track_id(node) == 2
     assert np.sum(tracks.segmentation != new_seg) == 0
 
-    assert tracks.graph.has_edge(2, node)
-    assert tracks.graph.has_edge(node, node_ids[1])
+    assert td_graph_has_edge(tracks.graph, [2, node])
+    assert td_graph_has_edge(tracks.graph, [node, node_ids[1]])
 
     # add node to middle of existing track
     time = 3
@@ -175,9 +165,9 @@ def test__add_nodes_with_seg(graph_2d, segmentation_2d):
     assert tracks.get_track_id(node) == 3
     assert np.sum(tracks.segmentation != new_seg) == 0
 
-    assert tracks.graph.has_edge(4, node)
-    assert tracks.graph.has_edge(node, 5)
-    assert not tracks.graph.has_edge(4, 5)
+    assert td_graph_has_edge(tracks.graph, [4, node])
+    assert td_graph_has_edge(tracks.graph, [node, 5])
+    assert not td_graph_has_edge(tracks.graph, [4, 5])
 
 
 def test__delete_nodes_no_seg(graph_2d):
@@ -196,16 +186,16 @@ def test__delete_nodes_no_seg(graph_2d):
     node = 5
     action = controller._delete_nodes([node])
     assert node not in tracks.graph.node_ids()
-    assert not tracks.graph.has_edge(4, node)
+    assert not td_graph_has_edge(tracks.graph, [4, node])
     action.inverse()
 
     # delete continuation node
     node = 4
     action = controller._delete_nodes([node])
     assert node not in tracks.graph.node_ids()
-    assert not tracks.graph.has_edge(3, node)
-    assert not tracks.graph.has_edge(node, 5)
-    assert tracks.graph.has_edge(3, 5)
+    assert not td_graph_has_edge(tracks.graph, [3, node])
+    assert not td_graph_has_edge(tracks.graph, [node, 5])
+    assert td_graph_has_edge(tracks.graph, [3, 5])
     assert tracks.get_track_id(5) == 3
     action.inverse()
 
@@ -213,8 +203,8 @@ def test__delete_nodes_no_seg(graph_2d):
     node = 1
     action = controller._delete_nodes([node])
     assert node not in tracks.graph.node_ids()
-    assert not tracks.graph.has_edge(node, 2)
-    assert not tracks.graph.has_edge(node, 3)
+    assert not td_graph_has_edge(tracks.graph, [node, 2])
+    assert not td_graph_has_edge(tracks.graph, [node, 3])
     action.inverse()
 
     # delete div child
@@ -246,7 +236,7 @@ def test__delete_nodes_with_seg(graph_2d, segmentation_2d):
     action = controller._delete_nodes([node])
     assert node not in tracks.graph.node_ids()
     assert track_id not in np.unique(tracks.segmentation[time])
-    assert not tracks.graph.has_edge(4, node)
+    assert not td_graph_has_edge(tracks.graph, [4, node])
     action.inverse()
 
     # delete continuation node
@@ -256,9 +246,9 @@ def test__delete_nodes_with_seg(graph_2d, segmentation_2d):
     action = controller._delete_nodes([node])
     assert node not in tracks.graph.node_ids()
     assert track_id not in np.unique(tracks.segmentation[time])
-    assert not tracks.graph.has_edge(3, node)
-    assert not tracks.graph.has_edge(node, 5)
-    assert tracks.graph.has_edge(3, 5)
+    assert not td_graph_has_edge(tracks.graph, [3, node])
+    assert not td_graph_has_edge(tracks.graph, [node, 5])
+    assert td_graph_has_edge(tracks.graph, [3, 5])
     assert tracks.get_track_id(5) == 3
     action.inverse()
 
@@ -269,8 +259,8 @@ def test__delete_nodes_with_seg(graph_2d, segmentation_2d):
     action = controller._delete_nodes([node])
     assert node not in tracks.graph.node_ids()
     assert track_id not in np.unique(tracks.segmentation[time])
-    assert not tracks.graph.has_edge(node, 2)
-    assert not tracks.graph.has_edge(node, 3)
+    assert not td_graph_has_edge(tracks.graph, [node, 2])
+    assert not td_graph_has_edge(tracks.graph, [node, 3])
     action.inverse()
 
     # delete div child
@@ -293,13 +283,13 @@ def test__add_remove_edges_no_seg(graph_2d):
     edge = (3, 4)
     track_id = 3
     controller._delete_edges([edge])
-    assert not tracks.graph.has_edge(*edge)
+    assert not td_graph_has_edge(tracks.graph, edge)
     assert tracks.get_track_id(edge[1]) != track_id  # relabeled the rest of the track
     assert tracks.graph.num_edges == num_edges - 1
 
     # add back in continuation edge
     controller._add_edges([edge])
-    assert tracks.graph.has_edge(*edge)
+    assert td_graph_has_edge(tracks.graph, edge)
     assert tracks.get_track_id(edge[1]) == track_id  # track id was changed back
     assert tracks.graph.num_edges == num_edges
 
@@ -307,7 +297,7 @@ def test__add_remove_edges_no_seg(graph_2d):
     edge = (1, 3)
     track_id = 3
     controller._delete_edges([edge])
-    assert not tracks.graph.has_edge(*edge)
+    assert not td_graph_has_edge(tracks.graph, edge)
     assert tracks.get_track_id(edge[1]) == track_id  # dont relabel after removal
     assert tracks.get_track_id(2) == 1  # but do relabel the sibling
     assert tracks.graph.num_edges == num_edges - 1
@@ -316,7 +306,7 @@ def test__add_remove_edges_no_seg(graph_2d):
     edge = (1, 3)
     track_id = 3
     controller._add_edges([edge])
-    assert tracks.graph.has_edge(*edge)
+    assert td_graph_has_edge(tracks.graph, edge)
     assert tracks.get_track_id(edge[1]) == track_id  # dont relabel after removal
     assert tracks.get_track_id(2) != 1  # give sibling new id again (not necessarily 2)
     assert tracks.graph.num_edges == num_edges

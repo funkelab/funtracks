@@ -112,6 +112,9 @@ def td_from_dict(graph_dict):
     return graph_td
 
 
-# Usage
-# graph_dict = { ... }  # Your dictionary representation of the graph
-# rustworkx_graph = dict_to_rustworkx_graph(graph_dict)
+def td_graph_has_edge(graph, edge):
+    """Check if a graph has an edge between two nodes."""
+
+    return (
+        edge in graph.edge_attrs().select(["source_id", "target_id"]).to_numpy().tolist()
+    )
