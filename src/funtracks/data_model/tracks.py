@@ -354,7 +354,7 @@ class Tracks:
         self.get_nodes_attr(nodes, attr, required=required)
 
     def _set_edge_attr(self, edge: Edge, attr: str, value: Any):
-        self.graph.edge[edge][attr] = value
+        self.graph.edges[edge][attr] = value
 
     def _set_edges_attr(self, edges: Iterable[Edge], attr: str, values: Iterable[Any]):
         for edge, value in zip(edges, values, strict=False):
