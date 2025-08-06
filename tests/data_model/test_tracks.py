@@ -102,7 +102,14 @@ def test_degrees(graph_2d):
     tracks = Tracks(graph_2d, ndim=3)
     assert tracks.in_degree(np.array([1])) == 0
     assert tracks.in_degree(np.array([4])) == 1
+    assert np.array_equal(
+        tracks.in_degree(None), np.array([[1, 0], [2, 1], [3, 1], [4, 1], [5, 1], [6, 0]])
+    )
     assert np.array_equal(tracks.out_degree(np.array([1, 4])), np.array([2, 1]))
+    assert np.array_equal(
+        tracks.out_degree(None),
+        np.array([[1, 2], [2, 0], [3, 1], [4, 1], [5, 0], [6, 0]]),
+    )
 
 
 def test_predecessors_successors(graph_2d):
@@ -195,7 +202,7 @@ def test_compute_ndim_errors():
         Tracks(g, segmentation=seg, scale=[1, 2], ndim=4)
 
 
-def test_get_node_attr_required(graph_2d):
+def test_get_node_attr(graph_2d):
     tracks = Tracks(graph_2d, ndim=3)
     assert tracks.get_node_attr(1, "time", required=True) == 0
     with pytest.raises(KeyError):
@@ -203,9 +210,10 @@ def test_get_node_attr_required(graph_2d):
     assert tracks.get_node_attr(1, "not_present", required=False) is None
 
 
-def test_get_nodes_attr_required(graph_2d):
+def test_get_nodes_attr(graph_2d):
     tracks = Tracks(graph_2d, ndim=3)
     assert tracks.get_nodes_attr([1, 2], "time", required=True) == [0, 1]
+    assert tracks.get_nodes_attr([1, 2], "time", required=False) == [0, 1]
     with pytest.raises(KeyError):
         tracks.get_nodes_attr([1, 2], "not_present", required=True)
     assert all(
@@ -213,7 +221,7 @@ def test_get_nodes_attr_required(graph_2d):
     )
 
 
-def test_get_edge_attr_required(graph_2d):
+def test_get_edge_attr(graph_2d):
     tracks = Tracks(graph_2d, ndim=3)
     assert tracks.get_edge_attr((1, 2), "iou", required=True) == 0.0
     with pytest.raises(KeyError):
@@ -221,9 +229,10 @@ def test_get_edge_attr_required(graph_2d):
     assert tracks.get_edge_attr((1, 2), "not_present", required=False) is None
 
 
-def test_get_edges_attr_required(graph_2d):
+def test_get_edges_attr(graph_2d):
     tracks = Tracks(graph_2d, ndim=3)
     assert tracks.get_edges_attr([(1, 2)], "iou", required=True) == [0.0]
+    assert tracks.get_edges_attr([(1, 2)], "iou", required=False) == [0.0]
     with pytest.raises(KeyError):
         tracks.get_edges_attr([(1, 2), (1, 3)], "not_present", required=True)
     assert all(
