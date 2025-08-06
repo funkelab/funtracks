@@ -40,7 +40,7 @@ def graph_2d():
     graph_nx = nx.DiGraph()
     nodes = [
         (
-            0,
+            1,
             {
                 NodeAttr.POS.value: [50, 50],
                 NodeAttr.TIME.value: 0,
@@ -50,7 +50,7 @@ def graph_2d():
             },
         ),
         (
-            1,
+            2,
             {
                 NodeAttr.POS.value: [20, 80],
                 NodeAttr.TIME.value: 1,
@@ -60,7 +60,7 @@ def graph_2d():
             },
         ),
         (
-            2,
+            3,
             {
                 NodeAttr.POS.value: [60, 45],
                 NodeAttr.TIME.value: 1,
@@ -70,7 +70,7 @@ def graph_2d():
             },
         ),
         (
-            3,
+            4,
             {
                 NodeAttr.POS.value: [1.5, 1.5],
                 NodeAttr.TIME.value: 2,
@@ -80,7 +80,7 @@ def graph_2d():
             },
         ),
         (
-            4,
+            5,
             {
                 NodeAttr.POS.value: [1.5, 1.5],
                 NodeAttr.TIME.value: 4,
@@ -91,7 +91,7 @@ def graph_2d():
         ),
         # unconnected node
         (
-            5,
+            6,
             {
                 NodeAttr.POS.value: [97.5, 97.5],
                 NodeAttr.TIME.value: 4,
@@ -102,10 +102,10 @@ def graph_2d():
         ),
     ]
     edges = [
-        (0, 1, {EdgeAttr.IOU.value: 0.0, td.DEFAULT_ATTR_KEYS.SOLUTION: 1}),
-        (0, 2, {EdgeAttr.IOU.value: 0.395, td.DEFAULT_ATTR_KEYS.SOLUTION: 1}),
-        (2, 3, {EdgeAttr.IOU.value: 0.0, td.DEFAULT_ATTR_KEYS.SOLUTION: 1}),
-        (3, 4, {EdgeAttr.IOU.value: 1.0, td.DEFAULT_ATTR_KEYS.SOLUTION: 1}),
+        (1, 2, {EdgeAttr.IOU.value: 0.0, td.DEFAULT_ATTR_KEYS.SOLUTION: 1}),
+        (1, 3, {EdgeAttr.IOU.value: 0.395, td.DEFAULT_ATTR_KEYS.SOLUTION: 1}),
+        (3, 4, {EdgeAttr.IOU.value: 0.0, td.DEFAULT_ATTR_KEYS.SOLUTION: 1}),
+        (4, 5, {EdgeAttr.IOU.value: 1.0, td.DEFAULT_ATTR_KEYS.SOLUTION: 1}),
     ]
     graph_nx.add_nodes_from(nodes)
     graph_nx.add_edges_from(edges)

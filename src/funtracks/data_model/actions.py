@@ -385,8 +385,8 @@ class DeleteEdges(TracksAction):
             )
             edge = list(edge)
             if edge in existing_edges:
-                index = existing_edges.index(list(edge))
-                edge_id = self.tracks.graph.edge_ids()[index]
+                index = existing_edges.index(list(edge))  # index in graph.edge_attrs()
+                edge_id = self.tracks.graph.edge_attrs()["edge_id"][index]
                 self.tracks.graph.update_edge_attrs(
                     edge_ids=[edge_id], attrs={td.DEFAULT_ATTR_KEYS.SOLUTION: [0]}
                 )

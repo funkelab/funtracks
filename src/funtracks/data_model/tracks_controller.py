@@ -142,7 +142,10 @@ class TracksController:
         track_ids = attributes[NodeAttr.TRACK_ID.value]
         nodes: list[Node]
         if pixels is not None:
-            nodes = attributes["node_id"]
+            # nodes = attributes["node_id"]
+            # TODO: ask Caroline why attributes needs node_id,
+            # why not simply always calculate it?
+            nodes = self._get_new_node_ids(len(times))
         else:
             nodes = self._get_new_node_ids(len(times))
         actions: list[TracksAction] = []

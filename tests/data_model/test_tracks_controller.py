@@ -47,7 +47,7 @@ def test__add_nodes_no_seg(graph_2d):
     node2 = node_ids[1]
     assert tracks.get_position(node1) == [1, 3]
     assert tracks.get_track_id(node1) == 2
-    assert td_graph_has_edge(tracks.graph, [1, node1])
+    assert td_graph_has_edge(tracks.graph, [2, node1])
     assert td_graph_has_edge(tracks.graph, [node1, node2])
 
     # add node to middle of existing track
@@ -64,9 +64,9 @@ def test__add_nodes_no_seg(graph_2d):
     assert tracks.get_position(node) == [1, 3]
     assert tracks.get_track_id(node) == 3
 
-    assert td_graph_has_edge(tracks.graph, [3, node])
-    assert td_graph_has_edge(tracks.graph, [node, 4])
-    assert not td_graph_has_edge(tracks.graph, [4, 5])
+    assert td_graph_has_edge(tracks.graph, [4, node])
+    assert td_graph_has_edge(tracks.graph, [node, 5])
+    assert not td_graph_has_edge(tracks.graph, [5, 6])
 
 
 def test__add_nodes_with_seg(graph_2d, segmentation_2d):
@@ -88,7 +88,7 @@ def test__add_nodes_with_seg(graph_2d, segmentation_2d):
     attrs = {
         NodeAttr.TIME.value: [time, time + 1],
         NodeAttr.TRACK_ID.value: [track_id, track_id],
-        "node_id": [node1, node2],
+        td.DEFAULT_ATTR_KEYS.SOLUTION: [1, 1],
     }
 
     loc_pix = np.where(new_seg[time] == node1)
@@ -124,7 +124,7 @@ def test__add_nodes_with_seg(graph_2d, segmentation_2d):
     attrs = {
         NodeAttr.TIME.value: [time, time + 1],
         NodeAttr.TRACK_ID.value: [track_id, track_id],
-        "node_id": [node1, node2],
+        td.DEFAULT_ATTR_KEYS.SOLUTION: [1, 1],
     }
 
     loc_pix = np.where(new_seg[time] == node1)
@@ -151,7 +151,7 @@ def test__add_nodes_with_seg(graph_2d, segmentation_2d):
     attrs = {
         NodeAttr.TIME.value: [time],
         NodeAttr.TRACK_ID.value: [track_id],
-        "node_id": [node1],
+        td.DEFAULT_ATTR_KEYS.SOLUTION: [1],
     }
 
     loc_pix = np.where(new_seg[time] == node1)
