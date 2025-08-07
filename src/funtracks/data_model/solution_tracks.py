@@ -7,6 +7,7 @@ import tracksdata as td
 
 from .graph_attributes import NodeAttr
 from .tracks import Tracks
+from .utils import td_get_predecessors
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -140,7 +141,7 @@ class SolutionTracks(Tracks):
         with open(outfile, "w") as f:
             f.write(",".join(header))
             for node_id in self.graph.node_ids():
-                parents = list(self.graph.predecessors(node_id))
+                parents = td_get_predecessors(self.graph, node_id)
                 parent_id = "" if len(parents) == 0 else parents[0]
                 track_id = self.get_track_id(node_id)
                 time = self.get_time(node_id)

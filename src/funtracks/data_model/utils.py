@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from typing import Any
 
 import numpy as np
 import polars as pl
@@ -115,6 +116,122 @@ def td_from_dict(graph_dict):
 def td_graph_has_edge(graph, edge):
     """Check if a graph has an edge between two nodes."""
 
+    if isinstance(edge, tuple):
+        edge = list(edge)
+
     return (
         edge in graph.edge_attrs().select(["source_id", "target_id"]).to_numpy().tolist()
     )
+
+
+def td_get_node_ids_from_df(df):
+    """Get list of node_ids from a polars DataFrame, handling empty case.
+
+    Args:
+        df: A polars DataFrame that may contain a 'node_id' column
+
+    Returns:
+        list: List of node_ids if DataFrame has rows, empty list otherwise
+    """
+    return list(df["node_id"]) if len(df) > 0 else []
+
+
+def td_get_predecessors(graph, node):
+    """Get list of predecessor node IDs for a given node.
+
+    Args:
+        graph: A tracksdata graph
+        node: Node ID to get predecessors for
+
+    Returns:
+        list: List of predecessor node IDs
+    """
+    predecessors_df = graph.predecessors(node)
+    return td_get_node_ids_from_df(predecessors_df)
+
+
+def td_get_successors(graph, node):
+    """Get list of successor node IDs for a given node.
+
+    Args:
+        graph: A tracksdata graph
+        node: Node ID to get successors for
+
+    Returns:
+        list: List of successor node IDs
+    """
+    successors_df = graph.successors(node)
+    return td_get_node_ids_from_df(successors_df)
+
+
+def values_are_equal(val1: Any, val2: Any) -> bool:
+    """
+    Compare two values that could be of any type (arrays, lists, scalars, etc.)
+
+    Args:
+        val1: First value to compare
+        val2: Second value to compare
+
+    Returns:
+        bool: True if values are equal, False otherwise
+    """
+    # If both are None, they're equal
+    if val1 is None and val2 is None:
+        return True
+
+    # If only one is None, they're not equal
+    if val1 is None or val2 is None:
+        return False
+
+    # Handle numpy arrays
+    if isinstance(val1, np.ndarray) or isinstance(val2, np.ndarray):
+        try:
+            return np.array_equal(np.asarray(val1), np.asarray(val2), equal_nan=True)
+        except (ValueError, TypeError):
+            # Return False if arrays cannot be compared (incompatible shapes or types)
+            return False
+
+    # Handle lists that might need to be compared as arrays
+    if isinstance(val1, list) and isinstance(val2, list):
+        try:
+            return np.array_equal(np.asarray(val1), np.asarray(val2), equal_nan=True)
+        except (ValueError, TypeError):
+            # Return False if arrays cannot be compared (incompatible shapes or types)
+            # If can't convert to numpy arrays, fall back to regular comparison
+            return val1 == val2
+
+    # Default comparison for other types
+    return val1 == val2
+
+
+def validate_and_merge_node_attrs(attrs_of_root_node: dict, node_dict: dict) -> dict:
+    """
+    Compare and validate two node attribute dictionaries.
+
+    Args:
+        attrs_of_root_node: Dictionary containing the root node attributes (reference)
+        node_dict: Dictionary containing the node attributes to compare/merge
+
+    Returns:
+        Updated dictionary with merged values
+
+    Raises:
+        ValueError: If node_dict contains fields not present in attrs_of_root_node
+    """
+    # Check for invalid fields in node_dict
+    invalid_fields = set(node_dict.keys()) - set(attrs_of_root_node.keys())
+    if invalid_fields:
+        raise ValueError(
+            f"Node dictionary contains fields not present in root: {invalid_fields}"
+        )
+
+    # Create a new dict starting with root values
+    merged_attrs = attrs_of_root_node.copy()
+
+    # Compare and update values
+    for field, value in node_dict.items():
+        # Skip None values from node_dict to keep root values
+        if value is not None and not values_are_equal(value, attrs_of_root_node[field]):
+            merged_attrs[field] = value
+
+    return merged_attrs

@@ -20,12 +20,14 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
+import polars as pl
 import tracksdata as td
 from typing_extensions import override
 
 from .graph_attributes import NodeAttr
 from .solution_tracks import SolutionTracks
 from .tracks import Attrs, Edge, Node, SegMask, Tracks
+from .utils import td_get_successors, validate_and_merge_node_attrs
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -143,6 +145,8 @@ class AddNodes(TracksAction):
 
         # Add nodes to td graph (include networkx_node attribute,
         required_attrs = self.tracks.graph.node_attr_keys
+        if td.DEFAULT_ATTR_KEYS.SOLUTION not in attrs:
+            attrs[td.DEFAULT_ATTR_KEYS.SOLUTION] = [1] * len(self.nodes)
         for attr in required_attrs:
             if attr not in attrs:
                 attrs[attr] = [None] * len(self.nodes)
@@ -152,8 +156,47 @@ class AddNodes(TracksAction):
             node_dict = {attr: values[i] for attr, values in attrs.items()}
             node_dicts.append(node_dict)
 
-        for node_dict in node_dicts:
-            self.tracks.graph.add_node(node_dict)
+        for node_id, node_dict in zip(self.nodes, node_dicts, strict=True):
+            if isinstance(self.tracks.graph, td.graph.GraphView):
+                node_in_root = node_id in self.tracks.graph._root.node_ids()
+                if node_in_root:
+                    node_in_solution = (
+                        self.tracks.graph._root.node_attrs()
+                        .filter(pl.col(td.DEFAULT_ATTR_KEYS.NODE_ID) == node_id)[
+                            td.DEFAULT_ATTR_KEYS.SOLUTION
+                        ]
+                        .item()
+                    )
+                    if not node_in_solution:
+                        # update the node in the root graph to be in solution,
+                        # and recreate graph_view
+                        self.tracks.graph._root.update_node_attrs(
+                            attrs={td.DEFAULT_ATTR_KEYS.SOLUTION: [1]}, node_ids=[node_id]
+                        )
+                        attrs_of_root_node = (
+                            self.tracks.graph._root.node_attrs()
+                            .filter(pl.col(td.DEFAULT_ATTR_KEYS.NODE_ID) == node_id)
+                            .to_dicts()[0]
+                        )
+                        node_dict = validate_and_merge_node_attrs(
+                            attrs_of_root_node, node_dict
+                        )
+
+                        # TODO: check if all attributes are the same, if not,
+                        # update them in the root
+                        self.tracks.graph = self.tracks.graph._root.filter(
+                            td.NodeAttr(td.DEFAULT_ATTR_KEYS.SOLUTION) == 1,
+                            td.EdgeAttr(td.DEFAULT_ATTR_KEYS.SOLUTION) == 1,
+                        ).subgraph()
+                    else:
+                        # if node not in solution, simply add it to the graph
+                        self.tracks.graph.add_node(node_dict, index=node_id)
+                else:
+                    # if node not in root, simply add it to the graph
+                    self.tracks.graph.add_node(node_dict, index=node_id)
+            else:
+                # if graph is not a view, simply add the node directly to the graph
+                self.tracks.graph.add_node(node_dict, index=node_id)
 
         if isinstance(self.tracks, SolutionTracks):
             for node, track_id in zip(
@@ -211,7 +254,16 @@ class DeleteNodes(TracksAction):
             for node in self.nodes:
                 self.tracks.track_id_to_node[self.tracks.get_track_id(node)].remove(node)
 
-        self.tracks.graph.remove_nodes_from(self.nodes)
+        # Delete the node, by 1) setting solution to 0, and
+        # 2) removing the node from the graph by filter+subgraph
+        self.tracks.graph.update_node_attrs(
+            attrs={td.DEFAULT_ATTR_KEYS.SOLUTION: [0]}, node_ids=self.nodes
+        )
+
+        self.tracks.graph = self.tracks.graph.filter(
+            td.NodeAttr(td.DEFAULT_ATTR_KEYS.SOLUTION) == 1,
+            td.EdgeAttr(td.DEFAULT_ATTR_KEYS.SOLUTION) == 1,
+        ).subgraph()
 
 
 class UpdateNodeSegs(TracksAction):
@@ -429,7 +481,7 @@ class UpdateTrackID(TracksAction):
             # update the track id
             self.tracks.set_track_id(curr_node, self.new_track_id)
             # getting the next node (picks one if there are two)
-            successors = list(self.tracks.graph.successors(curr_node))
+            successors = td_get_successors(self.tracks.graph, curr_node)
             if len(successors) == 0:
                 break
             curr_node = successors[0]

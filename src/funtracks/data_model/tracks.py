@@ -17,7 +17,12 @@ from skimage import measure
 
 from .compute_ious import _compute_ious
 from .graph_attributes import EdgeAttr, NodeAttr
-from .utils import td_get_single_attr_from_node, td_graph_has_edge
+from .utils import (
+    td_get_predecessors,
+    td_get_single_attr_from_node,
+    td_get_successors,
+    td_graph_has_edge,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -92,10 +97,10 @@ class Tracks:
             return np.array(self.graph.out_degree())
 
     def predecessors(self, node: int) -> list[int]:
-        return list(self.graph.predecessors(node))
+        return td_get_predecessors(self.graph, node)
 
     def successors(self, node: int) -> list[int]:
-        return list(self.graph.successors(node))
+        return td_get_successors(self.graph, node)
 
     def get_positions(self, nodes: Iterable[Node], incl_time: bool = False) -> np.ndarray:
         """Get the positions of nodes in the graph. Optionally include the
