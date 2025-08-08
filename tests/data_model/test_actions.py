@@ -116,7 +116,8 @@ def test_update_node_segs(segmentation_2d, graph_2d):
 
 
 def test_add_delete_edges(graph_2d, segmentation_2d):
-    node_graph = nx.create_empty_copy(graph_2d, with_data=True)
+    # Create a fresh copy of the graph for this test
+    node_graph = graph_2d.copy()
     tracks = Tracks(node_graph, segmentation_2d)
 
     edges = [[1, 2], [1, 3], [3, 4], [4, 5]]
