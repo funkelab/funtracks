@@ -7,6 +7,19 @@ import rustworkx as rx
 import tracksdata as td
 
 
+def td_edge_to_edge_id(graph, edge):
+    """Convert an edge tuple to an edge ID."""
+    index = (
+        graph.edge_attrs()
+        .select(["source_id", "target_id"])
+        .to_numpy()
+        .tolist()
+        .index(list(edge))
+    )  # index in graph.edge_attrs()
+    edge_id = graph.edge_attrs()["edge_id"][index]
+    return edge_id
+
+
 def td_get_single_attr_from_node(graph, node_ids: Sequence[int], attrs: Sequence[str]):
     """Get a single attribute from a node in a tracksdata graph."""
     item = graph.filter(node_ids=node_ids).node_attrs(attrs).item()

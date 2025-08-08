@@ -27,7 +27,12 @@ from typing_extensions import override
 from .graph_attributes import NodeAttr
 from .solution_tracks import SolutionTracks
 from .tracks import Attrs, Edge, Node, SegMask, Tracks
-from .utils import td_get_successors, validate_and_merge_node_attrs
+from .utils import (
+    td_edge_to_edge_id,
+    td_get_predecessors,
+    td_get_successors,
+    validate_and_merge_node_attrs,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -313,9 +318,15 @@ class UpdateNodeSegs(TracksAction):
             self.nodes, NodeAttr.AREA.value, computed_attrs[NodeAttr.AREA.value]
         )
 
-        incident_edges = list(self.tracks.graph.in_edges(self.nodes)) + list(
-            self.tracks.graph.out_edges(self.nodes)
-        )
+        # Get all incident edges using predecessors and successors
+        incident_edges = []
+        for node in self.nodes:
+            # Add edges from predecessors
+            for pred in td_get_predecessors(self.tracks.graph, node):
+                incident_edges.append((pred, node))
+            # Add edges from successors
+            for succ in td_get_successors(self.tracks.graph, node):
+                incident_edges.append((node, succ))
         for edge in incident_edges:
             new_edge_attrs = self.tracks._compute_edge_attrs([edge])
             self.tracks._set_edge_attributes([edge], new_edge_attrs)
@@ -437,8 +448,7 @@ class DeleteEdges(TracksAction):
             )
             edge = list(edge)
             if edge in existing_edges:
-                index = existing_edges.index(list(edge))  # index in graph.edge_attrs()
-                edge_id = self.tracks.graph.edge_attrs()["edge_id"][index]
+                edge_id = td_edge_to_edge_id(self.tracks.graph, edge)
                 self.tracks.graph.update_edge_attrs(
                     edge_ids=[edge_id], attrs={td.DEFAULT_ATTR_KEYS.SOLUTION: [0]}
                 )
