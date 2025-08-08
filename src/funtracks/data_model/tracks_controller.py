@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from warnings import warn
 
+import tracksdata as td
+
 from .action_history import ActionHistory
 from .actions import (
     ActionGroup,
@@ -18,6 +20,7 @@ from .actions import (
 from .graph_attributes import NodeAttr
 from .solution_tracks import SolutionTracks
 from .tracks import Attrs, Edge, Node, SegMask
+from .utils import td_get_predecessors, td_get_successors, td_graph_has_edge
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -129,12 +132,20 @@ class TracksController:
                 "Cannot add nodes without track ids. Please add "
                 f"{NodeAttr.TRACK_ID.value} attribute"
             )
+        if td.DEFAULT_ATTR_KEYS.SOLUTION not in attributes:
+            raise ValueError(
+                f"Cannot add nodes without solution attribute. Please add "
+                f"{td.DEFAULT_ATTR_KEYS.SOLUTION} attribute"
+            )
 
         times = attributes[NodeAttr.TIME.value]
         track_ids = attributes[NodeAttr.TRACK_ID.value]
         nodes: list[Node]
         if pixels is not None:
-            nodes = attributes["node_id"]
+            # nodes = attributes["node_id"]
+            # TODO: ask Caroline why attributes needs node_id,
+            # why not simply always calculate it?
+            nodes = self._get_new_node_ids(len(times))
         else:
             nodes = self._get_new_node_ids(len(times))
         actions: list[TracksAction] = []
@@ -225,10 +236,10 @@ class TracksController:
         edges_to_delete = set()
         new_track_ids = []
         for node in nodes:
-            for pred in self.tracks.graph.predecessors(node):
+            for pred in td_get_predecessors(self.tracks.graph, node):
                 edges_to_delete.add((pred, node))
                 # determine if we need to relabel any tracks
-                siblings = list(self.tracks.graph.successors(pred))
+                siblings = td_get_successors(self.tracks.graph, pred)
                 if len(siblings) == 2:
                     # need to relabel the track id of the sibling to match the pred
                     # because you are implicitly deleting a division
@@ -239,7 +250,7 @@ class TracksController:
                     if sib not in nodes:
                         new_track_id = self.tracks.get_track_id(pred)
                         new_track_ids.append((sib, new_track_id))
-            for succ in self.tracks.graph.successors(node):
+            for succ in td_get_successors(self.tracks.graph, node):
                 edges_to_delete.add((node, succ))
         if len(edges_to_delete) > 0:
             actions.append(DeleteEdges(self.tracks, list(edges_to_delete)))
@@ -360,7 +371,7 @@ class TracksController:
                 actions.append(UpdateTrackID(self.tracks, edge[1], new_track_id))
             elif out_degree == 1:  # creating a division
                 # assign a new track id to existing child
-                successor = next(iter(self.tracks.graph.successors(edge[0])))
+                successor = next(iter(td_get_successors(self.tracks.graph, edge[0])))
                 actions.append(
                     UpdateTrackID(self.tracks, successor, self.tracks.get_next_track_id())
                 )
@@ -400,7 +411,7 @@ class TracksController:
         action = None
         # do all checks
         # reject if edge already exists
-        if self.tracks.graph.has_edge(edge[0], edge[1]):
+        if td_graph_has_edge(self.tracks.graph, edge):
             warn("Edge is rejected because it exists already.", stacklevel=2)
             return False, action
 
@@ -450,7 +461,7 @@ class TracksController:
 
         for edge in edges:
             # First check if the to be deleted edges exist
-            if not self.tracks.graph.has_edge(edge[0], edge[1]):
+            if not td_graph_has_edge(self.tracks.graph, edge):
                 warn("Cannot delete non-existing edge!", stacklevel=2)
                 return
         action = self._delete_edges(edges)
@@ -465,7 +476,7 @@ class TracksController:
                 new_track_id = self.tracks.get_next_track_id()
                 actions.append(UpdateTrackID(self.tracks, edge[1], new_track_id))
             elif out_degree == 1:  # removed a division edge
-                sibling = next(self.tracks.graph.successors(edge[0]))
+                sibling = next(iter(td_get_successors(self.tracks.graph, edge[0])))
                 new_track_id = self.tracks.get_track_id(edge[0])
                 actions.append(UpdateTrackID(self.tracks, sibling, new_track_id))
             else:
@@ -573,7 +584,7 @@ class TracksController:
         ids = [self.node_id_counter + i for i in range(n)]
         self.node_id_counter += n
         for idx, _id in enumerate(ids):
-            while self.tracks.graph.has_node(_id):
+            while _id in self.tracks.graph.node_ids():
                 _id = self.node_id_counter
                 self.node_id_counter += 1
             ids[idx] = _id

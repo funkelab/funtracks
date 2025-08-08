@@ -10,13 +10,20 @@ from typing import (
 )
 from warnings import warn
 
-import networkx as nx
 import numpy as np
+import tracksdata as td
 from psygnal import Signal
 from skimage import measure
 
 from .compute_ious import _compute_ious
 from .graph_attributes import EdgeAttr, NodeAttr
+from .utils import (
+    td_edge_to_edge_id,
+    td_get_predecessors,
+    td_get_single_attr_from_node,
+    td_get_successors,
+    td_graph_has_edge,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -37,7 +44,7 @@ class Tracks:
     position attribute. Edges in the graph represent links across time.
 
     Attributes:
-        graph (nx.DiGraph): A graph with nodes representing detections and
+        graph (td.graph): A graph with nodes representing detections and
             and edges representing links across time.
         segmentation (Optional(np.ndarray)): An optional segmentation that
             accompanies the tracking graph. If a segmentation is provided,
@@ -58,7 +65,7 @@ class Tracks:
 
     def __init__(
         self,
-        graph: nx.DiGraph,
+        graph: td.graph,
         segmentation: np.ndarray | None = None,
         time_attr: str = NodeAttr.TIME.value,
         pos_attr: str | tuple[str] | list[str] = NodeAttr.POS.value,
@@ -73,10 +80,10 @@ class Tracks:
         self.ndim = self._compute_ndim(segmentation, scale, ndim)
 
     def nodes(self):
-        return np.array(self.graph.nodes())
+        return np.array(self.graph.node_ids())
 
     def edges(self):
-        return np.array(self.graph.edges())
+        return np.array(self.graph.edge_ids())
 
     def in_degree(self, nodes: np.ndarray | None = None) -> np.ndarray:
         if nodes is not None:
@@ -91,10 +98,10 @@ class Tracks:
             return np.array(self.graph.out_degree())
 
     def predecessors(self, node: int) -> list[int]:
-        return list(self.graph.predecessors(node))
+        return td_get_predecessors(self.graph, node)
 
     def successors(self, node: int) -> list[int]:
-        return list(self.graph.successors(node))
+        return td_get_successors(self.graph, node)
 
     def get_positions(self, nodes: Iterable[Node], incl_time: bool = False) -> np.ndarray:
         """Get the positions of nodes in the graph. Optionally include the
@@ -271,7 +278,9 @@ class Tracks:
         for idx, node in enumerate(nodes):
             if node in self.graph:
                 for key, values in attributes.items():
-                    self.graph.nodes[node][key] = values[idx]
+                    self.graph.update_node_attrs(
+                        attrs={key: values[idx]}, node_ids=[node]
+                    )
             else:
                 logger.info("Node %d not found in the graph.", node)
 
@@ -288,9 +297,12 @@ class Tracks:
                 update the values.
         """
         for idx, edge in enumerate(edges):
-            if self.graph.has_edge(*edge):
+            if td_graph_has_edge(self.graph, edge):
                 for key, value in attributes.items():
-                    self.graph.edges[edge][key] = value[idx]
+                    edge_id = td_edge_to_edge_id(self.graph, edge)
+                    self.graph.update_edge_attrs(
+                        attrs={key: value[idx]}, edge_ids=[edge_id]
+                    )
             else:
                 logger.info("Edge %d not found in the graph.", edge)
 
@@ -320,19 +332,19 @@ class Tracks:
     def _set_node_attr(self, node: Node, attr: str, value: Any):
         if isinstance(value, np.ndarray):
             value = list(value)
-        self.graph.nodes[node][attr] = value
+        self.graph.update_node_attrs(attrs={attr: value}, node_ids=[node])
 
     def _set_nodes_attr(self, nodes: Iterable[Node], attr: str, values: Iterable[Any]):
         for node, value in zip(nodes, values, strict=False):
             if isinstance(value, np.ndarray):
                 value = list(value)
-            self.graph.nodes[node][attr] = value
+            self.graph.update_node_attrs(attrs={attr: [value]}, node_ids=[node])
 
     def get_node_attr(self, node: Node, attr: str, required: bool = False):
         if required:
-            return self.graph.nodes[node][attr]
+            return td_get_single_attr_from_node(self.graph, node_ids=[node], attrs=[attr])
         else:
-            return self.graph.nodes[node].get(attr, None)
+            return td_get_single_attr_from_node(self.graph, node_ids=[node], attrs=[attr])
 
     def _get_node_attr(self, node, attr, required=False):
         warnings.warn(

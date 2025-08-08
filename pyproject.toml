@@ -34,6 +34,7 @@ dependencies =[
     "scikit-image",
     "geff",
     "dask",
+    "tracksdata@git+https://github.com/royerlab/tracksdata",
 ]
 [project.optional-dependencies]
 testing =["pytest", "pytest-cov"]
@@ -116,3 +117,6 @@ mypy = "mypy src/"
 
 [tool.pixi.feature.docs.tasks]
 docs = "mkdocs serve"
+
+[tool.pixi.dependencies]
+rust = ">=1.88.0,<1.89"

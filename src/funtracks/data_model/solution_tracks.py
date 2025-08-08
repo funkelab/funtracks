@@ -3,9 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import networkx as nx
+import tracksdata as td
 
 from .graph_attributes import NodeAttr
 from .tracks import Tracks
+from .utils import td_get_predecessors
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -20,7 +22,7 @@ class SolutionTracks(Tracks):
 
     def __init__(
         self,
-        graph: nx.DiGraph,
+        graph: td.graph,
         segmentation: np.ndarray | None = None,
         time_attr: str = NodeAttr.TIME.value,
         pos_attr: str | tuple[str] | list[str] = NodeAttr.POS.value,
@@ -39,10 +41,10 @@ class SolutionTracks(Tracks):
         self.max_track_id: int
 
         # recompute track_id if requested or missing
-        if graph.number_of_nodes() == 0:
+        if graph.num_nodes == 0:
             has_track_id = False
         else:
-            has_track_id = NodeAttr.TRACK_ID.value in graph.nodes[next(iter(graph.nodes))]
+            has_track_id = NodeAttr.TRACK_ID.value in graph.node_attr_keys
         if recompute_track_ids or not has_track_id:
             self._initialize_track_ids()
 
@@ -59,7 +61,8 @@ class SolutionTracks(Tracks):
 
     @property
     def node_id_to_track_id(self) -> dict[Node, int]:
-        return nx.get_node_attributes(self.graph, NodeAttr.TRACK_ID.value)
+        all_track_ids = self.graph.node_attrs()[NodeAttr.TRACK_ID.value]
+        return dict(zip(self.graph.node_ids(), all_track_ids, strict=True))
 
     def get_next_track_id(self) -> int:
         """Return the next available track_id and update self.max_track_id"""
@@ -88,8 +91,8 @@ class SolutionTracks(Tracks):
         self.max_track_id = 0
         self.track_id_to_node = {}
 
-        if self.graph.number_of_nodes() != 0:
-            if len(self.node_id_to_track_id) < self.graph.number_of_nodes():
+        if self.graph.num_nodes != 0:
+            if len(self.node_id_to_track_id) < self.graph.num_nodes:
                 # not all nodes have a track id: reassign
                 self._assign_tracklet_ids()
             else:
@@ -137,8 +140,8 @@ class SolutionTracks(Tracks):
             header = [header[0]] + header[2:]  # remove z
         with open(outfile, "w") as f:
             f.write(",".join(header))
-            for node_id in self.graph.nodes():
-                parents = list(self.graph.predecessors(node_id))
+            for node_id in self.graph.node_ids():
+                parents = td_get_predecessors(self.graph, node_id)
                 parent_id = "" if len(parents) == 0 else parents[0]
                 track_id = self.get_track_id(node_id)
                 time = self.get_time(node_id)
