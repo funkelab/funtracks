@@ -1,5 +1,6 @@
 import networkx as nx
 import numpy as np
+import polars as pl
 import pytest
 from numpy.testing import assert_array_almost_equal
 
@@ -10,7 +11,10 @@ from funtracks.data_model.actions import (
     UpdateNodeSegs,
 )
 from funtracks.data_model.graph_attributes import EdgeAttr, NodeAttr
-from funtracks.data_model.utils import td_get_single_attr_from_node
+from funtracks.data_model.utils import (
+    convert_nx_to_td_indexedrxgraph,
+    td_get_single_attr_from_node,
+)
 
 
 class TestAddDeleteNodes:
@@ -18,20 +22,30 @@ class TestAddDeleteNodes:
     @pytest.mark.parametrize("use_seg", [True, False])
     def test_2d_seg(segmentation_2d, graph_2d, use_seg):
         # start with an empty Tracks
-        empty_graph = nx.DiGraph()
+        empty_td_graph = convert_nx_to_td_indexedrxgraph(nx.DiGraph())
+        empty_td_graph.add_node_attr_key(key="pos", default_value=[0, 0, 0])
+        empty_td_graph.add_node_attr_key(key="t", default_value=0)
+        empty_td_graph.add_node_attr_key(key="track_id", default_value=0)
+        empty_td_graph.add_node_attr_key(key="area", default_value=0)
+        empty_td_graph.add_node_attr_key(key="solution", default_value=1)
+
         empty_seg = np.zeros_like(segmentation_2d) if use_seg else None
-        tracks = Tracks(empty_graph, segmentation=empty_seg, ndim=3)
+        tracks = Tracks(empty_td_graph, segmentation=empty_seg, ndim=3)
         # add all the nodes from graph_2d/seg_2d
         nodes = list(graph_2d.node_ids())
         attrs = {}
         attrs[NodeAttr.TIME.value] = [
-            graph_2d.nodes[node][NodeAttr.TIME.value] for node in nodes
+            # graph_2d.nodes[node][NodeAttr.TIME.value] for node in nodes
+            td_get_single_attr_from_node(graph_2d, [node], [NodeAttr.TIME.value])
+            for node in nodes
         ]
         attrs[NodeAttr.POS.value] = [
-            graph_2d.nodes[node][NodeAttr.POS.value] for node in nodes
+            td_get_single_attr_from_node(graph_2d, [node], [NodeAttr.POS.value])
+            for node in nodes
         ]
         attrs[NodeAttr.TRACK_ID.value] = [
-            graph_2d.nodes[node][NodeAttr.TRACK_ID.value] for node in nodes
+            td_get_single_attr_from_node(graph_2d, [node], [NodeAttr.TRACK_ID.value])
+            for node in nodes
         ]
         if use_seg:
             pixels = [
@@ -45,32 +59,49 @@ class TestAddDeleteNodes:
         else:
             pixels = None
             attrs[NodeAttr.AREA.value] = [
-                graph_2d.nodes[node][NodeAttr.AREA.value] for node in nodes
+                td_get_single_attr_from_node(graph_2d, [node], [NodeAttr.AREA.value])
+                for node in nodes
             ]
         add_nodes = AddNodes(tracks, nodes, attributes=attrs, pixels=pixels)
 
         assert set(tracks.graph.node_ids()) == set(graph_2d.node_ids())
-        for node, data in tracks.graph.nodes(data=True):
-            graph_2d_data = graph_2d.nodes[node]
-            assert data == graph_2d_data
+
+        data_graph_2d = graph_2d.node_attrs()[tracks.graph.node_attrs().columns]
+        data_tracks = tracks.graph.node_attrs()
+        assert data_graph_2d.equals(data_tracks)
         if use_seg:
             assert_array_almost_equal(tracks.segmentation, segmentation_2d)
 
+        # TODO: somehow, graph.copy() doesn't work for IndexedRXGraph,
+        # because it messes up with the internal mapping, so we just
+        # create a new empty_td_graph, purely for the assert
+        empty_td_graph2 = convert_nx_to_td_indexedrxgraph(nx.DiGraph())
+        empty_td_graph2.add_node_attr_key(key="pos", default_value=[0, 0, 0])
+        empty_td_graph2.add_node_attr_key(key="t", default_value=0)
+        empty_td_graph2.add_node_attr_key(key="track_id", default_value=0)
+        empty_td_graph2.add_node_attr_key(key="area", default_value=0)
+        empty_td_graph2.add_node_attr_key(key="solution", default_value=1)
+
         # invert the action to delete all the nodes
         del_nodes = add_nodes.inverse()
-        assert set(tracks.graph.node_ids()) == set(empty_graph.node_ids())
+        assert set(tracks.graph.node_ids()) == set(empty_td_graph2.node_ids())
         if use_seg:
             assert_array_almost_equal(tracks.segmentation, empty_seg)
 
         # re-invert the action to add back all the nodes and their attributes
         del_nodes.inverse()
         assert set(tracks.graph.node_ids()) == set(graph_2d.node_ids())
-        for node, data in tracks.graph.nodes(data=True):
-            graph_2d_data = graph_2d.nodes[node]
-            # TODO: get back custom attrs https://github.com/funkelab/funtracks/issues/1
-            if not use_seg:
-                del graph_2d_data["area"]
-            assert data == graph_2d_data
+
+        data_graph_2d = graph_2d.node_attrs()[tracks.graph.node_attrs().columns]
+        data_tracks = tracks.graph.node_attrs()
+        assert data_graph_2d.equals(data_tracks)
+
+        # for node, data in tracks.graph.nodes(data=True):
+        #     graph_2d_data = graph_2d.nodes[node]
+        #     # TODO: get back custom attrs https://github.com/funkelab/funtracks/issues/1
+        #     if not use_seg:
+        #         del graph_2d_data["area"]
+        #     assert data == graph_2d_data
         if use_seg:
             assert_array_almost_equal(tracks.segmentation, segmentation_2d)
 
@@ -118,7 +149,7 @@ def test_update_node_segs(segmentation_2d, graph_2d):
 def test_add_delete_edges(graph_2d, segmentation_2d):
     # Create a fresh copy of the graph for this test
     node_graph = graph_2d.copy()
-    tracks = Tracks(node_graph, segmentation_2d)
+    tracks = Tracks(node_graph, segmentation_2d.copy())
 
     edges = [[1, 2], [1, 3], [3, 4], [4, 5]]
 
@@ -126,21 +157,32 @@ def test_add_delete_edges(graph_2d, segmentation_2d):
     # TODO: What if adding an edge that already exists?
     # TODO: test all the edge cases, invalid operations, etc. for all actions
     assert set(tracks.graph.node_ids()) == set(graph_2d.node_ids())
-    for edge in tracks.graph.edges():
-        assert tracks.graph.edges[edge][EdgeAttr.IOU.value] == pytest.approx(
-            graph_2d.edges[edge][EdgeAttr.IOU.value], abs=0.01
+
+    for edge_id in tracks.graph.edge_ids():
+        assert tracks.graph.edge_attrs().filter(pl.col("edge_id") == edge_id)[
+            EdgeAttr.IOU.value
+        ].item() == pytest.approx(
+            graph_2d.edge_attrs()
+            .filter(pl.col("edge_id") == edge_id)[EdgeAttr.IOU.value]
+            .item(),
+            abs=0.01,
         )
     assert_array_almost_equal(tracks.segmentation, segmentation_2d)
 
     inverse = action.inverse()
-    assert set(tracks.graph.edges()) == set()
+    assert set(tracks.graph.edge_ids()) == set()
     assert_array_almost_equal(tracks.segmentation, segmentation_2d)
 
     inverse.inverse()
     assert set(tracks.graph.node_ids()) == set(graph_2d.node_ids())
-    assert set(tracks.graph.edges()) == set(graph_2d.edges())
-    for edge in tracks.graph.edges():
-        assert tracks.graph.edges[edge][EdgeAttr.IOU.value] == pytest.approx(
-            graph_2d.edges[edge][EdgeAttr.IOU.value], abs=0.01
+    assert set(tracks.graph.edge_ids()) == set(graph_2d.edge_ids())
+    for edge_id in tracks.graph.edge_ids():
+        assert tracks.graph.edge_attrs().filter(pl.col("edge_id") == edge_id)[
+            EdgeAttr.IOU.value
+        ].item() == pytest.approx(
+            graph_2d.edge_attrs()
+            .filter(pl.col("edge_id") == edge_id)[EdgeAttr.IOU.value]
+            .item(),
+            abs=0.01,
         )
     assert_array_almost_equal(tracks.segmentation, segmentation_2d)

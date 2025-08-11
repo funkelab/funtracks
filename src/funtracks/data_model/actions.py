@@ -262,7 +262,8 @@ class DeleteNodes(TracksAction):
         # Delete the node, by 1) setting solution to 0, and
         # 2) removing the node from the graph by filter+subgraph
         self.tracks.graph.update_node_attrs(
-            attrs={td.DEFAULT_ATTR_KEYS.SOLUTION: [0]}, node_ids=self.nodes
+            attrs={td.DEFAULT_ATTR_KEYS.SOLUTION: [0] * len(self.nodes)},
+            node_ids=self.nodes,
         )
 
         self.tracks.graph = self.tracks.graph.filter(

@@ -3,6 +3,7 @@ import numpy as np
 
 from funtracks.data_model import SolutionTracks
 from funtracks.data_model.actions import AddNodes
+from funtracks.data_model.utils import convert_nx_to_td_indexedrxgraph
 
 
 def test_next_track_id(graph_2d):
@@ -11,15 +12,19 @@ def test_next_track_id(graph_2d):
     AddNodes(
         tracks,
         nodes=[10],
-        attributes={"time": [3], "pos": [[0, 0, 0, 0]], "track_id": [10]},
+        attributes={"t": [3], "pos": [[0, 0]], "track_id": [10]},
+        # TODO: Caroline/Anniek, why did this test have a 4D pos vector?
     )
     assert tracks.get_next_track_id() == 11
 
 
 def test_next_track_id_empty():
-    graph = nx.DiGraph()
+    # graph_td = nx.DiGraph()
+    graph_td = convert_nx_to_td_indexedrxgraph(nx.DiGraph())
+    # TODO: somewhere we have to make track_id a mandatory node attr
+    graph_td.add_node_attr_key(key="track_id", default_value=0)
     seg = np.zeros(shape=(10, 100, 100, 100), dtype=np.uint64)
-    tracks = SolutionTracks(graph, segmentation=seg)
+    tracks = SolutionTracks(graph_td, segmentation=seg)
     assert tracks.get_next_track_id() == 1
 
 

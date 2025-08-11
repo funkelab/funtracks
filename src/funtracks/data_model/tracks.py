@@ -44,7 +44,7 @@ class Tracks:
     position attribute. Edges in the graph represent links across time.
 
     Attributes:
-        graph (td.graph): A graph with nodes representing detections and
+        graph (td.graph.BaseGraph): A graph with nodes representing detections and
             and edges representing links across time.
         segmentation (Optional(np.ndarray)): An optional segmentation that
             accompanies the tracking graph. If a segmentation is provided,
@@ -65,13 +65,15 @@ class Tracks:
 
     def __init__(
         self,
-        graph: td.graph,
+        graph: td.graph.BaseGraph,
         segmentation: np.ndarray | None = None,
         time_attr: str = NodeAttr.TIME.value,
         pos_attr: str | tuple[str] | list[str] = NodeAttr.POS.value,
         scale: list[float] | None = None,
         ndim: int | None = None,
     ):
+        if not isinstance(graph, td.graph.BaseGraph):
+            raise ValueError("graph must be a tracksdata.BaseGraph")
         self.graph = graph
         self.segmentation = segmentation
         self.time_attr = time_attr

@@ -2,10 +2,10 @@ import networkx as nx
 import numpy as np
 import pytest
 import tracksdata as td
-from rustworkx import networkx_converter
 from skimage.draw import disk
 
 from funtracks.data_model import EdgeAttr, NodeAttr
+from funtracks.data_model.utils import convert_nx_to_td_indexedrxgraph
 
 
 @pytest.fixture
@@ -109,10 +109,9 @@ def graph_2d():
     ]
     graph_nx.add_nodes_from(nodes)
     graph_nx.add_edges_from(edges)
-    graph_rx = networkx_converter(graph_nx, keep_attributes=True)
 
-    node_id_map = {node: i for i, node in enumerate(graph_nx.nodes)}
-    graph_td = td.graph.IndexedRXGraph(graph_rx, node_id_map=node_id_map)
+    graph_td = convert_nx_to_td_indexedrxgraph(graph_nx)
+
     return graph_td
 
 
@@ -153,6 +152,8 @@ def graph_3d():
             {
                 NodeAttr.POS.value: [50, 50, 50],
                 NodeAttr.TIME.value: 0,
+                NodeAttr.TRACK_ID.value: 1,
+                td.DEFAULT_ATTR_KEYS.SOLUTION: 1,
             },
         ),
         (
@@ -160,6 +161,8 @@ def graph_3d():
             {
                 NodeAttr.POS.value: [20, 50, 80],
                 NodeAttr.TIME.value: 1,
+                NodeAttr.TRACK_ID.value: 1,
+                td.DEFAULT_ATTR_KEYS.SOLUTION: 1,
             },
         ),
         (
@@ -167,6 +170,8 @@ def graph_3d():
             {
                 NodeAttr.POS.value: [60, 50, 45],
                 NodeAttr.TIME.value: 1,
+                NodeAttr.TRACK_ID.value: 1,
+                td.DEFAULT_ATTR_KEYS.SOLUTION: 1,
             },
         ),
     ]
@@ -177,9 +182,6 @@ def graph_3d():
     graph_nx.add_nodes_from(nodes)
     graph_nx.add_edges_from(edges)
 
-    graph_rx = networkx_converter(graph_nx, keep_attributes=True)
-
-    node_id_map = {node: i for i, node in enumerate(graph_nx.nodes)}
-    graph_td = td.graph.IndexedRXGraph(graph_rx, node_id_map=node_id_map)
+    graph_td = convert_nx_to_td_indexedrxgraph(graph_nx)
 
     return graph_td
