@@ -304,7 +304,7 @@ class Tracks:
                         attrs={key: value[idx]}, edge_ids=[edge_id]
                     )
             else:
-                logger.info("Edge %d not found in the graph.", edge)
+                logger.info("Edge %s not found in the graph.", edge)
 
     def _compute_ndim(
         self,
@@ -352,7 +352,7 @@ class Tracks:
             DeprecationWarning,
             stacklevel=2,
         )
-        self.get_node_attr(node, attr, required=required)
+        return self.get_node_attr(node, attr, required=required)
 
     def get_nodes_attr(self, nodes: Iterable[Node], attr: str, required: bool = False):
         return [self.get_node_attr(node, attr, required=required) for node in nodes]
@@ -363,10 +363,10 @@ class Tracks:
             DeprecationWarning,
             stacklevel=2,
         )
-        self.get_nodes_attr(nodes, attr, required=required)
+        return self.get_nodes_attr(nodes, attr, required=required)
 
     def _set_edge_attr(self, edge: Edge, attr: str, value: Any):
-        self.graph.edge[edge][attr] = value
+        self.graph.edges[edge][attr] = value
 
     def _set_edges_attr(self, edges: Iterable[Edge], attr: str, values: Iterable[Any]):
         for edge, value in zip(edges, values, strict=False):

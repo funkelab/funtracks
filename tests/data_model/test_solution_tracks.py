@@ -1,7 +1,7 @@
 import networkx as nx
 import numpy as np
 
-from funtracks.data_model import SolutionTracks
+from funtracks.data_model import NodeAttr, SolutionTracks, Tracks
 from funtracks.data_model.actions import AddNodes
 from funtracks.data_model.utils import convert_nx_to_td_indexedrxgraph
 
@@ -16,6 +16,26 @@ def test_next_track_id(graph_2d):
         # TODO: Caroline/Anniek, why did this test have a 4D pos vector?
     )
     assert tracks.get_next_track_id() == 11
+
+
+def test_from_tracks_cls(graph_2d):
+    tracks = Tracks(
+        graph_2d, ndim=3, pos_attr="POSITION", time_attr="TIME", scale=(2, 2, 2)
+    )
+    solution_tracks = SolutionTracks.from_tracks(tracks)
+    assert solution_tracks.graph == tracks.graph
+    assert solution_tracks.segmentation == tracks.segmentation
+    assert solution_tracks.time_attr == tracks.time_attr
+    assert solution_tracks.pos_attr == tracks.pos_attr
+    assert solution_tracks.scale == tracks.scale
+    assert solution_tracks.ndim == tracks.ndim
+    assert solution_tracks.get_node_attr(6, NodeAttr.TRACK_ID.value) == 5
+    # delete track id on one node to trigger reassignment of track_ids.
+    solution_tracks.graph.nodes[1].pop(NodeAttr.TRACK_ID.value, None)
+    solution_tracks._initialize_track_ids()
+    # should have reassigned new track_id to node 6
+    assert solution_tracks.get_node_attr(6, NodeAttr.TRACK_ID.value) == 4
+    assert solution_tracks.get_node_attr(1, NodeAttr.TRACK_ID.value) == 1  # still 1
 
 
 def test_next_track_id_empty():
