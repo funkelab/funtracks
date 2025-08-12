@@ -7,9 +7,10 @@ from typing import (
 import geff
 import networkx as nx
 import numpy as np
+import tracksdata as td
 import zarr
-from geff.affine import Affine
-from geff.metadata_schema import GeffMetadata
+from geff.metadata import GeffMetadata
+from geff.metadata._affine import Affine
 
 from funtracks.data_model.graph_attributes import NodeAttr
 
@@ -109,7 +110,7 @@ def export_to_geff(tracks: Tracks, directory: Path, overwrite: bool = False):
     )
 
 
-def split_position_attr(tracks: Tracks) -> nx.DiGraph:
+def split_position_attr(tracks: Tracks) -> td.graph.BaseGraph:
     """Spread the spatial coordinates to separate node attrs in order to export to geff
     format.
 
@@ -123,15 +124,22 @@ def split_position_attr(tracks: Tracks) -> nx.DiGraph:
     """
     new_graph = tracks.graph.copy()
 
-    for _, attrs in new_graph.nodes(data=True):
-        pos = attrs.pop(tracks.pos_attr)
+    new_graph.add_node_attr_key("x", default_value=0.0)
+    new_graph.add_node_attr_key("y", default_value=0.0)
 
-        if len(pos) == 2:
-            attrs["y"] = pos[0]
-            attrs["x"] = pos[1]
-        elif len(pos) == 3:
-            attrs["z"] = pos[0]
-            attrs["y"] = pos[1]
-            attrs["x"] = pos[2]
+    pos_values = new_graph.node_attrs()["pos"].to_numpy()
+    ndim = pos_values.shape[1]
+
+    if ndim == 2:
+        new_graph.update_node_attrs(
+            attrs={"x": pos_values[:, 1], "y": pos_values[:, 0]},
+            node_ids=new_graph.node_ids(),
+        )
+    elif ndim == 3:
+        new_graph.add_node_attr_key("z", default_value=0.0)
+        new_graph.update_node_attrs(
+            attrs={"x": pos_values[:, 2], "y": pos_values[:, 1], "z": pos_values[:, 0]},
+            node_ids=new_graph.node_ids(),
+        )
 
     return new_graph

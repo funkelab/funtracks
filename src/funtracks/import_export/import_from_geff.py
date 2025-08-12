@@ -7,13 +7,13 @@ from typing import (
 import geff
 import numpy as np
 import zarr
-from geff.affine import Affine
-from geff.validators.segmentation_validators import (
+from geff.metadata._affine import Affine
+from geff.validate.segmentation import (
     axes_match_seg_dims,
     has_seg_ids_at_coords,
     has_valid_seg_id,
 )
-from geff.validators.validators import validate_lineages, validate_tracklets
+from geff.validate.tracks import validate_lineages, validate_tracklets
 from numpy.typing import ArrayLike
 
 from funtracks.data_model.graph_attributes import NodeAttr

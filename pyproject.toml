@@ -32,7 +32,7 @@ dependencies =[
     "networkx",
     "psygnal",
     "scikit-image",
-    "geff",
+    "geff>=0.5.0",
     "dask",
     "tracksdata@git+https://github.com/royerlab/tracksdata",
 ]
