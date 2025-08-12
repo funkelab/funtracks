@@ -103,7 +103,7 @@ def graph_2d():
     ]
     edges = [
         (1, 2, {EdgeAttr.IOU.value: 0.0, td.DEFAULT_ATTR_KEYS.SOLUTION: 1}),
-        (1, 3, {EdgeAttr.IOU.value: 0.395, td.DEFAULT_ATTR_KEYS.SOLUTION: 1}),
+        (1, 3, {EdgeAttr.IOU.value: 0.39311, td.DEFAULT_ATTR_KEYS.SOLUTION: 1}),
         (3, 4, {EdgeAttr.IOU.value: 0.0, td.DEFAULT_ATTR_KEYS.SOLUTION: 1}),
         (4, 5, {EdgeAttr.IOU.value: 1.0, td.DEFAULT_ATTR_KEYS.SOLUTION: 1}),
     ]

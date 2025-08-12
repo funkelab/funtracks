@@ -1,17 +1,12 @@
 import pytest
-from networkx.utils import graphs_equal
 from numpy.testing import assert_array_almost_equal
+from polars.testing import assert_frame_equal
 
 from funtracks.data_model import NodeAttr, Tracks
 from funtracks.data_model.utils import td_get_single_attr_from_node
 
 
 def test_create_tracks(graph_3d, segmentation_3d):
-    # create empty tracks
-    # tracks = Tracks(graph=nx.DiGraph(), ndim=3)
-    # with pytest.raises(KeyError):
-    #     tracks.get_positions([1])
-
     # create tracks with graph only
     tracks = Tracks(graph=graph_3d.copy(), ndim=4)
     assert tracks.get_positions([1]).tolist() == [[50, 50, 50]]
@@ -20,7 +15,7 @@ def test_create_tracks(graph_3d, segmentation_3d):
         tracks.get_positions(["0"])
 
     # create track with graph and seg
-    tracks = Tracks(graph=graph_3d.copy(), segmentation=segmentation_3d)
+    tracks = Tracks(graph=graph_3d.copy(), segmentation=segmentation_3d.copy())
     assert tracks.get_positions([1]).tolist() == [[50, 50, 50]]
     assert tracks.get_time(1) == 0
     assert tracks.get_positions([1], incl_time=True).tolist() == [[0, 50, 50, 50]]
@@ -28,7 +23,9 @@ def test_create_tracks(graph_3d, segmentation_3d):
     assert tracks.get_positions([1], incl_time=True).tolist() == [[1, 50, 50, 50]]
 
     tracks_wrong_attr = Tracks(
-        graph=graph_3d.copy(), segmentation=segmentation_3d.copy(), time_attr="test"
+        graph=graph_3d.copy(),
+        segmentation=segmentation_3d.copy(),
+        time_attr="test",
     )
     with pytest.raises(KeyError):  # raises error at access if time is wrong
         tracks_wrong_attr.get_times([1])
@@ -76,7 +73,7 @@ def test_pixels_and_seg_id(graph_3d, segmentation_3d):
 
 def test_save_load_delete(tmp_path, graph_2d, segmentation_2d):
     tracks_dir = tmp_path / "tracks"
-    tracks = Tracks(graph_2d.copy(), segmentation_2d.copy())
+    tracks = Tracks(graph=graph_2d.copy(), segmentation=segmentation_2d.copy())
     with pytest.warns(
         DeprecationWarning,
         match="`Tracks.save` is deprecated and will be removed in 2.0",
@@ -87,7 +84,12 @@ def test_save_load_delete(tmp_path, graph_2d, segmentation_2d):
         match="`Tracks.load` is deprecated and will be removed in 2.0",
     ):
         loaded = Tracks.load(tracks_dir)
-        assert graphs_equal(loaded.graph, tracks.graph)
+        assert_frame_equal(
+            loaded.graph.node_attrs(), tracks.graph.node_attrs(), check_column_order=False
+        )
+        assert_frame_equal(
+            loaded.graph.edge_attrs(), tracks.graph.edge_attrs(), check_column_order=False
+        )
         assert_array_almost_equal(loaded.segmentation, tracks.segmentation)
     with pytest.warns(
         DeprecationWarning,

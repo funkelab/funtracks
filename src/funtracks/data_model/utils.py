@@ -29,19 +29,6 @@ def convert_nx_to_td_indexedrxgraph(graph_nx: nx.DiGraph) -> td.graph.IndexedRXG
     return graph_td
 
 
-def td_edge_to_edge_id(graph, edge):
-    """Convert an edge tuple to an edge ID."""
-    index = (
-        graph.edge_attrs()
-        .select(["source_id", "target_id"])
-        .to_numpy()
-        .tolist()
-        .index(list(edge))
-    )  # index in graph.edge_attrs()
-    edge_id = graph.edge_attrs()["edge_id"][index]
-    return edge_id
-
-
 def td_get_single_attr_from_node(graph, node_ids: Sequence[int], attrs: Sequence[str]):
     """Get a single attribute from a node in a tracksdata graph."""
     item = graph.filter(node_ids=node_ids).node_attrs(attrs).item()
@@ -158,15 +145,19 @@ def td_from_dict(graph_dict):
     return graph_td
 
 
-def td_graph_has_edge(graph, edge):
-    """Check if a graph has an edge between two nodes."""
+def td_graph_edge_list(graph):
+    """Get list of edges from a tracksdata graph.
 
-    if isinstance(edge, tuple):
-        edge = list(edge)
+    Args:
+        graph: A tracksdata graph
 
-    return (
-        edge in graph.edge_attrs().select(["source_id", "target_id"]).to_numpy().tolist()
+    Returns:
+        list: List of edges: [[source_id, target_id], ...]
+    """
+    existing_edges = (
+        graph.edge_attrs().select(["source_id", "target_id"]).to_numpy().tolist()
     )
+    return existing_edges
 
 
 def td_get_node_ids_from_df(df):

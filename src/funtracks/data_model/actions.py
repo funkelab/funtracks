@@ -28,9 +28,9 @@ from .graph_attributes import NodeAttr
 from .solution_tracks import SolutionTracks
 from .tracks import Attrs, Edge, Node, SegMask, Tracks
 from .utils import (
-    td_edge_to_edge_id,
     td_get_predecessors,
     td_get_successors,
+    td_graph_edge_list,
     validate_and_merge_node_attrs,
 )
 
@@ -441,15 +441,9 @@ class DeleteEdges(TracksAction):
         - Remove the edges from the graph
         """
         for edge in self.edges:
-            existing_edges = (
-                self.tracks.graph.edge_attrs()
-                .select(["source_id", "target_id"])
-                .to_numpy()
-                .tolist()
-            )
             edge = list(edge)
-            if edge in existing_edges:
-                edge_id = td_edge_to_edge_id(self.tracks.graph, edge)
+            if edge in td_graph_edge_list(self.tracks.graph):
+                edge_id = self.tracks.graph.edge_id(edge[0], edge[1])
                 self.tracks.graph.update_edge_attrs(
                     edge_ids=[edge_id], attrs={td.DEFAULT_ATTR_KEYS.SOLUTION: [0]}
                 )

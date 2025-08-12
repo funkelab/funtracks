@@ -20,7 +20,7 @@ from .actions import (
 from .graph_attributes import NodeAttr
 from .solution_tracks import SolutionTracks
 from .tracks import Attrs, Edge, Node, SegMask
-from .utils import td_get_predecessors, td_get_successors, td_graph_has_edge
+from .utils import td_get_predecessors, td_get_successors
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -411,7 +411,7 @@ class TracksController:
         action = None
         # do all checks
         # reject if edge already exists
-        if td_graph_has_edge(self.tracks.graph, edge):
+        if self.tracks.graph.has_edge(edge[0], edge[1]):
             warn("Edge is rejected because it exists already.", stacklevel=2)
             return False, action
 
@@ -461,7 +461,7 @@ class TracksController:
 
         for edge in edges:
             # First check if the to be deleted edges exist
-            if not td_graph_has_edge(self.tracks.graph, edge):
+            if not self.tracks.graph.has_edge(edge[0], edge[1]):
                 warn("Cannot delete non-existing edge!", stacklevel=2)
                 return
         action = self._delete_edges(edges)

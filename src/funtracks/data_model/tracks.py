@@ -18,11 +18,9 @@ from skimage import measure
 from .compute_ious import _compute_ious
 from .graph_attributes import EdgeAttr, NodeAttr
 from .utils import (
-    td_edge_to_edge_id,
     td_get_predecessors,
     td_get_single_attr_from_node,
     td_get_successors,
-    td_graph_has_edge,
 )
 
 if TYPE_CHECKING:
@@ -299,9 +297,9 @@ class Tracks:
                 update the values.
         """
         for idx, edge in enumerate(edges):
-            if td_graph_has_edge(self.graph, edge):
+            if self.graph.has_edge(edge[0], edge[1]):
                 for key, value in attributes.items():
-                    edge_id = td_edge_to_edge_id(self.graph, edge)
+                    edge_id = self.graph.edge_id(edge[0], edge[1])
                     self.graph.update_edge_attrs(
                         attrs={key: value[idx]}, edge_ids=[edge_id]
                     )

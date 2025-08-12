@@ -3,15 +3,24 @@ import networkx as nx
 from funtracks.data_model.action_history import ActionHistory
 from funtracks.data_model.actions import AddNodes
 from funtracks.data_model.tracks import Tracks
+from funtracks.data_model.utils import convert_nx_to_td_indexedrxgraph
 
 # https://github.com/zaboople/klonk/blob/master/TheGURQ.md
 
 
 def test_action_history():
     history = ActionHistory()
-    tracks = Tracks(nx.DiGraph(), ndim=3)
+
+    # make an empty tracksdata graph with the default attributes
+    graph_td = convert_nx_to_td_indexedrxgraph(nx.DiGraph())
+    graph_td.add_node_attr_key(key="t", default_value=0)
+    graph_td.add_node_attr_key(key="pos", default_value=[0, 0, 0])
+    graph_td.add_node_attr_key(key="solution", default_value=1)
+    graph_td.add_node_attr_key(key="track_id", default_value=0)
+
+    tracks = Tracks(graph_td, ndim=3)
     action1 = AddNodes(
-        tracks, nodes=[0, 1], attributes={"time": [0, 1], "pos": [[0, 1], [1, 2]]}
+        tracks, nodes=[0, 1], attributes={"t": [0, 1], "pos": [[0, 1], [1, 2]]}
     )
 
     # empty history has no undo or redo
@@ -42,7 +51,7 @@ def test_action_history():
 
     # undo and then add new action
     assert history.undo()
-    action2 = AddNodes(tracks, nodes=[10], attributes={"time": [10], "pos": [[0, 1]]})
+    action2 = AddNodes(tracks, nodes=[10], attributes={"t": [10], "pos": [[0, 1]]})
     history.add_new_action(action2)
     assert tracks.graph.num_nodes == 1
     # there are 3 things on the stack: action1, action1's inverse, and action 2

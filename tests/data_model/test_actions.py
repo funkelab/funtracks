@@ -3,17 +3,20 @@ import numpy as np
 import polars as pl
 import pytest
 from numpy.testing import assert_array_almost_equal
+from polars.testing import assert_frame_equal
 
 from funtracks.data_model import Tracks
 from funtracks.data_model.actions import (
     AddEdges,
     AddNodes,
+    DeleteEdges,
     UpdateNodeSegs,
 )
 from funtracks.data_model.graph_attributes import EdgeAttr, NodeAttr
 from funtracks.data_model.utils import (
     convert_nx_to_td_indexedrxgraph,
     td_get_single_attr_from_node,
+    td_graph_edge_list,
 )
 
 
@@ -107,7 +110,7 @@ class TestAddDeleteNodes:
 
 
 def test_update_node_segs(segmentation_2d, graph_2d):
-    tracks = Tracks(graph_2d.copy(), segmentation=segmentation_2d.copy())
+    tracks = Tracks(graph=graph_2d.copy(), segmentation=segmentation_2d.copy())
     # TODO: add copies back?
     nodes = list(graph_2d.node_ids())
 
@@ -130,8 +133,9 @@ def test_update_node_segs(segmentation_2d, graph_2d):
 
     inverse = action.inverse()
     assert set(tracks.graph.node_ids()) == set(graph_2d.node_ids())
-    # TODO: solve this one:
-    assert tracks.graph.node_attrs().equals(graph_2d.node_attrs())
+    assert_frame_equal(
+        tracks.graph.node_attrs(), graph_2d.node_attrs(), check_column_order=False
+    )
     assert_array_almost_equal(tracks.segmentation, segmentation_2d)
 
     inverse.inverse()
@@ -148,22 +152,31 @@ def test_update_node_segs(segmentation_2d, graph_2d):
 
 def test_add_delete_edges(graph_2d, segmentation_2d):
     # Create a fresh copy of the graph for this test
+
     node_graph = graph_2d.copy()
     tracks = Tracks(node_graph, segmentation_2d.copy())
 
     edges = [[1, 2], [1, 3], [3, 4], [4, 5]]
+
+    # first delete the edges, before we can add them again
+    action = DeleteEdges(tracks, edges)
 
     action = AddEdges(tracks, edges)
     # TODO: What if adding an edge that already exists?
     # TODO: test all the edge cases, invalid operations, etc. for all actions
     assert set(tracks.graph.node_ids()) == set(graph_2d.node_ids())
 
-    for edge_id in tracks.graph.edge_ids():
-        assert tracks.graph.edge_attrs().filter(pl.col("edge_id") == edge_id)[
+    # edge_ids are not preserved in td.graph.copy(), edges get re-assigned edge_ids.
+    # so, we check the actual edges, not using edge_ids
+    for edge in td_graph_edge_list(tracks.graph):
+        edge_id_tracks = tracks.graph.edge_id(edge[0], edge[1])
+        edge_id_graph = graph_2d.edge_id(edge[0], edge[1])
+
+        assert tracks.graph.edge_attrs().filter(pl.col("edge_id") == edge_id_tracks)[
             EdgeAttr.IOU.value
         ].item() == pytest.approx(
             graph_2d.edge_attrs()
-            .filter(pl.col("edge_id") == edge_id)[EdgeAttr.IOU.value]
+            .filter(pl.col("edge_id") == edge_id_graph)[EdgeAttr.IOU.value]
             .item(),
             abs=0.01,
         )
@@ -175,13 +188,16 @@ def test_add_delete_edges(graph_2d, segmentation_2d):
 
     inverse.inverse()
     assert set(tracks.graph.node_ids()) == set(graph_2d.node_ids())
-    assert set(tracks.graph.edge_ids()) == set(graph_2d.edge_ids())
-    for edge_id in tracks.graph.edge_ids():
-        assert tracks.graph.edge_attrs().filter(pl.col("edge_id") == edge_id)[
+    assert td_graph_edge_list(tracks.graph) == td_graph_edge_list(graph_2d)
+    for edge in td_graph_edge_list(tracks.graph):
+        edge_id_tracks = tracks.graph.edge_id(edge[0], edge[1])
+        edge_id_graph = graph_2d.edge_id(edge[0], edge[1])
+
+        assert tracks.graph.edge_attrs().filter(pl.col("edge_id") == edge_id_tracks)[
             EdgeAttr.IOU.value
         ].item() == pytest.approx(
             graph_2d.edge_attrs()
-            .filter(pl.col("edge_id") == edge_id)[EdgeAttr.IOU.value]
+            .filter(pl.col("edge_id") == edge_id_graph)[EdgeAttr.IOU.value]
             .item(),
             abs=0.01,
         )
