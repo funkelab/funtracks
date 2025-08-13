@@ -1,10 +1,11 @@
 import numpy as np
 import pytest
+import tracksdata as td
 from numpy.testing import assert_array_almost_equal
 from polars.testing import assert_frame_equal
 
 from funtracks.data_model import EdgeAttr, NodeAttr, Tracks
-from funtracks.data_model.utils import td_get_single_attr_from_node
+from funtracks.data_model.utils import td_get_single_attr_from_node, td_graph_edge_list
 
 
 def test_create_tracks(graph_3d, segmentation_3d):
@@ -43,7 +44,7 @@ def test_create_tracks(graph_3d, segmentation_3d):
     graph_3d_copy.add_node_attr_key(key="x", default_value=0)
     for node in graph_3d_copy.node_ids():
         pos = td_get_single_attr_from_node(
-            graph_3d_copy, node_ids=[node], attrs=[NodeAttr.POS.value]
+            graph_3d_copy, node_id=node, attrs=[NodeAttr.POS.value]
         )
         z, y, x = pos
         # del graph_3d.nodes[node][NodeAttr.POS.value]
@@ -99,27 +100,30 @@ def test_save_load_delete(tmp_path, graph_2d, segmentation_2d):
 def test_nodes_edges(graph_2d):
     tracks = Tracks(graph_2d, ndim=3)
     assert set(tracks.nodes()) == {1, 2, 3, 4, 5, 6}
-    assert set(map(tuple, tracks.edges())) == {(1, 2), (1, 3), (3, 4), (4, 5)}
+    assert set(map(tuple, td_graph_edge_list(tracks.graph))) == {
+        (1, 2),
+        (1, 3),
+        (3, 4),
+        (4, 5),
+    }
 
 
 def test_degrees(graph_2d):
     tracks = Tracks(graph_2d, ndim=3)
     assert tracks.in_degree(np.array([1])) == 0
     assert tracks.in_degree(np.array([4])) == 1
-    assert np.array_equal(
-        tracks.in_degree(None), np.array([[1, 0], [2, 1], [3, 1], [4, 1], [5, 1], [6, 0]])
-    )
+    assert np.array_equal(tracks.in_degree(None), np.array([0, 1, 1, 1, 1, 0]))
     assert np.array_equal(tracks.out_degree(np.array([1, 4])), np.array([2, 1]))
     assert np.array_equal(
         tracks.out_degree(None),
-        np.array([[1, 2], [2, 0], [3, 1], [4, 1], [5, 0], [6, 0]]),
+        np.array([2, 0, 1, 1, 0, 0]),
     )
 
 
 def test_predecessors_successors(graph_2d):
     tracks = Tracks(graph_2d, ndim=3)
     assert tracks.predecessors(2) == [1]
-    assert tracks.successors(1) == [2, 3]
+    assert set(tracks.successors(1)) == {2, 3}
     assert tracks.predecessors(1) == []
     assert tracks.successors(2) == []
 
@@ -134,31 +138,31 @@ def test_iou_methods(graph_2d):
     tracks = Tracks(graph_2d, ndim=3)
     assert tracks.get_iou((1, 2)) == 0.0
     assert tracks.get_ious([(1, 2)]) == [0.0]
-    assert tracks.get_ious([(1, 2), (1, 3)]) == [0.0, 0.395]
+    assert tracks.get_ious([(1, 2), (1, 3)]) == [0.0, 0.39311]
 
 
 def test_get_set_node_attr(graph_2d):
     tracks = Tracks(graph_2d, ndim=3)
 
-    tracks._set_node_attr(1, "a", 42)
+    tracks._set_node_attr(1, "area", 42)
     # test deprecated functions
     with pytest.warns(
         DeprecationWarning,
         match="_get_node_attr deprecated in favor of public method get_node_attr",
     ):
-        assert tracks._get_node_attr(1, "a") == 42
+        assert tracks._get_node_attr(1, "area") == 42
 
-    tracks._set_nodes_attr([1, 2], "b", [7, 8])
+    tracks._set_nodes_attr([1, 2], "track_id", [7, 8])
     with pytest.warns(
         DeprecationWarning,
         match="_get_nodes_attr deprecated in favor of public method get_nodes_attr",
     ):
-        assert tracks._get_nodes_attr([1, 2], "b") == [7, 8]
+        assert tracks._get_nodes_attr([1, 2], "track_id") == [7, 8]
 
     # test new functions
-    assert tracks.get_node_attr(1, "a", required=True) == 42
-    assert tracks.get_nodes_attr([1, 2], "b", required=True) == [7, 8]
-    assert tracks.get_nodes_attr([1, 2], "b", required=False) == [7, 8]
+    assert tracks.get_node_attr(1, "area", required=True) == 42
+    assert tracks.get_nodes_attr([1, 2], "track_id", required=True) == [7, 8]
+    assert tracks.get_nodes_attr([1, 2], "track_id", required=False) == [7, 8]
     with pytest.raises(KeyError):
         tracks.get_node_attr(1, "not_present", required=True)
     assert tracks.get_node_attr(1, "not_present", required=False) is None
@@ -169,18 +173,18 @@ def test_get_set_node_attr(graph_2d):
     )
 
     # test array attributes
-    tracks._set_node_attr(1, "array_attr", np.array([1, 2, 3]))
-    tracks._set_nodes_attr((1, 2), "array_attr2", np.array(([1, 2, 3], [4, 5, 6])))
+    tracks._set_node_attr(1, "pos", [np.array([1, 2])])
+    tracks._set_nodes_attr((1, 2), "pos", np.array(([1, 2], [4, 5])))
 
 
 def test_get_set_edge_attr(graph_2d):
     tracks = Tracks(graph_2d, ndim=3)
-    tracks._set_edge_attr((1, 2), "c", 99)
-    assert tracks.get_edge_attr((1, 2), "c") == 99
-    assert tracks.get_edge_attr((1, 2), "iou", required=True) == 0.0
-    tracks._set_edges_attr([(1, 2), (1, 3)], "d", [123, 5])
-    assert tracks.get_edges_attr([(1, 2), (1, 3)], "d", required=True) == [123, 5]
-    assert tracks.get_edges_attr([(1, 2), (1, 3)], "d", required=False) == [123, 5]
+    tracks._set_edge_attr((1, 2), "iou", 99)
+    assert tracks.get_edge_attr((1, 2), "iou") == 99
+    assert tracks.get_edge_attr((1, 2), "iou", required=True) == 99
+    tracks._set_edges_attr([(1, 2), (1, 3)], "iou", [123, 5])
+    assert tracks.get_edges_attr([(1, 2), (1, 3)], "iou", required=True) == [123, 5]
+    assert tracks.get_edges_attr([(1, 2), (1, 3)], "iou", required=False) == [123, 5]
     with pytest.raises(KeyError):
         tracks.get_edge_attr((1, 2), "not_present", required=True)
     assert tracks.get_edge_attr((1, 2), "not_present", required=False) is None
@@ -220,6 +224,9 @@ def test_set_positions_list(graph_2d_list):
 
 def test_set_node_attributes(graph_2d, caplog):
     tracks = Tracks(graph_2d, ndim=3)
+    tracks.graph.add_node_attr_key("attr_1", default_value=0)
+    tracks.graph.add_node_attr_key("attr_2", default_value="")
+
     attrs = {"attr_1": [1, 2, 3, 4, 5, 6], "attr_2": ["a", "b", "c", "d", "e", "f"]}
     tracks._set_node_attributes([1, 2, 3, 4, 5, 6], attrs)
     assert np.array_equal(tracks.get_nodes_attr([1, 2], "attr_1"), np.array([1, 2]))
@@ -230,6 +237,9 @@ def test_set_node_attributes(graph_2d, caplog):
 
 def test_set_edge_attributes(graph_2d, caplog):
     tracks = Tracks(graph_2d, ndim=3)
+    tracks.graph.add_edge_attr_key("attr_1", default_value=0)
+    tracks.graph.add_edge_attr_key("attr_2", default_value="")
+
     attrs = {"attr_1": [1, 2, 3, 4], "attr_2": ["a", "b", "c", "d"]}
     tracks._set_edge_attributes([(1, 2), (1, 3), (3, 4), (4, 5)], attrs)
     assert np.array_equal(
@@ -298,8 +308,10 @@ def test_set_pixels_no_segmentation(graph_2d):
 
 
 def test_compute_ndim_errors():
-    g = nx.DiGraph()
-    g.add_node(1, time=0, pos=[0, 0, 0])
+    g = td.graph.IndexedRXGraph()
+    g.add_node_attr_key("pos", default_value=[0, 0, 0])
+
+    g.add_node(attrs={"t": 0, "pos": [0, 0, 0]})
     # seg ndim = 3, scale ndim = 2, provided ndim = 4 -> mismatch
     seg = np.zeros((2, 2, 2))
     with pytest.raises(ValueError, match="Dimensions from segmentation"):

@@ -31,7 +31,10 @@ def test_from_tracks_cls(graph_2d):
     assert solution_tracks.ndim == tracks.ndim
     assert solution_tracks.get_node_attr(6, NodeAttr.TRACK_ID.value) == 5
     # delete track id on one node to trigger reassignment of track_ids.
-    solution_tracks.graph.nodes[1].pop(NodeAttr.TRACK_ID.value, None)
+    # solution_tracks.graph.nodes[1].pop(NodeAttr.TRACK_ID.value, None)
+    solution_tracks.graph.update_node_attrs(
+        attrs={NodeAttr.TRACK_ID.value: [None]}, node_ids=[1]
+    )
     solution_tracks._initialize_track_ids()
     # should have reassigned new track_id to node 6
     assert solution_tracks.get_node_attr(6, NodeAttr.TRACK_ID.value) == 4

@@ -39,15 +39,15 @@ class TestAddDeleteNodes:
         attrs = {}
         attrs[NodeAttr.TIME.value] = [
             # graph_2d.nodes[node][NodeAttr.TIME.value] for node in nodes
-            td_get_single_attr_from_node(graph_2d, [node], [NodeAttr.TIME.value])
+            td_get_single_attr_from_node(graph_2d, node, [NodeAttr.TIME.value])
             for node in nodes
         ]
         attrs[NodeAttr.POS.value] = [
-            td_get_single_attr_from_node(graph_2d, [node], [NodeAttr.POS.value])
+            td_get_single_attr_from_node(graph_2d, node, [NodeAttr.POS.value])
             for node in nodes
         ]
         attrs[NodeAttr.TRACK_ID.value] = [
-            td_get_single_attr_from_node(graph_2d, [node], [NodeAttr.TRACK_ID.value])
+            td_get_single_attr_from_node(graph_2d, node, [NodeAttr.TRACK_ID.value])
             for node in nodes
         ]
         if use_seg:
@@ -62,7 +62,7 @@ class TestAddDeleteNodes:
         else:
             pixels = None
             attrs[NodeAttr.AREA.value] = [
-                td_get_single_attr_from_node(graph_2d, [node], [NodeAttr.AREA.value])
+                td_get_single_attr_from_node(graph_2d, node, [NodeAttr.AREA.value])
                 for node in nodes
             ]
         add_nodes = AddNodes(tracks, nodes, attributes=attrs, pixels=pixels)
@@ -124,7 +124,8 @@ def test_update_node_segs(segmentation_2d, graph_2d):
 
     assert set(tracks.graph.node_ids()) == set(graph_2d.node_ids())
     assert (
-        td_get_single_attr_from_node(tracks.graph, nodes, [NodeAttr.AREA.value]) == 1345
+        td_get_single_attr_from_node(tracks.graph, nodes[0], [NodeAttr.AREA.value])
+        == 1345
     )
     assert td_get_single_attr_from_node(
         tracks.graph, nodes, [NodeAttr.POS.value]

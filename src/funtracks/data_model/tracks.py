@@ -19,6 +19,7 @@ from .compute_ious import _compute_ious
 from .graph_attributes import EdgeAttr, NodeAttr
 from .utils import (
     td_get_predecessors,
+    td_get_single_attr_from_edge,
     td_get_single_attr_from_node,
     td_get_successors,
 )
@@ -80,19 +81,30 @@ class Tracks:
         self.ndim = self._compute_ndim(segmentation, scale, ndim)
 
     def nodes(self):
+        """Get the node ids in the graph."""
         return np.array(self.graph.node_ids())
 
     def edges(self):
+        """Get the edge ids in the graph."""
         return np.array(self.graph.edge_ids())
 
     def in_degree(self, nodes: np.ndarray | None = None) -> np.ndarray:
+        """Get the in-degree edge_ids of the nodes in the graph."""
         if nodes is not None:
+            # make sure nodes is a numpy array
+            if not isinstance(nodes, np.ndarray):
+                nodes = np.array(nodes)
+
             return np.array([self.graph.in_degree(node.item()) for node in nodes])
         else:
             return np.array(self.graph.in_degree())
 
     def out_degree(self, nodes: np.ndarray | None = None) -> np.ndarray:
         if nodes is not None:
+            # make sure nodes is a numpy array
+            if not isinstance(nodes, np.ndarray):
+                nodes = np.array(nodes)
+
             return np.array([self.graph.out_degree(node.item()) for node in nodes])
         else:
             return np.array(self.graph.out_degree())
@@ -276,7 +288,7 @@ class Tracks:
         """Update the attributes for given nodes"""
 
         for idx, node in enumerate(nodes):
-            if node in self.graph:
+            if node in self.graph.node_ids():
                 for key, values in attributes.items():
                     self.graph.update_node_attrs(
                         attrs={key: values[idx]}, node_ids=[node]
@@ -341,10 +353,11 @@ class Tracks:
             self.graph.update_node_attrs(attrs={attr: [value]}, node_ids=[node])
 
     def get_node_attr(self, node: Node, attr: str, required: bool = False):
-        if required:
-            return td_get_single_attr_from_node(self.graph, node_ids=[node], attrs=[attr])
-        else:
-            return td_get_single_attr_from_node(self.graph, node_ids=[node], attrs=[attr])
+        if attr not in self.graph.node_attr_keys:
+            if required:
+                raise KeyError(attr)
+            return None
+        return td_get_single_attr_from_node(self.graph, node_id=node, attrs=[attr])
 
     def _get_node_attr(self, node, attr, required=False):
         warnings.warn(
@@ -366,17 +379,20 @@ class Tracks:
         return self.get_nodes_attr(nodes, attr, required=required)
 
     def _set_edge_attr(self, edge: Edge, attr: str, value: Any):
-        self.graph.edges[edge][attr] = value
+        edge_id = self.graph.edge_id(edge[0], edge[1])
+        self.graph.update_edge_attrs(attrs={attr: value}, edge_ids=[edge_id])
 
     def _set_edges_attr(self, edges: Iterable[Edge], attr: str, values: Iterable[Any]):
         for edge, value in zip(edges, values, strict=False):
-            self.graph.edges[edge][attr] = value
+            edge_id = self.graph.edge_id(edge[0], edge[1])
+            self.graph.update_edge_attrs(attrs={attr: value}, edge_ids=[edge_id])
 
     def get_edge_attr(self, edge: Edge, attr: str, required: bool = False):
-        if required:
-            return self.graph.edges[edge][attr]
-        else:
-            return self.graph.edges[edge].get(attr, None)
+        if attr not in self.graph.edge_attr_keys:
+            if required:
+                raise KeyError(attr)
+            return None
+        return td_get_single_attr_from_edge(self.graph, edge=edge, attrs=[attr])
 
     def get_edges_attr(self, edges: Iterable[Edge], attr: str, required: bool = False):
         return [self.get_edge_attr(edge, attr, required=required) for edge in edges]

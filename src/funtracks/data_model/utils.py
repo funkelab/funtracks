@@ -29,9 +29,29 @@ def convert_nx_to_td_indexedrxgraph(graph_nx: nx.DiGraph) -> td.graph.IndexedRXG
     return graph_td
 
 
-def td_get_single_attr_from_node(graph, node_ids: Sequence[int], attrs: Sequence[str]):
+def td_get_single_attr_from_node(graph, node_id: int, attrs: Sequence[str]):
     """Get a single attribute from a node in a tracksdata graph."""
-    item = graph.filter(node_ids=node_ids).node_attrs(attrs).item()
+
+    #TODO: typechecking should somehow resolve this...
+    if not isinstance(node_id, int):
+        if isinstance(node_id, list):
+            if len(node_id) > 1:
+                raise ValueError("node_id must be an single integer")
+            else:
+                node_id = int(node_id[0])
+        node_id = int(node_id)
+
+    item = graph.filter(node_ids=[node_id]).node_attrs(attrs).item()
+    if isinstance(item, pl.Series):
+        return item.to_list()
+    else:
+        return item
+
+
+def td_get_single_attr_from_edge(graph, edge: tuple[int, int], attrs: Sequence[str]):
+    """Get a single attribute from a edge in a tracksdata graph."""
+
+    item = graph.filter(node_ids=[edge[0], edge[1]]).edge_attrs()[attrs].item()
     if isinstance(item, pl.Series):
         return item.to_list()
     else:

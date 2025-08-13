@@ -117,7 +117,7 @@ def graph_2d():
 
 @pytest.fixture
 def graph_2d_list():
-    graph = nx.DiGraph()
+    graph_nx = nx.DiGraph()
     nodes = [
         (
             1,
@@ -140,8 +140,9 @@ def graph_2d_list():
             },
         ),
     ]
-    graph.add_nodes_from(nodes)
-    return graph
+    graph_nx.add_nodes_from(nodes)
+    graph_td = convert_nx_to_td_indexedrxgraph(graph_nx)
+    return graph_td
 
 
 def sphere(center, radius, shape):
