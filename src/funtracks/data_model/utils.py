@@ -32,7 +32,7 @@ def convert_nx_to_td_indexedrxgraph(graph_nx: nx.DiGraph) -> td.graph.IndexedRXG
 def td_get_single_attr_from_node(graph, node_id: int, attrs: Sequence[str]):
     """Get a single attribute from a node in a tracksdata graph."""
 
-    #TODO: typechecking should somehow resolve this...
+    # TODO: typechecking should somehow resolve this...
     if not isinstance(node_id, int):
         if isinstance(node_id, list):
             if len(node_id) > 1:

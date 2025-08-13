@@ -9,6 +9,7 @@ import networkx as nx
 import numpy as np
 import tracksdata as td
 import zarr
+from geff.core_io import write_arrays
 from geff.metadata import GeffMetadata
 from geff.metadata._affine import Affine
 
@@ -65,11 +66,12 @@ def export_to_geff(tracks: Tracks, directory: Path, overwrite: bool = False):
         axis_names = list(tracks.pos_attr)
         axis_names.insert(0, tracks.time_attr)
 
-    axis_types = (
-        ["time", "space", "space"]
-        if tracks.ndim == 3
-        else ["time", "space", "space", "space"]
-    )
+    # TODO: this is not correct, we need to add the type of the axis to the metadata
+    # axis_types = (
+    #     ["time", "space", "space"]
+    #     if tracks.ndim == 3
+    #     else ["time", "space", "space", "space"]
+    # )
 
     # calculate affine matrix
     if tracks.scale is None:
@@ -98,15 +100,23 @@ def export_to_geff(tracks: Tracks, directory: Path, overwrite: bool = False):
             }
         ]
 
+    node_props = {
+        name: (graph.node_attrs()[name].to_numpy(), None) for name in graph.node_attr_keys
+    }
+    edge_props = {
+        name: (graph.edge_attrs()[name].to_numpy(), None) for name in graph.edge_attr_keys
+    }
+
     # Save the graph in a 'tracks' folder
     tracks_path = directory / "tracks"
     tracks_path.mkdir(exist_ok=True)
-    geff.write_nx(
-        graph=graph,
-        store=tracks_path,
+    write_arrays(
+        geff_store=tracks_path,
+        node_ids=np.array(graph.node_ids()),
+        node_props=node_props,
+        edge_ids=np.array(graph.edge_ids()),
+        edge_props=edge_props,
         metadata=metadata,
-        axis_names=axis_names,
-        axis_types=axis_types,
     )
 
 

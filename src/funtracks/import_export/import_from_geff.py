@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 import dask.array as da
 
 from funtracks.data_model.solution_tracks import SolutionTracks
+from funtracks.data_model.utils import convert_nx_to_td_indexedrxgraph
 
 
 def relabel_seg_id_to_node_id(
@@ -273,7 +274,8 @@ def import_from_geff(
     selected_attrs.extend(extra_features.keys())
 
     # All pre-checks have passed, load the graph now.
-    graph, _ = geff.read_nx(directory, node_props=selected_attrs)
+    graph_nx, _ = geff.read_nx(directory, node_props=selected_attrs)
+    graph = convert_nx_to_td_indexedrxgraph(graph_nx)
 
     # Relabel track_id attr to NodeAttr.TRACK_ID.value (unless we should recompute)
     if name_map.get(NodeAttr.TRACK_ID.value) is not None and not recompute_track_ids:
@@ -302,7 +304,7 @@ def import_from_geff(
     )
     # compute the 'area' attribute if needed
     if tracks.segmentation is not None and extra_features.get("area"):
-        nodes = tracks.graph.nodes
+        nodes = tracks.graph.node_ids()
         times = tracks.get_times(nodes)
         computed_attrs = tracks._compute_node_attrs(nodes, times)
         areas = computed_attrs[NodeAttr.AREA.value]

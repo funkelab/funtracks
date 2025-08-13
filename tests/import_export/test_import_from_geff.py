@@ -4,6 +4,7 @@ import pytest
 import tifffile
 from geff.testing.data import create_memory_mock_geff
 
+from funtracks.data_model.utils import td_get_single_attr_from_node
 from funtracks.import_export.import_from_geff import import_from_geff
 
 
@@ -75,11 +76,11 @@ def test_duplicate_or_none_in_name_map(valid_store_and_attrs):
 
     store, _ = valid_store_and_attrs
     # Duplicate value
-    name_map = {"time": "time", "y": "y", "x": "y"}
+    name_map = {"t": "t", "y": "y", "x": "y"}
     with pytest.raises(ValueError, match="duplicate values"):
         import_from_geff(store, name_map)
     # None value
-    name_map = {"time": None, "y": "y", "x": "x"}
+    name_map = {"t": None, "y": "y", "x": "x"}
     with pytest.raises(ValueError, match="None values"):
         import_from_geff(store, name_map)
 
@@ -89,7 +90,7 @@ def test_segmentation_axes_mismatch(valid_store_and_attrs, tmp_path):
     bounds."""
 
     store, _ = valid_store_and_attrs
-    name_map = {"time": "t", "y": "y", "x": "x", "seg_id": "seg_id"}
+    name_map = {"t": "t", "y": "y", "x": "x", "seg_id": "seg_id"}
 
     # Provide a segmentation with wrong shape
     wrong_seg = np.zeros((2, 20, 200), dtype=np.uint16)
@@ -112,13 +113,13 @@ def test_tracks_with_segmentation(
     """Test relabeling of the segmentation from seg_id to node_id."""
 
     store, _ = valid_store_and_attrs
-    name_map = {"time": "t", "y": "y", "x": "x", "seg_id": "seg_id"}
+    name_map = {"t": "t", "y": "y", "x": "x", "seg_id": "seg_id"}
     valid_segmentation_path = tmp_path / "segmentation.tif"
     tifffile.imwrite(valid_segmentation_path, valid_segmentation)
 
     # Test that a tracks object is produced and that the seg_id has been relabeled.
     scale = [1, 1, (1 / 100)]
-    extra_features = {"area": True, "random_feature": False}
+    extra_features = {"area": True, "random_feature": False, "track_id": True}
     tracks = import_from_geff(
         store,
         name_map,
@@ -128,11 +129,11 @@ def test_tracks_with_segmentation(
     )
     assert hasattr(tracks, "segmentation")
     assert tracks.segmentation.shape == valid_segmentation.shape
-    last_node = list(tracks.graph.nodes)[-1]
+    last_node = list(tracks.graph.node_ids())[-1]
     coords = [
-        tracks.graph.nodes[last_node]["t"],
-        tracks.graph.nodes[last_node]["y"],
-        tracks.graph.nodes[last_node]["x"],
+        td_get_single_attr_from_node(tracks.graph, last_node, ["t"]),
+        td_get_single_attr_from_node(tracks.graph, last_node, ["y"]),
+        td_get_single_attr_from_node(tracks.graph, last_node, ["x"]),
     ]
     coords = tuple(int(c * 1 / s) for c, s in zip(coords, scale, strict=True))
     assert (
@@ -143,16 +144,20 @@ def test_tracks_with_segmentation(
     )  # test that the seg id has been relabeled
 
     # Check that only required/requested features are present, and that area is recomputed
-    _, data = list(tracks.graph.nodes(data=True))[-1]
-    assert "random_feature" in data
-    assert "random_feature2" not in data
-    assert "area" in data
+    data = tracks.graph.node_attrs()
+    assert "random_feature" in data.columns
+    assert "random_feature2" not in data.columns
+    assert "area" in data.columns
     assert (
-        data["area"] == 0.01
+        data["area"][-1] == 0.01
     )  # recomputed area values should be 1 pixel, so 0.01 after applying the scaling.
 
     # Check that area is not recomputed but taken directly from the graph
-    extra_features = {"area": False, "random_feature": False}  # set Recompute to False
+    extra_features = {
+        "area": False,
+        "random_feature": False,
+        "track_id": True,
+    }  # set Recompute to False
     tracks = import_from_geff(
         store,
         name_map,
@@ -160,9 +165,9 @@ def test_tracks_with_segmentation(
         scale=scale,
         extra_features=extra_features,
     )
-    _, data = list(tracks.graph.nodes(data=True))[-1]
-    assert "area" in data
-    assert data["area"] == 21
+    data = tracks.graph.node_attrs()
+    assert "area" in data.columns
+    assert data["area"][-1] == 21
 
     # Test that import fails with ValueError when scaling information is missing or
     # incorrect
@@ -185,7 +190,7 @@ def test_segmentation_loading_formats(
 ):
     """Test loading segmentation from different formats using magic_imread."""
     store, _ = valid_store_and_attrs
-    name_map = {"time": "t", "y": "y", "x": "x", "seg_id": "seg_id"}
+    name_map = {"t": "t", "y": "y", "x": "x", "seg_id": "seg_id"}
     scale = [1, 1, 1 / 100]
     seg = valid_segmentation
 
@@ -211,7 +216,7 @@ def test_segmentation_loading_formats(
         name_map,
         segmentation_path=path,
         scale=scale,
-        extra_features={"area": False, "random_feature": False},
+        extra_features={"area": False, "random_feature": False, "track_id": True},
     )
 
     assert hasattr(tracks, "segmentation")
