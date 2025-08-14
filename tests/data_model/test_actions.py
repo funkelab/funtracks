@@ -30,7 +30,7 @@ class TestAddDeleteNodes:
         empty_td_graph.add_node_attr_key(key="solution", default_value=1)
 
         empty_seg = np.zeros_like(segmentation_2d) if use_seg else None
-        tracks = Tracks(empty_td_graph, segmentation=empty_seg, ndim=3)
+        tracks = Tracks(empty_td_graph.copy(), segmentation=empty_seg, ndim=3)
         # add all the nodes from graph_2d/seg_2d
         nodes = list(graph_2d.node_ids())
         attrs = {}
@@ -65,14 +65,7 @@ class TestAddDeleteNodes:
         if use_seg:
             assert_array_almost_equal(tracks.segmentation, segmentation_2d)
 
-        # TODO: somehow, graph.copy() doesn't work for IndexedRXGraph,
-        # because it messes up with the internal mapping, so we just
-        # create a new empty_td_graph, purely for the assert
-        empty_td_graph2 = td.graph.IndexedRXGraph()
-        empty_td_graph2.add_node_attr_key(key="pos", default_value=[0, 0, 0])
-        empty_td_graph2.add_node_attr_key(key="track_id", default_value=0)
-        empty_td_graph2.add_node_attr_key(key="area", default_value=0)
-        empty_td_graph2.add_node_attr_key(key="solution", default_value=1)
+        empty_td_graph2 = empty_td_graph.copy()
 
         # invert the action to delete all the nodes
         del_nodes = add_nodes.inverse()
@@ -101,7 +94,6 @@ class TestAddDeleteNodes:
 
 def test_update_node_segs(segmentation_2d, graph_2d):
     tracks = Tracks(graph=graph_2d.copy(), segmentation=segmentation_2d.copy())
-    # TODO: add copies back?
     nodes = list(graph_2d.node_ids())
 
     # add a couple pixels to the first node
@@ -136,6 +128,15 @@ def test_update_node_segs(segmentation_2d, graph_2d):
         tracks.graph[nodes[0]][NodeAttr.POS.value],
     )
     assert_array_almost_equal(tracks.segmentation, new_seg)
+
+
+def test_duplicate_edges(graph_2d, segmentation_2d):
+    tracks = Tracks(graph_2d.copy(), segmentation_2d.copy())
+    edges = [[1, 2], [1, 3], [3, 4], [4, 5]]
+    for edge in edges:
+        with pytest.raises(ValueError):
+            AddEdges(tracks, [edge])
+    assert set(tracks.graph.edge_ids()) == set(graph_2d.edge_ids())
 
 
 def test_add_delete_edges(graph_2d, segmentation_2d):

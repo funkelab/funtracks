@@ -402,6 +402,11 @@ class AddEdges(TracksAction):
         - add each edge to the graph. Assumes all edges are valid (they should be checked
         at this point already)
         """
+
+        for edge in self.edges:
+            if edge in td_graph_edge_list(self.tracks.graph):
+                raise ValueError(f"Edge {edge} already exists in the graph")
+
         attrs: dict[str, Sequence[Any]] = {}
         attrs.update(self.tracks._compute_edge_attrs(self.edges))
         attrs[td.DEFAULT_ATTR_KEYS.SOLUTION] = [1] * len(self.edges)

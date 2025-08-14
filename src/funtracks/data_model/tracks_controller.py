@@ -444,7 +444,8 @@ class TracksController:
             for t in range(time1 + 1, time2):
                 nodes = [
                     n
-                    # TODO: graph.nodes is not allowed, but TC will retire soon
+                    # TODO: graph.nodes is not allowed, this is not tested!
+                    # but TC will retire soon
                     for n, attr in self.tracks.graph.nodes(data=True)
                     if attr.get(self.tracks.time_attr) == t
                     and attr.get(NodeAttr.TRACK_ID.value) == track_id2

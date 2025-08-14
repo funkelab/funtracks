@@ -260,9 +260,6 @@ def test__delete_nodes_with_seg(graph_2d, segmentation_2d):
     assert track_id not in np.unique(tracks.segmentation[time])
     assert not tracks.graph.has_edge(node, 2)
     assert not tracks.graph.has_edge(node, 3)
-    # TODO: Teun: somewhere here, the existing edges get solution=0
-    # > happens within AddNodes.apply()
-    # > actions line 192 (subgraphing)
     action.inverse()
 
     # delete div child
