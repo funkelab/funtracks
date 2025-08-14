@@ -20,7 +20,10 @@ from .actions import (
 from .graph_attributes import NodeAttr
 from .solution_tracks import SolutionTracks
 from .tracks import Attrs, Edge, Node, SegMask
-from .utils import td_get_predecessors, td_get_single_attr_from_node, td_get_successors
+from .tracksdata_utils import (
+    td_get_predecessors,
+    td_get_successors,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -435,9 +438,7 @@ class TracksController:
             return False, action
 
         elif time2 - time1 > 1:
-            track_id2 = td_get_single_attr_from_node(
-                self.tracks.graph, edge[1], [NodeAttr.TRACK_ID.value]
-            )
+            track_id2 = self.tracks.graph[edge[1]][NodeAttr.TRACK_ID.value]
             # check whether there are already any nodes with the same track id between
             # source and target (shortest path between equal track_ids rule)
             for t in range(time1 + 1, time2):

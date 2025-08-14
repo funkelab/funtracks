@@ -5,7 +5,9 @@ from numpy.testing import assert_array_almost_equal
 from polars.testing import assert_frame_equal
 
 from funtracks.data_model import EdgeAttr, NodeAttr, Tracks
-from funtracks.data_model.utils import td_get_single_attr_from_node, td_graph_edge_list
+from funtracks.data_model.tracksdata_utils import (
+    td_graph_edge_list,
+)
 
 
 def test_create_tracks(graph_3d, segmentation_3d):
@@ -13,7 +15,7 @@ def test_create_tracks(graph_3d, segmentation_3d):
     tracks = Tracks(graph=graph_3d.copy(), ndim=4)
     assert tracks.get_positions([1]).tolist() == [[50, 50, 50]]
     assert tracks.get_time(1) == 0
-    with pytest.raises(KeyError):
+    with pytest.raises(ValueError):
         tracks.get_positions(["0"])
 
     # create track with graph and seg
@@ -43,9 +45,7 @@ def test_create_tracks(graph_3d, segmentation_3d):
     graph_3d_copy.add_node_attr_key(key="y", default_value=0)
     graph_3d_copy.add_node_attr_key(key="x", default_value=0)
     for node in graph_3d_copy.node_ids():
-        pos = td_get_single_attr_from_node(
-            graph_3d_copy, node_id=node, attrs=[NodeAttr.POS.value]
-        )
+        pos = graph_3d_copy[node][NodeAttr.POS.value]
         z, y, x = pos
         # del graph_3d.nodes[node][NodeAttr.POS.value]
         graph_3d_copy.update_node_attrs(attrs={"z": z, "y": y, "x": x}, node_ids=[node])
@@ -207,7 +207,7 @@ def test_set_positions_str(graph_2d):
     )
 
     # test invalid node id
-    with pytest.raises(KeyError):
+    with pytest.raises(ValueError):
         tracks.get_positions(["0"])
 
 

@@ -27,7 +27,7 @@ from typing_extensions import override
 from .graph_attributes import NodeAttr
 from .solution_tracks import SolutionTracks
 from .tracks import Attrs, Edge, Node, SegMask, Tracks
-from .utils import (
+from .tracksdata_utils import (
     td_get_predecessors,
     td_get_successors,
     td_graph_edge_list,

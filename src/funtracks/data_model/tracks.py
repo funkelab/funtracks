@@ -17,10 +17,9 @@ from skimage import measure
 
 from .compute_ious import _compute_ious
 from .graph_attributes import EdgeAttr, NodeAttr
-from .utils import (
+from .tracksdata_utils import (
     td_get_predecessors,
     td_get_single_attr_from_edge,
-    td_get_single_attr_from_node,
     td_get_successors,
 )
 
@@ -357,7 +356,7 @@ class Tracks:
             if required:
                 raise KeyError(attr)
             return None
-        return td_get_single_attr_from_node(self.graph, node_id=node, attrs=[attr])
+        return self.graph[node][attr]
 
     def _get_node_attr(self, node, attr, required=False):
         warnings.warn(

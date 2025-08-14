@@ -7,7 +7,7 @@ import tracksdata as td
 
 from .graph_attributes import NodeAttr
 from .tracks import Tracks
-from .utils import td_get_predecessors, td_graph_edge_list
+from .tracksdata_utils import td_get_predecessors, td_graph_edge_list
 
 if TYPE_CHECKING:
     from pathlib import Path

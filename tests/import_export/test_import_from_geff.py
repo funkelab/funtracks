@@ -4,7 +4,6 @@ import pytest
 import tifffile
 from geff.testing.data import create_memory_mock_geff
 
-from funtracks.data_model.utils import td_get_single_attr_from_node
 from funtracks.import_export.import_from_geff import import_from_geff
 
 
@@ -131,9 +130,9 @@ def test_tracks_with_segmentation(
     assert tracks.segmentation.shape == valid_segmentation.shape
     last_node = list(tracks.graph.node_ids())[-1]
     coords = [
-        td_get_single_attr_from_node(tracks.graph, last_node, ["t"]),
-        td_get_single_attr_from_node(tracks.graph, last_node, ["y"]),
-        td_get_single_attr_from_node(tracks.graph, last_node, ["x"]),
+        tracks.graph[last_node]["t"],
+        tracks.graph[last_node]["y"],
+        tracks.graph[last_node]["x"],
     ]
     coords = tuple(int(c * 1 / s) for c, s in zip(coords, scale, strict=True))
     assert (

@@ -3,7 +3,7 @@ import polars as pl
 import pytest
 import tracksdata as td
 from numpy.testing import assert_array_almost_equal
-from polars.testing import assert_frame_equal
+from polars.testing import assert_frame_equal, assert_series_not_equal
 
 from funtracks.data_model import Tracks
 from funtracks.data_model.actions import (
@@ -13,8 +13,7 @@ from funtracks.data_model.actions import (
     UpdateNodeSegs,
 )
 from funtracks.data_model.graph_attributes import EdgeAttr, NodeAttr
-from funtracks.data_model.utils import (
-    td_get_single_attr_from_node,
+from funtracks.data_model.tracksdata_utils import (
     td_graph_edge_list,
 )
 
@@ -36,17 +35,11 @@ class TestAddDeleteNodes:
         nodes = list(graph_2d.node_ids())
         attrs = {}
         attrs[NodeAttr.TIME.value] = [
-            # graph_2d.nodes[node][NodeAttr.TIME.value] for node in nodes
-            td_get_single_attr_from_node(graph_2d, node, [NodeAttr.TIME.value])
-            for node in nodes
+            graph_2d[node][NodeAttr.TIME.value] for node in nodes
         ]
-        attrs[NodeAttr.POS.value] = [
-            td_get_single_attr_from_node(graph_2d, node, [NodeAttr.POS.value])
-            for node in nodes
-        ]
+        attrs[NodeAttr.POS.value] = [graph_2d[node][NodeAttr.POS.value] for node in nodes]
         attrs[NodeAttr.TRACK_ID.value] = [
-            td_get_single_attr_from_node(graph_2d, node, [NodeAttr.TRACK_ID.value])
-            for node in nodes
+            graph_2d[node][NodeAttr.TRACK_ID.value] for node in nodes
         ]
         if use_seg:
             pixels = [
@@ -60,8 +53,7 @@ class TestAddDeleteNodes:
         else:
             pixels = None
             attrs[NodeAttr.AREA.value] = [
-                td_get_single_attr_from_node(graph_2d, node, [NodeAttr.AREA.value])
-                for node in nodes
+                graph_2d[node][NodeAttr.AREA.value] for node in nodes
             ]
         add_nodes = AddNodes(tracks, nodes, attributes=attrs, pixels=pixels)
 
@@ -121,13 +113,11 @@ def test_update_node_segs(segmentation_2d, graph_2d):
     action = UpdateNodeSegs(tracks, nodes, pixels=pixels, added=True)
 
     assert set(tracks.graph.node_ids()) == set(graph_2d.node_ids())
-    assert (
-        td_get_single_attr_from_node(tracks.graph, nodes[0], [NodeAttr.AREA.value])
-        == 1345
+    assert tracks.graph[nodes[0]][NodeAttr.AREA.value] == 1345
+    assert_series_not_equal(
+        graph_2d[nodes[0]][NodeAttr.POS.value],
+        tracks.graph[nodes[0]][NodeAttr.POS.value],
     )
-    assert td_get_single_attr_from_node(
-        tracks.graph, nodes, [NodeAttr.POS.value]
-    ) != td_get_single_attr_from_node(graph_2d, nodes, [NodeAttr.POS.value])
     assert_array_almost_equal(tracks.segmentation, new_seg)
 
     inverse = action.inverse()
@@ -140,12 +130,11 @@ def test_update_node_segs(segmentation_2d, graph_2d):
     inverse.inverse()
 
     assert set(tracks.graph.node_ids()) == set(graph_2d.node_ids())
-    assert (
-        td_get_single_attr_from_node(tracks.graph, nodes, [NodeAttr.AREA.value]) == 1345
+    assert tracks.graph[nodes[0]][NodeAttr.AREA.value] == 1345
+    assert_series_not_equal(
+        graph_2d[nodes[0]][NodeAttr.POS.value],
+        tracks.graph[nodes[0]][NodeAttr.POS.value],
     )
-    assert td_get_single_attr_from_node(
-        tracks.graph, nodes, [NodeAttr.POS.value]
-    ) != td_get_single_attr_from_node(graph_2d, nodes, [NodeAttr.POS.value])
     assert_array_almost_equal(tracks.segmentation, new_seg)
 
 

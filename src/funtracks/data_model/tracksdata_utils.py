@@ -7,25 +7,6 @@ import rustworkx as rx
 import tracksdata as td
 
 
-def td_get_single_attr_from_node(graph, node_id: int, attrs: Sequence[str]):
-    """Get a single attribute from a node in a tracksdata graph."""
-
-    # TODO: typechecking should somehow resolve this...
-    if not isinstance(node_id, int):
-        if isinstance(node_id, list):
-            if len(node_id) > 1:
-                raise ValueError("node_id must be an single integer")
-            else:
-                node_id = int(node_id[0])
-        node_id = int(node_id)
-
-    item = graph.filter(node_ids=[node_id]).node_attrs(attrs).item()
-    if isinstance(item, pl.Series):
-        return item.to_list()
-    else:
-        return item
-
-
 def td_get_single_attr_from_edge(graph, edge: tuple[int, int], attrs: Sequence[str]):
     """Get a single attribute from a edge in a tracksdata graph."""
 

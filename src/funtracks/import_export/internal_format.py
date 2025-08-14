@@ -7,7 +7,7 @@ import numpy as np
 import tracksdata as td
 
 from ..data_model import SolutionTracks, Tracks
-from ..data_model.utils import td_from_dict, td_to_dict
+from ..data_model.tracksdata_utils import td_from_dict, td_to_dict
 
 GRAPH_FILE = "graph.json"
 SEG_FILE = "seg.npy"
