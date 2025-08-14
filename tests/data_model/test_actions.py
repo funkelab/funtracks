@@ -1,7 +1,7 @@
-import networkx as nx
 import numpy as np
 import polars as pl
 import pytest
+import tracksdata as td
 from numpy.testing import assert_array_almost_equal
 from polars.testing import assert_frame_equal
 
@@ -14,7 +14,6 @@ from funtracks.data_model.actions import (
 )
 from funtracks.data_model.graph_attributes import EdgeAttr, NodeAttr
 from funtracks.data_model.utils import (
-    convert_nx_to_td_indexedrxgraph,
     td_get_single_attr_from_node,
     td_graph_edge_list,
 )
@@ -25,9 +24,8 @@ class TestAddDeleteNodes:
     @pytest.mark.parametrize("use_seg", [True, False])
     def test_2d_seg(segmentation_2d, graph_2d, use_seg):
         # start with an empty Tracks
-        empty_td_graph = convert_nx_to_td_indexedrxgraph(nx.DiGraph())
+        empty_td_graph = td.graph.IndexedRXGraph()
         empty_td_graph.add_node_attr_key(key="pos", default_value=[0, 0, 0])
-        empty_td_graph.add_node_attr_key(key="t", default_value=0)
         empty_td_graph.add_node_attr_key(key="track_id", default_value=0)
         empty_td_graph.add_node_attr_key(key="area", default_value=0)
         empty_td_graph.add_node_attr_key(key="solution", default_value=1)
@@ -78,9 +76,8 @@ class TestAddDeleteNodes:
         # TODO: somehow, graph.copy() doesn't work for IndexedRXGraph,
         # because it messes up with the internal mapping, so we just
         # create a new empty_td_graph, purely for the assert
-        empty_td_graph2 = convert_nx_to_td_indexedrxgraph(nx.DiGraph())
+        empty_td_graph2 = td.graph.IndexedRXGraph()
         empty_td_graph2.add_node_attr_key(key="pos", default_value=[0, 0, 0])
-        empty_td_graph2.add_node_attr_key(key="t", default_value=0)
         empty_td_graph2.add_node_attr_key(key="track_id", default_value=0)
         empty_td_graph2.add_node_attr_key(key="area", default_value=0)
         empty_td_graph2.add_node_attr_key(key="solution", default_value=1)
@@ -99,6 +96,7 @@ class TestAddDeleteNodes:
         data_tracks = tracks.graph.node_attrs()
         assert data_graph_2d.equals(data_tracks)
 
+        # TODO: graph.nodes it not allowed with tracksdata
         # for node, data in tracks.graph.nodes(data=True):
         #     graph_2d_data = graph_2d.nodes[node]
         #     # TODO: get back custom attrs https://github.com/funkelab/funtracks/issues/1
@@ -189,7 +187,9 @@ def test_add_delete_edges(graph_2d, segmentation_2d):
 
     inverse.inverse()
     assert set(tracks.graph.node_ids()) == set(graph_2d.node_ids())
-    assert td_graph_edge_list(tracks.graph) == td_graph_edge_list(graph_2d)
+    assert sorted(td_graph_edge_list(tracks.graph)) == sorted(
+        td_graph_edge_list(graph_2d)
+    )
     for edge in td_graph_edge_list(tracks.graph):
         edge_id_tracks = tracks.graph.edge_id(edge[0], edge[1])
         edge_id_graph = graph_2d.edge_id(edge[0], edge[1])

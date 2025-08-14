@@ -211,8 +211,8 @@ def test_set_positions_str(graph_2d):
         tracks.get_positions(["0"])
 
 
-def test_set_positions_list(graph_2d_list):
-    tracks = Tracks(graph_2d_list, pos_attr=["y", "x"], ndim=3)
+def test_set_positions_list(graph_2d_xy_attrs):
+    tracks = Tracks(graph_2d_xy_attrs, pos_attr=["y", "x"], ndim=3)
     tracks.set_positions((1, 2), [(1, 2), (3, 4)])
     assert np.array_equal(
         tracks.get_positions((1, 2), incl_time=False), np.array([[1, 2], [3, 4]])

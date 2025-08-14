@@ -1,9 +1,8 @@
-import networkx as nx
+import tracksdata as td
 
 from funtracks.data_model.action_history import ActionHistory
 from funtracks.data_model.actions import AddNodes
 from funtracks.data_model.tracks import Tracks
-from funtracks.data_model.utils import convert_nx_to_td_indexedrxgraph
 
 # https://github.com/zaboople/klonk/blob/master/TheGURQ.md
 
@@ -12,8 +11,7 @@ def test_action_history():
     history = ActionHistory()
 
     # make an empty tracksdata graph with the default attributes
-    graph_td = convert_nx_to_td_indexedrxgraph(nx.DiGraph())
-    graph_td.add_node_attr_key(key="t", default_value=0)
+    graph_td = td.graph.IndexedRXGraph()
     graph_td.add_node_attr_key(key="pos", default_value=[0, 0, 0])
     graph_td.add_node_attr_key(key="solution", default_value=1)
     graph_td.add_node_attr_key(key="track_id", default_value=0)

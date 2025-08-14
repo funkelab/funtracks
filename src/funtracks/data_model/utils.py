@@ -1,32 +1,10 @@
 from collections.abc import Sequence
 from typing import Any
 
-import networkx as nx
 import numpy as np
 import polars as pl
 import rustworkx as rx
 import tracksdata as td
-from rustworkx import networkx_converter
-
-
-def convert_nx_to_td_indexedrxgraph(graph_nx: nx.DiGraph) -> td.graph.IndexedRXGraph:
-    """
-    Convert a networkx graph to a tracksdata graph.
-
-    Args:
-        graph_nx: A networkx graph
-
-    Returns:
-        A tracksdata graph
-    """
-    if not isinstance(graph_nx, nx.DiGraph):
-        raise ValueError("graph_nx must be a networkx DiGraph")
-
-    graph_rx = networkx_converter(graph_nx, keep_attributes=True)
-
-    node_id_map = {node: i for i, node in enumerate(graph_nx.nodes)}
-    graph_td = td.graph.IndexedRXGraph(graph_rx, node_id_map=node_id_map)
-    return graph_td
 
 
 def td_get_single_attr_from_node(graph, node_id: int, attrs: Sequence[str]):

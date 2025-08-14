@@ -1,9 +1,8 @@
-import networkx as nx
 import numpy as np
+import tracksdata as td
 
 from funtracks.data_model import NodeAttr, SolutionTracks, Tracks
 from funtracks.data_model.actions import AddNodes
-from funtracks.data_model.utils import convert_nx_to_td_indexedrxgraph
 
 
 def test_next_track_id(graph_2d):
@@ -41,8 +40,7 @@ def test_from_tracks_cls(graph_2d):
 
 
 def test_next_track_id_empty():
-    # graph_td = nx.DiGraph()
-    graph_td = convert_nx_to_td_indexedrxgraph(nx.DiGraph())
+    graph_td = td.graph.IndexedRXGraph()
     # TODO: somewhere we have to make track_id a mandatory node attr
     graph_td.add_node_attr_key(key="track_id", default_value=0)
     seg = np.zeros(shape=(10, 100, 100, 100), dtype=np.uint64)

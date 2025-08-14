@@ -148,7 +148,7 @@ class AddNodes(TracksAction):
 
         self.attributes[NodeAttr.POS.value] = final_pos
 
-        # Add nodes to td graph (include networkx_node attribute,
+        # Add nodes to td graph
         required_attrs = self.tracks.graph.node_attr_keys
         if td.DEFAULT_ATTR_KEYS.SOLUTION not in attrs:
             attrs[td.DEFAULT_ATTR_KEYS.SOLUTION] = [1] * len(self.nodes)
@@ -417,6 +417,37 @@ class AddEdges(TracksAction):
                     raise KeyError(
                         f"Cannot add edge {edge}: endpoint {node} not in graph yet"
                     )
+
+            edge = list(edge)
+
+            if isinstance(self.tracks.graph, td.graph.GraphView):
+                # Check if edge exists in root
+                edge_in_root = edge in td_graph_edge_list(self.tracks.graph._root)
+                if edge_in_root:
+                    edge_id = self.tracks.graph._root.edge_id(edge[0], edge[1])
+                    # Check if edge is not in solution
+                    edge_in_solution = (
+                        self.tracks.graph._root.edge_attrs()
+                        .filter(pl.col(td.DEFAULT_ATTR_KEYS.EDGE_ID) == edge_id)[
+                            td.DEFAULT_ATTR_KEYS.SOLUTION
+                        ]
+                        .item()
+                    )
+                    if not edge_in_solution:
+                        # Reactivate edge in root
+                        self.tracks.graph._root.update_edge_attrs(
+                            edge_ids=[edge_id], attrs={td.DEFAULT_ATTR_KEYS.SOLUTION: [1]}
+                        )
+                        # TODO: Similar to nodes, we might want to
+                        # validate/merge edge attributes
+
+                        # Recreate graph view
+                        self.tracks.graph = self.tracks.graph._root.filter(
+                            td.NodeAttr(td.DEFAULT_ATTR_KEYS.SOLUTION) == 1,
+                            td.EdgeAttr(td.DEFAULT_ATTR_KEYS.SOLUTION) == 1,
+                        ).subgraph()
+                        continue
+
             self.tracks.graph.add_edge(
                 source_id=edge[0],
                 target_id=edge[1],

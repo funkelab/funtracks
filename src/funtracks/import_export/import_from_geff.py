@@ -7,13 +7,13 @@ from typing import (
 import geff
 import numpy as np
 import zarr
-from geff.metadata._affine import Affine
-from geff.validate.segmentation import (
+from geff.affine import Affine
+from geff.validators.segmentation_validators import (
     axes_match_seg_dims,
     has_seg_ids_at_coords,
     has_valid_seg_id,
 )
-from geff.validate.tracks import validate_lineages, validate_tracklets
+from geff.validators.validators import validate_lineages, validate_tracklets
 from numpy.typing import ArrayLike
 
 from funtracks.data_model.graph_attributes import NodeAttr
@@ -23,9 +23,9 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 import dask.array as da
+import tracksdata as td
 
 from funtracks.data_model.solution_tracks import SolutionTracks
-from funtracks.data_model.utils import convert_nx_to_td_indexedrxgraph
 
 
 def relabel_seg_id_to_node_id(
@@ -274,12 +274,13 @@ def import_from_geff(
     selected_attrs.extend(extra_features.keys())
 
     # All pre-checks have passed, load the graph now.
-    graph_nx, _ = geff.read_nx(directory, node_props=selected_attrs)
-    graph = convert_nx_to_td_indexedrxgraph(graph_nx)
+    graph_rx, _ = geff.read_rx(directory, node_props=selected_attrs)
+    node_id_map = {i: i for i in range(len(graph_rx.nodes()))}
+    graph = td.graph.IndexedRXGraph(graph_rx, node_id_map)
 
     # Relabel track_id attr to NodeAttr.TRACK_ID.value (unless we should recompute)
     if name_map.get(NodeAttr.TRACK_ID.value) is not None and not recompute_track_ids:
-        for _, data in graph.nodes(data=True):
+        for data in graph.node_attrs():
             try:
                 data[NodeAttr.TRACK_ID.value] = data.pop(
                     name_map[NodeAttr.TRACK_ID.value]

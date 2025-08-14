@@ -1,11 +1,9 @@
-import networkx as nx
 import numpy as np
 import pytest
 import tracksdata as td
 from skimage.draw import disk
 
 from funtracks.data_model import EdgeAttr, NodeAttr
-from funtracks.data_model.utils import convert_nx_to_td_indexedrxgraph
 
 
 @pytest.fixture
@@ -37,111 +35,121 @@ def segmentation_2d():
 
 @pytest.fixture
 def graph_2d():
-    graph_nx = nx.DiGraph()
+    graph_td = td.graph.IndexedRXGraph()
+
+    graph_td.add_node_attr_key(NodeAttr.POS.value, default_value=[0, 0])
+    graph_td.add_node_attr_key(NodeAttr.AREA.value, default_value=0)
+    graph_td.add_node_attr_key(NodeAttr.TRACK_ID.value, default_value=0)
+    graph_td.add_node_attr_key(td.DEFAULT_ATTR_KEYS.SOLUTION, default_value=1)
+    graph_td.add_edge_attr_key(EdgeAttr.IOU.value, default_value=0)
+    graph_td.add_edge_attr_key(td.DEFAULT_ATTR_KEYS.SOLUTION, default_value=1)
+
     nodes = [
-        (
-            1,
-            {
-                NodeAttr.POS.value: [50, 50],
-                NodeAttr.TIME.value: 0,
-                NodeAttr.AREA.value: 1245,
-                NodeAttr.TRACK_ID.value: 1,
-                td.DEFAULT_ATTR_KEYS.SOLUTION: 1,
-            },
-        ),
-        (
-            2,
-            {
-                NodeAttr.POS.value: [20, 80],
-                NodeAttr.TIME.value: 1,
-                NodeAttr.TRACK_ID.value: 2,
-                NodeAttr.AREA.value: 305,
-                td.DEFAULT_ATTR_KEYS.SOLUTION: 1,
-            },
-        ),
-        (
-            3,
-            {
-                NodeAttr.POS.value: [60, 45],
-                NodeAttr.TIME.value: 1,
-                NodeAttr.AREA.value: 697,
-                NodeAttr.TRACK_ID.value: 3,
-                td.DEFAULT_ATTR_KEYS.SOLUTION: 1,
-            },
-        ),
-        (
-            4,
-            {
-                NodeAttr.POS.value: [1.5, 1.5],
-                NodeAttr.TIME.value: 2,
-                NodeAttr.AREA.value: 16,
-                NodeAttr.TRACK_ID.value: 3,
-                td.DEFAULT_ATTR_KEYS.SOLUTION: 1,
-            },
-        ),
-        (
-            5,
-            {
-                NodeAttr.POS.value: [1.5, 1.5],
-                NodeAttr.TIME.value: 4,
-                NodeAttr.AREA.value: 16,
-                NodeAttr.TRACK_ID.value: 3,
-                td.DEFAULT_ATTR_KEYS.SOLUTION: 1,
-            },
-        ),
-        # unconnected node
-        (
-            6,
-            {
-                NodeAttr.POS.value: [97.5, 97.5],
-                NodeAttr.TIME.value: 4,
-                NodeAttr.AREA.value: 16,
-                NodeAttr.TRACK_ID.value: 5,
-                td.DEFAULT_ATTR_KEYS.SOLUTION: 1,
-            },
-        ),
+        {
+            NodeAttr.POS.value: [50, 50],
+            NodeAttr.TIME.value: 0,
+            NodeAttr.AREA.value: 1245,
+            NodeAttr.TRACK_ID.value: 1,
+            td.DEFAULT_ATTR_KEYS.SOLUTION: 1,
+        },
+        {
+            NodeAttr.POS.value: [20, 80],
+            NodeAttr.TIME.value: 1,
+            NodeAttr.TRACK_ID.value: 2,
+            NodeAttr.AREA.value: 305,
+            td.DEFAULT_ATTR_KEYS.SOLUTION: 1,
+        },
+        {
+            NodeAttr.POS.value: [60, 45],
+            NodeAttr.TIME.value: 1,
+            NodeAttr.AREA.value: 697,
+            NodeAttr.TRACK_ID.value: 3,
+            td.DEFAULT_ATTR_KEYS.SOLUTION: 1,
+        },
+        {
+            NodeAttr.POS.value: [1.5, 1.5],
+            NodeAttr.TIME.value: 2,
+            NodeAttr.AREA.value: 16,
+            NodeAttr.TRACK_ID.value: 3,
+            td.DEFAULT_ATTR_KEYS.SOLUTION: 1,
+        },
+        {
+            NodeAttr.POS.value: [1.5, 1.5],
+            NodeAttr.TIME.value: 4,
+            NodeAttr.AREA.value: 16,
+            NodeAttr.TRACK_ID.value: 3,
+            td.DEFAULT_ATTR_KEYS.SOLUTION: 1,
+        },
+        {
+            NodeAttr.POS.value: [97.5, 97.5],
+            NodeAttr.TIME.value: 4,
+            NodeAttr.AREA.value: 16,
+            NodeAttr.TRACK_ID.value: 5,
+            td.DEFAULT_ATTR_KEYS.SOLUTION: 1,
+        },
     ]
     edges = [
-        (1, 2, {EdgeAttr.IOU.value: 0.0, td.DEFAULT_ATTR_KEYS.SOLUTION: 1}),
-        (1, 3, {EdgeAttr.IOU.value: 0.39311, td.DEFAULT_ATTR_KEYS.SOLUTION: 1}),
-        (3, 4, {EdgeAttr.IOU.value: 0.0, td.DEFAULT_ATTR_KEYS.SOLUTION: 1}),
-        (4, 5, {EdgeAttr.IOU.value: 1.0, td.DEFAULT_ATTR_KEYS.SOLUTION: 1}),
+        {
+            "source_id": 1,
+            "target_id": 2,
+            EdgeAttr.IOU.value: 0.0,
+            td.DEFAULT_ATTR_KEYS.SOLUTION: 1,
+        },
+        {
+            "source_id": 1,
+            "target_id": 3,
+            EdgeAttr.IOU.value: 0.39311,
+            td.DEFAULT_ATTR_KEYS.SOLUTION: 1,
+        },
+        {
+            "source_id": 3,
+            "target_id": 4,
+            EdgeAttr.IOU.value: 0.0,
+            td.DEFAULT_ATTR_KEYS.SOLUTION: 1,
+        },
+        {
+            "source_id": 4,
+            "target_id": 5,
+            EdgeAttr.IOU.value: 1.0,
+            td.DEFAULT_ATTR_KEYS.SOLUTION: 1,
+        },
     ]
-    graph_nx.add_nodes_from(nodes)
-    graph_nx.add_edges_from(edges)
 
-    graph_td = convert_nx_to_td_indexedrxgraph(graph_nx)
+    graph_td.bulk_add_nodes(nodes, indices=[1, 2, 3, 4, 5, 6])
+    graph_td.bulk_add_edges(edges)
 
     return graph_td
 
 
 @pytest.fixture
-def graph_2d_list():
-    graph_nx = nx.DiGraph()
+def graph_2d_xy_attrs():
+    graph_td = td.graph.IndexedRXGraph()
+
+    graph_td.add_node_attr_key("x", default_value=[0, 0])
+    graph_td.add_node_attr_key("y", default_value=[0, 0])
+    graph_td.add_node_attr_key(NodeAttr.AREA.value, default_value=0)
+    graph_td.add_node_attr_key(NodeAttr.TRACK_ID.value, default_value=0)
+    graph_td.add_node_attr_key(td.DEFAULT_ATTR_KEYS.SOLUTION, default_value=1)
+    graph_td.add_edge_attr_key(EdgeAttr.IOU.value, default_value=0)
+    graph_td.add_edge_attr_key(td.DEFAULT_ATTR_KEYS.SOLUTION, default_value=1)
+
     nodes = [
-        (
-            1,
-            {
-                "y": 100,
-                "x": 50,
-                NodeAttr.TIME.value: 0,
-                NodeAttr.AREA.value: 1245,
-                NodeAttr.TRACK_ID.value: 1,
-            },
-        ),
-        (
-            2,
-            {
-                "y": 20,
-                "x": 100,
-                NodeAttr.TIME.value: 1,
-                NodeAttr.AREA.value: 500,
-                NodeAttr.TRACK_ID.value: 2,
-            },
-        ),
+        {
+            "y": 100,
+            "x": 50,
+            NodeAttr.TIME.value: 0,
+            NodeAttr.AREA.value: 1245,
+            NodeAttr.TRACK_ID.value: 1,
+        },
+        {
+            "y": 20,
+            "x": 100,
+            NodeAttr.TIME.value: 1,
+            NodeAttr.AREA.value: 500,
+            NodeAttr.TRACK_ID.value: 2,
+        },
     ]
-    graph_nx.add_nodes_from(nodes)
-    graph_td = convert_nx_to_td_indexedrxgraph(graph_nx)
+    graph_td.bulk_add_nodes(nodes, indices=[1, 2])
     return graph_td
 
 
@@ -175,43 +183,50 @@ def segmentation_3d():
 
 @pytest.fixture
 def graph_3d():
-    graph_nx = nx.DiGraph()
+    graph_td = td.graph.IndexedRXGraph()
+
+    graph_td.add_node_attr_key(NodeAttr.POS.value, default_value=[0, 0, 0])
+    graph_td.add_node_attr_key(NodeAttr.TRACK_ID.value, default_value=0)
+    graph_td.add_node_attr_key(td.DEFAULT_ATTR_KEYS.SOLUTION, default_value=1)
+    graph_td.add_edge_attr_key(EdgeAttr.IOU.value, default_value=0)
+    graph_td.add_edge_attr_key(td.DEFAULT_ATTR_KEYS.SOLUTION, default_value=1)
+
     nodes = [
-        (
-            1,
-            {
-                NodeAttr.POS.value: [50, 50, 50],
-                NodeAttr.TIME.value: 0,
-                NodeAttr.TRACK_ID.value: 1,
-                td.DEFAULT_ATTR_KEYS.SOLUTION: 1,
-            },
-        ),
-        (
-            2,
-            {
-                NodeAttr.POS.value: [20, 50, 80],
-                NodeAttr.TIME.value: 1,
-                NodeAttr.TRACK_ID.value: 1,
-                td.DEFAULT_ATTR_KEYS.SOLUTION: 1,
-            },
-        ),
-        (
-            3,
-            {
-                NodeAttr.POS.value: [60, 50, 45],
-                NodeAttr.TIME.value: 1,
-                NodeAttr.TRACK_ID.value: 1,
-                td.DEFAULT_ATTR_KEYS.SOLUTION: 1,
-            },
-        ),
+        {
+            NodeAttr.POS.value: [50, 50, 50],
+            NodeAttr.TIME.value: 0,
+            NodeAttr.TRACK_ID.value: 1,
+            td.DEFAULT_ATTR_KEYS.SOLUTION: 1,
+        },
+        {
+            NodeAttr.POS.value: [20, 50, 80],
+            NodeAttr.TIME.value: 1,
+            NodeAttr.TRACK_ID.value: 1,
+            td.DEFAULT_ATTR_KEYS.SOLUTION: 1,
+        },
+        {
+            NodeAttr.POS.value: [60, 50, 45],
+            NodeAttr.TIME.value: 1,
+            NodeAttr.TRACK_ID.value: 1,
+            td.DEFAULT_ATTR_KEYS.SOLUTION: 1,
+        },
     ]
     edges = [
-        (1, 2),
-        (1, 3),
+        {
+            "source_id": 1,
+            "target_id": 2,
+            EdgeAttr.IOU.value: 0.0,
+            td.DEFAULT_ATTR_KEYS.SOLUTION: 1,
+        },
+        {
+            "source_id": 1,
+            "target_id": 3,
+            EdgeAttr.IOU.value: 0.39311,
+            td.DEFAULT_ATTR_KEYS.SOLUTION: 1,
+        },
     ]
-    graph_nx.add_nodes_from(nodes)
-    graph_nx.add_edges_from(edges)
 
-    graph_td = convert_nx_to_td_indexedrxgraph(graph_nx)
+    graph_td.bulk_add_nodes(nodes, indices=[1, 2, 3])
+    graph_td.bulk_add_edges(edges)
 
     return graph_td

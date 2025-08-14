@@ -5,13 +5,12 @@ from typing import (
 )
 
 import geff
-import networkx as nx
 import numpy as np
 import tracksdata as td
 import zarr
-from geff.core_io import write_arrays
-from geff.metadata import GeffMetadata
-from geff.metadata._affine import Affine
+from geff import GeffMetadata
+from geff.affine import Affine
+from geff.write_arrays import write_arrays
 
 from funtracks.data_model.graph_attributes import NodeAttr
 
@@ -22,7 +21,7 @@ if TYPE_CHECKING:
 
 
 def export_to_geff(tracks: Tracks, directory: Path, overwrite: bool = False):
-    """Export the Tracks nxgraph to geff.
+    """Export the Tracks graph to geff.
 
     Args:
         tracks (Tracks): Tracks object containing a graph to save.
@@ -83,7 +82,7 @@ def export_to_geff(tracks: Tracks, directory: Path, overwrite: bool = False):
     # Create metadata and add the affine matrix. Axes will be added automatically.
     metadata = GeffMetadata(
         geff_version=geff.__version__,
-        directed=isinstance(graph, nx.DiGraph),
+        directed=True,
         affine=affine,
     )
 
@@ -129,7 +128,7 @@ def split_position_attr(tracks: Tracks) -> td.graph.BaseGraph:
           converted.
 
     Returns:
-        nx.DiGraph with a separate positional attribute for each coordinate.
+        tracksdata.graph.BaseGraph with a separate positional attribute per coordinate.
 
     """
     new_graph = tracks.graph.copy()

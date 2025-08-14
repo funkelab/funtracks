@@ -3,8 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import networkx as nx
 import numpy as np
+import tracksdata as td
 
 from ..data_model import SolutionTracks, Tracks
 from ..data_model.utils import td_from_dict, td_to_dict
@@ -40,7 +40,6 @@ def _save_graph(tracks: Tracks, directory: Path):
         directory (Path): The directory in which to save the graph file.
     """
     graph_file = directory / GRAPH_FILE
-    # graph_data = nx.node_link_data(tracks.graph, edges="links")
     graph_data = td_to_dict(tracks.graph)
 
     def convert_np_types(data):
@@ -130,7 +129,7 @@ def load_tracks(
         return Tracks(graph, seg, **attrs)
 
 
-def _load_graph(graph_file: Path) -> nx.DiGraph:
+def _load_graph(graph_file: Path) -> td.graph.BaseGraph:
     """Load the graph from the given json file. Expects networkx node_link_graph
     formatted json.
 
@@ -141,13 +140,12 @@ def _load_graph(graph_file: Path) -> nx.DiGraph:
         FileNotFoundError: If the file does not exist
 
     Returns:
-        nx.DiGraph: A networkx graph loaded from the file.
+        td.graph.BaseGraph: A tracksdata graph loaded from the file.
     """
     if graph_file.is_file():
         with open(graph_file) as f:
             json_graph = json.load(f)
         return td_from_dict(json_graph)
-        # return nx.node_link_graph(json_graph, directed=True, edges="links")
     else:
         raise FileNotFoundError(f"No graph at {graph_file}")
 
