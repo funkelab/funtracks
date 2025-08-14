@@ -1,6 +1,6 @@
 import pytest
-from networkx.utils import graphs_equal
 from numpy.testing import assert_array_almost_equal
+from polars.testing import assert_frame_equal
 
 from funtracks.data_model import SolutionTracks, Tracks
 from funtracks.import_export.internal_format import (
@@ -47,7 +47,12 @@ def test_save_load(
     else:
         assert loaded.segmentation is None
 
-    assert graphs_equal(loaded.graph, tracks.graph)
+    assert_frame_equal(
+        loaded.graph.node_attrs(), tracks.graph.node_attrs(), check_column_order=False
+    )
+    assert_frame_equal(
+        loaded.graph.edge_attrs(), tracks.graph.edge_attrs(), check_column_order=False
+    )
 
 
 @pytest.mark.parametrize("use_seg", [True, False])

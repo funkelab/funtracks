@@ -5,11 +5,12 @@ from typing import (
 )
 
 import geff
-import networkx as nx
 import numpy as np
+import tracksdata as td
 import zarr
+from geff import GeffMetadata
 from geff.affine import Affine
-from geff.metadata_schema import GeffMetadata
+from geff.write_arrays import write_arrays
 
 from funtracks.data_model.graph_attributes import NodeAttr
 
@@ -20,7 +21,7 @@ if TYPE_CHECKING:
 
 
 def export_to_geff(tracks: Tracks, directory: Path, overwrite: bool = False):
-    """Export the Tracks nxgraph to geff.
+    """Export the Tracks graph to geff.
 
     Args:
         tracks (Tracks): Tracks object containing a graph to save.
@@ -64,11 +65,12 @@ def export_to_geff(tracks: Tracks, directory: Path, overwrite: bool = False):
         axis_names = list(tracks.pos_attr)
         axis_names.insert(0, tracks.time_attr)
 
-    axis_types = (
-        ["time", "space", "space"]
-        if tracks.ndim == 3
-        else ["time", "space", "space", "space"]
-    )
+    # TODO: this is not correct, we need to add the type of the axis to the metadata
+    # axis_types = (
+    #     ["time", "space", "space"]
+    #     if tracks.ndim == 3
+    #     else ["time", "space", "space", "space"]
+    # )
 
     # calculate affine matrix
     if tracks.scale is None:
@@ -80,7 +82,7 @@ def export_to_geff(tracks: Tracks, directory: Path, overwrite: bool = False):
     # Create metadata and add the affine matrix. Axes will be added automatically.
     metadata = GeffMetadata(
         geff_version=geff.__version__,
-        directed=isinstance(graph, nx.DiGraph),
+        directed=True,
         affine=affine,
     )
 
@@ -97,19 +99,27 @@ def export_to_geff(tracks: Tracks, directory: Path, overwrite: bool = False):
             }
         ]
 
+    node_props = {
+        name: (graph.node_attrs()[name].to_numpy(), None) for name in graph.node_attr_keys
+    }
+    edge_props = {
+        name: (graph.edge_attrs()[name].to_numpy(), None) for name in graph.edge_attr_keys
+    }
+
     # Save the graph in a 'tracks' folder
     tracks_path = directory / "tracks"
     tracks_path.mkdir(exist_ok=True)
-    geff.write_nx(
-        graph=graph,
-        store=tracks_path,
+    write_arrays(
+        geff_store=tracks_path,
+        node_ids=np.array(graph.node_ids()),
+        node_props=node_props,
+        edge_ids=np.array(graph.edge_ids()),
+        edge_props=edge_props,
         metadata=metadata,
-        axis_names=axis_names,
-        axis_types=axis_types,
     )
 
 
-def split_position_attr(tracks: Tracks) -> nx.DiGraph:
+def split_position_attr(tracks: Tracks) -> td.graph.BaseGraph:
     """Spread the spatial coordinates to separate node attrs in order to export to geff
     format.
 
@@ -118,20 +128,27 @@ def split_position_attr(tracks: Tracks) -> nx.DiGraph:
           converted.
 
     Returns:
-        nx.DiGraph with a separate positional attribute for each coordinate.
+        tracksdata.graph.BaseGraph with a separate positional attribute per coordinate.
 
     """
     new_graph = tracks.graph.copy()
 
-    for _, attrs in new_graph.nodes(data=True):
-        pos = attrs.pop(tracks.pos_attr)
+    new_graph.add_node_attr_key("x", default_value=0.0)
+    new_graph.add_node_attr_key("y", default_value=0.0)
 
-        if len(pos) == 2:
-            attrs["y"] = pos[0]
-            attrs["x"] = pos[1]
-        elif len(pos) == 3:
-            attrs["z"] = pos[0]
-            attrs["y"] = pos[1]
-            attrs["x"] = pos[2]
+    pos_values = new_graph.node_attrs()["pos"].to_numpy()
+    ndim = pos_values.shape[1]
+
+    if ndim == 2:
+        new_graph.update_node_attrs(
+            attrs={"x": pos_values[:, 1], "y": pos_values[:, 0]},
+            node_ids=new_graph.node_ids(),
+        )
+    elif ndim == 3:
+        new_graph.add_node_attr_key("z", default_value=0.0)
+        new_graph.update_node_attrs(
+            attrs={"x": pos_values[:, 2], "y": pos_values[:, 1], "z": pos_values[:, 0]},
+            node_ids=new_graph.node_ids(),
+        )
 
     return new_graph
