@@ -166,9 +166,9 @@ class Tracks:
             positions = np.array(positions)
         if incl_time:
             raise ValueError("Setting time is not allowed in tracksdata")
-            times = positions[:, 0].tolist()  # we know this is a list of ints
-            self.set_times(nodes, times)  # type: ignore
-            positions = positions[:, 1:]
+            # times = positions[:, 0].tolist()  # we know this is a list of ints
+            # self.set_times(nodes, times)  # type: ignore
+            # positions = positions[:, 1:]
 
         if isinstance(self.pos_attr, tuple | list):
             for idx, attr in enumerate(self.pos_attr):
@@ -179,7 +179,8 @@ class Tracks:
             self._set_nodes_attr(nodes, self.pos_attr, positions)
 
     def set_position(self, node: Node, position: list, incl_time=False):
-        raise ValueError("Setting time is not allowed in tracksdata")
+        if incl_time:
+            raise ValueError("Setting time is not allowed in tracksdata")
         self.set_positions(
             [node], np.expand_dims(np.array(position), axis=0), incl_time=incl_time
         )
@@ -199,20 +200,20 @@ class Tracks:
         """
         return int(self.get_times([node])[0])
 
-    def set_times(self, nodes: Iterable[Node], times: Iterable[int]):
-        times = [int(t) for t in times]
-        self._set_nodes_attr(nodes, self.time_attr, times)
+    # def set_times(self, nodes: Iterable[Node], times: Iterable[int]):
+    #     times = [int(t) for t in times]
+    #     self._set_nodes_attr(nodes, self.time_attr, times)
 
-    def set_time(self, node: Any, time: int):
-        """Set the time frame of a given node. Raises an error if the node
-        is not in the graph.
+    # def set_time(self, node: Any, time: int):
+    #     """Set the time frame of a given node. Raises an error if the node
+    #     is not in the graph.
 
-        Args:
-            node (Any): The node id to set the time frame for
-            time (int): The time to set
+    #     Args:
+    #         node (Any): The node id to set the time frame for
+    #         time (int): The time to set
 
-        """
-        self.set_times([node], [int(time)])
+    #     """
+    #     self.set_times([node], [int(time)])
 
     def get_areas(self, nodes: Iterable[Node]) -> Sequence[int | None]:
         """Get the area/volume of a given node. Raises a KeyError if the node
@@ -345,8 +346,6 @@ class Tracks:
         return ndim
 
     def _set_node_attr(self, node: Node, attr: str, value: Any):
-        if isinstance(value, np.ndarray):
-            value = list(value)
         self.graph.update_node_attrs(attrs={attr: value}, node_ids=[node])
 
     def _set_nodes_attr(self, nodes: Iterable[Node], attr: str, values: Iterable[Any]):

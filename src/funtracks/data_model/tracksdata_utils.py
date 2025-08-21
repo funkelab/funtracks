@@ -10,10 +10,7 @@ def td_get_single_attr_from_edge(graph, edge: tuple[int, int], attrs: Sequence[s
     """Get a single attribute from a edge in a tracksdata graph."""
 
     item = graph.filter(node_ids=[edge[0], edge[1]]).edge_attrs()[attrs].item()
-    if isinstance(item, pl.Series):
-        return item.to_list()
-    else:
-        return item
+    return item
 
 
 def convert_np_types(data):

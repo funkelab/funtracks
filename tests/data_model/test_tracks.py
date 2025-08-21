@@ -54,11 +54,14 @@ def test_create_tracks(graph_3d, segmentation_3d):
 
     tracks = Tracks(graph=graph_3d_copy, pos_attr=pos_attr, ndim=4)
     assert tracks.get_positions([1]).tolist() == [[50, 50, 50]]
-    # tracks.set_position(1, [55, 56, 57])
-    # assert tracks.get_position(1) == [55, 56, 57]
 
-    # tracks.set_position(1, [1, 50, 50, 50], incl_time=True)
-    # assert tracks.get_time(1) == 1
+    # setting time is no longer allowed in tracksdata
+    with pytest.raises(ValueError):
+        tracks.set_position(1, [55, 56, 57], incl_time=True)
+        # assert tracks.get_position(1) == [55, 56, 57]
+
+    tracks.set_position(1, [50, 50, 50], incl_time=False)
+    assert tracks.get_positions([1], incl_time=False).tolist() == [[50, 50, 50]]
 
 
 def test_create_tracks_not_trackdata_graph():
@@ -123,6 +126,7 @@ def test_degrees(graph_2d):
     assert tracks.in_degree(np.array([1])) == 0
     assert tracks.in_degree(np.array([4])) == 1
     assert tracks.in_degree([4]) == 1
+    assert tracks.out_degree([4]) == 1
     assert np.array_equal(tracks.in_degree(None), np.array([0, 1, 1, 1, 1, 0]))
     assert np.array_equal(tracks.out_degree(np.array([1, 4])), np.array([2, 1]))
     assert np.array_equal(
@@ -220,6 +224,9 @@ def test_set_positions_str(graph_2d):
     # test invalid node id
     with pytest.raises(ValueError):
         tracks.get_positions(["0"])
+
+    with pytest.raises(ValueError):
+        tracks.set_positions((1, 2), [(1, 2, 3), (4, 5, 6)], incl_time=True)
 
 
 def test_set_positions_list(graph_2d_xy_attrs):
