@@ -1,4 +1,4 @@
-import networkx as nx
+import tracksdata as td
 
 from funtracks.data_model.action_history import ActionHistory
 from funtracks.data_model.actions import AddNodes
@@ -9,9 +9,22 @@ from funtracks.data_model.tracks import Tracks
 
 def test_action_history():
     history = ActionHistory()
-    tracks = Tracks(nx.DiGraph(), ndim=3)
+
+    # make an empty tracksdata graph with the default attributes
+    kwargs = {
+        "drivername": "sqlite",
+        "database": ":memory:",
+        "overwrite": True,
+    }
+    graph_td = td.graph.SQLGraph(**kwargs)
+    graph_td.add_node_attr_key(key="pos", default_value=None)
+    graph_td.add_node_attr_key(key="solution", default_value=1)
+    graph_td.add_node_attr_key(key="track_id", default_value=0)
+    graph_td.add_edge_attr_key(key="solution", default_value=1)
+
+    tracks = Tracks(graph_td, ndim=3)
     action1 = AddNodes(
-        tracks, nodes=[0, 1], attributes={"time": [0, 1], "pos": [[0, 1], [1, 2]]}
+        tracks, nodes=[0, 1], attributes={"t": [0, 1], "pos": [[0, 1], [1, 2]]}
     )
 
     # empty history has no undo or redo
@@ -22,7 +35,7 @@ def test_action_history():
     history.add_new_action(action1)
     # undo the action
     assert history.undo()
-    assert tracks.graph.number_of_nodes() == 0
+    assert tracks.graph.num_nodes == 0
     assert len(history.undo_stack) == 1
     assert len(history.redo_stack) == 1
     assert history._undo_pointer == -1
@@ -32,7 +45,7 @@ def test_action_history():
 
     # redo the action
     assert history.redo()
-    assert tracks.graph.number_of_nodes() == 2
+    assert tracks.graph.num_nodes == 2
     assert len(history.undo_stack) == 1
     assert len(history.redo_stack) == 0
     assert history._undo_pointer == 0
@@ -42,9 +55,9 @@ def test_action_history():
 
     # undo and then add new action
     assert history.undo()
-    action2 = AddNodes(tracks, nodes=[10], attributes={"time": [10], "pos": [[0, 1]]})
+    action2 = AddNodes(tracks, nodes=[10], attributes={"t": [10], "pos": [[0, 1]]})
     history.add_new_action(action2)
-    assert tracks.graph.number_of_nodes() == 1
+    assert tracks.graph.num_nodes == 1
     # there are 3 things on the stack: action1, action1's inverse, and action 2
     assert len(history.undo_stack) == 3
     assert len(history.redo_stack) == 0
@@ -53,7 +66,7 @@ def test_action_history():
     # undo back to after action 1
     assert history.undo()
     assert history.undo()
-    assert tracks.graph.number_of_nodes() == 2
+    assert tracks.graph.num_nodes == 2
 
     assert len(history.undo_stack) == 3
     assert len(history.redo_stack) == 2

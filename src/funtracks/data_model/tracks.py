@@ -10,13 +10,18 @@ from typing import (
 )
 from warnings import warn
 
-import networkx as nx
 import numpy as np
+import tracksdata as td
 from psygnal import Signal
 from skimage import measure
 
 from .compute_ious import _compute_ious
 from .graph_attributes import EdgeAttr, NodeAttr
+from .tracksdata_utils import (
+    td_get_predecessors,
+    td_get_single_attr_from_edge,
+    td_get_successors,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -37,7 +42,7 @@ class Tracks:
     position attribute. Edges in the graph represent links across time.
 
     Attributes:
-        graph (nx.DiGraph): A graph with nodes representing detections and
+        graph (td.graph.BaseGraph): A graph with nodes representing detections and
             and edges representing links across time.
         segmentation (Optional(np.ndarray)): An optional segmentation that
             accompanies the tracking graph. If a segmentation is provided,
@@ -58,13 +63,15 @@ class Tracks:
 
     def __init__(
         self,
-        graph: nx.DiGraph,
+        graph: td.graph.BaseGraph,
         segmentation: np.ndarray | None = None,
         time_attr: str = NodeAttr.TIME.value,
         pos_attr: str | tuple[str] | list[str] = NodeAttr.POS.value,
         scale: list[float] | None = None,
         ndim: int | None = None,
     ):
+        if not isinstance(graph, td.graph.BaseGraph):
+            raise ValueError("graph must be a tracksdata.BaseGraph")
         self.graph = graph
         self.segmentation = segmentation
         self.time_attr = time_attr
@@ -73,28 +80,39 @@ class Tracks:
         self.ndim = self._compute_ndim(segmentation, scale, ndim)
 
     def nodes(self):
-        return np.array(self.graph.nodes())
+        """Get the node ids in the graph."""
+        return np.array(self.graph.node_ids())
 
     def edges(self):
-        return np.array(self.graph.edges())
+        """Get the edge ids in the graph."""
+        return np.array(self.graph.edge_ids())
 
     def in_degree(self, nodes: np.ndarray | None = None) -> np.ndarray:
+        """Get the in-degree edge_ids of the nodes in the graph."""
         if nodes is not None:
+            # make sure nodes is a numpy array
+            if not isinstance(nodes, np.ndarray):
+                nodes = np.array(nodes)
+
             return np.array([self.graph.in_degree(node.item()) for node in nodes])
         else:
             return np.array(self.graph.in_degree())
 
     def out_degree(self, nodes: np.ndarray | None = None) -> np.ndarray:
         if nodes is not None:
+            # make sure nodes is a numpy array
+            if not isinstance(nodes, np.ndarray):
+                nodes = np.array(nodes)
+
             return np.array([self.graph.out_degree(node.item()) for node in nodes])
         else:
             return np.array(self.graph.out_degree())
 
     def predecessors(self, node: int) -> list[int]:
-        return list(self.graph.predecessors(node))
+        return td_get_predecessors(self.graph, node)
 
     def successors(self, node: int) -> list[int]:
-        return list(self.graph.successors(node))
+        return td_get_successors(self.graph, node)
 
     def get_positions(self, nodes: Iterable[Node], incl_time: bool = False) -> np.ndarray:
         """Get the positions of nodes in the graph. Optionally include the
@@ -147,17 +165,22 @@ class Tracks:
         if not isinstance(positions, np.ndarray):
             positions = np.array(positions)
         if incl_time:
-            times = positions[:, 0].tolist()  # we know this is a list of ints
-            self.set_times(nodes, times)  # type: ignore
-            positions = positions[:, 1:]
+            raise ValueError("Setting time is not allowed in tracksdata")
+            # times = positions[:, 0].tolist()  # we know this is a list of ints
+            # self.set_times(nodes, times)  # type: ignore
+            # positions = positions[:, 1:]
 
         if isinstance(self.pos_attr, tuple | list):
             for idx, attr in enumerate(self.pos_attr):
+                # removed postitions[].tolsit() for tracksdata
                 self._set_nodes_attr(nodes, attr, positions[:, idx].tolist())
         else:
-            self._set_nodes_attr(nodes, self.pos_attr, positions.tolist())
+            # removed positions.tolsit() for tracksdata
+            self._set_nodes_attr(nodes, self.pos_attr, positions)
 
     def set_position(self, node: Node, position: list, incl_time=False):
+        if incl_time:
+            raise ValueError("Setting time is not allowed in tracksdata")
         self.set_positions(
             [node], np.expand_dims(np.array(position), axis=0), incl_time=incl_time
         )
@@ -177,20 +200,20 @@ class Tracks:
         """
         return int(self.get_times([node])[0])
 
-    def set_times(self, nodes: Iterable[Node], times: Iterable[int]):
-        times = [int(t) for t in times]
-        self._set_nodes_attr(nodes, self.time_attr, times)
+    # def set_times(self, nodes: Iterable[Node], times: Iterable[int]):
+    #     times = [int(t) for t in times]
+    #     self._set_nodes_attr(nodes, self.time_attr, times)
 
-    def set_time(self, node: Any, time: int):
-        """Set the time frame of a given node. Raises an error if the node
-        is not in the graph.
+    # def set_time(self, node: Any, time: int):
+    #     """Set the time frame of a given node. Raises an error if the node
+    #     is not in the graph.
 
-        Args:
-            node (Any): The node id to set the time frame for
-            time (int): The time to set
+    #     Args:
+    #         node (Any): The node id to set the time frame for
+    #         time (int): The time to set
 
-        """
-        self.set_times([node], [int(time)])
+    #     """
+    #     self.set_times([node], [int(time)])
 
     def get_areas(self, nodes: Iterable[Node]) -> Sequence[int | None]:
         """Get the area/volume of a given node. Raises a KeyError if the node
@@ -269,9 +292,11 @@ class Tracks:
         """Update the attributes for given nodes"""
 
         for idx, node in enumerate(nodes):
-            if node in self.graph:
+            if node in self.graph.node_ids():
                 for key, values in attributes.items():
-                    self.graph.nodes[node][key] = values[idx]
+                    self.graph.update_node_attrs(
+                        attrs={key: values[idx]}, node_ids=[node]
+                    )
             else:
                 logger.info("Node %d not found in the graph.", node)
 
@@ -288,9 +313,12 @@ class Tracks:
                 update the values.
         """
         for idx, edge in enumerate(edges):
-            if self.graph.has_edge(*edge):
+            if self.graph.has_edge(edge[0], edge[1]):
                 for key, value in attributes.items():
-                    self.graph.edges[edge][key] = value[idx]
+                    edge_id = self.graph.edge_id(edge[0], edge[1])
+                    self.graph.update_edge_attrs(
+                        attrs={key: value[idx]}, edge_ids=[edge_id]
+                    )
             else:
                 logger.info("Edge %s not found in the graph.", edge)
 
@@ -318,21 +346,20 @@ class Tracks:
         return ndim
 
     def _set_node_attr(self, node: Node, attr: str, value: Any):
-        if isinstance(value, np.ndarray):
-            value = list(value)
-        self.graph.nodes[node][attr] = value
+        self.graph.update_node_attrs(attrs={attr: value}, node_ids=[node])
 
     def _set_nodes_attr(self, nodes: Iterable[Node], attr: str, values: Iterable[Any]):
         for node, value in zip(nodes, values, strict=False):
-            if isinstance(value, np.ndarray):
-                value = list(value)
-            self.graph.nodes[node][attr] = value
+            # if isinstance(value, np.ndarray):
+            #     value = list(value)
+            self.graph.update_node_attrs(attrs={attr: [value]}, node_ids=[node])
 
     def get_node_attr(self, node: Node, attr: str, required: bool = False):
-        if required:
-            return self.graph.nodes[node][attr]
-        else:
-            return self.graph.nodes[node].get(attr, None)
+        if attr not in self.graph.node_attr_keys:
+            if required:
+                raise KeyError(attr)
+            return None
+        return self.graph[node][attr]
 
     def _get_node_attr(self, node, attr, required=False):
         warnings.warn(
@@ -354,17 +381,20 @@ class Tracks:
         return self.get_nodes_attr(nodes, attr, required=required)
 
     def _set_edge_attr(self, edge: Edge, attr: str, value: Any):
-        self.graph.edges[edge][attr] = value
+        edge_id = self.graph.edge_id(edge[0], edge[1])
+        self.graph.update_edge_attrs(attrs={attr: value}, edge_ids=[edge_id])
 
     def _set_edges_attr(self, edges: Iterable[Edge], attr: str, values: Iterable[Any]):
         for edge, value in zip(edges, values, strict=False):
-            self.graph.edges[edge][attr] = value
+            edge_id = self.graph.edge_id(edge[0], edge[1])
+            self.graph.update_edge_attrs(attrs={attr: value}, edge_ids=[edge_id])
 
     def get_edge_attr(self, edge: Edge, attr: str, required: bool = False):
-        if required:
-            return self.graph.edges[edge][attr]
-        else:
-            return self.graph.edges[edge].get(attr, None)
+        if attr not in self.graph.edge_attr_keys:
+            if required:
+                raise KeyError(attr)
+            return None
+        return td_get_single_attr_from_edge(self.graph, edge=edge, attrs=[attr])
 
     def get_edges_attr(self, edges: Iterable[Edge], attr: str, required: bool = False):
         return [self.get_edge_attr(edge, attr, required=required) for edge in edges]
@@ -408,7 +438,7 @@ class Tracks:
                     * (self.ndim - 1)
                 )
             )
-            attrs[NodeAttr.AREA.value].append(area)
+            attrs[NodeAttr.AREA.value].append(float(area))
             attrs[NodeAttr.POS.value].append(pos)
         return attrs
 

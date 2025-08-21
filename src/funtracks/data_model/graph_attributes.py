@@ -8,7 +8,7 @@ class NodeAttr(Enum):
     """
 
     POS = "pos"
-    TIME = "time"
+    TIME = "t"
     SEG_ID = "seg_id"
     SEG_HYPO = "seg_hypo"
     AREA = "area"
