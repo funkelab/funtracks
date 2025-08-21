@@ -2,6 +2,7 @@ import dask.array as da
 import numpy as np
 import pytest
 import tifffile
+import tracksdata as td
 from geff.testing.data import create_memory_mock_geff
 
 from funtracks.import_export.import_from_geff import import_from_geff
@@ -126,6 +127,7 @@ def test_tracks_with_segmentation(
         scale=scale,
         extra_features=extra_features,
     )
+    assert isinstance(tracks.graph, td.graph.SQLGraph)
     assert hasattr(tracks, "segmentation")
     assert tracks.segmentation.shape == valid_segmentation.shape
     last_node = list(tracks.graph.node_ids())[-1]
@@ -164,6 +166,7 @@ def test_tracks_with_segmentation(
         scale=scale,
         extra_features=extra_features,
     )
+    assert isinstance(tracks.graph, td.graph.SQLGraph)
     data = tracks.graph.node_attrs()
     assert "area" in data.columns
     assert data["area"][-1] == 21
@@ -217,6 +220,6 @@ def test_segmentation_loading_formats(
         scale=scale,
         extra_features={"area": False, "random_feature": False, "track_id": True},
     )
-
+    assert isinstance(tracks.graph, td.graph.SQLGraph)
     assert hasattr(tracks, "segmentation")
     assert np.array(tracks.segmentation).shape == seg.shape

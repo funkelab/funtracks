@@ -40,7 +40,12 @@ def test_from_tracks_cls(graph_2d):
 
 
 def test_next_track_id_empty():
-    graph_td = td.graph.IndexedRXGraph()
+    kwargs = {
+        "drivername": "sqlite",
+        "database": ":memory:",
+        "overwrite": True,
+    }
+    graph_td = td.graph.SQLGraph(**kwargs)
     # TODO: somewhere we have to make track_id a mandatory node attr
     graph_td.add_node_attr_key(key="track_id", default_value=0)
     seg = np.zeros(shape=(10, 100, 100, 100), dtype=np.uint64)

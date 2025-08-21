@@ -3,7 +3,6 @@ from typing import Any
 
 import numpy as np
 import polars as pl
-import rustworkx as rx
 import tracksdata as td
 
 
@@ -88,38 +87,63 @@ def td_to_dict(graph) -> dict:
     }
 
 
-def td_from_dict(graph_dict):
-    """Convert a dictionary to a rustworkx graph."""
-    # Create a new directed graph
-    graph_rx = rx.PyDiGraph()
+def td_from_dict(graph_dict) -> td.graph.SQLGraph:
+    """Convert a dictionary to a tracksdata SQL graph."""
 
-    # Get the attribute keys in the order they appear in the first node
+    # Get edge attribute keys and data
     node_attr_keys = list(graph_dict["nodes"][0].keys())
     node_attr_keys.remove("node_id")  # node_id is handled separately
+    node_data_list = [
+        {k: node[k] for k in node_attr_keys} for node in graph_dict["nodes"]
+    ]
+    node_ids = [node["node_id"] for node in graph_dict["nodes"]]
 
-    # Add nodes
-    node_id_map = {}
-    for node in graph_dict["nodes"]:
-        # Create node data dict in the same order as original
-        node_data = {k: node[k] for k in node_attr_keys}
-        node_id = graph_rx.add_node(node_data)
-        node_id_map[node["node_id"]] = node_id
+    # convert pos to numpy arrays
+    if "pos" in node_attr_keys:
+        for i in range(len(node_data_list)):
+            node_data_list[i]["pos"] = np.array(node_data_list[i]["pos"])
 
-    # Get edge attribute keys in order
+    # Get edge attribute keys and data
     edge_attr_keys = list(graph_dict["edges"][0].keys())
-    edge_attr_keys.remove("source")
-    edge_attr_keys.remove("target")
+    edge_data_list = [
+        {k: edge[k] for k in edge_attr_keys} for edge in graph_dict["edges"]
+    ]
 
-    # Add edges
-    for edge in graph_dict["edges"]:
-        source_id = node_id_map[edge["source"]]
-        target_id = node_id_map[edge["target"]]
-        # Create edge data dict in the same order as original
-        edge_data = {k: edge[k] for k in edge_attr_keys}
-        graph_rx.add_edge(source_id, target_id, edge_data)
+    # rename 'source' and 'target' to 'source_id' and 'target_id'
+    if "source" in edge_attr_keys:
+        edge_attr_keys.remove("source")
+        edge_attr_keys.append("source_id")
+    if "target" in edge_attr_keys:
+        edge_attr_keys.remove("target")
+        edge_attr_keys.append("target_id")
+    for edge in edge_data_list:
+        edge["source_id"] = edge["source"]
+        edge["target_id"] = edge["target"]
+        edge.pop("source")
+        edge.pop("target")
 
-    # Use the same node_id_map we created while building the graph
-    graph_td = td.graph.IndexedRXGraph(graph_rx, node_id_map=node_id_map)
+    kwargs = {
+        "drivername": "sqlite",
+        "database": ":memory:",
+        "overwrite": True,
+    }
+    graph_td = td.graph.SQLGraph(**kwargs)
+
+    # add node/edge attributes to graph, including default values
+    for key in node_attr_keys:
+        if key not in ["t"]:
+            first_value = node_data_list[0][key]
+            # if "pos" is an array, default_value should be None
+            if key == "pos" and len(first_value) > 1:
+                first_value = None
+            graph_td.add_node_attr_key(key, default_value=first_value)
+    for key in edge_attr_keys:
+        if key not in ["edge_id", "source_id", "target_id"]:
+            first_value = edge_data_list[0][key]
+            graph_td.add_edge_attr_key(key, default_value=first_value)
+
+    graph_td.bulk_add_nodes(node_data_list, indices=node_ids)
+    graph_td.bulk_add_edges(edge_data_list)
 
     return graph_td
 

@@ -158,7 +158,10 @@ class AddNodes(TracksAction):
 
         node_dicts = []
         for i in range(len(self.nodes)):
-            node_dict = {attr: values[i] for attr, values in attrs.items()}
+            node_dict = {
+                attr: np.array(values[i]) if attr == "pos" else values[i]
+                for attr, values in attrs.items()
+            }
             node_dicts.append(node_dict)
 
         for node_id, node_dict in zip(self.nodes, node_dicts, strict=True):

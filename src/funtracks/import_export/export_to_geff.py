@@ -131,7 +131,7 @@ def split_position_attr(tracks: Tracks) -> td.graph.BaseGraph:
         tracksdata.graph.BaseGraph with a separate positional attribute per coordinate.
 
     """
-    new_graph = tracks.graph.copy()
+    new_graph = tracks.graph
 
     new_graph.add_node_attr_key("x", default_value=0.0)
     new_graph.add_node_attr_key("y", default_value=0.0)

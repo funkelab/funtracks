@@ -23,21 +23,36 @@ class TestAddDeleteNodes:
     @pytest.mark.parametrize("use_seg", [True, False])
     def test_2d_seg(segmentation_2d, graph_2d, use_seg):
         # start with an empty Tracks
-        empty_td_graph = td.graph.IndexedRXGraph()
-        empty_td_graph.add_node_attr_key(key="pos", default_value=[0, 0, 0])
+        kwargs = {
+            "drivername": "sqlite",
+            "database": ":memory:",
+            "overwrite": True,
+        }
+        empty_td_graph = td.graph.SQLGraph(**kwargs)
+        empty_td_graph.add_node_attr_key(key="pos", default_value=None)
         empty_td_graph.add_node_attr_key(key="track_id", default_value=0)
         empty_td_graph.add_node_attr_key(key="area", default_value=0)
         empty_td_graph.add_node_attr_key(key="solution", default_value=1)
+        empty_td_graph.add_edge_attr_key(key="solution", default_value=1)
+
+        empty_td_graph_original = td.graph.IndexedRXGraph.from_other(empty_td_graph)
 
         empty_seg = np.zeros_like(segmentation_2d) if use_seg else None
-        tracks = Tracks(empty_td_graph.copy(), segmentation=empty_seg, ndim=3)
+        tracks = Tracks(empty_td_graph, segmentation=empty_seg, ndim=3)
         # add all the nodes from graph_2d/seg_2d
         nodes = list(graph_2d.node_ids())
         attrs = {}
         attrs[NodeAttr.TIME.value] = [
             graph_2d[node][NodeAttr.TIME.value] for node in nodes
         ]
-        attrs[NodeAttr.POS.value] = [graph_2d[node][NodeAttr.POS.value] for node in nodes]
+        if NodeAttr.POS.value == "pos":
+            attrs[NodeAttr.POS.value] = [
+                graph_2d[node][NodeAttr.POS.value].to_list() for node in nodes
+            ]
+        else:
+            attrs[NodeAttr.POS.value] = [
+                graph_2d[node][NodeAttr.POS.value] for node in nodes
+            ]
         attrs[NodeAttr.TRACK_ID.value] = [
             graph_2d[node][NodeAttr.TRACK_ID.value] for node in nodes
         ]
@@ -55,6 +70,7 @@ class TestAddDeleteNodes:
             attrs[NodeAttr.AREA.value] = [
                 graph_2d[node][NodeAttr.AREA.value] for node in nodes
             ]
+
         add_nodes = AddNodes(tracks, nodes, attributes=attrs, pixels=pixels)
 
         assert set(tracks.graph.node_ids()) == set(graph_2d.node_ids())
@@ -65,11 +81,9 @@ class TestAddDeleteNodes:
         if use_seg:
             assert_array_almost_equal(tracks.segmentation, segmentation_2d)
 
-        empty_td_graph2 = empty_td_graph.copy()
-
         # invert the action to delete all the nodes
         del_nodes = add_nodes.inverse()
-        assert set(tracks.graph.node_ids()) == set(empty_td_graph2.node_ids())
+        assert set(tracks.graph.node_ids()) == set(empty_td_graph_original.node_ids())
         if use_seg:
             assert_array_almost_equal(tracks.segmentation, empty_seg)
 
@@ -93,7 +107,9 @@ class TestAddDeleteNodes:
 
 
 def test_update_node_segs(segmentation_2d, graph_2d):
-    tracks = Tracks(graph=graph_2d.copy(), segmentation=segmentation_2d.copy())
+    graph_2d_original = td.graph.IndexedRXGraph.from_other(graph_2d)
+
+    tracks = Tracks(graph=graph_2d, segmentation=segmentation_2d.copy())
     nodes = list(graph_2d.node_ids())
 
     # add a couple pixels to the first node
@@ -102,36 +118,39 @@ def test_update_node_segs(segmentation_2d, graph_2d):
     nodes = [1]
 
     pixels = [np.nonzero(segmentation_2d != new_seg)]
+    # TODO: teun: error happens here:
     action = UpdateNodeSegs(tracks, nodes, pixels=pixels, added=True)
 
     assert set(tracks.graph.node_ids()) == set(graph_2d.node_ids())
     assert tracks.graph[nodes[0]][NodeAttr.AREA.value] == 1345
     assert_series_not_equal(
-        graph_2d[nodes[0]][NodeAttr.POS.value],
+        graph_2d_original[nodes[0]][NodeAttr.POS.value],
         tracks.graph[nodes[0]][NodeAttr.POS.value],
     )
     assert_array_almost_equal(tracks.segmentation, new_seg)
 
     inverse = action.inverse()
-    assert set(tracks.graph.node_ids()) == set(graph_2d.node_ids())
+    assert set(tracks.graph.node_ids()) == set(graph_2d_original.node_ids())
     assert_frame_equal(
-        tracks.graph.node_attrs(), graph_2d.node_attrs(), check_column_order=False
+        tracks.graph.node_attrs(),
+        graph_2d_original.node_attrs(),
+        check_column_order=False,
     )
     assert_array_almost_equal(tracks.segmentation, segmentation_2d)
 
     inverse.inverse()
 
-    assert set(tracks.graph.node_ids()) == set(graph_2d.node_ids())
+    assert set(tracks.graph.node_ids()) == set(graph_2d_original.node_ids())
     assert tracks.graph[nodes[0]][NodeAttr.AREA.value] == 1345
     assert_series_not_equal(
-        graph_2d[nodes[0]][NodeAttr.POS.value],
+        graph_2d_original[nodes[0]][NodeAttr.POS.value],
         tracks.graph[nodes[0]][NodeAttr.POS.value],
     )
     assert_array_almost_equal(tracks.segmentation, new_seg)
 
 
 def test_duplicate_edges(graph_2d, segmentation_2d):
-    tracks = Tracks(graph_2d.copy(), segmentation_2d.copy())
+    tracks = Tracks(graph_2d, segmentation_2d.copy())
     edges = [[1, 2], [1, 3], [3, 4], [4, 5]]
     for edge in edges:
         with pytest.raises(ValueError):
@@ -142,7 +161,7 @@ def test_duplicate_edges(graph_2d, segmentation_2d):
 def test_add_delete_edges(graph_2d, segmentation_2d):
     # Create a fresh copy of the graph for this test
 
-    node_graph = graph_2d.copy()
+    node_graph = graph_2d
     tracks = Tracks(node_graph, segmentation_2d.copy())
 
     edges = [[1, 2], [1, 3], [3, 4], [4, 5]]

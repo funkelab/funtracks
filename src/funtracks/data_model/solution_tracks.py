@@ -109,7 +109,7 @@ class SolutionTracks(Tracks):
         assigning one id to each connected component.
         Also sets the max_track_id and initializes a dictionary from track_id to nodes
         """
-        graph_copy = self.graph.copy()
+        graph_copy = td.graph.IndexedRXGraph.from_other(self.graph)
 
         parents = [
             node
@@ -141,10 +141,7 @@ class SolutionTracks(Tracks):
         track_id = 1
         for tracklet in rx.weakly_connected_components(graph_copy.rx_graph):
             node_ids_internal = list(tracklet)
-            node_ids_external = [
-                self.graph._local_to_external[nid] for nid in node_ids_internal
-            ]
-
+            node_ids_external = [graph_copy.node_ids()[nid] for nid in node_ids_internal]
             self.graph.update_node_attrs(
                 attrs={NodeAttr.TRACK_ID.value: [track_id] * len(node_ids_external)},
                 node_ids=node_ids_external,

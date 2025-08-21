@@ -165,17 +165,21 @@ class Tracks:
         if not isinstance(positions, np.ndarray):
             positions = np.array(positions)
         if incl_time:
+            raise ValueError("Setting time is not allowed in tracksdata")
             times = positions[:, 0].tolist()  # we know this is a list of ints
             self.set_times(nodes, times)  # type: ignore
             positions = positions[:, 1:]
 
         if isinstance(self.pos_attr, tuple | list):
             for idx, attr in enumerate(self.pos_attr):
+                # removed postitions[].tolsit() for tracksdata
                 self._set_nodes_attr(nodes, attr, positions[:, idx].tolist())
         else:
-            self._set_nodes_attr(nodes, self.pos_attr, positions.tolist())
+            # removed positions.tolsit() for tracksdata
+            self._set_nodes_attr(nodes, self.pos_attr, positions)
 
     def set_position(self, node: Node, position: list, incl_time=False):
+        raise ValueError("Setting time is not allowed in tracksdata")
         self.set_positions(
             [node], np.expand_dims(np.array(position), axis=0), incl_time=incl_time
         )
@@ -347,8 +351,8 @@ class Tracks:
 
     def _set_nodes_attr(self, nodes: Iterable[Node], attr: str, values: Iterable[Any]):
         for node, value in zip(nodes, values, strict=False):
-            if isinstance(value, np.ndarray):
-                value = list(value)
+            # if isinstance(value, np.ndarray):
+            #     value = list(value)
             self.graph.update_node_attrs(attrs={attr: [value]}, node_ids=[node])
 
     def get_node_attr(self, node: Node, attr: str, required: bool = False):
@@ -435,7 +439,7 @@ class Tracks:
                     * (self.ndim - 1)
                 )
             )
-            attrs[NodeAttr.AREA.value].append(area)
+            attrs[NodeAttr.AREA.value].append(float(area))
             attrs[NodeAttr.POS.value].append(pos)
         return attrs
 

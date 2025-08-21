@@ -277,6 +277,12 @@ def import_from_geff(
     graph_rx, _ = geff.read_rx(directory, node_props=selected_attrs)
     node_id_map = {i: i for i in range(len(graph_rx.nodes()))}
     graph = td.graph.IndexedRXGraph(graph_rx, node_id_map)
+    kwargs = {
+        "drivername": "sqlite",
+        "database": ":memory:",
+        "overwrite": True,
+    }
+    graph = td.graph.SQLGraph.from_other(graph, **kwargs)
 
     # Relabel track_id attr to NodeAttr.TRACK_ID.value (unless we should recompute)
     if name_map.get(NodeAttr.TRACK_ID.value) is not None and not recompute_track_ids:

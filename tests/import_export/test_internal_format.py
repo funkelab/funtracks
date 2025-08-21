@@ -51,7 +51,10 @@ def test_save_load(
         loaded.graph.node_attrs(), tracks.graph.node_attrs(), check_column_order=False
     )
     assert_frame_equal(
-        loaded.graph.edge_attrs(), tracks.graph.edge_attrs(), check_column_order=False
+        loaded.graph.edge_attrs().drop("edge_id"),
+        tracks.graph.edge_attrs().drop("edge_id"),
+        check_column_order=False,
+        check_row_order=False,
     )
 
 
