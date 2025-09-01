@@ -8,8 +8,8 @@ import geff
 import networkx as nx
 import numpy as np
 import zarr
-from geff.affine import Affine
-from geff.metadata_schema import GeffMetadata
+from geff.metadata import GeffMetadata
+from geff.metadata._affine import Affine
 
 from funtracks.data_model.graph_attributes import NodeAttr
 

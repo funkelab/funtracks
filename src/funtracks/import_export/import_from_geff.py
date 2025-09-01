@@ -4,16 +4,17 @@ from typing import (
     TYPE_CHECKING,
 )
 
-import geff
+import dask.array as da
 import numpy as np
-import zarr
-from geff.affine import Affine
-from geff.validators.segmentation_validators import (
+from geff._graph_libs._networkx import construct_nx
+from geff.core_io._base_read import read_to_memory
+from geff.metadata._affine import Affine
+from geff.validate.segmentation import (
     axes_match_seg_dims,
     has_seg_ids_at_coords,
     has_valid_seg_id,
 )
-from geff.validators.validators import validate_lineages, validate_tracklets
+from geff.validate.tracks import validate_lineages, validate_tracklets
 from numpy.typing import ArrayLike
 
 from funtracks.data_model.graph_attributes import NodeAttr
@@ -22,7 +23,7 @@ from funtracks.import_export.magic_imread import magic_imread
 if TYPE_CHECKING:
     from pathlib import Path
 
-import dask.array as da
+    from geff._typing import InMemoryGeff
 
 from funtracks.data_model.solution_tracks import SolutionTracks
 
@@ -53,7 +54,7 @@ def relabel_seg_id_to_node_id(
 
 
 def validate_graph_seg_match(
-    directory: Path,
+    in_memory_geff: InMemoryGeff,
     segmentation: ArrayLike,
     name_map: dict[str, str],
     scale: list[float],
@@ -66,7 +67,7 @@ def validate_graph_seg_match(
     relabeling of the segmentation to match it to node id values is required.
 
     Args:
-        directory (Path): path to the geff tracks data or its parent folder.
+        in_memory_geff (InMemoryGeff): geff data read into memory
         name_map (dict[str,str]): dictionary mapping required fields to node properties.
         segmentation (ArrayLike): segmentation data.
         scale (list[float]): scaling information (pixel to world coordinates).
@@ -76,43 +77,38 @@ def validate_graph_seg_match(
         bool: True if relabeling from seg_id to node_id is required.
     """
 
-    group = zarr.open_group(directory, mode="r")
     # check if the axes information in the metadata matches the segmentation
     # dimensions
-    axes_match, errors = axes_match_seg_dims(directory, segmentation)
+    axes_match, errors = axes_match_seg_dims(in_memory_geff, segmentation)
     if not axes_match:
         error_msg = "Axes in the geff do not match segmentation:\n" + "\n".join(
             f"- {e}" for e in errors
         )
         raise ValueError(error_msg)
 
+    node_ids = in_memory_geff["node_ids"]
+    node_props = in_memory_geff["node_props"]
+
     # Check if valid seg_ids are provided
     if name_map.get(NodeAttr.SEG_ID.value) is not None:
         seg_ids_valid, errors = has_valid_seg_id(
-            directory, name_map[NodeAttr.SEG_ID.value]
+            in_memory_geff, name_map[NodeAttr.SEG_ID.value]
         )
         if not seg_ids_valid:
             error_msg = "Error in validating the segmentation ids:\n" + "\n".join(
                 f"- {e}" for e in errors
             )
             raise ValueError(error_msg)
-        seg_id = int(
-            group["nodes"]["props"][name_map[NodeAttr.SEG_ID.value]]["values"][-1]
-        )
+        seg_id = int(node_props[name_map[NodeAttr.SEG_ID.value]]["values"][-1])
     else:
-        # assign the node id as seg_id instead and check in the next step if this is
-        #  valid.
-        seg_id = int(group["nodes"]["ids"][-1])
+        # assign the node id as seg_id instead and check in the next step if this is valid
+        seg_id = int(node_ids[-1])
 
     # Get the coordinates for the last node.
-    t = group["nodes"]["props"][name_map[NodeAttr.TIME.value]]["values"][-1]
-    z = (
-        group["nodes"]["props"][name_map["z"]]["values"][-1]
-        if len(position_attr) == 3
-        else None
-    )
-    y = group["nodes"]["props"][name_map["y"]]["values"][-1]
-    x = group["nodes"]["props"][name_map["x"]]["values"][-1]
+    t = node_props[name_map[NodeAttr.TIME.value]]["values"][-1]
+    z = node_props[name_map["z"]]["values"][-1] if len(position_attr) == 3 else None
+    y = node_props[name_map["y"]]["values"][-1]
+    x = node_props[name_map["x"]]["values"][-1]
 
     coord = []
     coord.append(t)
@@ -132,7 +128,7 @@ def validate_graph_seg_match(
         error_msg = "Error testing seg id:\n" + "\n".join(f"- {e}" for e in errors)
         raise ValueError(error_msg)
 
-    return group["nodes"]["ids"][-1] != seg_id
+    return node_ids[-1] != seg_id
 
 
 def import_from_geff(
@@ -175,8 +171,13 @@ def import_from_geff(
         Tracks based on the geff graph and segmentation, if provided.
     """
 
-    group = zarr.open_group(directory, mode="r")
-    metadata = dict(group.attrs)
+    # Read the GEFF file into memory
+    in_memory_geff = read_to_memory(directory)
+    metadata = dict(in_memory_geff["metadata"])
+    node_ids = in_memory_geff["node_ids"]
+    node_props = in_memory_geff["node_props"]
+    edge_ids = in_memory_geff["edge_ids"]
+    edge_props = in_memory_geff["edge_props"]
     selected_attrs = []
     segmentation = None
 
@@ -221,11 +222,9 @@ def import_from_geff(
     if name_map.get(NodeAttr.TRACK_ID.value) is not None:
         # if track id is present, it is a solution graph
         valid_track_ids, errors = validate_tracklets(
-            node_ids=group["nodes"]["ids"][:],
-            edge_ids=group["edges"]["ids"][:],
-            tracklet_ids=group["nodes"]["props"][name_map[NodeAttr.TRACK_ID.value]][
-                "values"
-            ][:],
+            node_ids=node_ids,
+            edge_ids=edge_ids,
+            tracklet_ids=node_props[name_map[NodeAttr.TRACK_ID.value]]["values"],
         )
         if valid_track_ids:
             selected_attrs.append(NodeAttr.TRACK_ID.value)
@@ -235,9 +234,9 @@ def import_from_geff(
     # attributes. If it is not provided, it will be a static feature (for now).
     if name_map.get("lineage_id") is not None:
         valid_lineages, errors = validate_lineages(
-            node_ids=group["nodes"]["ids"],
-            edge_ids=group["edges"]["ids"],
-            lineage_ids=group["nodes"]["props"][name_map["lineage_id"]]["values"],
+            node_ids=node_ids,
+            edge_ids=edge_ids,
+            lineage_ids=node_props[name_map["lineage_id"]]["values"],
         )
         if valid_lineages:
             selected_attrs.append(name_map["lineage_id"])
@@ -249,17 +248,15 @@ def import_from_geff(
         )  # change to in memory later
 
         relabel = validate_graph_seg_match(
-            directory, segmentation, name_map, scale, position_attr
+            in_memory_geff, segmentation, name_map, scale, position_attr
         )
 
         # If the provided segmentation has seg ids that are not identical to node ids,
         # relabel it now.
         if relabel:
-            times = group["nodes"]["props"][name_map[NodeAttr.TIME.value]]["values"][:]
-            ids = group["nodes"]["ids"][:]
-            seg_ids = group["nodes"]["props"][name_map[NodeAttr.SEG_ID.value]]["values"][
-                :
-            ]
+            times = node_props[name_map[NodeAttr.TIME.value]]["values"][:]
+            ids = node_ids[:]
+            seg_ids = node_props[name_map[NodeAttr.SEG_ID.value]]["values"][:]
 
             if not len(times) == len(ids) == len(seg_ids):
                 raise ValueError(
@@ -273,7 +270,14 @@ def import_from_geff(
     selected_attrs.extend(extra_features.keys())
 
     # All pre-checks have passed, load the graph now.
-    graph, _ = geff.read_nx(directory, node_props=selected_attrs)
+    filtered_node_props = {k: v for k, v in node_props.items() if k in selected_attrs}
+    graph = construct_nx(
+        metadata=in_memory_geff["metadata"],
+        node_ids=in_memory_geff["node_ids"],
+        edge_ids=in_memory_geff["edge_ids"],
+        node_props=filtered_node_props,
+        edge_props=edge_props,
+    )
 
     # Relabel track_id attr to NodeAttr.TRACK_ID.value (unless we should recompute)
     if name_map.get(NodeAttr.TRACK_ID.value) is not None and not recompute_track_ids:
