@@ -2,15 +2,15 @@ import dask.array as da
 import numpy as np
 import pytest
 import tifffile
-from geff.testing.data import create_memory_mock_geff
+from geff.testing.data import create_mock_geff
 
 from funtracks.import_export.import_from_geff import import_from_geff
 
 
 @pytest.fixture
-def valid_store_and_attrs():
-    store, graphattrs = create_memory_mock_geff(
-        node_id_dtype="int",
+def valid_geff():
+    store, memory_geff = create_mock_geff(
+        node_id_dtype="uint",
         node_axis_dtypes={"position": "float64", "time": "int64"},
         directed=True,
         num_nodes=5,
@@ -28,13 +28,13 @@ def valid_store_and_attrs():
             "random_feature2": np.array(["a", "b", "c", "d", "e"]),
         },
     )
-    return store, graphattrs
+    return store, memory_geff
 
 
 @pytest.fixture
-def invalid_store_and_attrs():
-    store, graphattrs = create_memory_mock_geff(
-        node_id_dtype="int",
+def invalid_geff():
+    invalid_store, invalid_memory_geff = create_mock_geff(
+        node_id_dtype="uint",
         node_axis_dtypes={"position": "float64", "time": "int64"},
         directed=True,
         num_nodes=5,
@@ -50,7 +50,7 @@ def invalid_store_and_attrs():
             "area": np.array([20, 41, 42, 776, 21]),
         },
     )
-    return store, graphattrs
+    return invalid_store, invalid_memory_geff
 
 
 @pytest.fixture
@@ -70,10 +70,10 @@ def valid_segmentation():
     return seg
 
 
-def test_duplicate_or_none_in_name_map(valid_store_and_attrs):
+def test_duplicate_or_none_in_name_map(valid_geff):
     """Test that duplicate values or missing t/y/x attributes are caught"""
 
-    store, _ = valid_store_and_attrs
+    store, _ = valid_geff
     # Duplicate value
     name_map = {"time": "time", "y": "y", "x": "y"}
     with pytest.raises(ValueError, match="duplicate values"):
@@ -84,11 +84,11 @@ def test_duplicate_or_none_in_name_map(valid_store_and_attrs):
         import_from_geff(store, name_map)
 
 
-def test_segmentation_axes_mismatch(valid_store_and_attrs, tmp_path):
+def test_segmentation_axes_mismatch(valid_geff, tmp_path):
     """Test checking if number of dimensions match and if coordinates are within
     bounds."""
 
-    store, _ = valid_store_and_attrs
+    store, _ = valid_geff
     name_map = {"time": "t", "y": "y", "x": "x", "seg_id": "seg_id"}
 
     # Provide a segmentation with wrong shape
@@ -106,12 +106,10 @@ def test_segmentation_axes_mismatch(valid_store_and_attrs, tmp_path):
         import_from_geff(store, name_map, segmentation_path=seg_path)
 
 
-def test_tracks_with_segmentation(
-    valid_store_and_attrs, invalid_store_and_attrs, valid_segmentation, tmp_path
-):
+def test_tracks_with_segmentation(valid_geff, invalid_geff, valid_segmentation, tmp_path):
     """Test relabeling of the segmentation from seg_id to node_id."""
 
-    store, _ = valid_store_and_attrs
+    store, _ = valid_geff
     name_map = {"time": "t", "y": "y", "x": "x", "seg_id": "seg_id"}
     valid_segmentation_path = tmp_path / "segmentation.tif"
     tifffile.imwrite(valid_segmentation_path, valid_segmentation)
@@ -172,7 +170,7 @@ def test_tracks_with_segmentation(
         )
 
     # Test that import fails with ValueError when invalid seg_ids are provided.
-    store, _ = invalid_store_and_attrs
+    store, _ = invalid_geff
     with pytest.raises(ValueError):
         tracks = import_from_geff(
             store, name_map, segmentation_path=valid_segmentation_path, scale=scale
@@ -181,10 +179,10 @@ def test_tracks_with_segmentation(
 
 @pytest.mark.parametrize("segmentation_format", ["single_tif", "tif_folder", "zarr"])
 def test_segmentation_loading_formats(
-    segmentation_format, valid_store_and_attrs, valid_segmentation, tmp_path
+    segmentation_format, valid_geff, valid_segmentation, tmp_path
 ):
     """Test loading segmentation from different formats using magic_imread."""
-    store, _ = valid_store_and_attrs
+    store, _ = valid_geff
     name_map = {"time": "t", "y": "y", "x": "x", "seg_id": "seg_id"}
     scale = [1, 1, 1 / 100]
     seg = valid_segmentation

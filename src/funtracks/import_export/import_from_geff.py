@@ -209,13 +209,16 @@ def import_from_geff(
 
     # if no scale is provided, load from metadata, if available.
     if scale is None:
-        affine = metadata.get("affine", {}).get("matrix", None)
+        scale = list([1.0] * ndims)
+
+        # overwrite if valid affine is provided
+        affine = metadata.get("affine", {})
         if affine is not None:
-            affine = Affine(matrix=affine)
-            linear = affine.linear_matrix
-            scale = list(np.diag(linear))
-        else:
-            scale = list([1.0] * ndims)
+            matrix = affine.get("matrix", None)
+            if matrix is not None:
+                affine = Affine(matrix=matrix)
+                linear = affine.linear_matrix
+                scale = list(np.diag(linear))
 
     # Check if a track_id was provided, and if it is valid add it to list of selected
     # attributes. If it is not provided, it will be computed again.
