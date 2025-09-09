@@ -9,7 +9,7 @@ from funtracks.user_actions import UserAddNode, UserDeleteNode
 @pytest.mark.parametrize("ndim", [3, 4])
 @pytest.mark.parametrize("use_seg", [True, False])
 class TestUserAddDeleteNode:
-    def get_tracks(self, request, ndim, use_seg):
+    def get_tracks(self, request, ndim, use_seg) -> SolutionTracks:
         seg_name = "segmentation_2d" if ndim == 3 else "segmentation_3d"
         seg = request.getfixturevalue(seg_name) if use_seg else None
 
@@ -126,3 +126,38 @@ class TestUserAddDeleteNode:
         assert not graph.has_edge(node_id, 5)
         assert graph.has_edge(3, 5)
         # TODO: error if node doesn't exist?
+
+    def test_user_delete_node_after_division(self, request, ndim, use_seg: bool):
+        tracks = self.get_tracks(request, ndim, use_seg)
+        # delete first node after division. Should relabel the other child
+        # to be the same track as parent
+        parent_node = 1
+        node_id = 2
+        sib = 3
+
+        graph = tracks.graph
+        assert graph.has_node(node_id)
+        assert graph.has_edge(parent_node, node_id)
+        parent_track_id = tracks.get_track_id(parent_node)
+        node_track_id = tracks.get_track_id(node_id)
+        sib_track_id = tracks.get_track_id(sib)
+        assert parent_track_id != node_track_id
+        assert parent_track_id != sib_track_id
+        assert node_track_id != sib_track_id
+
+        action = UserDeleteNode(tracks, node_id)
+        assert not graph.has_node(node_id)
+        assert graph.has_edge(parent_node, sib)
+        assert tracks.get_track_id(sib) == parent_track_id
+
+        inverse = action.inverse()
+        assert graph.has_node(node_id)
+        assert graph.has_edge(parent_node, node_id)
+        assert tracks.get_track_id(parent_node) == parent_track_id
+        assert tracks.get_track_id(node_id) == node_track_id
+        assert tracks.get_track_id(sib) == sib_track_id
+
+        inverse.inverse()
+        assert not graph.has_node(node_id)
+        assert graph.has_edge(parent_node, sib)
+        assert tracks.get_track_id(sib) == parent_track_id

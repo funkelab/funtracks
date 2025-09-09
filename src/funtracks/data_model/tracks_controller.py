@@ -10,7 +10,6 @@ from ..actions import (
     ActionGroup,
     AddEdges,
     DeleteEdges,
-    DeleteNodes,
     TracksAction,
     UpdateNodeAttrs,
     UpdateNodeSegs,
@@ -19,6 +18,7 @@ from ..actions import (
 from ..actions.action_history import ActionHistory
 from ..user_actions import (
     UserAddNode,
+    UserDeleteNode,
 )
 from .graph_attributes import NodeAttr
 from .solution_tracks import SolutionTracks
@@ -150,52 +150,17 @@ class TracksController:
                 known already. Will be computed if not provided.
         """
         actions: list[TracksAction] = []
-
-        # find all the edges that should be deleted (no duplicates) and put them in a
-        # single action. also keep track of which deletions removed a division, and save
-        # the sibling nodes so we can update the track ids
-        edges_to_delete = set()
-        new_track_ids = []
-        for node in nodes:
-            for pred in self.tracks.graph.predecessors(node):
-                edges_to_delete.add((pred, node))
-                # determine if we need to relabel any tracks
-                siblings = list(self.tracks.graph.successors(pred))
-                if len(siblings) == 2:
-                    # need to relabel the track id of the sibling to match the pred
-                    # because you are implicitly deleting a division
-                    siblings.remove(node)
-                    sib = siblings[0]
-                    # check if the sibling is also deleted, because then relabeling is
-                    # not needed
-                    if sib not in nodes:
-                        new_track_id = self.tracks.get_track_id(pred)
-                        new_track_ids.append((sib, new_track_id))
-            for succ in self.tracks.graph.successors(node):
-                edges_to_delete.add((node, succ))
-        if len(edges_to_delete) > 0:
-            actions.append(DeleteEdges(self.tracks, list(edges_to_delete)))
-
-        if len(new_track_ids) > 0:
-            for node, track_id in new_track_ids:
-                actions.append(UpdateTrackID(self.tracks, node, track_id))
-
-        track_ids = [self.tracks.get_track_id(node) for node in nodes]
-        times = self.tracks.get_times(nodes)
-        # remove nodes
-        actions.append(DeleteNodes(self.tracks, nodes, pixels=pixels))
-
-        # find all the skip edges to be made (no duplicates or intermediates to nodes
-        # that are deleted) and put them in a single action
-        skip_edges = set()
-        for track_id, time in zip(track_ids, times, strict=False):
-            pred, succ = self._get_pred_and_succ(track_id, time)
-            if pred is not None and succ is not None:
-                skip_edges.add((pred, succ))
-        if len(skip_edges) > 0:
-            actions.append(AddEdges(self.tracks, list(skip_edges)))
-
-        return ActionGroup(self.tracks, actions=actions)
+        for i in range(len(nodes)):
+            try:
+                actions.append(
+                    UserDeleteNode(
+                        nodes[i],
+                        pixels=pixels[i] if pixels is not None else None,
+                    )
+                )
+            except InvalidActionError as e:
+                warnings.warn(f"Failed to delete node: {e.message}", stacklevel=2)
+        return ActionGroup(self.tracks, actions)
 
     def _update_node_segs(
         self,
