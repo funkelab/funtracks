@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 import dask.array as da
+import tracksdata as td
 
 from funtracks.data_model.solution_tracks import SolutionTracks
 
@@ -273,11 +274,19 @@ def import_from_geff(
     selected_attrs.extend(extra_features.keys())
 
     # All pre-checks have passed, load the graph now.
-    graph, _ = geff.read_nx(directory, node_props=selected_attrs)
+    graph_rx, _ = geff.read_rx(directory, node_props=selected_attrs)
+    node_id_map = {i: i for i in range(len(graph_rx.nodes()))}
+    graph = td.graph.IndexedRXGraph(graph_rx, node_id_map)
+    kwargs = {
+        "drivername": "sqlite",
+        "database": ":memory:",
+        "overwrite": True,
+    }
+    graph = td.graph.SQLGraph.from_other(graph, **kwargs)
 
     # Relabel track_id attr to NodeAttr.TRACK_ID.value (unless we should recompute)
     if name_map.get(NodeAttr.TRACK_ID.value) is not None and not recompute_track_ids:
-        for _, data in graph.nodes(data=True):
+        for data in graph.node_attrs():
             try:
                 data[NodeAttr.TRACK_ID.value] = data.pop(
                     name_map[NodeAttr.TRACK_ID.value]
@@ -302,7 +311,7 @@ def import_from_geff(
     )
     # compute the 'area' attribute if needed
     if tracks.segmentation is not None and extra_features.get("area"):
-        nodes = tracks.graph.nodes
+        nodes = tracks.graph.node_ids()
         times = tracks.get_times(nodes)
         computed_attrs = tracks._compute_node_attrs(nodes, times)
         areas = computed_attrs[NodeAttr.AREA.value]

@@ -29,11 +29,12 @@ classifiers = [
 dependencies =[
     "numpy",
     "pydantic",
-    "networkx",
     "psygnal",
     "scikit-image",
-    "geff",
+    # "geff>=0.5.0",
+    "geff@git+https://github.com/live-image-tracking-tools/geff.git@b751718f81d107e1fdda2df2afb62253039c137b",
     "dask",
+    "tracksdata@git+https://github.com/royerlab/tracksdata",
 ]
 [project.optional-dependencies]
 testing =["pytest", "pytest-cov"]
@@ -116,3 +117,6 @@ mypy = "mypy src/"
 
 [tool.pixi.feature.docs.tasks]
 docs = "mkdocs serve"
+
+[tool.pixi.dependencies]
+rust = ">=1.88.0,<1.89"
