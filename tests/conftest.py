@@ -112,6 +112,35 @@ def graph_2d():
     return graph
 
 
+@pytest.fixture
+def graph_2d_list():
+    graph = nx.DiGraph()
+    nodes = [
+        (
+            1,
+            {
+                "y": 100,
+                "x": 50,
+                NodeAttr.TIME.value: 0,
+                NodeAttr.AREA.value: 1245,
+                NodeAttr.TRACK_ID.value: 1,
+            },
+        ),
+        (
+            2,
+            {
+                "y": 20,
+                "x": 100,
+                NodeAttr.TIME.value: 1,
+                NodeAttr.AREA.value: 500,
+                NodeAttr.TRACK_ID.value: 2,
+            },
+        ),
+    ]
+    graph.add_nodes_from(nodes)
+    return graph
+
+
 def sphere(center, radius, shape):
     assert len(center) == len(shape)
     indices = np.moveaxis(np.indices(shape), 0, -1)  # last dim is the index
