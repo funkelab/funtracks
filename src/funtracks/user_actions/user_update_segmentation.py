@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from funtracks.data_model import NodeAttr
+from funtracks.data_model.graph_attributes import NodeAttr
 
 from ..actions._base import ActionGroup
 from ..actions.update_segmentation import UpdateNodeSeg
@@ -36,6 +36,7 @@ class UserUpdateSegmentation(ActionGroup):
                 before the change
         """
         super().__init__(tracks, actions=[])
+        self.nodes_added = []
         if self.tracks.segmentation is None:
             raise ValueError("Cannot update non-existing segmentation.")
         for pixels, old_value in updated_pixels:
@@ -77,3 +78,4 @@ class UserUpdateSegmentation(ActionGroup):
                         pixels=all_pixels,
                     )
                 )
+                self.nodes_added.append(new_value)

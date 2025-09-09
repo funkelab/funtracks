@@ -4,7 +4,8 @@ from typing import Any
 
 import numpy as np
 
-from funtracks.data_model import NodeAttr, SolutionTracks
+from funtracks.data_model.graph_attributes import NodeAttr
+from funtracks.data_model.solution_tracks import SolutionTracks
 from funtracks.exceptions import InvalidActionError
 
 from ..actions._base import ActionGroup

@@ -8,17 +8,16 @@ from funtracks.exceptions import InvalidActionError
 
 from ..actions import (
     ActionGroup,
-    AddEdges,
-    DeleteEdges,
     TracksAction,
     UpdateNodeAttrs,
-    UpdateNodeSegs,
-    UpdateTrackID,
 )
 from ..actions.action_history import ActionHistory
 from ..user_actions import (
+    UserAddEdge,
     UserAddNode,
+    UserDeleteEdge,
     UserDeleteNode,
+    UserUpdateSegmentation,
 )
 from .graph_attributes import NodeAttr
 from .solution_tracks import SolutionTracks
@@ -150,38 +149,19 @@ class TracksController:
                 known already. Will be computed if not provided.
         """
         actions: list[TracksAction] = []
-        for i in range(len(nodes)):
+        pixels = list(pixels) if pixels is not None else None
+        for i, node in enumerate(nodes):
             try:
                 actions.append(
                     UserDeleteNode(
-                        nodes[i],
+                        self.tracks,
+                        node,
                         pixels=pixels[i] if pixels is not None else None,
                     )
                 )
             except InvalidActionError as e:
                 warnings.warn(f"Failed to delete node: {e.message}", stacklevel=2)
         return ActionGroup(self.tracks, actions)
-
-    def _update_node_segs(
-        self,
-        nodes: Iterable[Node],
-        pixels: Iterable[SegMask],
-        added=False,
-    ) -> TracksAction:
-        """Update the segmentation and segmentation-managed attributes for
-        a set of nodes.
-
-        Args:
-            nodes (Iterable[Node]): The nodes to update
-            pixels (list[SegMask]): The pixels for each node that were edited
-            added (bool, optional): If the pixels were added to the nodes (True)
-                or deleted (False). Defaults to False. Cannot mix adding and removing
-                pixels in one call.
-
-        Returns:
-            TracksAction: _description_
-        """
-        return UpdateNodeSegs(self.tracks, nodes, pixels, added=added)
 
     def add_edges(self, edges: Iterable[Edge]) -> None:
         """Add edges to the graph. Also update the track ids and
@@ -234,7 +214,14 @@ class TracksController:
 
         Returns: A TracksAction object that performed the update
         """
-        return UpdateNodeAttrs(self.tracks, nodes, attributes)
+        actions: list[TracksAction] = []
+        for i, node in enumerate(nodes):
+            actions.append(
+                UpdateNodeAttrs(
+                    self.tracks, node, {key: val[i] for key, val in attributes.items()}
+                )
+            )
+        return ActionGroup(self.tracks, actions)
 
     def _add_edges(self, edges: Iterable[Edge]) -> TracksAction:
         """Add edges and attributes to the graph. Also update the track ids of the
@@ -249,24 +236,7 @@ class TracksController:
         """
         actions: list[TracksAction] = []
         for edge in edges:
-            out_degree = self.tracks.graph.out_degree(edge[0])
-            if out_degree == 0:  # joining two segments
-                # assign the track id of the source node to the target and all out
-                # edges until end of track
-                new_track_id = self.tracks.get_track_id(edge[0])
-                actions.append(UpdateTrackID(self.tracks, edge[1], new_track_id))
-            elif out_degree == 1:  # creating a division
-                # assign a new track id to existing child
-                successor = next(iter(self.tracks.graph.successors(edge[0])))
-                actions.append(
-                    UpdateTrackID(self.tracks, successor, self.tracks.get_next_track_id())
-                )
-            else:
-                raise RuntimeError(
-                    f"Expected degree of 0 or 1 before adding edge, got {out_degree}"
-                )
-
-        actions.append(AddEdges(self.tracks, edges))
+            actions.append(UserAddEdge(self.tracks, edge))
         return ActionGroup(self.tracks, actions)
 
     def is_valid(self, edge: Edge) -> tuple[bool, TracksAction | None]:
@@ -355,84 +325,40 @@ class TracksController:
         self.tracks.refresh.emit()
 
     def _delete_edges(self, edges: Iterable[Edge]) -> ActionGroup:
-        actions: list[TracksAction] = [DeleteEdges(self.tracks, edges)]
+        actions: list[TracksAction] = []
         for edge in edges:
-            out_degree = self.tracks.graph.out_degree(edge[0])
-            if out_degree == 0:  # removed a normal (non division) edge
-                new_track_id = self.tracks.get_next_track_id()
-                actions.append(UpdateTrackID(self.tracks, edge[1], new_track_id))
-            elif out_degree == 1:  # removed a division edge
-                sibling = next(self.tracks.graph.successors(edge[0]))
-                new_track_id = self.tracks.get_track_id(edge[0])
-                actions.append(UpdateTrackID(self.tracks, sibling, new_track_id))
-            else:
-                raise RuntimeError(
-                    f"Expected degree of 0 or 1 after removing edge, got {out_degree}"
-                )
+            actions.append(UserDeleteEdge(self.tracks, edge))
         return ActionGroup(self.tracks, actions)
 
     def update_segmentations(
         self,
-        to_remove: list[tuple[Node, SegMask]],
-        to_update_smaller: list[tuple[Node, SegMask]],
-        to_update_bigger: list[tuple[Node, SegMask]],
-        to_add: list[tuple[Node, int, SegMask]],
+        new_value: int,
+        updated_pixels: list[tuple[SegMask, int]],
         current_timepoint: int,
-    ) -> None:
+    ):
         """Handle a change in the segmentation mask, checking for node addition,
         deletion, and attribute updates.
+
+        NOTE: we have introduced a minor breaking change to this API that finn will need
+        to adapt to - it used to parse the pixel change into different action lists,
+        but that is now done in the UserUpdateSegmentation action
+
         Args:
-            to_remove (list[tuple[Node, SegMask]]): (node_ids, pixels)
-            to_update_smaller (list[tuple[Node, SegMask]]): (node_id, pixels)
-            to_update_bigger (list[tuple[Node, SegMask]]): (node_id, pixels)
-            to_add (list[tuple[Node, int, SegMask]]): (node_id, track_id, pixels)
+            new_value (int)): the label that the user drew with
+            updated_pixels (list[tuple[SegMask, int]]): a list of pixels changed
+                and the value that was there before the user drew
             current_timepoint (int): the current time point in the viewer, used to set
                 the selected node.
         """
-        actions: list[TracksAction] = []
-        node_to_select = None
 
-        if len(to_remove) > 0:
-            nodes = [node_id for node_id, _ in to_remove]
-            pixels = [pixels for _, pixels in to_remove]
-            actions.append(self._delete_nodes(nodes, pixels=pixels))
-        if len(to_update_smaller) > 0:
-            nodes = [node_id for node_id, _ in to_update_smaller]
-            pixels = [pixels for _, pixels in to_update_smaller]
-            actions.append(self._update_node_segs(nodes, pixels, added=False))
-        if len(to_update_bigger) > 0:
-            nodes = [node_id for node_id, _ in to_update_bigger]
-            pixels = [pixels for _, pixels in to_update_bigger]
-            actions.append(self._update_node_segs(nodes, pixels, added=True))
-        if len(to_add) > 0:
-            nodes = [node for node, _, _ in to_add]
-            pixels = [pix for _, _, pix in to_add]
-            track_ids = [
-                val if val is not None else self.tracks.get_next_track_id()
-                for _, val, _ in to_add
-            ]
-            times = [pix[0][0] for pix in pixels]
-            attributes = {
-                NodeAttr.TRACK_ID.value: track_ids,
-                NodeAttr.TIME.value: times,
-                "node_id": nodes,
-            }
-
-            result = self._add_nodes(attributes=attributes, pixels=pixels)
-            if result is None:
-                return
-            else:
-                action, nodes = result
-
-            actions.append(action)
-
-            # if this is the time point where the user added a node, select the new node
-            if current_timepoint in times:
-                index = times.index(current_timepoint)
-                node_to_select = nodes[index]
-
-        action_group = ActionGroup(self.tracks, actions)
-        self.action_history.add_new_action(action_group)
+        action = UserUpdateSegmentation(self.tracks, new_value, updated_pixels)
+        self.action_history.add_new_action(action)
+        nodes_added = action.nodes_added
+        times = self.tracks.get_times(nodes_added)
+        if current_timepoint in times:
+            node_to_select = nodes_added[times.index(current_timepoint)]
+        else:
+            node_to_select = None
         self.tracks.refresh.emit(node_to_select)
 
     def undo(self) -> bool:
