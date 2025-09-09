@@ -115,7 +115,7 @@ class TracksController:
                 )
                 nodes_added.append(nodes[i])
             except InvalidActionError as e:
-                warnings.warn(f"Failed to add node: {e.message}", stacklevel=2)
+                warnings.warn(f"Failed to add node: {e}", stacklevel=2)
 
         return ActionGroup(self.tracks, actions), nodes_added
 
@@ -160,7 +160,7 @@ class TracksController:
                     )
                 )
             except InvalidActionError as e:
-                warnings.warn(f"Failed to delete node: {e.message}", stacklevel=2)
+                warnings.warn(f"Failed to delete node: {e}", stacklevel=2)
         return ActionGroup(self.tracks, actions)
 
     def add_edges(self, edges: Iterable[Edge]) -> None:

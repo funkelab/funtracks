@@ -304,8 +304,10 @@ def import_from_geff(
     if tracks.segmentation is not None and extra_features.get("area"):
         nodes = tracks.graph.nodes
         times = tracks.get_times(nodes)
-        computed_attrs = tracks._compute_node_attrs(nodes, times)
-        areas = computed_attrs[NodeAttr.AREA.value]
+        areas = [
+            tracks._compute_node_attrs(node, time)[NodeAttr.AREA.value]
+            for node, time in zip(nodes, times, strict=True)
+        ]
         tracks._set_nodes_attr(nodes, NodeAttr.AREA.value, areas)
 
     return tracks

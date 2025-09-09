@@ -48,6 +48,7 @@ class Tracks:
         pos_attr (str | tuple[str] | list[str]): The attribute in the graph
             that specifies the position of each node. Can be a single attribute
             that holds a list, or a list of attribute keys.
+        scale (list[float] | None): How much to scale each dimension by, including time.
 
     For bulk operations on attributes, a KeyError will be raised if a node or edge
     in the input set is not in the graph. All operations before the error node will
