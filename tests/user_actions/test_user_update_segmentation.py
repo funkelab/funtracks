@@ -186,3 +186,9 @@ class TestUpdateNodeSeg:
         assert tracks.graph.has_node(node_id)
         assert tracks.get_position(node_id) == position
         assert tracks.get_area(node_id) == area
+
+
+def test_missing_seg(graph_2d):
+    tracks = SolutionTracks(graph_2d, ndim=3)
+    with pytest.raises(ValueError, match="Cannot update non-existing segmentation"):
+        UserUpdateSegmentation(tracks, 0, [])

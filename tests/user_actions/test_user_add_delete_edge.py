@@ -83,3 +83,34 @@ class TestUserAddDeleteEdge:
         inverse.inverse()
         assert not tracks.graph.has_edge(*edge)
         assert tracks.get_track_id(old_child) != old_track_id
+
+
+def test_add_edge_mising_node(graph_2d):
+    tracks = SolutionTracks(graph_2d, ndim=3)
+    with pytest.raises(ValueError, match="Source node .* not in solution yet"):
+        UserAddEdge(tracks, (10, 11))
+    with pytest.raises(ValueError, match="Target node .* not in solution yet"):
+        UserAddEdge(tracks, (1, 11))
+
+
+def test_add_edge_triple_div(graph_2d):
+    tracks = SolutionTracks(graph_2d, ndim=3)
+    with pytest.raises(
+        RuntimeError, match="Expected degree of 0 or 1 before adding edge"
+    ):
+        UserAddEdge(tracks, (1, 6))
+
+
+def test_delete_missing_edge(graph_2d):
+    tracks = SolutionTracks(graph_2d, ndim=3)
+    with pytest.raises(ValueError, match="Edge .* not in solution"):
+        UserDeleteEdge(tracks, (10, 11))
+
+
+def test_delete_edge_triple_div(graph_2d):
+    graph_2d.add_edge(1, 6)
+    tracks = SolutionTracks(graph_2d, ndim=3)
+    with pytest.raises(
+        RuntimeError, match="Expected degree of 0 or 1 after removing edge"
+    ):
+        UserDeleteEdge(tracks, (1, 6))
