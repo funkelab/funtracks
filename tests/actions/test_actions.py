@@ -7,10 +7,19 @@ from funtracks.actions import (
     ActionGroup,
     AddEdge,
     AddNode,
+    DeleteEdge,
+    TracksAction,
     UpdateNodeSeg,
 )
 from funtracks.data_model import SolutionTracks
 from funtracks.data_model.graph_attributes import EdgeAttr, NodeAttr
+
+
+def test_initialize_base_class(graph_2d):
+    tracks = SolutionTracks(graph_2d, ndim=3)
+    action = TracksAction(tracks)
+    with pytest.raises(NotImplementedError):
+        action.inverse()
 
 
 class TestAddDeleteNodes:
@@ -120,3 +129,31 @@ def test_add_delete_edges(graph_2d, segmentation_2d):
             graph_2d.edges[edge][EdgeAttr.IOU.value], abs=0.01
         )
     assert_array_almost_equal(tracks.segmentation, segmentation_2d)
+
+
+def test_add_edge_missing_endpoint(graph_2d):
+    tracks = SolutionTracks(graph_2d, ndim=3)
+    with pytest.raises(ValueError, match="Cannot add edge .*: endpoint .* not in graph"):
+        AddEdge(tracks, (10, 11))
+
+
+def test_remove_missing_edge(graph_2d):
+    tracks = SolutionTracks(graph_2d, ndim=3)
+    with pytest.raises(
+        ValueError, match="Edge .* not in the graph, and cannot be removed"
+    ):
+        DeleteEdge(tracks, (10, 11))
+
+
+def test_add_node_missing_time(graph_2d):
+    tracks = SolutionTracks(graph_2d, ndim=3)
+    with pytest.raises(ValueError, match="Must provide a time attribute for each node"):
+        AddNode(tracks, 8, {})
+
+
+def test_add_node_missing_pos(graph_2d):
+    tracks = SolutionTracks(graph_2d, ndim=3)
+    with pytest.raises(
+        ValueError, match="Must provide positions or segmentation and ids"
+    ):
+        AddNode(tracks, 8, {"time": 2})

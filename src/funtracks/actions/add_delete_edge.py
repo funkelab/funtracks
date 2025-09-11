@@ -32,7 +32,7 @@ class AddEdge(TracksAction):
         attrs.update(self.tracks._compute_edge_attrs(self.edge))
         for node in self.edge:
             if not self.tracks.graph.has_node(node):
-                raise KeyError(
+                raise ValueError(
                     f"Cannot add edge {self.edge}: endpoint {node} not in graph yet"
                 )
         self.tracks.graph.add_edge(self.edge[0], self.edge[1], **attrs)
@@ -57,4 +57,4 @@ class DeleteEdge(TracksAction):
         if self.tracks.graph.has_edge(*self.edge):
             self.tracks.graph.remove_edge(*self.edge)
         else:
-            raise KeyError(f"Edge {self.edge} not in the graph, and cannot be removed")
+            raise ValueError(f"Edge {self.edge} not in the graph, and cannot be removed")

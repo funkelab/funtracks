@@ -43,7 +43,9 @@ class AddNode(TracksAction):
         super().__init__(tracks)
         self.node = node
         user_attrs = attributes.copy()
-        self.time = attributes.pop(NodeAttr.TIME.value, None)
+        if NodeAttr.TIME.value not in attributes:
+            raise ValueError("Must provide a time attribute for each node")
+        self.time = attributes.pop(NodeAttr.TIME.value)
         self.position = attributes.pop(NodeAttr.POS.value, None)
         self.pixels = pixels
         self.attributes = user_attrs
@@ -58,8 +60,6 @@ class AddNode(TracksAction):
         if self.pixels is not None:
             self.tracks.set_pixels(self.pixels, self.node)
         attrs = self.attributes
-        if attrs is None:
-            attrs = {}
         self.tracks.graph.add_node(self.node)
         self.tracks.set_time(self.node, self.time)
         final_pos: np.ndarray
