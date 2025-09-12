@@ -137,6 +137,7 @@ def import_from_geff(
     segmentation_path: Path | None = None,
     scale: list[float] | None = None,
     extra_features: dict[str, bool] | None = None,
+    edge_prop_filter: list[str] | None = None,
 ):
     """Load Tracks from a geff directory. Takes a name_map to map graph attributes
     (spatial dimensions and optional track and lineage ids) to tracks attributes.
@@ -166,18 +167,22 @@ def import_from_geff(
         extra_features (dict[str: bool] | None=None): optional features to include in the
             Tracks object. The keys are the feature names, and the boolean value indicates
             whether to recompute the feature (area) or load it as a static node attribute.
-
+        edge_prop_filter (list[str]): List of edge properties to include. If None all
+        properties will be included.
     Returns:
         Tracks based on the geff graph and segmentation, if provided.
     """
 
     # Read the GEFF file into memory
     node_prop_filter = [
-        prop for prop in list(name_map.keys()) if name_map[prop] is not None
+        prop for key, prop in name_map.items() if name_map[key] is not None
     ]
     if extra_features is not None:
         node_prop_filter.extend(list(extra_features.keys()))
-    in_memory_geff = read_to_memory(directory, node_props=node_prop_filter)
+
+    in_memory_geff = read_to_memory(
+        directory, node_props=node_prop_filter, edge_props=edge_prop_filter
+    )
     metadata = dict(in_memory_geff["metadata"])
     node_ids = in_memory_geff["node_ids"]
     node_props = in_memory_geff["node_props"]

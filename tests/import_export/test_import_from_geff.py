@@ -75,7 +75,7 @@ def test_duplicate_or_none_in_name_map(valid_geff):
 
     store, _ = valid_geff
     # Duplicate value
-    name_map = {"time": "time", "y": "y", "x": "y"}
+    name_map = {"time": "t", "y": "y", "x": "y"}
     with pytest.raises(ValueError, match="duplicate values"):
         import_from_geff(store, name_map)
     # None value
