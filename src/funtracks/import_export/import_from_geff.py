@@ -172,7 +172,12 @@ def import_from_geff(
     """
 
     # Read the GEFF file into memory
-    in_memory_geff = read_to_memory(directory)
+    node_prop_filter = [
+        prop for prop in list(name_map.keys()) if name_map[prop] is not None
+    ]
+    if extra_features is not None:
+        node_prop_filter.extend(list(extra_features.keys()))
+    in_memory_geff = read_to_memory(directory, node_props=node_prop_filter)
     metadata = dict(in_memory_geff["metadata"])
     node_ids = in_memory_geff["node_ids"]
     node_props = in_memory_geff["node_props"]
