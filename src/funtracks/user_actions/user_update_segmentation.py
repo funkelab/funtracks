@@ -29,7 +29,7 @@ class UserUpdateSegmentation(ActionGroup):
         add_node action doesn't have anything with pixels.
 
         Args:
-            tracks (SolutiuonTracks): The solution tracks that the user is updating.
+            tracks (SolutionTracks): The solution tracks that the user is updating.
             new_value (int): The new value that the user painted with
             updated_pixels (list[tuple[tuple[np.ndarray, ...], int]]): A list of node
                 update actions, consisting of a numpy multi-index, pointing to the array
