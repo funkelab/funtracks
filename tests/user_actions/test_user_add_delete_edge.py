@@ -1,6 +1,7 @@
 import pytest
 
 from funtracks.data_model import SolutionTracks
+from funtracks.exceptions import InvalidActionError
 from funtracks.user_actions import UserAddEdge, UserDeleteEdge
 
 
@@ -39,6 +40,33 @@ class TestUserAddDeleteEdge:
         inverse.inverse()
         assert tracks.graph.has_edge(*edge)
         assert tracks.get_track_id(old_child) != old_track_id
+
+    def test_user_add_merge_edge(self, request, ndim, use_seg):
+        tracks = self.get_tracks(request, ndim, use_seg)
+        # add an edge from 2 to 4 (there is already an edge from 3 to 4)
+        edge = (2, 4)
+        old_edge = (3, 4)
+        assert not tracks.graph.has_edge(*edge)
+        assert tracks.graph.has_edge(*old_edge)
+        with pytest.raises(
+            InvalidActionError, match="Cannot make a merge edge in a tracking solution"
+        ):
+            UserAddEdge(tracks, edge)
+        with pytest.warns(
+            UserWarning,
+            match="Removing edge .* to add new edge without merging.",
+        ):
+            action = UserAddEdge(tracks, edge, force=True)
+        assert tracks.graph.has_edge(*edge)
+        assert not tracks.graph.has_edge(*old_edge)
+
+        inverse = action.inverse()
+        assert not tracks.graph.has_edge(*edge)
+        assert tracks.graph.has_edge(*old_edge)
+
+        inverse.inverse()
+        assert tracks.graph.has_edge(*edge)
+        assert not tracks.graph.has_edge(*old_edge)
 
     def test_user_delete_edge(self, request, ndim, use_seg):
         tracks = self.get_tracks(request, ndim, use_seg)
