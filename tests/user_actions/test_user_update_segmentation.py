@@ -202,4 +202,4 @@ class TestUpdateNodeSeg:
 def test_missing_seg(graph_2d):
     tracks = SolutionTracks(graph_2d, ndim=3)
     with pytest.raises(ValueError, match="Cannot update non-existing segmentation"):
-        UserUpdateSegmentation(tracks, 0, [])
+        UserUpdateSegmentation(tracks, 0, [], 1)
