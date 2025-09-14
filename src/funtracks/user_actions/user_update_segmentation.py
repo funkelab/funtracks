@@ -21,6 +21,7 @@ class UserUpdateSegmentation(ActionGroup):
         tracks: SolutionTracks,
         new_value: int,
         updated_pixels: list[tuple[tuple[np.ndarray, ...], int]],
+        current_track_id: int,
     ):
         """Assumes that the pixels have already been updated in the project.segmentation
         NOTE: Re discussion with Kasia: we should have a basic action that updates the
@@ -34,6 +35,8 @@ class UserUpdateSegmentation(ActionGroup):
                 update actions, consisting of a numpy multi-index, pointing to the array
                 elements that were changed (a tuple with len ndims), and the value
                 before the change
+            current_track_id (int): The track id to use if adding a new node, usually
+                the currently selected track id in the viewer.
         """
         super().__init__(tracks, actions=[])
         self.nodes_added = []
@@ -67,8 +70,7 @@ class UserUpdateSegmentation(ActionGroup):
             else:
                 attrs = {
                     NodeAttr.TIME.value: time,
-                    # TODO: allow passing in the current track id, or just use UserAddNode
-                    NodeAttr.TRACK_ID.value: tracks.get_next_track_id(),
+                    NodeAttr.TRACK_ID.value: current_track_id,
                 }
                 self.actions.append(
                     UserAddNode(

@@ -45,7 +45,10 @@ class TestUpdateNodeSeg:
         )
 
         action = UserUpdateSegmentation(
-            tracks, new_value=0, updated_pixels=[(pixels_to_remove, node_id)]
+            tracks,
+            new_value=0,
+            updated_pixels=[(pixels_to_remove, node_id)],
+            current_track_id=1,
         )
         assert tracks.graph.has_node(node_id)
         assert self.pixel_equals(tracks.get_pixels(node_id), remaining_pixels)
@@ -96,7 +99,7 @@ class TestUpdateNodeSeg:
         )
 
         action = UserUpdateSegmentation(
-            tracks, new_value=3, updated_pixels=[(pixels_to_add, 0)]
+            tracks, new_value=3, updated_pixels=[(pixels_to_add, 0)], current_track_id=1
         )
         assert tracks.graph.has_node(node_id)
         assert self.pixel_equals(all_pixels, tracks.get_pixels(node_id))
@@ -134,7 +137,10 @@ class TestUpdateNodeSeg:
         # (to reflect that the user directly changes the segmentation array)
         tracks.set_pixels(pixels_to_remove, 0)
         action = UserUpdateSegmentation(
-            tracks, new_value=0, updated_pixels=[(pixels_to_remove, node_id)]
+            tracks,
+            new_value=0,
+            updated_pixels=[(pixels_to_remove, node_id)],
+            current_track_id=1,
         )
         assert not tracks.graph.has_node(node_id)
 
@@ -172,12 +178,16 @@ class TestUpdateNodeSeg:
         assert np.sum(tracks.segmentation == node_id) == 0
         tracks.set_pixels(pixels_to_add, node_id)
         action = UserUpdateSegmentation(
-            tracks, new_value=node_id, updated_pixels=[(pixels_to_add, 0)]
+            tracks,
+            new_value=node_id,
+            updated_pixels=[(pixels_to_add, 0)],
+            current_track_id=10,
         )
         assert np.sum(tracks.segmentation == node_id) == len(pixels_to_add[0])
         assert tracks.graph.has_node(node_id)
         assert tracks.get_position(node_id) == position
         assert tracks.get_area(node_id) == area
+        assert tracks.get_track_id(node_id) == 10
 
         inverse = action.inverse()
         assert not tracks.graph.has_node(node_id)
@@ -186,6 +196,7 @@ class TestUpdateNodeSeg:
         assert tracks.graph.has_node(node_id)
         assert tracks.get_position(node_id) == position
         assert tracks.get_area(node_id) == area
+        assert tracks.get_track_id(node_id) == 10
 
 
 def test_missing_seg(graph_2d):

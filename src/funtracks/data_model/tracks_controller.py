@@ -335,6 +335,7 @@ class TracksController:
         new_value: int,
         updated_pixels: list[tuple[SegMask, int]],
         current_timepoint: int,
+        current_track_id: int,
     ):
         """Handle a change in the segmentation mask, checking for node addition,
         deletion, and attribute updates.
@@ -349,9 +350,13 @@ class TracksController:
                 and the value that was there before the user drew
             current_timepoint (int): the current time point in the viewer, used to set
                 the selected node.
+            current_track_id (int): the track_id to use when adding a new node, usually
+                the currently selected track id in the viewer
         """
 
-        action = UserUpdateSegmentation(self.tracks, new_value, updated_pixels)
+        action = UserUpdateSegmentation(
+            self.tracks, new_value, updated_pixels, current_track_id
+        )
         self.action_history.add_new_action(action)
         nodes_added = action.nodes_added
         times = self.tracks.get_times(nodes_added)
