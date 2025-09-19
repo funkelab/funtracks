@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from typing import TYPE_CHECKING
 
 import networkx as nx
@@ -59,6 +60,12 @@ class SolutionTracks(Tracks):
 
     @property
     def node_id_to_track_id(self) -> dict[Node, int]:
+        warnings.warn(
+            "node_id_to_track_id property will be removed in funtracks v2. "
+            "Use `get_track_id` instead for better performance.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return nx.get_node_attributes(self.graph, NodeAttr.TRACK_ID.value)
 
     def get_next_track_id(self) -> int:

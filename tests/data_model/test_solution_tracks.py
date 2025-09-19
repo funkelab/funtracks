@@ -1,5 +1,6 @@
 import networkx as nx
 import numpy as np
+import pytest
 
 from funtracks.actions import AddNode
 from funtracks.data_model import NodeAttr, SolutionTracks, Tracks
@@ -14,6 +15,15 @@ def test_next_track_id(graph_2d):
         attributes={"time": 3, "pos": [0, 0, 0, 0], "track_id": 10},
     )
     assert tracks.get_next_track_id() == 11
+
+
+def test_node_id_to_track_id(graph_2d):
+    tracks = SolutionTracks(graph_2d, ndim=3)
+    with pytest.warns(
+        DeprecationWarning,
+        match="node_id_to_track_id property will be removed in funtracks v2. ",
+    ):
+        tracks.node_id_to_track_id  # noqa B018
 
 
 def test_from_tracks_cls(graph_2d):
