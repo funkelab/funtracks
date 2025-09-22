@@ -12,6 +12,7 @@ from geff.affine import Affine
 from geff.metadata_schema import GeffMetadata
 
 from funtracks.data_model.graph_attributes import NodeAttr
+from funtracks.features import Feature
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -52,17 +53,8 @@ def export_to_geff(tracks: Tracks, directory: Path, overwrite: bool = False):
 
     # update the graph to split the position into separate attrs, if they are currently
     # together in a list
-    if isinstance(tracks.pos_attr, str):
-        graph = split_position_attr(tracks)
-        axis_names = (
-            [tracks.time_attr, "y", "x"]
-            if tracks.ndim == 3
-            else [tracks.time_attr, "z", "y", "x"]
-        )
-    else:
-        graph = tracks.graph
-        axis_names = list(tracks.pos_attr)
-        axis_names.insert(0, tracks.time_attr)
+    graph, axis_names = split_position_attr(tracks)
+    axis_names.insert(0, tracks.features.time.key)
 
     axis_types = (
         ["time", "space", "space"]
@@ -109,7 +101,7 @@ def export_to_geff(tracks: Tracks, directory: Path, overwrite: bool = False):
     )
 
 
-def split_position_attr(tracks: Tracks) -> nx.DiGraph:
+def split_position_attr(tracks: Tracks) -> tuple[nx.DiGraph, list[str]]:
     """Spread the spatial coordinates to separate node attrs in order to export to geff
     format.
 
@@ -118,20 +110,22 @@ def split_position_attr(tracks: Tracks) -> nx.DiGraph:
           converted.
 
     Returns:
-        nx.DiGraph with a separate positional attribute for each coordinate.
+        tuple[nx.DiGraph, list[str]]: graph with a separate positional attribute for each
+            coordinate, and the axis names used to store the separate attributes
 
     """
-    new_graph = tracks.graph.copy()
+    pos_feat = tracks.features.position
+    if isinstance(pos_feat, Feature):
+        new_graph = tracks.graph.copy()
+        pos_attr = pos_feat.key
+        new_keys = ["y", "x"]
+        if tracks.ndim == 4:
+            new_keys.insert(0, "z")
+        for _, attrs in new_graph.nodes(data=True):
+            pos = attrs.pop(pos_attr)
+            for i in range(len(new_keys)):
+                attrs[new_keys[i]] = pos[i]
 
-    for _, attrs in new_graph.nodes(data=True):
-        pos = attrs.pop(tracks.pos_attr)
-
-        if len(pos) == 2:
-            attrs["y"] = pos[0]
-            attrs["x"] = pos[1]
-        elif len(pos) == 3:
-            attrs["z"] = pos[0]
-            attrs["y"] = pos[1]
-            attrs["x"] = pos[2]
-
-    return new_graph
+        return new_graph, new_keys
+    else:
+        return tracks.graph, [feat.key for feat in pos_feat]

@@ -30,6 +30,7 @@ class Area(RPFeature):
             regionprops_name="area",
         )
 
+
 class Intensity(RPFeature):
     def __init__(self, ndim=3):
         super().__init__(
@@ -39,6 +40,7 @@ class Intensity(RPFeature):
             valid_ndim=(3, 4),
             regionprops_name="intensity_mean",
         )
+
 
 class EllipsoidAxes(RPFeature):
     def __init__(self, ndim=3):
@@ -144,7 +146,7 @@ class RegionpropsAnnotator(GraphAnnotator):
         ndim = tracks.ndim
         features = [
             Area(ndim=ndim),
-            Intensity(ndim=ndim),
+            # Intensity(ndim=ndim),  # TODO: Add in intensity when image is passed
             EllipsoidAxes(ndim=ndim),
             Circularity(ndim=ndim),
             Perimeter(ndim=ndim),

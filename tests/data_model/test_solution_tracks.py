@@ -33,8 +33,8 @@ def test_from_tracks_cls(graph_2d):
     solution_tracks = SolutionTracks.from_tracks(tracks)
     assert solution_tracks.graph == tracks.graph
     assert solution_tracks.segmentation == tracks.segmentation
-    assert solution_tracks.time_attr == tracks.time_attr
-    assert solution_tracks.pos_attr == tracks.pos_attr
+    assert solution_tracks.features.time.key == tracks.features.time.key
+    assert solution_tracks.features.position.key == tracks.features.position.key
     assert solution_tracks.scale == tracks.scale
     assert solution_tracks.ndim == tracks.ndim
     assert solution_tracks.get_node_attr(6, NodeAttr.TRACK_ID.value) == 5

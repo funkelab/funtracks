@@ -40,10 +40,10 @@ class TestRegionpropsAnnotator:
         tracks = self.get_tracks(request, ndim)
         node_id = 3
 
-        orig_pixels = tracks.get_pixels([node_id])[0]
+        orig_pixels = tracks.get_pixels(node_id)
         # remove all but one pixel
         pixels_to_remove = tuple(orig_pixels[d][1:] for d in range(len(orig_pixels)))
-        tracks.set_pixels([pixels_to_remove], [0])
+        tracks.set_pixels(pixels_to_remove, 0)
         expected_area = 1
 
         rp_ann = RegionpropsAnnotator(tracks)
@@ -60,8 +60,8 @@ class TestRegionpropsAnnotator:
 
         # segmentation is fully erased and you try to update
         node_id = 1
-        pixels = tracks.get_pixels([node_id])[0]
-        tracks.set_pixels([pixels], [0])
+        pixels = tracks.get_pixels(node_id)
+        tracks.set_pixels(pixels, 0)
         with pytest.warns(
             match="Cannot find label 1 in frame .*: updating regionprops values to None"
         ):
@@ -91,9 +91,9 @@ class TestRegionpropsAnnotator:
         # remove all but one pixel
         node_id = 3
         prev_value = tracks.get_node_attr(node_id, second_remove.key)
-        orig_pixels = tracks.get_pixels([node_id])[0]
+        orig_pixels = tracks.get_pixels(node_id)
         pixels_to_remove = tuple(orig_pixels[d][1:] for d in range(len(orig_pixels)))
-        tracks.set_pixels([pixels_to_remove], [0])
+        tracks.set_pixels(pixels_to_remove, 0)
         rp_ann.update(node_id)
         # the new one we removed is not updated
         assert tracks.get_node_attr(node_id, second_remove.key) == prev_value
