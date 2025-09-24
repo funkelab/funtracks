@@ -1,3 +1,4 @@
+from .edge_annotator import EdgeAnnotator
 from .feature import Feature, FeatureType, ValueType
 from .feature_set import FeatureSet
 from .graph_annotator import GraphAnnotator

@@ -89,47 +89,7 @@ class RegionpropsAnnotator(GraphAnnotator):
     """
 
     def __init__(self, tracks: Tracks):
-        self.all_features: list[Feature] = RegionpropsAnnotator.all_supported_features(
-            tracks
-        )
-        self.include = [
-            True,
-        ] * len(self.all_features)
-        # whether to include each of the features or not. Can update later to exclude
-        # features to be more efficient.
-        super().__init__(tracks, self.all_features.copy())
-
-    def remove_feature(self, feature: Feature, update_set: bool = True) -> None:
-        """Stop computing the given feature in the regionprops annotation process.
-        This will not actually remove the feature from the tracks nodes. It will just
-        remove it from the list of features that this annotator is updating/computing.
-
-        Args:
-            feature (Feature): The feature to remove. Must be in all_features list.
-            update_set (bool, optional): Whether to update the tracks FeatureSet or not.
-                Defaults to True. Will error if the feature is not already in the
-                FeatureSet and the value is True.
-        """
-        if feature in self.all_features:
-            self.include[self.all_features.index(feature)] = False
-        if update_set:
-            self.tracks.features._features.remove(feature)
-
-    def add_feature(self, feature: Feature, update_set: bool = True) -> None:
-        """Start computing the given feature in the regionprops annotation process.
-        This will not actually add the feature to the tracks. It will just add it to
-        the list of features that this annotator is updating/computing.
-
-        Args:
-            feature (Feature): The feature to add. Must be in all_features list.
-            update_set (bool, optional): Whether to update the tracks FeatureSet or not.
-                Defaults to True. Will error if the feature is already in the
-                FeatureSet and the value is True.
-        """
-        if feature in self.all_features:
-            self.include[self.all_features.index(feature)] = True
-        if update_set:
-            self.tracks.features.add_feature(feature)
+        super().__init__(tracks, RegionpropsAnnotator.all_supported_features(tracks))
 
     @classmethod
     def all_supported_features(cls, tracks: Tracks) -> list[Feature]:
@@ -152,25 +112,6 @@ class RegionpropsAnnotator(GraphAnnotator):
             Perimeter(ndim=ndim),
         ]
         return features
-
-    @property
-    def features(self):
-        """The list of features that this annotator currently controls.
-
-        In this case, it is the list of all features filtered by the include flags.
-        """
-        return [
-            feat
-            for feat, include in zip(self.all_features, self.include, strict=True)
-            if include
-        ]
-
-    def add_features_to_set(self) -> None:
-        """Add the currently included features to the tracks FeatureSet. Usually
-        performed during initial computation.
-        """
-        for feature in self.features:
-            self.tracks.features.add_feature(feature)
 
     def compute(self, add_to_set=False) -> None:
         """Compute the currently included features and add them to the tracks.

@@ -26,13 +26,62 @@ class GraphAnnotator:
         self.tracks = tracks
         self._features = features
 
-    @property
-    def features(self):
-        """The list of features that this annotator controls.
+        self.include = [
+            True,
+        ] * len(self._features)
+        # whether to include each of the features or not. Can update later to exclude
+        # features to be more efficient.
 
-        Can be overridden in subclasses, e.g. to filter the list by user selection.
+    def remove_feature(self, feature: Feature, update_set: bool = True) -> None:
+        """Stop computing the given feature in the edge annotation process.
+        This will not actually remove the feature from the tracks edges. It will just
+        remove it from the list of features that this annotator is updating/computing.
+
+        Args:
+            feature (Feature): The feature to remove. Must be in _features list.
+            update_set (bool, optional): Whether to update the tracks FeatureSet or not.
+                Defaults to True. Will error if the feature is not already in the
+                FeatureSet and the value is True.
         """
-        return self._features
+        if feature in self._features:
+            self.include[self._features.index(feature)] = False
+        if update_set:
+            self.tracks.features._features.remove(feature)
+
+    def add_feature(self, feature: Feature, update_set: bool = True) -> None:
+        """Start computing the given feature in the edges annotation process.
+        This will not actually add the feature to the tracks. It will just add it to
+        the list of features that this annotator is updating/computing.
+
+        Args:
+            feature (Feature): The feature to add. Must be in _features list.
+            update_set (bool, optional): Whether to update the tracks FeatureSet or not.
+                Defaults to True. Will error if the feature is already in the
+                FeatureSet and the value is True.
+        """
+        if feature in self._features:
+            self.include[self._features.index(feature)] = True
+        if update_set:
+            self.tracks.features.add_feature(feature)
+
+    @property
+    def features(self) -> list[Feature]:
+        """The list of features that this annotator currently controls.
+
+        In this case, it is the list of all features filtered by the include flags.
+        """
+        return [
+            feat
+            for feat, include in zip(self._features, self.include, strict=True)
+            if include
+        ]
+
+    def add_features_to_set(self) -> None:
+        """Add the currently included features to the tracks FeatureSet. Usually
+        performed during initial computation.
+        """
+        for feature in self.features:
+            self.tracks.features.add_feature(feature)
 
     def compute(self) -> None:
         """Compute a set of features and add them to the tracks.

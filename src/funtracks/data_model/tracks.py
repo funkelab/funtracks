@@ -17,7 +17,7 @@ from skimage import measure
 
 from funtracks.features import Feature, FeatureSet, FeatureType, Position, Time
 
-from .compute_ious import _compute_ious
+from ..features.compute_ious import _compute_ious
 from .graph_attributes import EdgeAttr, NodeAttr
 
 if TYPE_CHECKING:

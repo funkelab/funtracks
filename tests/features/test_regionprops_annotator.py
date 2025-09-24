@@ -70,7 +70,7 @@ class TestRegionpropsAnnotator:
         for feature in all_features:
             assert tracks.graph.nodes[node_id][feature.key] is None
 
-    def test_add_remove_feature(self, request, ndim):
+    def test_add_remove_feature(self, request, ndim: int):
         tracks = self.get_tracks(request, ndim)
         rp_ann = RegionpropsAnnotator(tracks)
         all_features = RegionpropsAnnotator.all_supported_features(tracks)
