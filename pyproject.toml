@@ -32,7 +32,7 @@ dependencies =[
     "networkx",
     "psygnal",
     "scikit-image",
-    "geff",
+    "geff<1.0",
     "dask",
 ]
 [project.optional-dependencies]
