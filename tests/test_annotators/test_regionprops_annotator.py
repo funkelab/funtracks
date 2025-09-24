@@ -1,7 +1,8 @@
 import pytest
 
+from funtracks.annotators import RegionpropsAnnotator
 from funtracks.data_model import Tracks
-from funtracks.features import FeatureSet, Position, RegionpropsAnnotator, Time
+from funtracks.features import FeatureSet, Position, Time
 
 
 @pytest.mark.parametrize("ndim", [3, 4])

@@ -1,7 +1,8 @@
 import pytest
 
+from funtracks.annotators import EdgeAnnotator
 from funtracks.data_model import Tracks
-from funtracks.features import EdgeAnnotator, FeatureSet, Position, Time
+from funtracks.features import FeatureSet, Position, Time
 
 
 @pytest.mark.parametrize("ndim", [3, 4])

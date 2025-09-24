@@ -5,9 +5,9 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from .feature import Feature, FeatureType
+from ..features.feature import Feature, FeatureType
+from ..features.regionprops_extended import regionprops_extended
 from .graph_annotator import GraphAnnotator
-from .regionprops_extended import regionprops_extended
 
 if TYPE_CHECKING:
     from funtracks.data_model import Tracks

@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from .compute_ious import _compute_ious
-from .feature import Feature, FeatureType
+from ..features.compute_ious import _compute_ious
+from ..features.feature import Feature, FeatureType
 from .graph_annotator import GraphAnnotator
 
 if TYPE_CHECKING:

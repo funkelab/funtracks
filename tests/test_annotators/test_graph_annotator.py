@@ -1,7 +1,8 @@
 import pytest
 
+from funtracks.annotators import GraphAnnotator
 from funtracks.data_model import Tracks
-from funtracks.features import GraphAnnotator, Time
+from funtracks.features import Time
 
 
 def test_base_graph_annotator(graph_2d, segmentation_2d):

@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from funtracks.data_model import Tracks
 
-    from .feature import Feature
+    from ..features.feature import Feature
 
 
 class GraphAnnotator:
