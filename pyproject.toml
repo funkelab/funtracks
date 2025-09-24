@@ -35,15 +35,19 @@ dependencies =[
     "geff",
     "dask",
 ]
-[project.optional-dependencies]
-testing =["pytest", "pytest-cov"]
-docs = ["mkdocs-material", "mike", "mkdocstrings[python]", "mkdocs-api-autonav"]
-dev = ["ruff", "pre-commit", "mypy"]
-all = ["funtracks[testing,docs,dev]"]
 
 [project.urls]
 "Bug Tracker" = "https://github.com/funkelab/funtracks/issues"
 "Documentation" ="https://funkelab.github.io/funtracks/"
+
+[dependency-groups]
+testing =["pytest", "pytest-cov"]
+docs = ["mkdocs-material", "mike", "mkdocstrings[python]", "mkdocs-api-autonav"]
+dev = [
+    "ruff", "pre-commit", "mypy",
+    {include-group="testing"},
+    {include-group = "docs"},
+]
 
 [tool.setuptools_scm]
 
@@ -94,25 +98,3 @@ python_version = "3.10"
 exclude_also = [
     "if TYPE_CHECKING:",
 ]
-[tool.pixi.project]
-channels = ["conda-forge"]
-platforms = ["osx-arm64"]
-
-[tool.pixi.pypi-dependencies]
-funtracks = { path = ".", editable = true }
-
-[tool.pixi.environments]
-default = { solve-group = "default" }
-dev = { features = ["dev", "testing"], solve-group = "default" }
-docs = { features = ["docs"], solve-group = "default" }
-
-[tool.pixi.tasks]
-
-[tool.pixi.feature.dev.tasks]
-ruff-check = "ruff check --fix ."
-ruff-format = "ruff format ."
-test = "pytest --cov=funtracks tests/"
-mypy = "mypy src/"
-
-[tool.pixi.feature.docs.tasks]
-docs = "mkdocs serve"
