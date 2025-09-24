@@ -6,8 +6,10 @@ from .feature import (
     Feature,
     FeatureType,
 )
+
 if TYPE_CHECKING:
     from collections.abc import Sequence
+
 
 class Time(Feature):
     """A feature to hold the integer time frame a node is in"""
@@ -29,7 +31,6 @@ class Time(Feature):
 
 class Position(Feature):
     """A feature to hold the position of a node (time not included)"""
-
 
     def __init__(
         self, axes: Sequence[str], key: str | None = None, recompute: bool = False
