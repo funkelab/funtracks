@@ -1,0 +1,2 @@
+class InvalidActionError(RuntimeError):
+    pass

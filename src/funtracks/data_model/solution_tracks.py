@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from typing import TYPE_CHECKING
 
 import networkx as nx
@@ -28,6 +29,7 @@ class SolutionTracks(Tracks):
         pos_attr: str | tuple[str] | list[str] | None = NodeAttr.POS.value,
         scale: list[float] | None = None,
         ndim: int | None = None,
+        recompute_track_ids: bool = True,
         features: FeatureSet | None = None,
     ):
         super().__init__(
@@ -40,7 +42,14 @@ class SolutionTracks(Tracks):
             features=features,
         )
         self.max_track_id: int
-        self._initialize_track_ids()
+
+        # recompute track_id if requested or missing
+        if graph.number_of_nodes() == 0:
+            has_track_id = False
+        else:
+            has_track_id = NodeAttr.TRACK_ID.value in graph.nodes[next(iter(graph.nodes))]
+        if recompute_track_ids or not has_track_id:
+            self._initialize_track_ids()
 
     @classmethod
     def from_tracks(cls, tracks: Tracks):
@@ -56,6 +65,12 @@ class SolutionTracks(Tracks):
 
     @property
     def node_id_to_track_id(self) -> dict[Node, int]:
+        warnings.warn(
+            "node_id_to_track_id property will be removed in funtracks v2. "
+            "Use `get_track_id` instead for better performance.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return nx.get_node_attributes(self.graph, NodeAttr.TRACK_ID.value)
 
     def get_next_track_id(self) -> int:
@@ -149,3 +164,38 @@ class SolutionTracks(Tracks):
                 ]
                 f.write("\n")
                 f.write(",".join(map(str, row)))
+
+    def get_track_neighbors(
+        self, track_id: int, time: int
+    ) -> tuple[Node | None, Node | None]:
+        """Get the last node with the given track id before time, and the first node
+        with the track id after time, if any. Does not assume that a node with
+        the given track_id and time is already in tracks, but it can be.
+
+        Args:
+            track_id (int): The track id to search for
+            time (int): The time point to find the immediate predecessor and successor
+                for
+
+        Returns:
+            tuple[Node | None, Node | None]: The last node before time with the given
+            track id, and the first node after time with the given track id,
+            or Nones if there are no such nodes.
+        """
+        if (
+            track_id not in self.track_id_to_node
+            or len(self.track_id_to_node[track_id]) == 0
+        ):
+            return None, None
+        candidates = self.track_id_to_node[track_id]
+        candidates.sort(key=lambda n: self.get_time(n))
+
+        pred = None
+        succ = None
+        for cand in candidates:
+            if self.get_time(cand) < time:
+                pred = cand
+            elif self.get_time(cand) > time:
+                succ = cand
+                break
+        return pred, succ

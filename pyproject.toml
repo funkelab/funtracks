@@ -32,6 +32,8 @@ dependencies =[
     "networkx",
     "psygnal",
     "scikit-image",
+    "geff",
+    "dask",
 ]
 [project.optional-dependencies]
 testing =["pytest", "pytest-cov"]

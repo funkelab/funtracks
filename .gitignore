@@ -90,3 +90,6 @@ venv/
 .pixi
 *.egg-info
 pixi.lock
+
+# uv environments
+uv.lock
