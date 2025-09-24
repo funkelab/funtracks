@@ -10,10 +10,9 @@ The full documentation can be found [here](https://funkelab.github.io/funtracks/
 
 ## Installation
 
-pip install funtracks (soon)
+`pip install funtracks`
 
-Alternatively, you can use pixi to install and run funtracks code. For example, to run the tests,
-you can call `pixi run test` to run our pre-configured pixi task in the testing environment.
+Alternatively, you can use `uv` to install and run `funtracks` code.
 
 ## Issues
 
