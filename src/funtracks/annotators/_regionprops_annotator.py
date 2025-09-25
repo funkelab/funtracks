@@ -7,7 +7,7 @@ import numpy as np
 
 from ..features.feature import Feature, FeatureType
 from ..features.regionprops_extended import regionprops_extended
-from .graph_annotator import GraphAnnotator
+from ._graph_annotator import GraphAnnotator
 
 if TYPE_CHECKING:
     from funtracks.data_model import Tracks

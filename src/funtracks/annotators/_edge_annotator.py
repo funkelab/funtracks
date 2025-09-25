@@ -8,7 +8,7 @@ import numpy as np
 
 from ..features.compute_ious import _compute_ious
 from ..features.feature import Feature, FeatureType
-from .graph_annotator import GraphAnnotator
+from ._graph_annotator import GraphAnnotator
 
 if TYPE_CHECKING:
     from funtracks.data_model import Tracks

@@ -8,7 +8,7 @@ import networkx as nx
 from funtracks.data_model import SolutionTracks
 
 from ..features.feature import Feature, FeatureType
-from .graph_annotator import GraphAnnotator
+from ._graph_annotator import GraphAnnotator
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
