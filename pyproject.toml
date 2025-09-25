@@ -27,24 +27,33 @@ classifiers = [
 ]
 
 dependencies =[
-    "numpy",
-    "pydantic",
-    "networkx",
-    "psygnal",
-    "scikit-image",
-    "geff",
-    "dask",
+    "numpy>=2,<3",
+    "pydantic>=2,<3",
+    "networkx>=3.4,<4",
+    "psygnal>=0.14",
+    "scikit-image>=0.25",
+    "geff>=0.5.0,<1.0",
+    "dask>=2025.5.0",
 ]
 
 [project.urls]
 "Bug Tracker" = "https://github.com/funkelab/funtracks/issues"
-"Documentation" ="https://funkelab.github.io/funtracks/"
+"Documentation" = "https://funkelab.github.io/funtracks/"
 
 [dependency-groups]
-testing =["pytest", "pytest-cov"]
-docs = ["mkdocs-material", "mike", "mkdocstrings[python]", "mkdocs-api-autonav"]
+testing =[
+    "pytest>=8,<9",
+    "pytest-cov>=7,<8",
+]
+docs = [
+    "mkdocs-material>=9,<10",
+    "mike>=2,<3",
+    "mkdocstrings[python]>=0.28.2",
+    "mkdocs-api-autonav>=0.4.0"]
 dev = [
-    "ruff", "pre-commit", "mypy",
+    "ruff>=0.12",
+    "pre-commit>=4,<5",
+    "mypy>=1,<2",
     {include-group="testing"},
     {include-group = "docs"},
 ]
