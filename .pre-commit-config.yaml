@@ -19,3 +19,8 @@ repos:
     rev: v1.18.2
     hooks:
       - id: mypy
+
+  - repo: https://github.com/adhtruong/mirrors-typos
+    rev: v1.36.2
+    hooks:
+      - id: typos

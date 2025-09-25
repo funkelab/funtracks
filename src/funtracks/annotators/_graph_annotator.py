@@ -4,8 +4,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from funtracks.data_model import Tracks
-
-    from ..features.feature import Feature
+    from funtracks.features.feature import Feature
 
 
 class GraphAnnotator:
@@ -13,24 +12,28 @@ class GraphAnnotator:
 
     This class holds a set of features that it is responsible for. The annotator will
     compute these features and add them to the Tracks initially, and update them when
-    necessary. The set of features will all be computed and updated together.
+    necessary. The set of features will all be computed and updated together, although
+    individual ones can be removed for efficiency.
+
+    Args:
+        tracks (Tracks): The tracks to manage features for.
+        features (list[Feature]): A list of all features that this annotator is
+            capable of computing and updating.
+
+    Attributes:
+        all_features: (list[Feature]): The list of features that the annotator knows
+            how to manage (the same as passed in to the constructor).
+        features (list[Feature]): The list of features that the annotator is currently
+            managing. Does not necessarily include all of the features.
     """
 
     def __init__(self, tracks: Tracks, features: list[Feature]):
-        """
-        Args:
-            tracks (Tracks): The tracks to manage features for.
-            features (list[Feature]): A list of features that this annotator is
-                responsible for computing and updating.
-        """
         self.tracks = tracks
-        self._features = features
+        self.all_features = features
 
-        self.include = [
-            True,
-        ] * len(self._features)
         # whether to include each of the features or not. Can update later to exclude
         # features to be more efficient.
+        self._include: list[bool] = [True] * len(self.all_features)
 
     def remove_feature(self, feature: Feature, update_set: bool = True) -> None:
         """Stop computing the given feature in the edge annotation process.
@@ -43,8 +46,8 @@ class GraphAnnotator:
                 Defaults to True. Will error if the feature is not already in the
                 FeatureSet and the value is True.
         """
-        if feature in self._features:
-            self.include[self._features.index(feature)] = False
+        if feature in self.all_features:
+            self._include[self.all_features.index(feature)] = False
         if update_set:
             self.tracks.features._features.remove(feature)
 
@@ -59,26 +62,32 @@ class GraphAnnotator:
                 Defaults to True. Will error if the feature is already in the
                 FeatureSet and the value is True.
         """
-        if feature in self._features:
-            self.include[self._features.index(feature)] = True
+        if feature in self.all_features:
+            self._include[self.all_features.index(feature)] = True
+        else:
+            raise ValueError(
+                f"Cannot add {feature} - this annotator does not know how to manage this "
+                "feature."
+            )
         if update_set:
             self.tracks.features.add_feature(feature)
 
     @property
     def features(self) -> list[Feature]:
-        """The list of features that this annotator currently controls.
+        """The list of features that this annotator currently manages.
 
-        In this case, it is the list of all features filtered by the include flags.
+        The list of all features filtered by the include flags.
         """
         return [
             feat
-            for feat, include in zip(self._features, self.include, strict=True)
+            for feat, include in zip(self.all_features, self._include, strict=True)
             if include
         ]
 
     def add_features_to_set(self) -> None:
-        """Add the currently included features to the tracks FeatureSet. Usually
-        performed during initial computation.
+        """Add the currently included features to the tracks FeatureSet.
+
+        Usually performed during initial computation.
         """
         for feature in self.features:
             self.tracks.features.add_feature(feature)

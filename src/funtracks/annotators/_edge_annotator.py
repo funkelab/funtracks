@@ -6,16 +6,17 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from ..features.compute_ious import _compute_ious
-from ..features.feature import Feature, FeatureType
+from funtracks.features.compute_ious import _compute_ious
+from funtracks.features.feature import Feature, FeatureType
+
 from ._graph_annotator import GraphAnnotator
 
 if TYPE_CHECKING:
     from funtracks.data_model import Tracks
 
 
-class IOU(Feature):
-    def __init__(self):
+class IoU(Feature):
+    def __init__(self) -> None:
         super().__init__(
             key="IoU",
             feature_type=FeatureType.EDGE,
@@ -26,14 +27,17 @@ class IOU(Feature):
 
 
 class EdgeAnnotator(GraphAnnotator):
-    """A graph annotator extract edge features from segmentations or endpoint positions.
+    """Manages edge features computed from segmentations or endpoint positions.
 
     The possible features include:
-    - IoU
+    - Intersection over Union (IoU)
+
+    Args:
+        tracks (Tracks): The tracks to manage the edge features on
     """
 
-    def __init__(self, tracks: Tracks):
-        iou_feat = IOU()
+    def __init__(self, tracks: Tracks) -> None:
+        iou_feat = IoU()
         feats = [] if tracks.segmentation is None else [iou_feat]
         super().__init__(tracks, feats)
         self.iou_feat = iou_feat
@@ -43,8 +47,8 @@ class EdgeAnnotator(GraphAnnotator):
 
         Args:
             add_to_set (bool, optional): Whether to add the Features to the Tracks
-            FeatureSet. Defaults to False. Should usually be set to True on the initial
-            computation, but False on subsequent re-computations.
+                FeatureSet. Defaults to False. Should usually be set to True on the
+                initial computation, but False on subsequent re-computations.
 
         Raises:
             ValueError: If the segmentation is missing from the tracks.
@@ -73,7 +77,7 @@ class EdgeAnnotator(GraphAnnotator):
         seg_next_frame: np.ndarray,
         iou_feat: Feature,
     ) -> None:
-        """Perform the IOU computation and update all feature values for a
+        """Perform the IoU computation and update all feature values for a
         single pair of frames of segmentation data.
 
         Args:
@@ -82,7 +86,7 @@ class EdgeAnnotator(GraphAnnotator):
                 starting time of the edges
             seg_next_frame (np.ndarray): A 2D or 3D numpy array representing the seg for
                 the ending time of the edges
-            iou_feat (Feature): The feature represeting IOU
+            iou_feat (Feature): The feature representing IoU
         """
         ious = _compute_ious(seg_frame, seg_next_frame)  # list of (id1, id2, iou)
         for id1, id2, iou in ious:
