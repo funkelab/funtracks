@@ -36,7 +36,7 @@ jobs:
           enable-cache: true
 
       - name: Install dependencies
-        run: uv sync --no-dev --resolution ${{ matrix.resolution }}
+        run: uv sync --resolution ${{ matrix.resolution }}
 
       - name: Test with pytest
         run: |
