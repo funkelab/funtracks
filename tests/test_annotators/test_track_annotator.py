@@ -23,12 +23,12 @@ class TestTrackAnnotator:
         tracks = self.get_soln_tracks(request, ndim)
         ann = TrackAnnotator(tracks)
         assert len(ann.features) == 2
-        assert len(ann.lineage_id_to_node) == 0
+        assert len(ann.lineage_id_to_nodes) == 0
 
         ann = TrackAnnotator(tracks, tracklet_key="track_id")
         assert len(ann.features) == 2
-        assert len(ann.lineage_id_to_node) == 0
-        assert len(ann.tracklet_id_to_node) == 4
+        assert len(ann.lineage_id_to_nodes) == 0
+        assert len(ann.tracklet_id_to_nodes) == 4
         assert ann.max_lineage_id == 0
         assert ann.max_tracklet_id == 5
 

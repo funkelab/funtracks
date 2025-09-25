@@ -39,12 +39,17 @@ class LineageID(Feature):
 
 
 class TrackAnnotator(GraphAnnotator):
-    """A graph annotator to update tracklet and lineage IDs
+    """A graph annotator to compute tracklet and lineage IDs for SolutionTracks only.
 
-    The possible features include:
-    - TrackletID
-    - LineageID
+    Currently, updating the tracklet and lineage IDs is left to Actions.
 
+    Attributes:
+        tracklet_id_to_nodes (dict[int, list[int]]): A mapping from tracklet ids to
+            nodes in that tracklet
+        lineage_id_to_nodes (dict[int, list[int]]): A mapping from lineage ids to nodes
+            in that lineage
+        max_tracklet_id (int): the maximum tracklet id used in the tracks
+        max_lineage_id (int): the maximum lineage id used in the tracks
 
     Args:
         tracks (SolutionTracks): The tracks to be annotated. Must be a solution.
@@ -54,6 +59,7 @@ class TrackAnnotator(GraphAnnotator):
         lineage_key (str | None, optional): A key that already holds the lineage ids
             on the graph. If provided, must be there for every node and already hold
             valid lineage ids. Defaults to None.
+
 
     Raises:
         ValueError: if the provided Tracks are not SolutionTracks (not a binary lineage
@@ -75,20 +81,20 @@ class TrackAnnotator(GraphAnnotator):
         self.tracklet = tracklet
         self.lineage = lineage
 
-        self.tracklet_id_to_node: dict[int, list[int]] = {}
-        self.lineage_id_to_node: dict[int, list[int]] = {}
+        self.tracklet_id_to_nodes: dict[int, list[int]] = {}
+        self.lineage_id_to_nodes: dict[int, list[int]] = {}
         self.max_tracklet_id = 0
         self.max_lineage_id = 0
 
         if tracklet_key is not None and tracks.graph.number_of_nodes() > 0:
             max_id, id_to_nodes = self._get_max_id_and_map(self.tracklet.key)
             self.max_tracklet_id = max_id
-            self.tracklet_id_to_node = id_to_nodes
+            self.tracklet_id_to_nodes = id_to_nodes
 
         if lineage_key is not None and tracks.graph.number_of_nodes() > 0:
             max_id, id_to_nodes = self._get_max_id_and_map(self.lineage.key)
             self.max_lineage_id = max_id
-            self.lineage_id_to_node = id_to_nodes
+            self.lineage_id_to_nodes = id_to_nodes
 
     def _get_max_id_and_map(self, key: str) -> tuple[int, dict[int, list[int]]]:
         """Get the maximum ID value and a mapping from ids to nodes with that id.
@@ -161,7 +167,7 @@ class TrackAnnotator(GraphAnnotator):
         lineages = nx.weakly_connected_components(self.tracks.graph)
         max_id, ids_to_nodes = self._assign_ids(lineages, self.lineage.key)
         self.max_lineage_id = max_id
-        self.lineage_id_to_node = ids_to_nodes
+        self.lineage_id_to_nodes = ids_to_nodes
 
     def _assign_tracklet_ids(self) -> None:
         """Add a tracklet id attribute to each node of the solution tracks.
@@ -181,4 +187,4 @@ class TrackAnnotator(GraphAnnotator):
         tracklets = nx.weakly_connected_components(graph_copy)
         max_id, ids_to_nodes = self._assign_ids(tracklets, self.tracklet.key)
         self.max_tracklet_id = max_id
-        self.tracklet_id_to_node = ids_to_nodes
+        self.tracklet_id_to_nodes = ids_to_nodes
