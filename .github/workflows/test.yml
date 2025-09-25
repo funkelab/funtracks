@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   test:
-    name: ${{ matrix.platform }} py${{ matrix.python-version }}
+    name: ${{ matrix.platform }} py${{ matrix.python-version }} ${{ matrix.resolution }}
     runs-on: ${{ matrix.platform }}
     env:
       # disable resyncing on uv run
