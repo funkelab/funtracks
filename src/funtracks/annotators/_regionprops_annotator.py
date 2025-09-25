@@ -5,80 +5,27 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from ..features.feature import Feature, FeatureType
-from ..features.regionprops_extended import regionprops_extended
+from funtracks.features import Feature
+from funtracks.features.regionprops_extended import regionprops_extended
+from funtracks.features.regionprops_features import (
+    Area,
+    Centroid,
+    Circularity,
+    EllipsoidAxes,
+    Perimeter,
+)
+
 from ._graph_annotator import GraphAnnotator
 
 if TYPE_CHECKING:
     from funtracks.data_model import Tracks
 
 
-class RPFeature(Feature):
-    regionprops_name: str
-    feature_type: FeatureType = FeatureType.NODE
-    recompute: bool = True
-
-
-# TODO: make position a regionprops feature when we have a segmentation!
-class Area(RPFeature):
-    def __init__(self, ndim=3):
-        super().__init__(
-            key="area",
-            value_type=float,
-            display_name="Area" if ndim == 3 else "Volume",
-            valid_ndim=(3, 4),
-            regionprops_name="area",
-        )
-
-
-class Intensity(RPFeature):
-    def __init__(self, ndim=3):
-        super().__init__(
-            key="intensity",
-            value_type=float,
-            display_name="Intensity",
-            valid_ndim=(3, 4),
-            regionprops_name="intensity_mean",
-        )
-
-
-class EllipsoidAxes(RPFeature):
-    def __init__(self, ndim=3):
-        super().__init__(
-            key="ellipse_axis_radii",
-            value_type=float,
-            display_name="Ellipse axis radii" if ndim == 3 else "Ellipsoid axis radii",
-            valid_ndim=(3, 4),
-            regionprops_name="axes",
-        )
-
-
-class Circularity(RPFeature):
-    def __init__(self, ndim=3):
-        super().__init__(
-            key="circularity",
-            value_type=float,
-            display_name="Circularity" if ndim == 3 else "Sphericity",
-            valid_ndim=(3, 4),
-            regionprops_name="circularity" if ndim == 3 else "sphericity",
-        )
-
-
-class Perimeter(RPFeature):
-    def __init__(self, ndim=3):
-        super().__init__(
-            key="perimeter",
-            value_type=float,
-            display_name="Perimeter" if ndim == 3 else "Surface Area",
-            valid_ndim=(3, 4),
-            regionprops_name="perimeter" if ndim == 3 else "surface_area",
-        )
-
-
 class RegionpropsAnnotator(GraphAnnotator):
     """A graph annotator using regionprops to extract node features from segmentations.
 
     The possible features include:
+    - centroid (to use as node position)
     - area/volume
     - ellipsoid major/minor/semi-minor axes
     - circularity/sphericity
@@ -105,6 +52,7 @@ class RegionpropsAnnotator(GraphAnnotator):
             return []
         ndim = tracks.ndim
         features = [
+            Centroid(axes=tracks.axis_names),
             Area(ndim=ndim),
             # Intensity(ndim=ndim),  # TODO: Add in intensity when image is passed
             EllipsoidAxes(ndim=ndim),

@@ -15,7 +15,7 @@ import numpy as np
 from psygnal import Signal
 from skimage import measure
 
-from funtracks.features import Feature, FeatureSet, FeatureType, Position, Time
+from funtracks.features import Centroid, Feature, FeatureSet, FeatureType, Position, Time
 
 from ..features.compute_ious import _compute_ious
 from .graph_attributes import EdgeAttr, NodeAttr
@@ -64,7 +64,7 @@ class Tracks:
         graph: nx.DiGraph,
         segmentation: np.ndarray | None = None,
         time_attr: str | None = NodeAttr.TIME.value,
-        pos_attr: str | tuple[str] | list[str] | None = NodeAttr.POS.value,
+        pos_attr: str | tuple[str, ...] | list[str] | None = NodeAttr.POS.value,
         scale: list[float] | None = None,
         ndim: int | None = None,
         features: FeatureSet | None = None,
@@ -81,6 +81,7 @@ class Tracks:
         self._pos_attr = pos_attr
         self.scale = scale
         self.ndim = self._compute_ndim(segmentation, scale, ndim)
+        self.axis_names = ["z", "y", "x"] if self.ndim == 4 else ["y", "x"]
         self.features = (
             self._get_feature_set(time_attr, pos_attr) if features is None else features
         )
@@ -106,24 +107,29 @@ class Tracks:
         return self._pos_attr
 
     def _get_feature_set(
-        self, time_attr: str | None, pos_attr: str | tuple[str] | list[str] | None
+        self, time_attr: str | None, pos_attr: str | tuple[str, ...] | list[str] | None
     ):
         time = Time(key=time_attr)
-        recompute = self.segmentation is not None
-        if isinstance(pos_attr, tuple | list):
-            pos_feature = [
-                Feature(
-                    key=attr,
-                    feature_type=FeatureType.NODE,
-                    value_type=float,
-                    required=True,
-                    recompute=recompute,
+        if self.segmentation is None:
+            if isinstance(pos_attr, tuple | list):
+                pos_feature = [
+                    Feature(
+                        key=attr,
+                        feature_type=FeatureType.NODE,
+                        value_type=float,
+                        required=True,
+                        recompute=False,
+                    )
+                    for attr in pos_attr
+                ]
+            else:
+                pos_feature = Position(
+                    key=pos_attr,
+                    axes=self.axis_names,
+                    recompute=False,
                 )
-                for attr in pos_attr
-            ]
         else:
-            axis_names = ["z", "y", "x"] if self.ndim == 4 else ["y", "x"]
-            pos_feature = Position(key=pos_attr, axes=axis_names, recompute=recompute)
+            pos_feature = Centroid(axes=self.axis_names)
 
         # TODO: use RegionpropsAnnotator to add area feature and others to the feature set
         extra_features = []
