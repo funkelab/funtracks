@@ -6,10 +6,10 @@ from typing import (
 )
 
 import geff
+import geff_spec
 import networkx as nx
 import numpy as np
 import zarr
-from geff._graph_libs._api_wrapper import get_backend
 from geff_spec import GeffMetadata
 
 from funtracks.data_model.graph_attributes import NodeAttr
@@ -76,7 +76,7 @@ def export_to_geff(tracks: Tracks, directory: Path, overwrite: bool = False):
         tracks.scale = (1.0,) * tracks.ndim
 
     metadata = GeffMetadata(
-        geff_version=geff.__version__,
+        geff_version=geff_spec.__version__,
         directed=isinstance(graph, nx.DiGraph),
         node_props_metadata={},
         edge_props_metadata={},
@@ -98,8 +98,7 @@ def export_to_geff(tracks: Tracks, directory: Path, overwrite: bool = False):
     # Save the graph in a 'tracks' folder
     tracks_path = directory / "tracks"
     tracks_path.mkdir(exist_ok=True)
-    nx_backend = get_backend("networkx")
-    nx_backend.write(
+    geff.write(
         graph=graph,
         store=tracks_path,
         metadata=metadata,

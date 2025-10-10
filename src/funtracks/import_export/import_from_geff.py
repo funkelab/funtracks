@@ -5,8 +5,8 @@ from typing import (
 )
 
 import dask.array as da
+import geff
 import numpy as np
-from geff._graph_libs._api_wrapper import get_backend
 from geff.core_io._base_read import read_to_memory
 from geff.validate.segmentation import (
     axes_match_seg_dims,
@@ -279,8 +279,7 @@ def import_from_geff(
 
     # All pre-checks have passed, load the graph now.
     filtered_node_props = {k: v for k, v in node_props.items() if k in selected_attrs}
-    nx_backend = get_backend("networkx")
-    graph = nx_backend.construct(
+    graph = geff.construct(
         metadata=in_memory_geff["metadata"],
         node_ids=in_memory_geff["node_ids"],
         edge_ids=in_memory_geff["edge_ids"],
