@@ -220,7 +220,7 @@ def import_from_geff(
     if scale is None:
         scale = list([1.0] * ndims)
         axes = metadata.get("axes", [])
-        lookup = {a["name"].lower(): a.get("scale", 1) or 1 for a in axes}
+        lookup = {a.name.lower(): (a.scale or 1) for a in axes}
         scale[-1], scale[-2] = lookup.get("x", 1), lookup.get("y", 1)
         if "z" in lookup:
             scale[-3] = lookup.get("z", 1)
