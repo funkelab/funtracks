@@ -17,7 +17,9 @@ def _alphanumeric_key(s: str):
 
 
 def _guess_zarr_path(path: Path) -> bool:
-    return any(part.endswith(".zarr") for part in path.parts)
+    if not path.is_dir():
+        return False
+    return (path / ".zarray").exists() or (path / "zarr.json").exists()
 
 
 def read_zarr_dataset(path: Path) -> tuple[ArrayLike | list[ArrayLike], tuple[int]]:

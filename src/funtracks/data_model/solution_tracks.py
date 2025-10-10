@@ -38,14 +38,10 @@ class SolutionTracks(Tracks):
             ndim=ndim,
         )
         self.max_track_id: int
+        self.track_id_to_node: dict[int, list[int]] = {}
 
         # recompute track_id if requested or missing
-        if graph.number_of_nodes() == 0:
-            has_track_id = False
-        else:
-            has_track_id = NodeAttr.TRACK_ID.value in graph.nodes[next(iter(graph.nodes))]
-        if recompute_track_ids or not has_track_id:
-            self._initialize_track_ids()
+        self._initialize_track_ids(recompute_track_ids)
 
     @classmethod
     def from_tracks(cls, tracks: Tracks):
@@ -56,6 +52,7 @@ class SolutionTracks(Tracks):
             pos_attr=tracks.pos_attr,
             scale=tracks.scale,
             ndim=tracks.ndim,
+            recompute_track_ids=False,
         )
 
     @property
@@ -91,15 +88,15 @@ class SolutionTracks(Tracks):
             self.track_id_to_node[value] = []
         self.track_id_to_node[value].append(node)
 
-    def _initialize_track_ids(self):
+    def _initialize_track_ids(self, recompute: bool = False):
         self.max_track_id = 0
-        self.track_id_to_node = {}
 
         if self.graph.number_of_nodes() != 0:
-            if len(self.node_id_to_track_id) < self.graph.number_of_nodes():
+            if len(self.node_id_to_track_id) < self.graph.number_of_nodes() or recompute:
                 # not all nodes have a track id: reassign
                 self._assign_tracklet_ids()
             else:
+                # only populate track_id_to_node and set max_track_id
                 self.max_track_id = max(self.node_id_to_track_id.values())
                 for node, track_id in self.node_id_to_track_id.items():
                     if track_id not in self.track_id_to_node:

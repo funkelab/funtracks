@@ -9,7 +9,9 @@ from funtracks.data_model.graph_attributes import NodeAttr
 
 
 def test_update_node_segs(segmentation_2d, graph_2d):
-    tracks = SolutionTracks(graph_2d.copy(), segmentation=segmentation_2d.copy())
+    tracks = SolutionTracks(
+        graph_2d.copy(), segmentation=segmentation_2d.copy(), recompute_track_ids=False
+    )
 
     # add a couple pixels to the first node
     new_seg = segmentation_2d.copy()
