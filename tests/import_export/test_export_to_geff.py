@@ -45,7 +45,8 @@ def test_export_to_geff(
     attrs = dict(z.attrs)
     assert "geff" in attrs
     assert "axes" in attrs["geff"]
-    assert attrs["geff"]["axes"]["y"]["scale"] is not None
+    for ax in attrs["geff"]["axes"]:
+        assert ax["scale"] is not None
 
     # test that providing a non existing parent dir raises error
     file_path = tmp_path / "nonexisting" / "target.zarr"
