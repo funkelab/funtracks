@@ -6,9 +6,8 @@ from typing import (
 
 import dask.array as da
 import numpy as np
-from geff._graph_libs._networkx import construct_nx
+from geff._graph_libs._api_wrapper import get_backend
 from geff.core_io._base_read import read_to_memory
-from geff.metadata._affine import Affine
 from geff.validate.segmentation import (
     axes_match_seg_dims,
     has_seg_ids_at_coords,
@@ -217,18 +216,14 @@ def import_from_geff(
     selected_attrs.extend(position_attr)
     ndims = len(position_attr) + 1
 
-    # if no scale is provided, load from metadata, if available.
+    # if no scale is provided, load from metadata if available.
     if scale is None:
         scale = list([1.0] * ndims)
-
-        # overwrite if valid affine is provided
-        affine = metadata.get("affine", {})
-        if affine is not None:
-            matrix = affine.get("matrix", None)
-            if matrix is not None:
-                affine = Affine(matrix=matrix)
-                linear = affine.linear_matrix
-                scale = list(np.diag(linear))
+        axes = metadata.get("axes", [])
+        lookup = {a["name"].lower(): a.get("scale", 1) or 1 for a in axes}
+        scale[-1], scale[-2] = lookup.get("x", 1), lookup.get("y", 1)
+        if "z" in lookup:
+            scale[-3] = lookup.get("z", 1)
 
     # Check if a track_id was provided, and if it is valid add it to list of selected
     # attributes. If it is not provided, it will be computed again.
@@ -284,7 +279,8 @@ def import_from_geff(
 
     # All pre-checks have passed, load the graph now.
     filtered_node_props = {k: v for k, v in node_props.items() if k in selected_attrs}
-    graph = construct_nx(
+    nx_backend = get_backend("networkx")
+    graph = nx_backend.construct(
         metadata=in_memory_geff["metadata"],
         node_ids=in_memory_geff["node_ids"],
         edge_ids=in_memory_geff["edge_ids"],
@@ -321,10 +317,11 @@ def import_from_geff(
     if tracks.segmentation is not None and extra_features.get("area"):
         nodes = tracks.graph.nodes
         times = tracks.get_times(nodes)
-        areas = [
-            tracks._compute_node_attrs(node, time)[NodeAttr.AREA.value]
+        computed_attrs = [
+            tracks._compute_node_attrs(node, time)
             for node, time in zip(nodes, times, strict=True)
         ]
+        areas = [attr[NodeAttr.AREA.value] for attr in computed_attrs]
         tracks._set_nodes_attr(nodes, NodeAttr.AREA.value, areas)
 
     return tracks
