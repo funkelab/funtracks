@@ -29,6 +29,7 @@ class UserAddNode(ActionGroup):
         node: int,
         attributes: dict[str, Any],
         pixels: tuple[np.ndarray, ...] | None = None,
+        force: bool = False,
     ):
         """
         Args:
@@ -38,13 +39,16 @@ class UserAddNode(ActionGroup):
                 Must contain "time" and "track_id".
             pixels (tuple[np.ndarray, ...] | None, optional): The pixels of the associated
                 segmentation to add to the tracks. Defaults to None.
+            force (bool, optional): Whether to force the action by removing any
+                conflicting edges. Defaults to False.
 
         Raises:
             ValueError: If the attributes dictionary does not contain either `time` or
                 `track_id`.
             ValueError: If a node with the given ID already exists in the tracks.
             InvalidActionError: If the node is trying to be added to a track that
-                divided in a previous time point.
+                divided in a previous time point, or if the parent track of the node will
+                divide downstream of the current time point.
         """
         super().__init__(tracks, actions=[])
         if NodeAttr.TIME.value not in attributes:
@@ -66,9 +70,15 @@ class UserAddNode(ActionGroup):
 
         # check if you are adding a node to a track that divided previously
         if pred is not None and self.tracks.graph.out_degree(pred) == 2:
-            raise InvalidActionError(
-                "Cannot add node here - upstream division event detected."
-            )
+            if not force:
+                raise InvalidActionError(
+                    "Cannot add node here - upstream division event detected."
+                )
+            else:
+                # Delete both conflicting edges in the upstream division.
+                succ_of_pred1, succ_of_pred2 = self.tracks.successors(pred)
+                self.actions.append(DeleteEdge(tracks, (pred, succ_of_pred1)))
+                self.actions.append(DeleteEdge(tracks, (pred, succ_of_pred2)))
 
         # check if you are adding a node to a track of which the parent track will divide
         # downstream
@@ -79,9 +89,13 @@ class UserAddNode(ActionGroup):
                 pred_of_succ is not None
                 and self.tracks.graph.out_degree(pred_of_succ) == 2
             ):
-                raise InvalidActionError(
-                    "Cannot add node here - downstream division of parent detected."
-                )
+                if not force:
+                    raise InvalidActionError(
+                        "Cannot add node here - downstream division of parent detected."
+                    )
+                else:
+                    # Delete the conflicting edge
+                    self.actions.append(DeleteEdge(tracks, (pred_of_succ, succ)))
 
         # remove skip edge that will be replaced by new edges after adding nodes
         if pred is not None and succ is not None:

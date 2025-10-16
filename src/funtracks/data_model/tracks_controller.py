@@ -336,6 +336,7 @@ class TracksController:
         updated_pixels: list[tuple[SegMask, int]],
         current_timepoint: int,
         current_track_id: int,
+        force: bool = False,
     ):
         """Handle a change in the segmentation mask, checking for node addition,
         deletion, and attribute updates.
@@ -352,10 +353,12 @@ class TracksController:
                 the selected node.
             current_track_id (int): the track_id to use when adding a new node, usually
                 the currently selected track id in the viewer
+            force (bool): Whether to force the operation by removing conflicing edges.
+                Defaults to False.
         """
 
         action = UserUpdateSegmentation(
-            self.tracks, new_value, updated_pixels, current_track_id
+            self.tracks, new_value, updated_pixels, current_track_id, force
         )
         self.action_history.add_new_action(action)
         nodes_added = action.nodes_added
