@@ -63,11 +63,26 @@ class UserAddNode(ActionGroup):
         track_id = attributes[NodeAttr.TRACK_ID.value]
         time = attributes[NodeAttr.TIME.value]
         pred, succ = self.tracks.get_track_neighbors(track_id, time)
+
         # check if you are adding a node to a track that divided previously
         if pred is not None and self.tracks.graph.out_degree(pred) == 2:
             raise InvalidActionError(
                 "Cannot add node here - upstream division event detected."
             )
+
+        # check if you are adding a node to a track of which the parent track will divide
+        # downstream
+        elif succ is not None:
+            # check pred of succ
+            pred_of_succ = next(self.tracks.graph.predecessors(succ), None)
+            if (
+                pred_of_succ is not None
+                and self.tracks.graph.out_degree(pred_of_succ) == 2
+            ):
+                raise InvalidActionError(
+                    "Cannot add node here - downstream division of parent detected."
+                )
+
         # remove skip edge that will be replaced by new edges after adding nodes
         if pred is not None and succ is not None:
             self.actions.append(DeleteEdge(tracks, (pred, succ)))
