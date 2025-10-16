@@ -11,6 +11,7 @@ from funtracks.exceptions import InvalidActionError
 from ..actions._base import ActionGroup
 from ..actions.add_delete_edge import AddEdge, DeleteEdge
 from ..actions.add_delete_node import AddNode
+from .user_delete_edge import UserDeleteEdge
 
 
 class UserAddNode(ActionGroup):
@@ -77,8 +78,8 @@ class UserAddNode(ActionGroup):
             else:
                 # Delete both conflicting edges in the upstream division.
                 succ_of_pred1, succ_of_pred2 = self.tracks.successors(pred)
-                self.actions.append(DeleteEdge(tracks, (pred, succ_of_pred1)))
-                self.actions.append(DeleteEdge(tracks, (pred, succ_of_pred2)))
+                self.actions.append(UserDeleteEdge(tracks, (pred, succ_of_pred1)))
+                self.actions.append(UserDeleteEdge(tracks, (pred, succ_of_pred2)))
 
         # check if you are adding a node to a track of which the parent track will divide
         # downstream
@@ -95,7 +96,7 @@ class UserAddNode(ActionGroup):
                     )
                 else:
                     # Delete the conflicting edge
-                    self.actions.append(DeleteEdge(tracks, (pred_of_succ, succ)))
+                    self.actions.append(UserDeleteEdge(tracks, (pred_of_succ, succ)))
 
         # remove skip edge that will be replaced by new edges after adding nodes
         if pred is not None and succ is not None:
