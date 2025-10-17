@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from typing import Any
 
 import numpy as np
@@ -67,6 +68,17 @@ class UserAddNode(ActionGroup):
 
         track_id = attributes[NodeAttr.TRACK_ID.value]
         time = attributes[NodeAttr.TIME.value]
+
+        # check if node with this track id exists already at current time point
+        if self.tracks.has_track_id_at_time(track_id, time):
+            warnings.warn(
+                f"Starting a new track, because track id {track_id} already "
+                f"exists at time point {time}",
+                stacklevel=2,
+            )
+            track_id = self.tracks.get_next_track_id()
+            attributes[NodeAttr.TRACK_ID.value] = track_id
+
         pred, succ = self.tracks.get_track_neighbors(track_id, time)
 
         # check if you are adding a node to a track that divided previously
