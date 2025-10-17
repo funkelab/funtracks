@@ -48,6 +48,7 @@ class TracksController:
         self,
         attributes: Attrs,
         pixels: list[SegMask] | None = None,
+        force: bool = False,
     ) -> None:
         """Calls the _add_nodes function to add nodes. Calls the refresh signal when
         finished.
@@ -57,8 +58,11 @@ class TracksController:
                 attributes
             pixels (list[SegMask] | None, optional): The pixels associated with each
                 node, if a segmentation is present. Defaults to None.
+            force (bool): Whether to force the operation by removing conflicting edges.
+                Defaults to False.
+
         """
-        result = self._add_nodes(attributes, pixels)
+        result = self._add_nodes(attributes, pixels, force)
         if result is not None:
             action, nodes = result
             self.action_history.add_new_action(action)
@@ -68,6 +72,7 @@ class TracksController:
         self,
         attributes: Attrs,
         pixels: list[SegMask] | None = None,
+        force: bool = False,
     ) -> tuple[TracksAction, list[Node]] | None:
         """Add nodes to the graph. Includes all attributes and the segmentation.
         Will return the actions needed to add the nodes, and the node ids generated for
@@ -93,7 +98,9 @@ class TracksController:
                 and either node_id (if pixels are provided) or position (if not)
             pixels (list[SegMask] | None): A list of pixels associated with the node,
                 or None if there is no segmentation. These pixels will be updated
-                in the tracks.segmentation, set to the new node id
+                in the tracks.segmentation, set to the new node id.
+            force (bool): Whether to force the operation by removing conflicting edges.
+                Defaults to False.
         """
         times = attributes[NodeAttr.TIME.value]
         nodes: list[Node]
@@ -104,18 +111,16 @@ class TracksController:
         actions: list[TracksAction] = []
         nodes_added = []
         for i in range(len(nodes)):
-            try:
-                actions.append(
-                    UserAddNode(
-                        self.tracks,
-                        node=nodes[i],
-                        attributes={key: val[i] for key, val in attributes.items()},
-                        pixels=pixels[i] if pixels is not None else None,
-                    )
+            actions.append(
+                UserAddNode(
+                    self.tracks,
+                    node=nodes[i],
+                    attributes={key: val[i] for key, val in attributes.items()},
+                    pixels=pixels[i] if pixels is not None else None,
+                    force=force,
                 )
-                nodes_added.append(nodes[i])
-            except InvalidActionError as e:
-                warnings.warn(f"Failed to add node: {e}", stacklevel=2)
+            )
+            nodes_added.append(nodes[i])
 
         return ActionGroup(self.tracks, actions), nodes_added
 
@@ -151,16 +156,13 @@ class TracksController:
         actions: list[TracksAction] = []
         pixels = list(pixels) if pixels is not None else None
         for i, node in enumerate(nodes):
-            try:
-                actions.append(
-                    UserDeleteNode(
-                        self.tracks,
-                        node,
-                        pixels=pixels[i] if pixels is not None else None,
-                    )
+            actions.append(
+                UserDeleteNode(
+                    self.tracks,
+                    node,
+                    pixels=pixels[i] if pixels is not None else None,
                 )
-            except InvalidActionError as e:
-                warnings.warn(f"Failed to delete node: {e}", stacklevel=2)
+            )
         return ActionGroup(self.tracks, actions)
 
     def add_edges(self, edges: Iterable[Edge], force: bool = False) -> None:
