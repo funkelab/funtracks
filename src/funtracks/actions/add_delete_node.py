@@ -45,8 +45,8 @@ class AddNode(TracksAction):
         user_attrs = attributes.copy()
         if NodeAttr.TIME.value not in attributes:
             raise ValueError("Must provide a time attribute for each node")
-        self.time = attributes.pop(NodeAttr.TIME.value)
-        self.position = attributes.pop(NodeAttr.POS.value, None)
+        self.time = attributes[NodeAttr.TIME.value]
+        self.position = attributes.get(NodeAttr.POS.value, None)
         self.pixels = pixels
         self.attributes = user_attrs
         self._apply()

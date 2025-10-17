@@ -22,6 +22,7 @@ class UserUpdateSegmentation(ActionGroup):
         new_value: int,
         updated_pixels: list[tuple[tuple[np.ndarray, ...], int]],
         current_track_id: int,
+        force: bool = False,
     ):
         """Assumes that the pixels have already been updated in the project.segmentation
         NOTE: Re discussion with Kasia: we should have a basic action that updates the
@@ -37,6 +38,8 @@ class UserUpdateSegmentation(ActionGroup):
                 before the change
             current_track_id (int): The track id to use if adding a new node, usually
                 the currently selected track id in the viewer.
+            force (bool): Whether to force the operation by removing conflicting edges.
+                Defaults to False.
         """
         super().__init__(tracks, actions=[])
         self.nodes_added = []
@@ -78,6 +81,7 @@ class UserUpdateSegmentation(ActionGroup):
                         new_value,
                         attributes=attrs,
                         pixels=all_pixels,
+                        force=force,
                     )
                 )
                 self.nodes_added.append(new_value)

@@ -191,3 +191,21 @@ class SolutionTracks(Tracks):
                 succ = cand
                 break
         return pred, succ
+
+    def has_track_id_at_time(self, track_id: int, time: int) -> bool:
+        """Function to check if a node with given track id exists at given time point.
+
+        Args:
+            track_id (int): The track id to search for.
+            time (int): The time point to check.
+
+        Returns:
+            True if a node with given track id exists at given time point.
+        """
+
+        nodes = self.track_id_to_node.get(track_id)
+        if not nodes:
+            return False
+
+        # Direct access to limit overhead?
+        return any(self.graph.nodes[node][self.time_attr] == time for node in nodes)

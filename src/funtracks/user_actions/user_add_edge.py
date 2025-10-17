@@ -6,8 +6,9 @@ from funtracks.data_model import SolutionTracks
 from funtracks.exceptions import InvalidActionError
 
 from ..actions._base import ActionGroup
-from ..actions.add_delete_edge import AddEdge, DeleteEdge
+from ..actions.add_delete_edge import AddEdge
 from ..actions.update_track_id import UpdateTrackID
+from .user_delete_edge import UserDeleteEdge
 
 
 class UserAddEdge(ActionGroup):
@@ -37,7 +38,8 @@ class UserAddEdge(ActionGroup):
                 f"Target node {target} not in solution yet - must be added before edge"
             )
 
-        # Check if making a merge. If yes and force, remove the other edge
+        # Check if making a merge. If yes and force, remove the other edge and update
+        # track ids.
         in_degree_target = self.tracks.graph.in_degree(target)
         if in_degree_target > 0:
             if not force:
@@ -48,10 +50,10 @@ class UserAddEdge(ActionGroup):
             else:
                 merge_edge = list(self.tracks.graph.in_edges(target))[0]
                 warnings.warn(
-                    "Removing edge {merge_edge} to add new edge without merging.",
+                    f"Removing edge {merge_edge} to add new edge without merging.",
                     stacklevel=2,
                 )
-                self.actions.append(DeleteEdge(self.tracks, merge_edge))
+                self.actions.append(UserDeleteEdge(self.tracks, merge_edge))
 
         # update track ids if needed
         out_degree_source = self.tracks.graph.out_degree(source)
