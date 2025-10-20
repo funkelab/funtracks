@@ -16,7 +16,6 @@ from psygnal import Signal
 from skimage import measure
 
 from funtracks.features import Centroid, Feature, FeatureSet, FeatureType, Position, Time
-from funtracks.features._compute_ious import _compute_ious
 
 from .graph_attributes import EdgeAttr, NodeAttr
 
@@ -499,6 +498,9 @@ class Tracks:
         """
         if self.segmentation is None:
             return {}
+
+        # Lazy import to avoid circular dependency
+        from funtracks.annotators._compute_ious import _compute_ious
 
         attrs: dict[str, Any] = {}
         source, target = edge

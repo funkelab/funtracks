@@ -13,9 +13,9 @@ from funtracks.features import (
     Feature,
     Perimeter,
 )
-from funtracks.features._regionprops_extended import regionprops_extended
 
 from ._graph_annotator import GraphAnnotator
+from ._regionprops_extended import regionprops_extended
 
 if TYPE_CHECKING:
     from funtracks.data_model import Tracks
