@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from .feature import (
     Feature,
     FeatureType,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 class Time(Feature):
@@ -27,10 +32,12 @@ class Time(Feature):
 class Position(Feature):
     """A feature to hold the position of a node (time not included)"""
 
-    def __init__(self, axes: list[str], key: str | None = None, recompute: bool = False):
+    def __init__(
+        self, axes: Sequence[str], key: str | None = None, recompute: bool = False
+    ):
         """
         Args:
-            axes (list[str]): A list of the axis names. Used to infer the number
+            axes (Sequence[str]): A sequence of the axis names. Used to infer the number
                 of dimensions of the position values.
             key (str | None, optional): The key used to access the position on the graph.
                 Defaults to None, which sets it to "pos". The position must be stored
@@ -40,7 +47,7 @@ class Position(Feature):
         """
         super().__init__(
             key=key if key is not None else "pos",
-            display_name=axes,
+            display_name=list(axes),
             num_values=len(axes),
             feature_type=FeatureType.NODE,
             value_type=float,

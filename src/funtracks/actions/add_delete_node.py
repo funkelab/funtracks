@@ -100,7 +100,7 @@ class DeleteNode(TracksAction):
         super().__init__(tracks)
         self.node = node
         self.attributes = {
-            NodeAttr.TIME.value: self.tracks.get_time(node),
+            self.tracks.features.time.key: self.tracks.get_time(node),
             NodeAttr.POS.value: self.tracks.get_position(node),
             NodeAttr.TRACK_ID.value: self.tracks.get_node_attr(
                 node, NodeAttr.TRACK_ID.value
