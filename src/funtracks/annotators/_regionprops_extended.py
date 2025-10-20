@@ -94,14 +94,23 @@ class ExtendedRegionProperties(RegionProperties):
     @property
     def circularity(self):
         """
-        Calculate the circularity of the region.
+        Calculate the circularity or sphericity of the region.
 
-        Circularity is defined as 4π * (Area / Perimeter^2).
+        For 2D regions, circularity is defined as 4π * (Area / Perimeter^2).
+        For 3D regions, sphericity is defined as the ratio of the surface area of
+        a sphere with the same volume as the region to the surface area of the region.
 
         Returns:
-            float: The circularity of the region.
+            float: The circularity (2D) or sphericity (3D) of the region.
         """
-        return 4 * math.pi * self.area / self.perimeter**2
+        if self._label_image.ndim == 2:
+            return 4 * math.pi * self.area / self.perimeter**2
+        else:  # 3D
+            vol = self.volume
+            r = (3 / 4 / np.pi * vol) ** (1 / 3)
+            a_equiv = 4 * np.pi * r**2
+            a_region = self.perimeter  # perimeter returns surface_area for 3D
+            return a_equiv / a_region
 
     @property
     def pixel_count(self):
@@ -114,39 +123,25 @@ class ExtendedRegionProperties(RegionProperties):
         return self.voxel_count
 
     @property
-    def surface_area(self):
+    def perimeter(self):
         """
-        Calculate the surface area of the region using the marching cubes algorithm.
+        Calculate the perimeter or surface area of the region.
 
-        The marching cubes algorithm is used to extract a 2D surface mesh from a 3D
-        volume.
-        The mesh surface area is calculated with skimage.measure.mesh_surface_area.
+        For 2D regions, returns the perimeter.
+        For 3D regions, returns the surface area calculated using the marching cubes
+        algorithm to extract a 2D surface mesh from the 3D volume. The mesh surface
+        area is calculated with skimage.measure.mesh_surface_area.
 
         Returns:
-            float: The surface area of the region.
+            float: The perimeter (2D) or surface area (3D) of the region.
         """
-        verts, faces, _, _ = marching_cubes(
-            self._label_image == self.label, level=0.5, spacing=self._spacing
-        )
-        surface_area = mesh_surface_area(verts, faces)
-        return surface_area
-
-    @property
-    def sphericity(self):
-        """
-        Calculate the sphericity of the region.
-
-        Sphericity is defined as the ratio of the surface area of a sphere with the same
-        volume as the region to the surface area of the region.
-
-        Returns:
-            float: The sphericity of the region.
-        """
-        vol = self.volume
-        r = (3 / 4 / np.pi * vol) ** (1 / 3)
-        a_equiv = 4 * np.pi * r**2
-        a_region = self.surface_area
-        return a_equiv / a_region
+        if self._label_image.ndim == 2:
+            return super().perimeter
+        else:  # 3D
+            verts, faces, _, _ = marching_cubes(
+                self._label_image == self.label, level=0.5, spacing=self._spacing
+            )
+            return mesh_surface_area(verts, faces)
 
     @property
     def volume(self):

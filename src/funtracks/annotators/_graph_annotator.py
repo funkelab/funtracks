@@ -17,91 +17,80 @@ class GraphAnnotator:
 
     Args:
         tracks (Tracks): The tracks to manage features for.
-        features (list[Feature]): A list of all features that this annotator is
-            capable of computing and updating.
+        features (dict[str, Feature]): A dict mapping keys to features that this
+            annotator is capable of computing and updating.
 
     Attributes:
-        all_features: (list[Feature]): The list of features that the annotator knows
-            how to manage (the same as passed in to the constructor).
-        features (list[Feature]): The list of features that the annotator is currently
-            managing. Does not necessarily include all of the features.
+        all_features (dict[str, tuple[Feature, bool]]): Maps feature keys to
+            (feature, is_included) tuples. Tracks both what can be computed and
+            what is currently being computed.
     """
 
-    def __init__(self, tracks: Tracks, features: list[Feature]):
+    def __init__(self, tracks: Tracks, features: dict[str, Feature]):
         self.tracks = tracks
-        self.all_features = features
+        # Store (feature, is_included) for each key
+        self.all_features: dict[str, tuple[Feature, bool]] = {
+            key: (feat, True) for key, feat in features.items()
+        }
 
-        # whether to include each of the features or not. Can update later to exclude
-        # features to be more efficient.
-        self._include: list[bool] = [True] * len(self.all_features)
-
-    def remove_feature(self, feature: Feature, update_set: bool = True) -> None:
-        """Stop computing the given feature in the edge annotation process.
-        This will not actually remove the feature from the tracks edges. It will just
-        remove it from the list of features that this annotator is updating/computing.
+    def remove_feature(self, key: str, update_dict: bool = True) -> None:
+        """Stop computing the given feature in the annotation process.
 
         Args:
-            feature (Feature): The feature to remove. Must be in _features list.
-            update_set (bool, optional): Whether to update the tracks FeatureSet or not.
-                Defaults to True. Will error if the feature is not already in the
-                FeatureSet and the value is True.
+            key (str): The key of the feature to remove. Must be in all_features.
+            update_dict (bool, optional): Whether to remove from tracks FeatureDict.
+                Defaults to True.
         """
-        if feature in self.all_features:
-            self._include[self.all_features.index(feature)] = False
-        if update_set:
-            self.tracks.features._features.remove(feature)
+        if key in self.all_features:
+            feat, _ = self.all_features[key]
+            self.all_features[key] = (feat, False)
+        if update_dict and key in self.tracks.features:
+            del self.tracks.features[key]
 
-    def add_feature(self, feature: Feature, update_set: bool = True) -> None:
-        """Start computing the given feature in the edges annotation process.
-        This will not actually add the feature to the tracks. It will just add it to
-        the list of features that this annotator is updating/computing.
+    def add_feature(self, key: str, update_dict: bool = True) -> None:
+        """Start computing the given feature in the annotation process.
 
         Args:
-            feature (Feature): The feature to add. Must be in _features list.
-            update_set (bool, optional): Whether to update the tracks FeatureSet or not.
-                Defaults to True. Will error if the feature is already in the
-                FeatureSet and the value is True.
+            key (str): The key of the feature to add. Must be in all_features.
+            update_dict (bool, optional): Whether to add to tracks FeatureDict.
+                Defaults to True.
         """
-        if feature in self.all_features:
-            self._include[self.all_features.index(feature)] = True
+        if key in self.all_features:
+            feat, _ = self.all_features[key]
+            self.all_features[key] = (feat, True)
         else:
             raise ValueError(
-                f"Cannot add {feature} - this annotator does not know how to manage this "
-                "feature."
+                f"Cannot add feature '{key}' - annotator cannot manage this feature."
             )
-        if update_set:
-            self.tracks.features.add_feature(feature)
+        if update_dict:
+            feat, _ = self.all_features[key]
+            self.tracks.features[key] = feat
 
     @property
-    def features(self) -> list[Feature]:
-        """The list of features that this annotator currently manages.
+    def features(self) -> dict[str, Feature]:
+        """The dict of features that this annotator currently manages.
 
-        The list of all features filtered by the include flags.
+        Filtered from all_features based on inclusion flags.
         """
-        return [
-            feat
-            for feat, include in zip(self.all_features, self._include, strict=True)
-            if include
-        ]
+        return {k: feat for k, (feat, included) in self.all_features.items() if included}
 
     def add_features_to_set(self) -> None:
-        """Add the currently included features to the tracks FeatureSet.
+        """Add the currently included features to the tracks FeatureDict.
 
         Usually performed during initial computation.
         """
-        for feature in self.features:
-            self.tracks.features.add_feature(feature)
+        for key, feature in self.features.items():
+            self.tracks.features[key] = feature
 
     def compute(self) -> None:
         """Compute a set of features and add them to the tracks.
 
         This involves both updating the node/edge attributes on the tracks.graph
-        and adding the features to the FeatureSet, if necessary. This is distinct
+        and adding the features to the FeatureDict, if necessary. This is distinct
         from `update` to allow more efficient bulk computation of features.
 
         Raises:
-            NotImplementedError: If not implemented in subclass and you attempt to call
-                it.
+            NotImplementedError: If not implemented in subclass.
         """
         raise NotImplementedError("Must implement compute in the annotator subclass")
 
@@ -112,15 +101,14 @@ class GraphAnnotator:
         """Update a set of features for a given node or edge.
 
         This involves both updating the node or edge attributes on the tracks.graph
-        and adding the features to the FeatureSet, if necessary. This is distinct
+        and adding the features to the FeatureDict, if necessary. This is distinct
         from `compute` to allow more efficient computation of features for single
         elements.
 
         Args:
-            element (int | tuple[int, int]): The node or edge to update the features for
+            element (int | tuple[int, int]): The node or edge to update
 
         Raises:
-            NotImplementedError: If not implemented in subclass and you attempt to call
-                it.
+            NotImplementedError: If not implemented in subclass.
         """
         raise NotImplementedError("Must implement update in the annotator subclass")

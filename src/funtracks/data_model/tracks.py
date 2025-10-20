@@ -115,6 +115,7 @@ class Tracks:
         features: dict[str, Feature] = {time_key: Time()}
 
         # Handle position features
+        position_key: str | list[str]
         if self.segmentation is None:
             if isinstance(pos_attr, tuple | list):
                 # Multiple position attributes (one per axis)
@@ -473,7 +474,7 @@ class Tracks:
         if self.segmentation is None:
             return {}
 
-        attrs: dict[str, list[Any]] = {}
+        attrs: dict[str, Any] = {}
         seg = self.segmentation[time] == node
         pos_scale = self.scale[1:] if self.scale is not None else None
         area = np.sum(seg)

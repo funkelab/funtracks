@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 import networkx as nx
 
-from funtracks.features import FeatureSet
+from funtracks.features import FeatureDict
 
 from .graph_attributes import NodeAttr
 from .tracks import Tracks
@@ -30,7 +30,7 @@ class SolutionTracks(Tracks):
         scale: list[float] | None = None,
         ndim: int | None = None,
         recompute_track_ids: bool = True,
-        features: FeatureSet | None = None,
+        features: FeatureDict | None = None,
     ):
         super().__init__(
             graph,

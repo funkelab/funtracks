@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from funtracks.features import Feature, FeatureType
+from funtracks.features import Feature
 
 from ._compute_ious import _compute_ious
 from ._graph_annotator import GraphAnnotator
@@ -15,15 +15,22 @@ if TYPE_CHECKING:
     from funtracks.data_model import Tracks
 
 
-class IoU(Feature):
-    def __init__(self) -> None:
-        super().__init__(
-            key="IoU",
-            feature_type=FeatureType.EDGE,
-            value_type=float,
-            valid_ndim=(3, 4),
-            recompute=True,
-        )
+def IoU() -> Feature:
+    """A feature representing Intersection over Union for edges.
+
+    Returns:
+        Feature: A feature dict representing IoU
+    """
+    return {
+        "feature_type": "edge",
+        "value_type": "float",
+        "num_values": 1,
+        "valid_ndim": (3, 4),
+        "display_name": "IoU",
+        "recompute": True,
+        "required": True,
+        "default_value": None,
+    }
 
 
 class EdgeAnnotator(GraphAnnotator):
@@ -37,10 +44,9 @@ class EdgeAnnotator(GraphAnnotator):
     """
 
     def __init__(self, tracks: Tracks) -> None:
-        iou_feat = IoU()
-        feats = [] if tracks.segmentation is None else [iou_feat]
+        self.iou_key = "IoU"
+        feats = {} if tracks.segmentation is None else {self.iou_key: IoU()}
         super().__init__(tracks, feats)
-        self.iou_feat = iou_feat
 
     def compute(self, add_to_set=False) -> None:
         """Compute the currently included features and add them to the tracks.
@@ -60,7 +66,7 @@ class EdgeAnnotator(GraphAnnotator):
 
         seg = self.tracks.segmentation
         # TODO: add skip edges
-        if self.iou_feat in self.features:
+        if self.iou_key in self.features:
             nodes_by_frame = defaultdict(list)
             for n in self.tracks.nodes():
                 nodes_by_frame[self.tracks.get_time(n)].append(n)
@@ -68,14 +74,13 @@ class EdgeAnnotator(GraphAnnotator):
             for t in range(seg.shape[0] - 1):
                 nodes_in_t = nodes_by_frame[t]
                 edges = list(self.tracks.graph.out_edges(nodes_in_t))
-                self._iou_update(edges, seg[t], seg[t + 1], self.iou_feat)
+                self._iou_update(edges, seg[t], seg[t + 1])
 
     def _iou_update(
         self,
         edges: list[tuple[int, int]],
         seg_frame: np.ndarray,
         seg_next_frame: np.ndarray,
-        iou_feat: Feature,
     ) -> None:
         """Perform the IoU computation and update all feature values for a
         single pair of frames of segmentation data.
@@ -86,18 +91,17 @@ class EdgeAnnotator(GraphAnnotator):
                 starting time of the edges
             seg_next_frame (np.ndarray): A 2D or 3D numpy array representing the seg for
                 the ending time of the edges
-            iou_feat (Feature): The feature representing IoU
         """
         ious = _compute_ious(seg_frame, seg_next_frame)  # list of (id1, id2, iou)
         for id1, id2, iou in ious:
             edge = (id1, id2)
             if edge in edges:
-                self.tracks._set_edge_attr(edge, iou_feat.key, iou)
+                self.tracks._set_edge_attr(edge, self.iou_key, iou)
                 edges.remove(edge)
 
         # anything left has IOU of 0
         for edge in edges:
-            self.tracks._set_edge_attr(edge, iou_feat.key, 0)
+            self.tracks._set_edge_attr(edge, self.iou_key, 0)
 
     def update(self, element: int | tuple[int, int]):
         """Update the regionprops features for the given node.
@@ -115,7 +119,7 @@ class EdgeAnnotator(GraphAnnotator):
 
         if isinstance(element, int):
             raise ValueError(f"EdgeAnnotator update expected an edge, got node {element}")
-        if self.iou_feat in self.features:
+        if self.iou_key in self.features:
             source, target = element
             start_time = self.tracks.get_time(source)
             end_time = self.tracks.get_time(target)
@@ -129,8 +133,8 @@ class EdgeAnnotator(GraphAnnotator):
                     "in frame {end_time}: updating edge IOU value to 0",
                     stacklevel=2,
                 )
-                self.tracks._set_edge_attr(element, self.iou_feat.key, 0)
+                self.tracks._set_edge_attr(element, self.iou_key, 0)
 
             iou_list = _compute_ious(masked_start, masked_end)
             iou = 0 if len(iou_list) == 0 else iou_list[0][2]
-            self.tracks._set_edge_attr(element, self.iou_feat.key, iou)
+            self.tracks._set_edge_attr(element, self.iou_key, iou)

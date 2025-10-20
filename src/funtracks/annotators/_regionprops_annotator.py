@@ -36,30 +36,43 @@ class RegionpropsAnnotator(GraphAnnotator):
     """
 
     def __init__(self, tracks: Tracks):
-        super().__init__(tracks, RegionpropsAnnotator.all_supported_features(tracks))
+        feats, rp_names = RegionpropsAnnotator.all_supported_features(tracks)
+        super().__init__(tracks, feats)
+        self.regionprops_names = rp_names
 
     @classmethod
-    def all_supported_features(cls, tracks: Tracks) -> list[Feature]:
-        """Get a list of all regionprops features that can be computed for the tracks.
+    def all_supported_features(
+        cls, tracks: Tracks
+    ) -> tuple[dict[str, Feature], dict[str, str]]:
+        """Get all regionprops features that can be computed for the tracks.
 
         Args:
             tracks (Tracks): The tracks to get regionprops features for.
 
         Returns:
-            list[Feature]: A list of all regionprops features that can be computed
+            tuple[dict[str, Feature], dict[str, str]]: A dict mapping keys to
+                Features, and a dict mapping keys to regionprops attribute names
         """
         if tracks.segmentation is None:
-            return []
+            return {}, {}
         ndim = tracks.ndim
-        features = [
-            Centroid(axes=tracks.axis_names),
-            Area(ndim=ndim),
-            # Intensity(ndim=ndim),  # TODO: Add in intensity when image is passed
-            EllipsoidAxes(ndim=ndim),
-            Circularity(ndim=ndim),
-            Perimeter(ndim=ndim),
-        ]
-        return features
+        features = {
+            "pos": Centroid(axes=tracks.axis_names),
+            "area": Area(ndim=ndim),
+            # TODO: Add in intensity when image is passed
+            # "intensity": Intensity(ndim=ndim),
+            "ellipse_axis_radii": EllipsoidAxes(ndim=ndim),
+            "circularity": Circularity(ndim=ndim),
+            "perimeter": Perimeter(ndim=ndim),
+        }
+        regionprops_names = {
+            "pos": "centroid",
+            "area": "area",
+            "ellipse_axis_radii": "axes",
+            "circularity": "circularity",
+            "perimeter": "perimeter",
+        }
+        return features, regionprops_names
 
     def compute(self, add_to_set=False) -> None:
         """Compute the currently included features and add them to the tracks.
@@ -93,11 +106,11 @@ class RegionpropsAnnotator(GraphAnnotator):
         spacing = None if self.tracks.scale is None else tuple(self.tracks.scale[1:])
         for region in regionprops_extended(seg_frame, spacing=spacing):
             node = region.label
-            for feature in self.features:
-                value = getattr(region, feature.regionprops_name)
+            for key in self.features:
+                value = getattr(region, self.regionprops_names[key])
                 if isinstance(value, tuple):
                     value = list(value)
-                self.tracks._set_node_attr(node, feature.key, value)
+                self.tracks._set_node_attr(node, key, value)
 
     def update(self, element: int | tuple[int, int]):
         """Update the regionprops features for the given node.
@@ -128,8 +141,8 @@ class RegionpropsAnnotator(GraphAnnotator):
                 "updating regionprops values to None",
                 stacklevel=2,
             )
-            for feature in self.features:
+            for key in self.features:
                 value = None
-                self.tracks._set_node_attr(element, feature.key, value)
+                self.tracks._set_node_attr(element, key, value)
         else:
             self._regionprops_update(masked_frame)

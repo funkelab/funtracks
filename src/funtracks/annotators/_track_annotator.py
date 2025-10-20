@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 import networkx as nx
 
 from funtracks.data_model import SolutionTracks
-from funtracks.features import Feature, FeatureType
+from funtracks.features import Feature
 
 from ._graph_annotator import GraphAnnotator
 
@@ -14,28 +14,40 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
 
-class TrackletID(Feature):
-    def __init__(self, tracklet_id: str | None = None):
-        super().__init__(
-            key="tracklet_id" if tracklet_id is None else tracklet_id,
-            feature_type=FeatureType.NODE,
-            value_type=int,
-            valid_ndim=(3, 4),
-            recompute=False,
-            required=True,
-        )
+def TrackletID() -> Feature:
+    """A feature representing tracklet ID for nodes.
+
+    Returns:
+        Feature: A feature dict representing tracklet ID
+    """
+    return {
+        "feature_type": "node",
+        "value_type": "int",
+        "num_values": 1,
+        "valid_ndim": (3, 4),
+        "display_name": "Tracklet ID",
+        "recompute": False,
+        "required": True,
+        "default_value": None,
+    }
 
 
-class LineageID(Feature):
-    def __init__(self, lineage_id: str | None = None):
-        super().__init__(
-            key="lineage_id" if lineage_id is None else lineage_id,
-            feature_type=FeatureType.NODE,
-            value_type=int,
-            valid_ndim=(3, 4),
-            recompute=False,
-            required=True,
-        )
+def LineageID() -> Feature:
+    """A feature representing lineage ID for nodes.
+
+    Returns:
+        Feature: A feature dict representing lineage ID
+    """
+    return {
+        "feature_type": "node",
+        "value_type": "int",
+        "num_values": 1,
+        "valid_ndim": (3, 4),
+        "display_name": "Lineage ID",
+        "recompute": False,
+        "required": True,
+        "default_value": None,
+    }
 
 
 class TrackAnnotator(GraphAnnotator):
@@ -74,12 +86,15 @@ class TrackAnnotator(GraphAnnotator):
     ):
         if not isinstance(tracks, SolutionTracks):
             raise ValueError("Currently the TrackAnnotator only works on SolutionTracks")
-        tracklet = TrackletID(tracklet_key)
-        lineage = LineageID(lineage_key)
-        feats = [tracklet, lineage]
+
+        self.tracklet_key = tracklet_key if tracklet_key is not None else "tracklet_id"
+        self.lineage_key = lineage_key if lineage_key is not None else "lineage_id"
+
+        feats = {
+            self.tracklet_key: TrackletID(),
+            self.lineage_key: LineageID(),
+        }
         super().__init__(tracks, feats)
-        self.tracklet = tracklet
-        self.lineage = lineage
 
         self.tracklet_id_to_nodes: dict[int, list[int]] = {}
         self.lineage_id_to_nodes: dict[int, list[int]] = {}
@@ -87,12 +102,12 @@ class TrackAnnotator(GraphAnnotator):
         self.max_lineage_id = 0
 
         if tracklet_key is not None and tracks.graph.number_of_nodes() > 0:
-            max_id, id_to_nodes = self._get_max_id_and_map(self.tracklet.key)
+            max_id, id_to_nodes = self._get_max_id_and_map(self.tracklet_key)
             self.max_tracklet_id = max_id
             self.tracklet_id_to_nodes = id_to_nodes
 
         if lineage_key is not None and tracks.graph.number_of_nodes() > 0:
-            max_id, id_to_nodes = self._get_max_id_and_map(self.lineage.key)
+            max_id, id_to_nodes = self._get_max_id_and_map(self.lineage_key)
             self.max_lineage_id = max_id
             self.lineage_id_to_nodes = id_to_nodes
 
@@ -118,15 +133,15 @@ class TrackAnnotator(GraphAnnotator):
 
         Args:
             add_to_set (bool, optional): Whether to add the Features to the Tracks
-                FeatureSet. Defaults to False. Should usually be set to True on the
+                FeatureDict. Defaults to False. Should usually be set to True on the
                 initial computation, but False on subsequent re-computations.
         """
         if add_to_set:
             self.add_features_to_set()
         # TODO: move this code to litt-utils
-        if self.tracklet in self.features:
+        if self.tracklet_key in self.features:
             self._assign_tracklet_ids()
-        if self.lineage in self.features:
+        if self.lineage_key in self.features:
             self._assign_lineage_ids()
 
     def _assign_ids(
@@ -165,7 +180,7 @@ class TrackAnnotator(GraphAnnotator):
         attributes will be updated.
         """
         lineages = nx.weakly_connected_components(self.tracks.graph)
-        max_id, ids_to_nodes = self._assign_ids(lineages, self.lineage.key)
+        max_id, ids_to_nodes = self._assign_ids(lineages, self.lineage_key)
         self.max_lineage_id = max_id
         self.lineage_id_to_nodes = ids_to_nodes
 
@@ -185,6 +200,6 @@ class TrackAnnotator(GraphAnnotator):
                 graph_copy.remove_edge(parent, daughter)
 
         tracklets = nx.weakly_connected_components(graph_copy)
-        max_id, ids_to_nodes = self._assign_ids(tracklets, self.tracklet.key)
+        max_id, ids_to_nodes = self._assign_ids(tracklets, self.tracklet_key)
         self.max_tracklet_id = max_id
         self.tracklet_id_to_nodes = ids_to_nodes
