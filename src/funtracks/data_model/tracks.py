@@ -15,7 +15,7 @@ import numpy as np
 from psygnal import Signal
 from skimage import measure
 
-from funtracks.features import Centroid, Feature, FeatureSet, FeatureType, Position, Time
+from funtracks.features import Centroid, Feature, FeatureDict, Position, Time
 
 from .graph_attributes import EdgeAttr, NodeAttr
 
@@ -66,11 +66,11 @@ class Tracks:
         pos_attr: str | tuple[str, ...] | list[str] | None = NodeAttr.POS.value,
         scale: list[float] | None = None,
         ndim: int | None = None,
-        features: FeatureSet | None = None,
+        features: FeatureDict | None = None,
     ):
         if features is not None and (time_attr is not None or pos_attr is not None):
             warn(
-                "Provided both FeatureSet and pos_attr or time_attr: ignoring attr "
+                "Provided both FeatureDict and pos_attr or time_attr: ignoring attr "
                 "arguments ({pos_attr=}, {time_attr=}).",
                 stacklevel=2,
             )
@@ -108,42 +108,54 @@ class Tracks:
     def _get_feature_set(
         self, time_attr: str | None, pos_attr: str | tuple[str, ...] | list[str] | None
     ):
-        time = Time(key=time_attr)
+        # Determine keys
+        time_key = time_attr if time_attr is not None else "time"
+
+        # Build features dict
+        features: dict[str, Feature] = {time_key: Time()}
+
+        # Handle position features
         if self.segmentation is None:
             if isinstance(pos_attr, tuple | list):
-                pos_feature = [
-                    Feature(
-                        key=attr,
-                        feature_type=FeatureType.NODE,
-                        value_type=float,
-                        required=True,
-                        recompute=False,
-                    )
-                    for attr in pos_attr
-                ]
+                # Multiple position attributes (one per axis)
+                position_key = list(pos_attr)
+                for attr in pos_attr:
+                    features[attr] = {
+                        "feature_type": "node",
+                        "value_type": "float",
+                        "num_values": 1,
+                        "valid_ndim": (3, 4),
+                        "display_name": None,
+                        "recompute": False,
+                        "required": True,
+                        "default_value": None,
+                    }
             else:
-                pos_feature = Position(
-                    key=pos_attr,
-                    axes=self.axis_names,
-                    recompute=False,
-                )
+                # Single position attribute
+                position_key = pos_attr if pos_attr is not None else "pos"
+                features[position_key] = Position(axes=self.axis_names, recompute=False)
         else:
-            pos_feature = Centroid(axes=self.axis_names)
+            # Using segmentation, so use centroid
+            position_key = "pos"
+            features[position_key] = Centroid(axes=self.axis_names)
 
         # TODO: use RegionpropsAnnotator to add area feature and others to the feature set
-        extra_features = []
         if self.segmentation is not None:
             area_name = "Area" if self.ndim == 3 else "Volume"
-            extra_features.append(
-                Feature(
-                    key=NodeAttr.AREA.value,
-                    display_name=area_name,
-                    feature_type=FeatureType.NODE,
-                    value_type=float,
-                    recompute=True,
-                )
-            )
-        return FeatureSet(time, pos_feature, extra_features)
+            features[NodeAttr.AREA.value] = {
+                "feature_type": "node",
+                "value_type": "float",
+                "num_values": 1,
+                "valid_ndim": (3, 4),
+                "display_name": area_name,
+                "recompute": True,
+                "required": True,
+                "default_value": None,
+            }
+
+        return FeatureDict(
+            features=features, time_key=time_key, position_key=position_key
+        )
 
     def nodes(self):
         return np.array(self.graph.nodes())
@@ -183,22 +195,22 @@ class Tracks:
             np.ndarray: A N x ndim numpy array holding the positions, where N is the
                 number of nodes passed in
         """
-        if isinstance(self.features.position, list):
+        if isinstance(self.features.position_key, list):
             positions = np.stack(
                 [
-                    self.get_nodes_attr(nodes, feat.key, required=True)
-                    for feat in self.features.position
+                    self.get_nodes_attr(nodes, key, required=True)
+                    for key in self.features.position_key
                 ],
                 axis=1,
             )
         else:
             positions = np.array(
-                self.get_nodes_attr(nodes, self.features.position.key, required=True)
+                self.get_nodes_attr(nodes, self.features.position_key, required=True)
             )
 
         if incl_time:
             times = np.array(
-                self.get_nodes_attr(nodes, self.features.time.key, required=True)
+                self.get_nodes_attr(nodes, self.features.time_key, required=True)
             )
             positions = np.c_[times, positions]
 
@@ -231,11 +243,11 @@ class Tracks:
             self.set_times(nodes, times)  # type: ignore
             positions = positions[:, 1:]
 
-        if isinstance(self.features.position, list):
-            for idx, feat in enumerate(self.features.position):
-                self._set_nodes_attr(nodes, feat.key, positions[:, idx].tolist())
+        if isinstance(self.features.position_key, list):
+            for idx, key in enumerate(self.features.position_key):
+                self._set_nodes_attr(nodes, key, positions[:, idx].tolist())
         else:
-            self._set_nodes_attr(nodes, self.features.position.key, positions.tolist())
+            self._set_nodes_attr(nodes, self.features.position_key, positions.tolist())
 
     def set_position(self, node: Node, position: list, incl_time=False):
         self.set_positions(
@@ -243,7 +255,7 @@ class Tracks:
         )
 
     def get_times(self, nodes: Iterable[Node]) -> Sequence[int]:
-        return self.get_nodes_attr(nodes, self.features.time.key, required=True)
+        return self.get_nodes_attr(nodes, self.features.time_key, required=True)
 
     def get_time(self, node: Node) -> int:
         """Get the time frame of a given node. Raises an error if the node
@@ -259,7 +271,7 @@ class Tracks:
 
     def set_times(self, nodes: Iterable[Node], times: Iterable[int]):
         times = [int(t) for t in times]
-        self._set_nodes_attr(nodes, self.features.time.key, times)
+        self._set_nodes_attr(nodes, self.features.time_key, times)
 
     def set_time(self, node: Any, time: int):
         """Set the time frame of a given node. Raises an error if the node
