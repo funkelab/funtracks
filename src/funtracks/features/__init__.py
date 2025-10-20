@@ -1,7 +1,7 @@
-from .feature import Feature, FeatureType, ValueType
-from .feature_set import FeatureSet
-from .node_features import Position, Time
-from .regionprops_features import Area, Centroid, Circularity, EllipsoidAxes, Perimeter
+from ._feature import Feature, FeatureType, ValueType
+from ._feature_set import FeatureSet
+from ._node_features import Position, Time
+from ._regionprops_features import Area, Centroid, Circularity, EllipsoidAxes, Perimeter
 
 __all__ = [
     "Feature",

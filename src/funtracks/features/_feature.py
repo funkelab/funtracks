@@ -26,7 +26,7 @@ class Feature(BaseModel):
             to, nodes or edges.
         value_type (ValueType | type | str): The data type of the feature values.
             Values are expected to be python or numpy native types, not classes.
-            Can pass in: the enum feilds, a string literal ("int", "float", or "str"),
+            Can pass in: the enum fields, a string literal ("int", "float", or "str"),
             or the enum values (python builtins `int`, `float`, or `str`)
         num_values (int, optional): The number of values expected for this feature.
             Defaults to 1.

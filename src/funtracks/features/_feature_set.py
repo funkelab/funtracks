@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .feature import Feature, FeatureType
+from ._feature import Feature, FeatureType
 
 
 class FeatureSet:
@@ -30,7 +30,7 @@ class FeatureSet:
                 attributes, this can be a list of Features. If the position is stored
                 in a single attribute, this will be a single Feature.
             extra_features (list[Feature] | None, optional): Extra features
-                to add to the set upon initalization. Defaults to None.
+                to add to the set upon initialization. Defaults to None.
         """
         self.time = time_feature
         self.position: Feature | list[Feature] = pos_feature

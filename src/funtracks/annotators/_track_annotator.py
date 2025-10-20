@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING
 import networkx as nx
 
 from funtracks.data_model import SolutionTracks
+from funtracks.features import Feature, FeatureType
 
-from ..features.feature import Feature, FeatureType
 from ._graph_annotator import GraphAnnotator
 
 if TYPE_CHECKING:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .feature import (
+from ._feature import (
     Feature,
     FeatureType,
 )

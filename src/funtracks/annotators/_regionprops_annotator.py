@@ -5,15 +5,15 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from funtracks.features import Feature
-from funtracks.features.regionprops_extended import regionprops_extended
-from funtracks.features.regionprops_features import (
+from funtracks.features import (
     Area,
     Centroid,
     Circularity,
     EllipsoidAxes,
+    Feature,
     Perimeter,
 )
+from funtracks.features._regionprops_extended import regionprops_extended
 
 from ._graph_annotator import GraphAnnotator
 

@@ -16,8 +16,8 @@ from psygnal import Signal
 from skimage import measure
 
 from funtracks.features import Centroid, Feature, FeatureSet, FeatureType, Position, Time
+from funtracks.features._compute_ious import _compute_ious
 
-from ..features.compute_ious import _compute_ious
 from .graph_attributes import EdgeAttr, NodeAttr
 
 if TYPE_CHECKING:

@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from funtracks.features.compute_ious import _compute_ious
-from funtracks.features.feature import Feature, FeatureType
+from funtracks.features import Feature, FeatureType
+from funtracks.features._compute_ious import _compute_ious
 
 from ._graph_annotator import GraphAnnotator
 
