@@ -1,15 +1,16 @@
 from __future__ import annotations
 
+import shutil
 from typing import (
     TYPE_CHECKING,
 )
 
 import geff
+import geff_spec
 import networkx as nx
 import numpy as np
 import zarr
-from geff.affine import Affine
-from geff.metadata_schema import GeffMetadata
+from geff_spec import GeffMetadata
 
 from funtracks.data_model.graph_attributes import NodeAttr
 from funtracks.features import Feature
@@ -47,9 +48,11 @@ def export_to_geff(tracks: Tracks, directory: Path, overwrite: bool = False):
             raise ValueError(
                 f"Directory {directory} is not empty. Use overwrite=True to allow export."
             )
-    else:
-        # Create dir
-        directory.mkdir()
+        shutil.rmtree(directory)  # remove directory since overwriting in a non-empty zarr
+        # dir may trigger geff warnings.
+
+    # Create dir
+    directory.mkdir()
 
     # update the graph to split the position into separate attrs, if they are currently
     # together in a list
@@ -61,19 +64,14 @@ def export_to_geff(tracks: Tracks, directory: Path, overwrite: bool = False):
         if tracks.ndim == 3
         else ["time", "space", "space", "space"]
     )
-
-    # calculate affine matrix
     if tracks.scale is None:
         tracks.scale = (1.0,) * tracks.ndim
-    linear_matrix = np.diag(tracks.scale)
-    offset = 0.0  # no offset or translation
-    affine = Affine.from_matrix_offset(linear_matrix, offset)
 
-    # Create metadata and add the affine matrix. Axes will be added automatically.
     metadata = GeffMetadata(
-        geff_version=geff.__version__,
+        geff_version=geff_spec.__version__,
         directed=isinstance(graph, nx.DiGraph),
-        affine=affine,
+        node_props_metadata={},
+        edge_props_metadata={},
     )
 
     # Save segmentation if present
@@ -92,12 +90,13 @@ def export_to_geff(tracks: Tracks, directory: Path, overwrite: bool = False):
     # Save the graph in a 'tracks' folder
     tracks_path = directory / "tracks"
     tracks_path.mkdir(exist_ok=True)
-    geff.write_nx(
+    geff.write(
         graph=graph,
         store=tracks_path,
         metadata=metadata,
         axis_names=axis_names,
         axis_types=axis_types,
+        axis_scales=tracks.scale,
     )
 
 

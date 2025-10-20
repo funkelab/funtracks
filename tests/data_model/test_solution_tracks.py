@@ -6,8 +6,13 @@ from funtracks.actions import AddNode
 from funtracks.data_model import NodeAttr, SolutionTracks, Tracks
 
 
+def test_recompute_track_ids(graph_2d):
+    tracks = SolutionTracks(graph_2d, ndim=3, recompute_track_ids=True)
+    assert tracks.get_next_track_id() == 5
+
+
 def test_next_track_id(graph_2d):
-    tracks = SolutionTracks(graph_2d, ndim=3)
+    tracks = SolutionTracks(graph_2d, ndim=3, recompute_track_ids=False)
     assert tracks.get_next_track_id() == 6
     AddNode(
         tracks,
@@ -38,9 +43,10 @@ def test_from_tracks_cls(graph_2d):
     assert solution_tracks.scale == tracks.scale
     assert solution_tracks.ndim == tracks.ndim
     assert solution_tracks.get_node_attr(6, NodeAttr.TRACK_ID.value) == 5
-    # delete track id on one node to trigger reassignment of track_ids.
+    # delete track id on one node triggers reassignment of track_ids even when recompute
+    # is False.
     solution_tracks.graph.nodes[1].pop(NodeAttr.TRACK_ID.value, None)
-    solution_tracks._initialize_track_ids()
+    solution_tracks._initialize_track_ids(recompute=False)
     # should have reassigned new track_id to node 6
     assert solution_tracks.get_node_attr(6, NodeAttr.TRACK_ID.value) == 4
     assert solution_tracks.get_node_attr(1, NodeAttr.TRACK_ID.value) == 1  # still 1

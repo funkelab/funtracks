@@ -52,12 +52,12 @@ def test_export_to_geff(
     assert isinstance(seg_zarr, zarr.Array)
     np.testing.assert_array_equal(seg_zarr[:], segmentation)
 
-    # Check that affine is present in metadata
+    # Check that scaling info is present in metadata
     attrs = dict(z.attrs)
     assert "geff" in attrs
-    assert "affine" in attrs["geff"]
-    affine = attrs["geff"]["affine"]
-    assert affine is None or isinstance(affine, dict)
+    assert "axes" in attrs["geff"]
+    for ax in attrs["geff"]["axes"]:
+        assert ax["scale"] is not None
 
     # test that providing a non existing parent dir raises error
     file_path = tmp_path / "nonexisting" / "target.zarr"
