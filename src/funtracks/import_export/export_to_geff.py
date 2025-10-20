@@ -13,7 +13,6 @@ import zarr
 from geff_spec import GeffMetadata
 
 from funtracks.data_model.graph_attributes import NodeAttr
-from funtracks.features import Feature
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -57,7 +56,7 @@ def export_to_geff(tracks: Tracks, directory: Path, overwrite: bool = False):
     # update the graph to split the position into separate attrs, if they are currently
     # together in a list
     graph, axis_names = split_position_attr(tracks)
-    axis_names.insert(0, tracks.features.time.key)
+    axis_names.insert(0, tracks.features.time_key)
 
     axis_types = (
         ["time", "space", "space"]
@@ -113,18 +112,19 @@ def split_position_attr(tracks: Tracks) -> tuple[nx.DiGraph, list[str]]:
             coordinate, and the axis names used to store the separate attributes
 
     """
-    pos_feat = tracks.features.position
-    if isinstance(pos_feat, Feature):
+    pos_key = tracks.features.position_key
+    if isinstance(pos_key, str):
+        # Position is stored as a single attribute, need to split
         new_graph = tracks.graph.copy()
-        pos_attr = pos_feat.key
         new_keys = ["y", "x"]
         if tracks.ndim == 4:
             new_keys.insert(0, "z")
         for _, attrs in new_graph.nodes(data=True):
-            pos = attrs.pop(pos_attr)
+            pos = attrs.pop(pos_key)
             for i in range(len(new_keys)):
                 attrs[new_keys[i]] = pos[i]
 
         return new_graph, new_keys
     else:
-        return tracks.graph, [feat.key for feat in pos_feat]
+        # Position is already split into separate attributes
+        return tracks.graph, pos_key

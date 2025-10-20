@@ -7,7 +7,7 @@ from pathlib import Path
 import networkx as nx
 import numpy as np
 
-from funtracks.features import FeatureSet
+from funtracks.features import FeatureDict
 
 from ..data_model import SolutionTracks, Tracks
 
@@ -108,7 +108,7 @@ def load_tracks(
         seg_required (bool, optional): If true, raises a FileNotFoundError if the
             segmentation file is not present in the directory. Defaults to False.
         solution (bool, optional): If true, returns a SolutionTracks object, otherwise
-            reutrns a normal Tracks object. Defaults to False.
+            returns a normal Tracks object. Defaults to False.
 
     Returns:
         Tracks: A tracks object loaded from the given directory
@@ -129,7 +129,7 @@ def load_tracks(
     # break if the attrs are changed/removed in the future. Can remove in v2.0.
     with warnings.catch_warnings():
         warnings.filterwarnings(
-            "ignore", message="Provided both FeatureSet and pos_attr or time_attr"
+            "ignore", message="Provided both FeatureDict and pos_attr or time_attr"
         )
         tracks: Tracks
         if solution:
@@ -186,7 +186,7 @@ def _load_attrs(attrs_file: Path) -> dict:
         with open(attrs_file) as f:
             json_dict = json.load(f)
         if "features" in json_dict:
-            json_dict["features"] = FeatureSet.from_json(json_dict["features"])
+            json_dict["features"] = FeatureDict.from_json(json_dict["features"])
         return json_dict
 
     else:
