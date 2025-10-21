@@ -49,6 +49,15 @@ def test_compute_all(graph_2d, segmentation_2d):
     nodes = list(tracks.graph.nodes())
     edges = list(tracks.graph.edges())
 
+    # Clear existing attributes from the fixture
+    for node in nodes:
+        for attr in ["pos", "area"]:
+            if attr in tracks.graph.nodes[node]:
+                del tracks.graph.nodes[node][attr]
+    for edge in edges:
+        if "IoU" in tracks.graph.edges[edge]:
+            del tracks.graph.edges[edge]["IoU"]
+
     # Compute all features
     manager.compute_all()
 
@@ -67,13 +76,20 @@ def test_update_node(graph_2d, segmentation_2d):
     manager = AnnotatorManager(tracks)
     manager.compute_all()
 
-    node = list(tracks.graph.nodes())[0]
+    node_id = 3
 
-    # Update the node (in a real scenario, segmentation would change)
-    manager.update(node)
+    # Modify the segmentation by removing all but one pixel
+    orig_pixels = tracks.get_pixels(node_id)
+    assert orig_pixels is not None
+    pixels_to_remove = tuple(orig_pixels[d][1:] for d in range(len(orig_pixels)))
+    tracks.set_pixels(pixels_to_remove, 0)
+    expected_area = 1
 
-    # Position should still exist (even if it might be the same)
-    assert tracks.graph.nodes[node].get("pos") is not None
+    # Update the node - should recompute regionprops features
+    manager.update(node_id)
+
+    # Check that features were updated
+    assert tracks.get_area(node_id) == expected_area
 
 
 def test_update_edge(graph_2d, segmentation_2d):
@@ -82,17 +98,23 @@ def test_update_edge(graph_2d, segmentation_2d):
     manager = AnnotatorManager(tracks)
     manager.compute_all()
 
-    edges = list(tracks.graph.edges())
-    if not edges:
-        pytest.skip("No edges in graph")
+    edge_id = (1, 3)
+    node_id = 3
+    orig_iou = tracks.graph.edges[edge_id]["IoU"]
 
-    edge = edges[0]
+    # Modify the segmentation by removing all but one pixel from node 3
+    orig_pixels = tracks.get_pixels(node_id)
+    assert orig_pixels is not None
+    pixels_to_remove = tuple(orig_pixels[d][1:] for d in range(len(orig_pixels)))
+    tracks.set_pixels(pixels_to_remove, 0)
 
-    # Update the edge
-    manager.update(edge)
+    # Update the edge - should recompute IoU
+    manager.update(edge_id)
 
-    # IoU should still exist
-    assert tracks.graph.edges[edge].get("IoU") is not None
+    # Check that IoU was recomputed (value should have changed)
+    new_iou = tracks.graph.edges[edge_id]["IoU"]
+    assert new_iou != orig_iou
+    assert new_iou == pytest.approx(0.0, abs=0.001)
 
 
 def test_recompute_tracks(graph_2d, segmentation_2d):
