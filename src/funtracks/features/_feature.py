@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any, Literal, TypedDict
 
 
@@ -17,9 +18,9 @@ class Feature(TypedDict):
         value_type (Literal["int", "float", "str"]): The data type of the feature
             values.
         num_values (int): The number of values expected for this feature.
-        valid_ndim (tuple[Literal[3, 4], ...]): Is the feature valid in 3D
+        valid_ndim (Sequence[Literal[3, 4]]): Is the feature valid in 3D
             (2D+t) data, 4D (3D+t) data, or both.
-        display_name (str | list[str] | None): The name to use to display the
+        display_name (str | Sequence[str] | None): The name to use to display the
             feature.
         recompute (bool): If True, the feature should be recomputed
             when the element changes.
@@ -32,8 +33,8 @@ class Feature(TypedDict):
     feature_type: Literal["node", "edge"]
     value_type: Literal["int", "float", "str"]
     num_values: int
-    valid_ndim: tuple[Literal[3, 4], ...]
-    display_name: str | list[str] | None
+    valid_ndim: Sequence[Literal[3, 4]]
+    display_name: str | Sequence[str] | None
     recompute: bool
     required: bool
     default_value: Any
