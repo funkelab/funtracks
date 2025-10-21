@@ -56,7 +56,8 @@ def export_to_geff(tracks: Tracks, directory: Path, overwrite: bool = False):
     # update the graph to split the position into separate attrs, if they are currently
     # together in a list
     graph, axis_names = split_position_attr(tracks)
-    axis_names.insert(0, tracks.features.time_key)
+    if tracks.features.time_key is not None:
+        axis_names.insert(0, tracks.features.time_key)
 
     axis_types = (
         ["time", "space", "space"]

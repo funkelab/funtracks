@@ -10,17 +10,19 @@ from funtracks.data_model import EdgeAttr, NodeAttr, Tracks
 def test_create_tracks(graph_3d: nx.DiGraph, segmentation_3d):
     # create empty tracks
     tracks = Tracks(graph=nx.DiGraph(), ndim=3)
-    assert isinstance(tracks.features.position, dict)
     assert tracks.features.position_key == "pos"
-    assert not tracks.features.position["recompute"]
+    assert isinstance(tracks.features["pos"], dict)
+    assert not tracks.features["pos"]["recompute"]
     with pytest.raises(KeyError):
         tracks.get_positions([1])
 
     # create tracks with graph only
     tracks = Tracks(graph=graph_3d, ndim=4)
-    assert isinstance(tracks.features.position, dict)
-    assert tracks.features.position_key == "pos"
-    assert not tracks.features.position["recompute"]
+    pos_key = tracks.features.position_key
+    assert pos_key == "pos"
+    assert isinstance(pos_key, str)
+    assert isinstance(tracks.features[pos_key], dict)
+    assert not tracks.features[pos_key]["recompute"]
     assert tracks.get_positions([1]).tolist() == [[50, 50, 50]]
     assert tracks.get_time(1) == 0
     with pytest.raises(KeyError):
@@ -28,9 +30,11 @@ def test_create_tracks(graph_3d: nx.DiGraph, segmentation_3d):
 
     # create track with graph and seg
     tracks = Tracks(graph=graph_3d, segmentation=segmentation_3d)
-    assert isinstance(tracks.features.position, dict)
-    assert tracks.features.position_key == "pos"
-    assert tracks.features.position["recompute"]
+    pos_key = tracks.features.position_key
+    assert pos_key == "pos"
+    assert isinstance(pos_key, str)
+    assert isinstance(tracks.features[pos_key], dict)
+    assert tracks.features[pos_key]["recompute"]
     assert tracks.get_positions([1]).tolist() == [[50, 50, 50]]
     assert tracks.get_time(1) == 0
     assert tracks.get_positions([1], incl_time=True).tolist() == [[0, 50, 50, 50]]

@@ -15,7 +15,7 @@ import numpy as np
 from psygnal import Signal
 from skimage import measure
 
-from funtracks.features import Centroid, Feature, FeatureDict, Position, Time
+from funtracks.features import Feature, FeatureDict, Position, Time
 
 from .graph_attributes import EdgeAttr, NodeAttr
 
@@ -85,6 +85,12 @@ class Tracks:
             self._get_feature_set(time_attr, pos_attr) if features is None else features
         )
 
+        # Initialize AnnotatorManager for managing feature computation
+        # Import here to avoid circular dependency
+        from funtracks.annotators import AnnotatorManager
+
+        self.annotator_manager = AnnotatorManager(self)
+
     @property
     def time_attr(self):
         warn(
@@ -108,15 +114,29 @@ class Tracks:
     def _get_feature_set(
         self, time_attr: str | None, pos_attr: str | tuple[str, ...] | list[str] | None
     ):
+        """Create a FeatureDict with static features only.
+
+        Static features are those provided by the user on the graph (time, position
+        when segmentation is None). Managed features (computed from segmentation or
+        graph structure) are added by AnnotatorManager after initialization.
+
+        Args:
+            time_attr: The attribute name for time
+            pos_attr: The attribute name(s) for position
+
+        Returns:
+            FeatureDict with static features
+        """
         # Determine keys
         time_key = time_attr if time_attr is not None else "time"
 
-        # Build features dict
+        # Build static features dict - always include time
         features: dict[str, Feature] = {time_key: Time()}
 
         # Handle position features
-        position_key: str | list[str]
+        position_key: str | list[str] | None
         if self.segmentation is None:
+            # No segmentation - position is provided by user (static)
             if isinstance(pos_attr, tuple | list):
                 # Multiple position attributes (one per axis)
                 position_key = list(pos_attr)
@@ -136,23 +156,8 @@ class Tracks:
                 position_key = pos_attr if pos_attr is not None else "pos"
                 features[position_key] = Position(axes=self.axis_names, recompute=False)
         else:
-            # Using segmentation, so use centroid
-            position_key = "pos"
-            features[position_key] = Centroid(axes=self.axis_names)
-
-        # TODO: use RegionpropsAnnotator to add area feature and others to the feature set
-        if self.segmentation is not None:
-            area_name = "Area" if self.ndim == 3 else "Volume"
-            features[NodeAttr.AREA.value] = {
-                "feature_type": "node",
-                "value_type": "float",
-                "num_values": 1,
-                "valid_ndim": (3, 4),
-                "display_name": area_name,
-                "recompute": True,
-                "required": True,
-                "default_value": None,
-            }
+            # With segmentation - position will be added by AnnotatorManager
+            position_key = None
 
         return FeatureDict(
             features=features, time_key=time_key, position_key=position_key
@@ -196,6 +201,9 @@ class Tracks:
             np.ndarray: A N x ndim numpy array holding the positions, where N is the
                 number of nodes passed in
         """
+        if self.features.position_key is None:
+            raise ValueError("position_key must be set")
+
         if isinstance(self.features.position_key, list):
             positions = np.stack(
                 [
@@ -210,6 +218,8 @@ class Tracks:
             )
 
         if incl_time:
+            if self.features.time_key is None:
+                raise ValueError("time_key must be set")
             times = np.array(
                 self.get_nodes_attr(nodes, self.features.time_key, required=True)
             )
@@ -237,6 +247,9 @@ class Tracks:
             incl_time (bool, optional): If true, include the time as the
                 first column of the position array. Defaults to False.
         """
+        if self.features.position_key is None:
+            raise ValueError("position_key must be set")
+
         if not isinstance(positions, np.ndarray):
             positions = np.array(positions)
         if incl_time:
@@ -250,12 +263,16 @@ class Tracks:
         else:
             self._set_nodes_attr(nodes, self.features.position_key, positions.tolist())
 
-    def set_position(self, node: Node, position: list, incl_time=False):
+    def set_position(
+        self, node: Node, position: list | np.ndarray, incl_time: bool = False
+    ):
         self.set_positions(
             [node], np.expand_dims(np.array(position), axis=0), incl_time=incl_time
         )
 
     def get_times(self, nodes: Iterable[Node]) -> Sequence[int]:
+        if self.features.time_key is None:
+            raise ValueError("time_key must be set")
         return self.get_nodes_attr(nodes, self.features.time_key, required=True)
 
     def get_time(self, node: Node) -> int:
@@ -271,6 +288,8 @@ class Tracks:
         return int(self.get_times([node])[0])
 
     def set_times(self, nodes: Iterable[Node], times: Iterable[int]):
+        if self.features.time_key is None:
+            raise ValueError("time_key must be set")
         times = [int(t) for t in times]
         self._set_nodes_attr(nodes, self.features.time_key, times)
 

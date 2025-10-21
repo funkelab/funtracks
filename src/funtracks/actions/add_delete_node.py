@@ -99,6 +99,8 @@ class DeleteNode(TracksAction):
     ):
         super().__init__(tracks)
         self.node = node
+        if self.tracks.features.time_key is None:
+            raise ValueError("time_key must be set")
         self.attributes = {
             self.tracks.features.time_key: self.tracks.get_time(node),
             NodeAttr.POS.value: self.tracks.get_position(node),

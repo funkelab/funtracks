@@ -2,7 +2,6 @@ import pytest
 
 from funtracks.annotators import TrackAnnotator
 from funtracks.data_model import SolutionTracks, Tracks
-from funtracks.features import FeatureDict, Position, Time
 
 
 @pytest.mark.parametrize("ndim", [3, 4])
@@ -12,13 +11,8 @@ class TestTrackAnnotator:
         graph_name = "graph_2d" if ndim == 3 else "graph_3d"
         seg = request.getfixturevalue(seg_name)
         graph = request.getfixturevalue(graph_name)
-        axes = ("y", "x") if ndim == 3 else ("z", "y", "x")
-        features = FeatureDict(
-            features={"time": Time(), "pos": Position(axes)},
-            time_key="time",
-            position_key="pos",
-        )
-        return Tracks(graph, segmentation=seg, features=features)
+        # Tracks will automatically build features including managed ones
+        return Tracks(graph, segmentation=seg, ndim=ndim)
 
     def get_soln_tracks(self, request, ndim) -> SolutionTracks:
         return SolutionTracks.from_tracks(self.get_tracks(request, ndim))
@@ -38,19 +32,18 @@ class TestTrackAnnotator:
 
     def test_compute_all(self, request, ndim) -> None:
         tracks = self.get_soln_tracks(request, ndim)
-        assert len(tracks.features) == 2
+        # Features are now automatically added during Tracks init
+        assert "tracklet_id" in tracks.features
+        assert "lineage_id" in tracks.features
 
         ann = TrackAnnotator(tracks)
         all_features = ann.features
 
-        ann.compute(add_to_set=True)
-        assert len(tracks.features) == 2 + len(all_features)
+        # Compute values (features already in tracks.features)
+        ann.compute()
         for node in tracks.nodes():
             for key in all_features:
                 assert key in tracks.graph.nodes[node]
-
-        with pytest.raises(KeyError, match="Key .* already in feature set"):
-            ann.compute(add_to_set=True)
 
         lineages = [
             [1, 2, 3, 4, 5],
@@ -79,7 +72,7 @@ class TestTrackAnnotator:
         tracks = self.get_soln_tracks(request, ndim)
         ann = TrackAnnotator(tracks)
         # compute the original tracklet and lineage ids
-        ann.compute(add_to_set=True)
+        ann.compute()
         # add an edge
         node_id = 6
         edge_id = (4, 6)
@@ -88,16 +81,17 @@ class TestTrackAnnotator:
         orig_lin = tracks.get_node_attr(node_id, ann.lineage_key, required=True)
         orig_tra = tracks.get_node_attr(node_id, ann.tracklet_key, required=True)
 
-        # remove one feature from computation
-        ann.remove_feature(to_remove_key, update_dict=True)
-        ann.compute(add_to_set=False)  # this should update tra but not lin
-        assert len(tracks.features) == 3  # lin not added to set
+        # remove one feature from computation (annotator level, not FeatureDict)
+        ann.remove_feature(to_remove_key)
+        ann.compute()  # this should update tra but not lin
+        # Features still in tracks.features (added during init) but lineage not computed
+        assert to_remove_key in tracks.features
         assert tracks.get_node_attr(node_id, ann.lineage_key, required=True) == orig_lin
         assert tracks.get_node_attr(node_id, ann.tracklet_key, required=True) != orig_tra
 
         # add it back in
-        ann.add_feature(to_remove_key, update_dict=True)
-        ann.compute(add_to_set=False)
+        ann.add_feature(to_remove_key)
+        ann.compute()
         # now both are updated
         assert tracks.get_node_attr(node_id, ann.lineage_key, required=True) != orig_lin
         assert tracks.get_node_attr(node_id, ann.tracklet_key, required=True) != orig_tra

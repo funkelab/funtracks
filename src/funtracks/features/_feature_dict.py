@@ -10,21 +10,21 @@ class FeatureDict(dict[str, Feature]):
     Provides convenient access to time and position features through properties.
 
     Attributes:
-        time_key (str): The key used for the time feature
-        position_key (str | list[str]): The key(s) used for position feature(s)
+        time_key (str | None): The key used for the time feature
+        position_key (str | list[str] | None): The key(s) used for position feature(s)
     """
 
     def __init__(
         self,
         features: dict[str, Feature],
-        time_key: str,
-        position_key: str | list[str],
+        time_key: str | None,
+        position_key: str | list[str] | None,
     ):
         """
         Args:
             features (dict[str, Feature]): Mapping from feature keys to Features
-            time_key (str): The key for the time feature (must be in features)
-            position_key (str | list[str]): The key(s) for position feature(s)
+            time_key (str | None): The key for the time feature (must be in features)
+            position_key (str | list[str] | None): The key(s) for position feature(s)
                 (must be in features)
         """
         super().__init__(features)
@@ -32,27 +32,15 @@ class FeatureDict(dict[str, Feature]):
         self.position_key = position_key
 
         # Validate that time and position keys exist
-        if time_key not in self:
+        if time_key is not None and time_key not in self:
             raise KeyError(f"time_key '{time_key}' not found in features")
         if isinstance(position_key, list):
             for key in position_key:
                 if key not in self:
                     raise KeyError(f"position_key '{key}' not found in features")
         else:
-            if position_key not in self:
+            if position_key is not None and position_key not in self:
                 raise KeyError(f"position_key '{position_key}' not found in features")
-
-    @property
-    def time(self) -> Feature:
-        """Get the time feature"""
-        return self[self.time_key]
-
-    @property
-    def position(self) -> Feature | list[Feature]:
-        """Get the position feature(s)"""
-        if isinstance(self.position_key, list):
-            return [self[key] for key in self.position_key]
-        return self[self.position_key]
 
     @property
     def node_features(self) -> dict[str, Feature]:

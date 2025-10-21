@@ -48,21 +48,14 @@ class EdgeAnnotator(GraphAnnotator):
         feats = {} if tracks.segmentation is None else {self.iou_key: IoU()}
         super().__init__(tracks, feats)
 
-    def compute(self, add_to_set=False) -> None:
+    def compute(self) -> None:
         """Compute the currently included features and add them to the tracks.
-
-        Args:
-            add_to_set (bool, optional): Whether to add the Features to the Tracks
-                FeatureSet. Defaults to False. Should usually be set to True on the
-                initial computation, but False on subsequent re-computations.
 
         Raises:
             ValueError: If the segmentation is missing from the tracks.
         """
         if self.tracks.segmentation is None:
             raise ValueError("Cannot compute edge features without segmentation.")
-        if add_to_set:
-            self.add_features_to_set()
 
         seg = self.tracks.segmentation
         # TODO: add skip edges

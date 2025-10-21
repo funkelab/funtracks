@@ -128,16 +128,8 @@ class TrackAnnotator(GraphAnnotator):
         max_id = max(id_to_nodes.keys()) if len(id_to_nodes) > 0 else 0
         return max_id, dict(id_to_nodes)
 
-    def compute(self, add_to_set=False) -> None:
-        """Compute the currently included features and add them to the tracks.
-
-        Args:
-            add_to_set (bool, optional): Whether to add the Features to the Tracks
-                FeatureDict. Defaults to False. Should usually be set to True on the
-                initial computation, but False on subsequent re-computations.
-        """
-        if add_to_set:
-            self.add_features_to_set()
+    def compute(self) -> None:
+        """Compute the currently included features and add them to the tracks."""
         # TODO: move this code to litt-utils
         if self.tracklet_key in self.features:
             self._assign_tracklet_ids()

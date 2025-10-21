@@ -2,23 +2,17 @@ import pytest
 
 from funtracks.annotators import RegionpropsAnnotator
 from funtracks.data_model import Tracks
-from funtracks.features import FeatureDict, Position, Time
 
 
 @pytest.mark.parametrize("ndim", [3, 4])
 class TestRegionpropsAnnotator:
-    def get_tracks(self, request, ndim):
+    def get_tracks(self, request, ndim) -> Tracks:
         seg_name = "segmentation_2d" if ndim == 3 else "segmentation_3d"
         graph_name = "graph_2d" if ndim == 3 else "graph_3d"
         seg = request.getfixturevalue(seg_name)
         graph = request.getfixturevalue(graph_name)
-        axes = ("y", "x") if ndim == 3 else ("z", "y", "x")
-        features = FeatureDict(
-            features={"time": Time(), "pos": Position(axes)},
-            time_key="time",
-            position_key="pos",
-        )
-        return Tracks(graph, segmentation=seg, features=features)
+        # Tracks will automatically build features including managed ones
+        return Tracks(graph, segmentation=seg, ndim=ndim)
 
     def test_init(self, request, ndim):
         tracks = self.get_tracks(request, ndim)
@@ -29,19 +23,18 @@ class TestRegionpropsAnnotator:
 
     def test_compute_all(self, request, ndim):
         tracks = self.get_tracks(request, ndim)
-        assert len(tracks.features) == 2
+        # Features are now automatically added during Tracks init
+        assert "pos" in tracks.features
+        assert "area" in tracks.features
 
         rp_ann = RegionpropsAnnotator(tracks)
         all_feature_specs = RegionpropsAnnotator.get_feature_specs(tracks)
 
-        rp_ann.compute(add_to_set=True)
-        assert len(tracks.features) == 7  # 2 original + 5 regionprops
+        # Compute values (features already in tracks.features)
+        rp_ann.compute()
         for node in tracks.nodes():
             for spec in all_feature_specs:
                 assert spec.key in tracks.graph.nodes[node]
-
-        with pytest.raises(KeyError, match="Key .* already in feature set"):
-            rp_ann.compute(add_to_set=True)
 
     def test_update_all(self, request, ndim):
         tracks = self.get_tracks(request, ndim)
@@ -79,21 +72,22 @@ class TestRegionpropsAnnotator:
 
     def test_add_remove_feature(self, request, ndim: int):
         tracks = self.get_tracks(request, ndim)
-        rp_ann = RegionpropsAnnotator(tracks)
+        rp_ann = tracks.annotator_manager.annotators["regionprops"]
         all_feature_specs = RegionpropsAnnotator.get_feature_specs(tracks)
         to_remove_key = all_feature_specs[1].key  # area
-        rp_ann.remove_feature(to_remove_key, update_dict=False)
+        rp_ann.remove_feature(to_remove_key)
 
-        rp_ann.compute(add_to_set=True)
-        # Start with 2 (time, pos), add 4 regionprops (not area), but pos already exists
-        # So we add 3 new ones: ellipse_axis_radii, circularity, perimeter, and overwrite
-        # pos
-        assert len(tracks.features) == 6  # time + pos(overwritten) + 3 others
+        # Clear existing area attributes from graph (from fixture)
+        for node in tracks.nodes():
+            if to_remove_key in tracks.graph.nodes[node]:
+                del tracks.graph.nodes[node][to_remove_key]
+
+        rp_ann.compute()
         for node in tracks.nodes():
             assert to_remove_key not in tracks.graph.nodes[node]
 
         # add it back in
-        rp_ann.add_feature(to_remove_key, update_dict=True)
+        rp_ann.add_feature(to_remove_key)
         # but remove a different one
         second_remove_key = all_feature_specs[2].key  # ellipse_axis_radii
         rp_ann.remove_feature(second_remove_key)
@@ -102,6 +96,7 @@ class TestRegionpropsAnnotator:
         node_id = 3
         prev_value = tracks.get_node_attr(node_id, second_remove_key)
         orig_pixels = tracks.get_pixels(node_id)
+        assert orig_pixels is not None
         pixels_to_remove = tuple(orig_pixels[d][1:] for d in range(len(orig_pixels)))
         tracks.set_pixels(pixels_to_remove, 0)
         rp_ann.update(node_id)

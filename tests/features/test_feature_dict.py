@@ -12,8 +12,8 @@ class TestFeatureDict:
         assert len(fd) == 2
         assert fd.time_key == "time"
         assert fd.position_key == "pos"
-        assert fd.time == Time()
-        assert fd.position == Position(("y", "x"))
+        assert fd["time"] == Time()
+        assert fd["pos"] == Position(("y", "x"))
 
     def test_init_with_list_position(self):
         """Test initialization with list of position keys"""
@@ -45,8 +45,9 @@ class TestFeatureDict:
         assert len(fd) == 3
         assert fd.time_key == "time"
         assert fd.position_key == ["y", "x"]
-        assert isinstance(fd.position, list)
-        assert len(fd.position) == 2
+        # Check that both position features exist
+        assert "y" in fd
+        assert "x" in fd
 
     def test_init_validation(self):
         """Test that init validates time and position keys exist"""

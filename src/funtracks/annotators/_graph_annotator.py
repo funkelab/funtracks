@@ -33,27 +33,28 @@ class GraphAnnotator:
             key: (feat, True) for key, feat in features.items()
         }
 
-    def remove_feature(self, key: str, update_dict: bool = True) -> None:
+    def remove_feature(self, key: str) -> None:
         """Stop computing the given feature in the annotation process.
+
+        This only affects whether the annotator computes values for this feature.
+        The feature remains in tracks.features (FeatureDict modifications should be
+        done through AnnotatorManager).
 
         Args:
             key (str): The key of the feature to remove. Must be in all_features.
-            update_dict (bool, optional): Whether to remove from tracks FeatureDict.
-                Defaults to True.
         """
         if key in self.all_features:
             feat, _ = self.all_features[key]
             self.all_features[key] = (feat, False)
-        if update_dict and key in self.tracks.features:
-            del self.tracks.features[key]
 
-    def add_feature(self, key: str, update_dict: bool = True) -> None:
+    def add_feature(self, key: str) -> None:
         """Start computing the given feature in the annotation process.
+
+        This only affects whether the annotator computes values for this feature.
+        The feature should already be in tracks.features (added during initialization).
 
         Args:
             key (str): The key of the feature to add. Must be in all_features.
-            update_dict (bool, optional): Whether to add to tracks FeatureDict.
-                Defaults to True.
         """
         if key in self.all_features:
             feat, _ = self.all_features[key]
@@ -62,9 +63,6 @@ class GraphAnnotator:
             raise ValueError(
                 f"Cannot add feature '{key}' - annotator cannot manage this feature."
             )
-        if update_dict:
-            feat, _ = self.all_features[key]
-            self.tracks.features[key] = feat
 
     @property
     def features(self) -> dict[str, Feature]:
