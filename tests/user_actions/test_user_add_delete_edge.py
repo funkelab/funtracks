@@ -113,7 +113,7 @@ class TestUserAddDeleteEdge:
         assert tracks.get_track_id(old_child) != old_track_id
 
 
-def test_add_edge_mising_node(graph_2d):
+def test_add_edge_missing_node(graph_2d):
     tracks = SolutionTracks(graph_2d, ndim=3)
     with pytest.raises(ValueError, match="Source node .* not in solution yet"):
         UserAddEdge(tracks, (10, 11))

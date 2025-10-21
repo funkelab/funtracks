@@ -145,7 +145,7 @@ class TracksController:
 
         Args:
             nodes (Iterable[Node]): array of node_ids to be deleted
-            pixels (Iterable[SegMask] | None): pixels of the ndoes to be deleted, if
+            pixels (Iterable[SegMask] | None): pixels of the nodes to be deleted, if
                 known already. Will be computed if not provided.
         """
         actions: list[TracksAction] = []

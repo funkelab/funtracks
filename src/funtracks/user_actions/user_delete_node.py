@@ -36,9 +36,9 @@ class UserDeleteNode(ActionGroup):
         track_id = self.tracks.get_track_id(node)
         if track_id is not None:
             time = self.tracks.get_time(node)
-            predecessor, succcessor = self.tracks.get_track_neighbors(track_id, time)
-            if predecessor is not None and succcessor is not None:
-                self.actions.append(AddEdge(tracks, (predecessor, succcessor)))
+            predecessor, successor = self.tracks.get_track_neighbors(track_id, time)
+            if predecessor is not None and successor is not None:
+                self.actions.append(AddEdge(tracks, (predecessor, successor)))
 
         # delete node
         self.actions.append(DeleteNode(tracks, node, pixels=pixels))
