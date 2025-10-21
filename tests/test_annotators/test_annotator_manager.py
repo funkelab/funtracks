@@ -162,6 +162,9 @@ def test_get_active_features(graph_2d, segmentation_2d):
     assert "area" not in active  # Disabled
     assert "IoU" in active
 
+    # FeatureDict should also reflect the disabled feature
+    assert "area" not in tracks.features
+
 
 def test_get_feature_source(graph_2d, segmentation_2d):
     """Test get_feature_source returns correct annotator name."""
@@ -180,15 +183,22 @@ def test_enable_disable_feature(graph_2d, segmentation_2d):
     tracks = Tracks(graph_2d, segmentation=segmentation_2d, ndim=3)
     manager = AnnotatorManager(tracks)
 
+    # Feature should be in FeatureDict initially
+    assert "area" in tracks.features
+
     # Disable a feature
     manager.disable_feature("area")
     active = manager.get_active_features()
     assert "area" not in active
+    # Feature should be removed from FeatureDict
+    assert "area" not in tracks.features
 
     # Re-enable it
     manager.enable_feature("area")
     active = manager.get_active_features()
     assert "area" in active
+    # Feature should be back in FeatureDict
+    assert "area" in tracks.features
 
 
 def test_enable_feature_with_compute(graph_2d, segmentation_2d):

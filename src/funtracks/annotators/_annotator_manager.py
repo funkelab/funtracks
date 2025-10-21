@@ -90,6 +90,7 @@ class AnnotatorManager:
             tracks: The Tracks instance to manage features for
         """
         self.annotators: dict[str, GraphAnnotator] = {}
+        self.features = tracks.features  # Reference to FeatureDict for enable/disable
 
         # Import here to avoid circular imports
         from funtracks.data_model import SolutionTracks
@@ -189,6 +190,8 @@ class AnnotatorManager:
     def enable_feature(self, feature_key: str, compute: bool = False) -> None:
         """Enable a feature for computation.
 
+        Adds the feature to the FeatureDict and marks it for computation in the annotator.
+
         Args:
             feature_key: The key of the feature to enable
             compute: If True, immediately compute the feature
@@ -201,13 +204,23 @@ class AnnotatorManager:
             raise KeyError(f"Feature '{feature_key}' not available")
 
         annotator = self.annotators[annotator_name]
+
+        # Add feature to annotator's active features
         annotator.add_feature(feature_key)
+
+        # Add feature to FeatureDict if not already present
+        if feature_key not in self.features:
+            feature, _ = annotator.all_features[feature_key]
+            self.features[feature_key] = feature
 
         if compute:
             annotator.compute()
 
     def disable_feature(self, feature_key: str) -> None:
         """Disable a feature from computation.
+
+        Removes the feature from the FeatureDict and marks it as inactive in the
+        annotator.
 
         Args:
             feature_key: The key of the feature to disable
@@ -220,4 +233,10 @@ class AnnotatorManager:
             raise KeyError(f"Feature '{feature_key}' not available")
 
         annotator = self.annotators[annotator_name]
+
+        # Remove feature from annotator's active features
         annotator.remove_feature(feature_key)
+
+        # Remove feature from FeatureDict
+        if feature_key in self.features:
+            del self.features[feature_key]
