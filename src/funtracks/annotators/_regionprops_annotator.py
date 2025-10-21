@@ -80,8 +80,13 @@ class RegionpropsAnnotator(GraphAnnotator):
             FeatureSpec("perimeter", Perimeter(ndim=ndim), "perimeter"),
         ]
 
-    def compute(self) -> None:
+    def compute(self, feature_keys: list[str] | None = None) -> None:
         """Compute the currently included features and add them to the tracks.
+
+        Args:
+            feature_keys: Optional list of specific feature keys to compute.
+                If None, computes all currently active features. Keys not in
+                self.features (not enabled) are ignored.
 
         Raises:
             ValueError: If the segmentation is missing from the tracks.
@@ -89,22 +94,27 @@ class RegionpropsAnnotator(GraphAnnotator):
         if self.tracks.segmentation is None:
             raise ValueError("Cannot compute regionprops features without segmentation.")
 
+        keys_to_compute = self._filter_feature_keys(feature_keys)
+        if not keys_to_compute:
+            return
+
         seg = self.tracks.segmentation
         for t in range(seg.shape[0]):
-            self._regionprops_update(seg[t])
+            self._regionprops_update(seg[t], keys_to_compute)
 
-    def _regionprops_update(self, seg_frame: np.ndarray) -> None:
+    def _regionprops_update(self, seg_frame: np.ndarray, feature_keys: list[str]) -> None:
         """Perform the regionprops computation and update all feature values for a
         single frame of segmentation data.
 
         Args:
             seg_frame (np.ndarray): A 2D or 3D numpy array representing one time point
                 of segmentation data.
+            feature_keys: List of feature keys to compute (already filtered to enabled).
         """
         spacing = None if self.tracks.scale is None else tuple(self.tracks.scale[1:])
         for region in regionprops_extended(seg_frame, spacing=spacing):
             node = region.label
-            for key in self.features:
+            for key in feature_keys:
                 value = getattr(region, self.regionprops_names[key])
                 if isinstance(value, tuple):
                     value = list(value)
@@ -129,6 +139,10 @@ class RegionpropsAnnotator(GraphAnnotator):
                 f"RegionpropsAnnotator update expected a node, got edge {element}"
             )
 
+        keys_to_compute = list(self.features.keys())
+        if not keys_to_compute:
+            return
+
         time = self.tracks.get_time(element)
         seg_frame = self.tracks.segmentation[time]
         masked_frame = np.where(seg_frame == element, element, 0)
@@ -139,8 +153,8 @@ class RegionpropsAnnotator(GraphAnnotator):
                 "updating regionprops values to None",
                 stacklevel=2,
             )
-            for key in self.features:
+            for key in keys_to_compute:
                 value = None
                 self.tracks._set_node_attr(element, key, value)
         else:
-            self._regionprops_update(masked_frame)
+            self._regionprops_update(masked_frame, keys_to_compute)

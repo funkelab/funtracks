@@ -47,8 +47,13 @@ class EdgeAnnotator(GraphAnnotator):
         feats = {} if tracks.segmentation is None else {self.iou_key: IoU()}
         super().__init__(tracks, feats)
 
-    def compute(self) -> None:
+    def compute(self, feature_keys: list[str] | None = None) -> None:
         """Compute the currently included features and add them to the tracks.
+
+        Args:
+            feature_keys: Optional list of specific feature keys to compute.
+                If None, computes all currently active features. Keys not in
+                self.features (not enabled) are ignored.
 
         Raises:
             ValueError: If the segmentation is missing from the tracks.
@@ -56,9 +61,13 @@ class EdgeAnnotator(GraphAnnotator):
         if self.tracks.segmentation is None:
             raise ValueError("Cannot compute edge features without segmentation.")
 
+        keys_to_compute = self._filter_feature_keys(feature_keys)
+        if not keys_to_compute:
+            return
+
         seg = self.tracks.segmentation
         # TODO: add skip edges
-        if self.iou_key in self.features:
+        if self.iou_key in keys_to_compute:
             nodes_by_frame = defaultdict(list)
             for n in self.tracks.nodes():
                 nodes_by_frame[self.tracks.get_time(n)].append(n)

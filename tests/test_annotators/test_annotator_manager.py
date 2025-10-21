@@ -202,15 +202,15 @@ def test_enable_disable_feature(graph_2d, segmentation_2d):
 
 
 def test_enable_feature_with_compute(graph_2d, segmentation_2d):
-    """Test enable_feature with compute=True computes the feature."""
+    """Test enable_feature always computes the feature."""
     tracks = Tracks(graph_2d, segmentation=segmentation_2d, ndim=3)
     manager = AnnotatorManager(tracks)
 
     # Disable and clear the feature
     manager.disable_feature("area")
 
-    # Re-enable with compute
-    manager.enable_feature("area", compute=True)
+    # Re-enable (always computes)
+    manager.enable_feature("area")
 
     # Feature should be computed
     nodes = list(tracks.graph.nodes())
@@ -233,3 +233,29 @@ def test_disable_nonexistent_feature(graph_2d, segmentation_2d):
 
     with pytest.raises(KeyError, match="Feature 'nonexistent' not available"):
         manager.disable_feature("nonexistent")
+
+
+def test_compute_strict_validation(graph_2d, segmentation_2d):
+    """Test that compute() strictly validates feature keys."""
+    tracks = Tracks(graph_2d, segmentation=segmentation_2d, ndim=3)
+    manager = AnnotatorManager(tracks)
+
+    # Valid feature key should work
+    manager.annotators["regionprops"].compute(["area"])
+
+    # Invalid feature key should raise KeyError
+    with pytest.raises(KeyError, match="Features not available or not enabled"):
+        manager.annotators["regionprops"].compute(["nonexistent_feature"])
+
+    # Disabled feature should raise KeyError
+    manager.disable_feature("area")
+    with pytest.raises(KeyError, match="Features not available or not enabled"):
+        manager.annotators["regionprops"].compute(["area"])
+
+    # Mix of valid and invalid should raise KeyError
+    manager.enable_feature("area")
+    with pytest.raises(KeyError, match="Features not available or not enabled"):
+        manager.annotators["regionprops"].compute(["area", "nonexistent"])
+
+    # None should still work (compute all enabled features)
+    manager.annotators["regionprops"].compute()

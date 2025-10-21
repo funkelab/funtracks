@@ -187,14 +187,14 @@ class AnnotatorManager:
 
     # ========== Feature Enable/Disable ==========
 
-    def enable_feature(self, feature_key: str, compute: bool = False) -> None:
+    def enable_feature(self, feature_key: str) -> None:
         """Enable a feature for computation.
 
-        Adds the feature to the FeatureDict and marks it for computation in the annotator.
+        Adds the feature to the FeatureDict, marks it for computation in the annotator,
+        and immediately computes it to ensure the FeatureDict reflects current values.
 
         Args:
             feature_key: The key of the feature to enable
-            compute: If True, immediately compute the feature
 
         Raises:
             KeyError: If the feature is not available
@@ -213,8 +213,8 @@ class AnnotatorManager:
             feature, _ = annotator.all_features[feature_key]
             self.features[feature_key] = feature
 
-        if compute:
-            annotator.compute()
+        # Compute only this feature to ensure values are up-to-date
+        annotator.compute([feature_key])
 
     def disable_feature(self, feature_key: str) -> None:
         """Disable a feature from computation.

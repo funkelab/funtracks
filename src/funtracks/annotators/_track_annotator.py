@@ -126,12 +126,22 @@ class TrackAnnotator(GraphAnnotator):
         max_id = max(id_to_nodes.keys()) if len(id_to_nodes) > 0 else 0
         return max_id, dict(id_to_nodes)
 
-    def compute(self) -> None:
-        """Compute the currently included features and add them to the tracks."""
+    def compute(self, feature_keys: list[str] | None = None) -> None:
+        """Compute the currently included features and add them to the tracks.
+
+        Args:
+            feature_keys: Optional list of specific feature keys to compute.
+                If None, computes all currently active features. Keys not in
+                self.features (not enabled) are ignored.
+        """
+        keys_to_compute = self._filter_feature_keys(feature_keys)
+        if not keys_to_compute:
+            return
+
         # TODO: move this code to litt-utils
-        if self.tracklet_key in self.features:
+        if self.tracklet_key in keys_to_compute:
             self._assign_tracklet_ids()
-        if self.lineage_key in self.features:
+        if self.lineage_key in keys_to_compute:
             self._assign_lineage_ids()
 
     def _assign_ids(

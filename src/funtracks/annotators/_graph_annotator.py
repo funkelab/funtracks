@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from funtracks.data_model import Tracks
     from funtracks.features.feature import Feature
+
+logger = logging.getLogger(__name__)
 
 
 class GraphAnnotator:
@@ -72,6 +75,32 @@ class GraphAnnotator:
         """
         return {k: feat for k, (feat, included) in self.all_features.items() if included}
 
+    def _filter_feature_keys(self, feature_keys: list[str] | None) -> list[str]:
+        """Filter feature keys to only those that are enabled.
+
+        Args:
+            feature_keys: Optional list of feature keys to filter. If None, returns
+                all currently enabled features.
+
+        Returns:
+            List of feature keys that are enabled.
+
+        Raises:
+            KeyError: If any keys in feature_keys are not currently enabled.
+        """
+        if feature_keys is None:
+            return list(self.features.keys())
+
+        # Strict validation - all requested keys must be enabled
+        invalid_keys = [k for k in feature_keys if k not in self.features]
+        if invalid_keys:
+            raise KeyError(
+                f"Features not available or not enabled: {invalid_keys}. "
+                f"Available features: {list(self.features.keys())}"
+            )
+
+        return feature_keys
+
     def add_features_to_set(self) -> None:
         """Add the currently included features to the tracks FeatureDict.
 
@@ -85,12 +114,17 @@ class GraphAnnotator:
                 raise KeyError(f"Key '{key}' already in feature set")
             self.tracks.features[key] = feature
 
-    def compute(self) -> None:
+    def compute(self, feature_keys: list[str] | None = None) -> None:
         """Compute a set of features and add them to the tracks.
 
         This involves both updating the node/edge attributes on the tracks.graph
         and adding the features to the FeatureDict, if necessary. This is distinct
         from `update` to allow more efficient bulk computation of features.
+
+        Args:
+            feature_keys: Optional list of specific feature keys to compute.
+                If None, computes all currently active features. Any provided
+                keys not in the currently active set are ignored.
 
         Raises:
             NotImplementedError: If not implemented in subclass.
