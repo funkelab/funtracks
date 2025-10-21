@@ -67,6 +67,7 @@ class Tracks:
         scale: list[float] | None = None,
         ndim: int | None = None,
         features: FeatureDict | None = None,
+        existing_features: list[str] | None = None,
     ):
         if features is not None and (time_attr is not None or pos_attr is not None):
             warn(
@@ -89,7 +90,7 @@ class Tracks:
         # Import here to avoid circular dependency
         from funtracks.annotators import AnnotatorManager
 
-        self.annotator_manager = AnnotatorManager(self)
+        self.annotator_manager = AnnotatorManager(self, existing_features)
 
     @property
     def time_attr(self):

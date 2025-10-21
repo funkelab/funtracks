@@ -80,14 +80,17 @@ class AnnotatorManager:
 
         return features
 
-    def __init__(self, tracks: Tracks):
+    def __init__(self, tracks: Tracks, existing_features: list[str] | None = None):
         """Initialize AnnotatorManager with all appropriate annotators.
 
-        Adds managed features to the tracks.features FeatureDict and updates
-        the position_key if needed.
+        Only includes features specified in existing_features in the FeatureDict.
+        Other features remain in all_features but are disabled until explicitly enabled.
 
         Args:
             tracks: The Tracks instance to manage features for
+            existing_features: Feature keys already computed on the graph.
+                These will be included in FeatureDict and marked as active.
+                All other features start disabled. Defaults to empty list.
         """
         self.annotators: dict[str, GraphAnnotator] = {}
         self.features = tracks.features  # Reference to FeatureDict for enable/disable
@@ -108,25 +111,24 @@ class AnnotatorManager:
         if isinstance(tracks, SolutionTracks):
             self.annotators["tracks"] = TrackAnnotator(tracks)
 
-        # Add managed features to tracks.features
+        # Determine which features to include
+        features_to_include = set(existing_features or [])
+
+        # Include only existing features in tracks.features and disable the rest
         for annotator in self.annotators.values():
             for key, (feature, _) in annotator.all_features.items():
-                if key not in tracks.features:
-                    tracks.features[key] = feature
-                # Update position_key if this is the position feature
-                if key == "pos" and tracks.features.position_key is None:
-                    tracks.features.position_key = "pos"
+                if key in features_to_include:
+                    # Include this feature (already computed)
+                    if key not in tracks.features:
+                        tracks.features[key] = feature
+                    # Update position_key if this is the position feature
+                    if key == "pos" and tracks.features.position_key is None:
+                        tracks.features.position_key = "pos"
+                else:
+                    # Disable this feature (not yet computed)
+                    annotator.remove_feature(key)
 
     # ========== Feature Computation ==========
-
-    def compute_all(self) -> None:
-        """Compute all features from all annotators.
-
-        Features are already registered in tracks.features during initialization.
-        This method computes the actual values and stores them as node/edge attributes.
-        """
-        for annotator in self.annotators.values():
-            annotator.compute()
 
     def update(self, element: int | tuple[int, int]) -> None:
         """Update features for a specific node or edge.
@@ -187,56 +189,64 @@ class AnnotatorManager:
 
     # ========== Feature Enable/Disable ==========
 
-    def enable_feature(self, feature_key: str) -> None:
-        """Enable a feature for computation.
+    def enable_features(self, feature_keys: list[str]) -> None:
+        """Enable multiple features for computation efficiently.
 
-        Adds the feature to the FeatureDict, marks it for computation in the annotator,
-        and immediately computes it to ensure the FeatureDict reflects current values.
-
-        Args:
-            feature_key: The key of the feature to enable
-
-        Raises:
-            KeyError: If the feature is not available
-        """
-        annotator_name = self.get_feature_source(feature_key)
-        if annotator_name is None:
-            raise KeyError(f"Feature '{feature_key}' not available")
-
-        annotator = self.annotators[annotator_name]
-
-        # Add feature to annotator's active features
-        annotator.add_feature(feature_key)
-
-        # Add feature to FeatureDict if not already present
-        if feature_key not in self.features:
-            feature, _ = annotator.all_features[feature_key]
-            self.features[feature_key] = feature
-
-        # Compute only this feature to ensure values are up-to-date
-        annotator.compute([feature_key])
-
-    def disable_feature(self, feature_key: str) -> None:
-        """Disable a feature from computation.
-
-        Removes the feature from the FeatureDict and marks it as inactive in the
-        annotator.
+        Groups features by annotator and computes them together for efficiency.
+        Adds features to FeatureDict and computes their values.
 
         Args:
-            feature_key: The key of the feature to disable
+            feature_keys: List of feature keys to enable
 
         Raises:
-            KeyError: If the feature is not available
+            KeyError: If any feature is not available
         """
-        annotator_name = self.get_feature_source(feature_key)
-        if annotator_name is None:
-            raise KeyError(f"Feature '{feature_key}' not available")
+        # Group features by annotator
+        features_by_annotator: dict[str, list[str]] = {}
+        for key in feature_keys:
+            annotator_name = self.get_feature_source(key)
+            if annotator_name is None:
+                raise KeyError(f"Feature '{key}' not available")
 
-        annotator = self.annotators[annotator_name]
+            if annotator_name not in features_by_annotator:
+                features_by_annotator[annotator_name] = []
+            features_by_annotator[annotator_name].append(key)
 
-        # Remove feature from annotator's active features
-        annotator.remove_feature(feature_key)
+        # Enable and compute features for each annotator
+        for annotator_name, keys in features_by_annotator.items():
+            annotator = self.annotators[annotator_name]
 
-        # Remove feature from FeatureDict
-        if feature_key in self.features:
-            del self.features[feature_key]
+            # Add features to annotator's active features and FeatureDict
+            for key in keys:
+                annotator.add_feature(key)
+                if key not in self.features:
+                    feature, _ = annotator.all_features[key]
+                    self.features[key] = feature
+
+            # Compute all features for this annotator at once
+            annotator.compute(keys)
+
+    def disable_features(self, feature_keys: list[str]) -> None:
+        """Disable multiple features from computation.
+
+        Removes features from FeatureDict and marks them as inactive in annotators.
+
+        Args:
+            feature_keys: List of feature keys to disable
+
+        Raises:
+            KeyError: If any feature is not available
+        """
+        for key in feature_keys:
+            annotator_name = self.get_feature_source(key)
+            if annotator_name is None:
+                raise KeyError(f"Feature '{key}' not available")
+
+            annotator = self.annotators[annotator_name]
+
+            # Remove feature from annotator's active features
+            annotator.remove_feature(key)
+
+            # Remove feature from FeatureDict
+            if key in self.features:
+                del self.features[key]
