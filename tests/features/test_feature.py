@@ -15,7 +15,6 @@ def test_time_feature():
     assert feat["feature_type"] == "node"
     assert feat["value_type"] == "int"
     assert feat["num_values"] == 1
-    assert feat["valid_ndim"] == (3, 4)
     assert feat["display_name"] == "Time"
     assert feat["recompute"] is False
     assert feat["required"] is True
@@ -28,7 +27,6 @@ def test_position_feature():
     assert feat["feature_type"] == "node"
     assert feat["value_type"] == "float"
     assert feat["num_values"] == 2
-    assert feat["valid_ndim"] == (3, 4)
     assert feat["display_name"] == ["y", "x"]
     assert feat["recompute"] is False
     assert feat["required"] is True
@@ -41,7 +39,6 @@ def test_centroid_feature():
     assert feat["feature_type"] == "node"
     assert feat["value_type"] == "float"
     assert feat["num_values"] == 3
-    assert feat["valid_ndim"] == (3, 4)
     assert feat["display_name"] == ["z", "y", "x"]
     assert feat["recompute"] is True
     assert feat["required"] is True
@@ -54,7 +51,6 @@ def test_area_feature():
     assert feat["feature_type"] == "node"
     assert feat["value_type"] == "float"
     assert feat["num_values"] == 1
-    assert feat["valid_ndim"] == (3, 4)
     assert feat["display_name"] == "Area"
     assert feat["recompute"] is True
     assert feat["required"] is True
@@ -62,7 +58,6 @@ def test_area_feature():
 
     feat = Area(ndim=4)
     assert feat["display_name"] == "Volume"
-    assert feat["valid_ndim"] == (3, 4)
 
 
 def test_ellipsoid_axes_feature():
@@ -71,12 +66,10 @@ def test_ellipsoid_axes_feature():
     assert feat["feature_type"] == "node"
     assert feat["value_type"] == "float"
     assert feat["num_values"] == 1
-    assert feat["valid_ndim"] == (3, 4)
     assert feat["display_name"] == "Ellipse axis radii"
 
     feat = EllipsoidAxes(ndim=4)
     assert feat["num_values"] == 1
-    assert feat["valid_ndim"] == (3, 4)
     assert feat["display_name"] == "Ellipsoid axis radii"
 
 
@@ -86,11 +79,9 @@ def test_circularity_feature():
     assert feat["feature_type"] == "node"
     assert feat["value_type"] == "float"
     assert feat["num_values"] == 1
-    assert feat["valid_ndim"] == (3, 4)
     assert feat["display_name"] == "Circularity"
 
     feat = Circularity(ndim=4)
-    assert feat["valid_ndim"] == (3, 4)
     assert feat["display_name"] == "Sphericity"
 
 
@@ -100,11 +91,9 @@ def test_perimeter_feature():
     assert feat["feature_type"] == "node"
     assert feat["value_type"] == "float"
     assert feat["num_values"] == 1
-    assert feat["valid_ndim"] == (3, 4)
     assert feat["display_name"] == "Perimeter"
 
     feat = Perimeter(ndim=4)
-    assert feat["valid_ndim"] == (3, 4)
     assert feat["display_name"] == "Surface Area"
 
 

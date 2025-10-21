@@ -145,7 +145,6 @@ class Tracks:
                         "feature_type": "node",
                         "value_type": "float",
                         "num_values": 1,
-                        "valid_ndim": (3, 4),
                         "display_name": None,
                         "recompute": False,
                         "required": True,

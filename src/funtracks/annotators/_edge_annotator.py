@@ -25,7 +25,6 @@ def IoU() -> Feature:
         "feature_type": "edge",
         "value_type": "float",
         "num_values": 1,
-        "valid_ndim": (3, 4),
         "display_name": "IoU",
         "recompute": True,
         "required": True,
