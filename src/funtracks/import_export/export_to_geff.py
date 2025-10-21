@@ -127,4 +127,4 @@ def split_position_attr(tracks: Tracks) -> tuple[nx.DiGraph, list[str]]:
         return new_graph, new_keys
     else:
         # Position is already split into separate attributes
-        return tracks.graph, pos_key
+        return tracks.graph, list(pos_key)
