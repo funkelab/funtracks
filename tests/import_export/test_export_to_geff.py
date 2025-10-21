@@ -4,8 +4,7 @@ import zarr
 
 from funtracks.data_model.solution_tracks import SolutionTracks
 from funtracks.data_model.tracks import Tracks
-from funtracks.features import Feature
-from funtracks.import_export.export_to_geff import export_to_geff, split_position_attr
+from funtracks.import_export.export_to_geff import export_to_geff
 
 
 @pytest.mark.parametrize("ndim", [2, 3])
@@ -25,32 +24,31 @@ def test_export_to_geff(
         graph = request.getfixturevalue("graph_3d")
         segmentation = request.getfixturevalue("segmentation_3d")
 
-    tracks = track_type(graph, segmentation=segmentation, ndim=ndim + 1)
-
     # in the case the pos_attr_type is a list, split the position values over multiple
     # attributes to create a list type pos_attr.
     if pos_attr_type is list:
-        featureset = tracks.features
-        graph, axis_names = split_position_attr(tracks)
-        pos_feats = [
-            Feature(key=name, feature_type="node", value_type="float")
-            for name in axis_names
-        ]
-        featureset._features.remove(featureset.position)
-        for pos_feat in pos_feats:
-            featureset.add_feature(pos_feat)
-        featureset.position = pos_feats
-        tracks.graph = graph
-        tracks.features = featureset
+        # Determine position attribute keys based on dimensions
+        pos_keys = ["y", "x"] if ndim == 2 else ["z", "y", "x"]
+        # Split the composite position attribute into separate attributes
+        for node in graph.nodes():
+            pos = graph.nodes[node]["pos"]
+            for i, key in enumerate(pos_keys):
+                graph.nodes[node][key] = pos[i]
+            del graph.nodes[node]["pos"]
+        # Don't use segmentation when testing split pos, as it would compute centroids
+        tracks = track_type(graph, segmentation=None, pos_attr=pos_keys, ndim=ndim + 1)
+    else:
+        tracks = track_type(graph, segmentation=segmentation, ndim=ndim + 1)
     export_to_geff(tracks, tmp_path)
     z = zarr.open((tmp_path / "tracks").as_posix(), mode="r")
     assert isinstance(z, zarr.Group)
 
-    # Check that segmentation was saved
-    seg_path = tmp_path / "segmentation"
-    seg_zarr = zarr.open(str(seg_path), mode="r")
-    assert isinstance(seg_zarr, zarr.Array)
-    np.testing.assert_array_equal(seg_zarr[:], segmentation)
+    # Check that segmentation was saved (only when using segmentation)
+    if pos_attr_type is not list:
+        seg_path = tmp_path / "segmentation"
+        seg_zarr = zarr.open(str(seg_path), mode="r")
+        assert isinstance(seg_zarr, zarr.Array)
+        np.testing.assert_array_equal(seg_zarr[:], segmentation)
 
     # Check that scaling info is present in metadata
     attrs = dict(z.attrs)
@@ -87,7 +85,9 @@ def test_export_to_geff(
     z = zarr.open((export_dir / "tracks").as_posix(), mode="r")
     assert isinstance(z, zarr.Group)
 
-    seg_path = export_dir / "segmentation"
-    seg_zarr = zarr.open(str(seg_path), mode="r")
-    assert isinstance(seg_zarr, zarr.Array)
-    np.testing.assert_array_equal(seg_zarr[:], segmentation)
+    # Check segmentation only when it was used
+    if pos_attr_type is not list:
+        seg_path = export_dir / "segmentation"
+        seg_zarr = zarr.open(str(seg_path), mode="r")
+        assert isinstance(seg_zarr, zarr.Array)
+        np.testing.assert_array_equal(seg_zarr[:], segmentation)

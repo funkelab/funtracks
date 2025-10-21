@@ -2,7 +2,7 @@ import pytest
 
 from funtracks.annotators import RegionpropsAnnotator
 from funtracks.data_model import Tracks
-from funtracks.features import FeatureSet, Position, Time
+from funtracks.features import FeatureDict, Position, Time
 
 
 @pytest.mark.parametrize("ndim", [3, 4])
@@ -13,26 +13,32 @@ class TestRegionpropsAnnotator:
         seg = request.getfixturevalue(seg_name)
         graph = request.getfixturevalue(graph_name)
         axes = ("y", "x") if ndim == 3 else ("z", "y", "x")
-        features = FeatureSet(Time(), Position(axes))
+        features = FeatureDict(
+            features={"time": Time(), "pos": Position(axes)},
+            time_key="time",
+            position_key="pos",
+        )
         return Tracks(graph, segmentation=seg, features=features)
 
     def test_init(self, request, ndim):
         tracks = self.get_tracks(request, ndim)
         rp_ann = RegionpropsAnnotator(tracks)
-        assert len(rp_ann.features) == 4
+        assert (
+            len(rp_ann.features) == 5
+        )  # pos, area, ellipse_axis_radii, circularity, perimeter
 
     def test_compute_all(self, request, ndim):
         tracks = self.get_tracks(request, ndim)
-        assert len(tracks.features._features) == 2
+        assert len(tracks.features) == 2
 
         rp_ann = RegionpropsAnnotator(tracks)
-        all_features = RegionpropsAnnotator.all_supported_features(tracks)
+        all_feature_specs = RegionpropsAnnotator.get_feature_specs(tracks)
 
         rp_ann.compute(add_to_set=True)
-        assert len(tracks.features._features) == 6
+        assert len(tracks.features) == 7  # 2 original + 5 regionprops
         for node in tracks.nodes():
-            for feature in all_features:
-                assert feature.key in tracks.graph.nodes[node]
+            for spec in all_feature_specs:
+                assert spec.key in tracks.graph.nodes[node]
 
         with pytest.raises(KeyError, match="Key .* already in feature set"):
             rp_ann.compute(add_to_set=True)
@@ -48,11 +54,11 @@ class TestRegionpropsAnnotator:
         expected_area = 1
 
         rp_ann = RegionpropsAnnotator(tracks)
-        all_features = RegionpropsAnnotator.all_supported_features(tracks)
+        all_feature_specs = RegionpropsAnnotator.get_feature_specs(tracks)
         rp_ann.update(node_id)
         assert tracks.get_area(node_id) == expected_area
-        for feature in all_features:
-            assert feature.key in tracks.graph.nodes[node_id]
+        for spec in all_feature_specs:
+            assert spec.key in tracks.graph.nodes[node_id]
         # update an edge
         with pytest.raises(
             ValueError, match="RegionpropsAnnotator update expected a node, got edge"
@@ -68,43 +74,46 @@ class TestRegionpropsAnnotator:
         ):
             rp_ann.update(node_id)
 
-        for feature in all_features:
-            assert tracks.graph.nodes[node_id][feature.key] is None
+        for spec in all_feature_specs:
+            assert tracks.graph.nodes[node_id][spec.key] is None
 
     def test_add_remove_feature(self, request, ndim: int):
         tracks = self.get_tracks(request, ndim)
         rp_ann = RegionpropsAnnotator(tracks)
-        all_features = RegionpropsAnnotator.all_supported_features(tracks)
-        to_remove = all_features[1]
-        rp_ann.remove_feature(to_remove, update_set=False)
+        all_feature_specs = RegionpropsAnnotator.get_feature_specs(tracks)
+        to_remove_key = all_feature_specs[1].key  # area
+        rp_ann.remove_feature(to_remove_key, update_dict=False)
 
         rp_ann.compute(add_to_set=True)
-        assert len(tracks.features._features) == len(all_features) + 1  # instead of +2
+        # Start with 2 (time, pos), add 4 regionprops (not area), but pos already exists
+        # So we add 3 new ones: ellipse_axis_radii, circularity, perimeter, and overwrite
+        # pos
+        assert len(tracks.features) == 6  # time + pos(overwritten) + 3 others
         for node in tracks.nodes():
-            assert to_remove.key not in tracks.graph.nodes[node]
+            assert to_remove_key not in tracks.graph.nodes[node]
 
         # add it back in
-        rp_ann.add_feature(to_remove, update_set=True)
+        rp_ann.add_feature(to_remove_key, update_dict=True)
         # but remove a different one
-        second_remove = all_features[2]
-        rp_ann.remove_feature(second_remove)
+        second_remove_key = all_feature_specs[2].key  # ellipse_axis_radii
+        rp_ann.remove_feature(second_remove_key)
 
         # remove all but one pixel
         node_id = 3
-        prev_value = tracks.get_node_attr(node_id, second_remove.key)
+        prev_value = tracks.get_node_attr(node_id, second_remove_key)
         orig_pixels = tracks.get_pixels(node_id)
         pixels_to_remove = tuple(orig_pixels[d][1:] for d in range(len(orig_pixels)))
         tracks.set_pixels(pixels_to_remove, 0)
         rp_ann.update(node_id)
         # the new one we removed is not updated
-        assert tracks.get_node_attr(node_id, second_remove.key) == prev_value
+        assert tracks.get_node_attr(node_id, second_remove_key) == prev_value
         # the one we added back in is now present
-        assert tracks.get_node_attr(node_id, to_remove.key) is not None
+        assert tracks.get_node_attr(node_id, to_remove_key) is not None
 
     def test_missing_seg(self, request, ndim):
         tracks = self.get_tracks(request, ndim)
         tracks.segmentation = None
-        assert RegionpropsAnnotator.all_supported_features(tracks) == []
+        assert RegionpropsAnnotator.get_feature_specs(tracks) == []
         rp_ann = RegionpropsAnnotator(tracks)
         with pytest.raises(
             ValueError, match="Cannot compute regionprops features without segmentation."

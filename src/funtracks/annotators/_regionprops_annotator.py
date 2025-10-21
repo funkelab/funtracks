@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
 
@@ -21,6 +21,20 @@ if TYPE_CHECKING:
     from funtracks.data_model import Tracks
 
 
+class FeatureSpec(NamedTuple):
+    """Specification for a regionprops feature.
+
+    Attributes:
+        key: The key to use in the graph attributes and feature dict
+        feature: The Feature TypedDict definition
+        regionprops_attr: The name of the corresponding regionprops attribute
+    """
+
+    key: str
+    feature: Feature
+    regionprops_attr: str
+
+
 class RegionpropsAnnotator(GraphAnnotator):
     """A graph annotator using regionprops to extract node features from segmentations.
 
@@ -36,43 +50,35 @@ class RegionpropsAnnotator(GraphAnnotator):
     """
 
     def __init__(self, tracks: Tracks):
-        feats, rp_names = RegionpropsAnnotator.all_supported_features(tracks)
+        specs = RegionpropsAnnotator.get_feature_specs(tracks)
+        feats = {spec.key: spec.feature for spec in specs}
         super().__init__(tracks, feats)
-        self.regionprops_names = rp_names
+        # Build regionprops name mapping from specs
+        self.regionprops_names = {spec.key: spec.regionprops_attr for spec in specs}
 
-    @classmethod
-    def all_supported_features(
-        cls, tracks: Tracks
-    ) -> tuple[dict[str, Feature], dict[str, str]]:
-        """Get all regionprops features that can be computed for the tracks.
+    @staticmethod
+    def get_feature_specs(tracks: Tracks) -> list[FeatureSpec]:
+        """Get specifications for all supported regionprops features.
 
         Args:
-            tracks (Tracks): The tracks to get regionprops features for.
+            tracks (Tracks): The tracks to get feature specs for.
 
         Returns:
-            tuple[dict[str, Feature], dict[str, str]]: A dict mapping keys to
-                Features, and a dict mapping keys to regionprops attribute names
+            list[FeatureSpec]: List of feature specifications with key, feature,
+                and regionprops attribute name. Empty list if no segmentation.
         """
         if tracks.segmentation is None:
-            return {}, {}
+            return []
         ndim = tracks.ndim
-        features = {
-            "pos": Centroid(axes=tracks.axis_names),
-            "area": Area(ndim=ndim),
+        return [
+            FeatureSpec("pos", Centroid(axes=tracks.axis_names), "centroid"),
+            FeatureSpec("area", Area(ndim=ndim), "area"),
             # TODO: Add in intensity when image is passed
-            # "intensity": Intensity(ndim=ndim),
-            "ellipse_axis_radii": EllipsoidAxes(ndim=ndim),
-            "circularity": Circularity(ndim=ndim),
-            "perimeter": Perimeter(ndim=ndim),
-        }
-        regionprops_names = {
-            "pos": "centroid",
-            "area": "area",
-            "ellipse_axis_radii": "axes",
-            "circularity": "circularity",
-            "perimeter": "perimeter",
-        }
-        return features, regionprops_names
+            # FeatureSpec("intensity", Intensity(ndim=ndim), "intensity"),
+            FeatureSpec("ellipse_axis_radii", EllipsoidAxes(ndim=ndim), "axes"),
+            FeatureSpec("circularity", Circularity(ndim=ndim), "circularity"),
+            FeatureSpec("perimeter", Perimeter(ndim=ndim), "perimeter"),
+        ]
 
     def compute(self, add_to_set=False) -> None:
         """Compute the currently included features and add them to the tracks.

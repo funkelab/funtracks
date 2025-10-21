@@ -78,8 +78,13 @@ class GraphAnnotator:
         """Add the currently included features to the tracks FeatureDict.
 
         Usually performed during initial computation.
+
+        Raises:
+            KeyError: If any key already exists in the feature dict.
         """
         for key, feature in self.features.items():
+            if key in self.tracks.features:
+                raise KeyError(f"Key '{key}' already in feature set")
             self.tracks.features[key] = feature
 
     def compute(self) -> None:

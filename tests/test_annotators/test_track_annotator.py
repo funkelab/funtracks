@@ -2,7 +2,7 @@ import pytest
 
 from funtracks.annotators import TrackAnnotator
 from funtracks.data_model import SolutionTracks, Tracks
-from funtracks.features import FeatureSet, Position, Time
+from funtracks.features import FeatureDict, Position, Time
 
 
 @pytest.mark.parametrize("ndim", [3, 4])
@@ -13,7 +13,11 @@ class TestTrackAnnotator:
         seg = request.getfixturevalue(seg_name)
         graph = request.getfixturevalue(graph_name)
         axes = ("y", "x") if ndim == 3 else ("z", "y", "x")
-        features = FeatureSet(Time(), Position(axes))
+        features = FeatureDict(
+            features={"time": Time(), "pos": Position(axes)},
+            time_key="time",
+            position_key="pos",
+        )
         return Tracks(graph, segmentation=seg, features=features)
 
     def get_soln_tracks(self, request, ndim) -> SolutionTracks:
@@ -34,16 +38,16 @@ class TestTrackAnnotator:
 
     def test_compute_all(self, request, ndim) -> None:
         tracks = self.get_soln_tracks(request, ndim)
-        assert len(tracks.features._features) == 2
+        assert len(tracks.features) == 2
 
         ann = TrackAnnotator(tracks)
         all_features = ann.features
 
         ann.compute(add_to_set=True)
-        assert len(tracks.features._features) == 2 + len(all_features)
+        assert len(tracks.features) == 2 + len(all_features)
         for node in tracks.nodes():
-            for feature in all_features:
-                assert feature.key in tracks.graph.nodes[node]
+            for key in all_features:
+                assert key in tracks.graph.nodes[node]
 
         with pytest.raises(KeyError, match="Key .* already in feature set"):
             ann.compute(add_to_set=True)
@@ -59,7 +63,7 @@ class TestTrackAnnotator:
             [6],
         ]
         for components, key in zip(
-            [lineages, tracklets], [ann.lineage.key, ann.tracklet.key], strict=True
+            [lineages, tracklets], [ann.lineage_key, ann.tracklet_key], strict=True
         ):
             # one unique id per component
             id_sets = [
@@ -80,23 +84,23 @@ class TestTrackAnnotator:
         node_id = 6
         edge_id = (4, 6)
         tracks.graph.add_edge(*edge_id)
-        to_remove = ann.lineage
-        orig_lin = tracks.get_node_attr(node_id, ann.lineage.key, required=True)
-        orig_tra = tracks.get_node_attr(node_id, ann.tracklet.key, required=True)
+        to_remove_key = ann.lineage_key
+        orig_lin = tracks.get_node_attr(node_id, ann.lineage_key, required=True)
+        orig_tra = tracks.get_node_attr(node_id, ann.tracklet_key, required=True)
 
         # remove one feature from computation
-        ann.remove_feature(to_remove, update_set=True)
+        ann.remove_feature(to_remove_key, update_dict=True)
         ann.compute(add_to_set=False)  # this should update tra but not lin
-        assert len(tracks.features._features) == 3  # lin not added to set
-        assert tracks.get_node_attr(node_id, ann.lineage.key, required=True) == orig_lin
-        assert tracks.get_node_attr(node_id, ann.tracklet.key, required=True) != orig_tra
+        assert len(tracks.features) == 3  # lin not added to set
+        assert tracks.get_node_attr(node_id, ann.lineage_key, required=True) == orig_lin
+        assert tracks.get_node_attr(node_id, ann.tracklet_key, required=True) != orig_tra
 
         # add it back in
-        ann.add_feature(to_remove, update_set=True)
+        ann.add_feature(to_remove_key, update_dict=True)
         ann.compute(add_to_set=False)
         # now both are updated
-        assert tracks.get_node_attr(node_id, ann.lineage.key, required=True) != orig_lin
-        assert tracks.get_node_attr(node_id, ann.tracklet.key, required=True) != orig_tra
+        assert tracks.get_node_attr(node_id, ann.lineage_key, required=True) != orig_lin
+        assert tracks.get_node_attr(node_id, ann.tracklet_key, required=True) != orig_tra
 
     def test_invalid(self, request, ndim) -> None:
         tracks = self.get_tracks(request, ndim)

@@ -1,4 +1,5 @@
 import json
+from collections.abc import Sequence
 
 import pytest
 from networkx.utils import graphs_equal
@@ -36,8 +37,34 @@ def test_save_load(
     solution = bool(issubclass(track_type, SolutionTracks))
     loaded = load_tracks(tmp_path, solution=solution)
     assert loaded.ndim == tracks.ndim
-    assert loaded.features.position.model_dump() == tracks.features.position.model_dump()
-    assert loaded.features.time.model_dump() == tracks.features.time.model_dump()
+    # Check feature keys and important properties match (allow tuple vs list diff)
+    assert loaded.features.time_key == tracks.features.time_key
+    assert loaded.features.position_key == tracks.features.position_key
+
+    # Check that features dictionaries have same keys
+    assert set(loaded.features.keys()) == set(tracks.features.keys())
+
+    # Check that each feature has matching values
+    for key in tracks.features:
+        loaded_feature = loaded.features[key]
+        tracks_feature = tracks.features[key]
+
+        for attr_name, attr_value in tracks_feature.items():
+            loaded_attr_value = loaded_feature[attr_name]
+
+            # For sequence attributes, cast to list to compare (handles tuple vs list)
+            if isinstance(attr_value, Sequence) and not isinstance(attr_value, str):
+                assert list(loaded_attr_value) == list(attr_value), (
+                    f"Feature '{key}' attribute '{attr_name}' mismatch: "
+                    f"{loaded_attr_value} != {attr_value}"
+                )
+            # For non-sequence attributes, direct equality
+            else:
+                assert loaded_attr_value == attr_value, (
+                    f"Feature '{key}' attribute '{attr_name}' mismatch: "
+                    f"{loaded_attr_value} != {attr_value}"
+                )
+
     assert loaded.scale == tracks.scale
     assert loaded.ndim == tracks.ndim
 
@@ -94,5 +121,5 @@ def test_load_without_features(tmp_path, graph_2d):
         json.dump(attrs, f)
 
     imported_tracks = load_tracks(tracks_path)
-    assert imported_tracks.features.time.key == "time"
-    assert imported_tracks.features.position.key == "pos"
+    assert imported_tracks.features.time_key == "time"
+    assert imported_tracks.features.position_key == "pos"
