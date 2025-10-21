@@ -57,13 +57,17 @@ def export_to_geff(tracks: Tracks, directory: Path, overwrite: bool = False):
     # together in a list
     graph, axis_names = split_position_attr(tracks)
     if tracks.features.time_key is not None:
+        if axis_names is None:
+            axis_names = []
         axis_names.insert(0, tracks.features.time_key)
-
-    axis_types = (
-        ["time", "space", "space"]
-        if tracks.ndim == 3
-        else ["time", "space", "space", "space"]
-    )
+    if axis_names is not None:
+        axis_types = (
+            ["time", "space", "space"]
+            if tracks.ndim == 3
+            else ["time", "space", "space", "space"]
+        )
+    else:
+        axis_types = None
     if tracks.scale is None:
         tracks.scale = (1.0,) * tracks.ndim
 
@@ -100,7 +104,7 @@ def export_to_geff(tracks: Tracks, directory: Path, overwrite: bool = False):
     )
 
 
-def split_position_attr(tracks: Tracks) -> tuple[nx.DiGraph, list[str]]:
+def split_position_attr(tracks: Tracks) -> tuple[nx.DiGraph, list[str] | None]:
     """Spread the spatial coordinates to separate node attrs in order to export to geff
     format.
 
@@ -114,6 +118,7 @@ def split_position_attr(tracks: Tracks) -> tuple[nx.DiGraph, list[str]]:
 
     """
     pos_key = tracks.features.position_key
+
     if isinstance(pos_key, str):
         # Position is stored as a single attribute, need to split
         new_graph = tracks.graph.copy()
@@ -126,6 +131,8 @@ def split_position_attr(tracks: Tracks) -> tuple[nx.DiGraph, list[str]]:
                 attrs[new_keys[i]] = pos[i]
 
         return new_graph, new_keys
-    else:
+    elif pos_key is not None:
         # Position is already split into separate attributes
         return tracks.graph, list(pos_key)
+    else:
+        return tracks.graph, None
