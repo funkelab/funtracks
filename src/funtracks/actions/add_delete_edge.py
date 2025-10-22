@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 
 class AddEdge(TracksAction):
-    """Action for adding new edges"""
+    """Action for adding a new edge. Endpoints must exist already."""
 
     def __init__(self, tracks: SolutionTracks, edge: Edge):
         super().__init__(tracks)
@@ -27,6 +27,9 @@ class AddEdge(TracksAction):
         Steps:
         - add each edge to the graph. Assumes all edges are valid (they should be checked
         at this point already)
+
+        Raises:
+            ValueError if an endpoint of the edge does not exist
         """
         # Check that both endpoints exist before computing edge attributes
         for node in self.edge:
@@ -41,7 +44,7 @@ class AddEdge(TracksAction):
 
 
 class DeleteEdge(TracksAction):
-    """Action for deleting edges"""
+    """Action for deleting an edge. Edge must exist already."""
 
     def __init__(self, tracks: SolutionTracks, edge: Edge):
         super().__init__(tracks)
@@ -49,12 +52,14 @@ class DeleteEdge(TracksAction):
         self._apply()
 
     def inverse(self) -> TracksAction:
-        """Restore edges and their attributes"""
+        """Restore edge and their attributes"""
         return AddEdge(self.tracks, self.edge)
 
     def _apply(self) -> None:
         """Steps:
         - Remove the edges from the graph
+        Raises:
+            ValueError if edge does not exist on the graph
         """
         if self.tracks.graph.has_edge(*self.edge):
             self.tracks.graph.remove_edge(*self.edge)
