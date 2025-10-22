@@ -1,44 +1,50 @@
+import copy
+
 import numpy as np
+import pytest
 from numpy.testing import assert_array_almost_equal
 
 from funtracks.actions import (
     UpdateNodeSeg,
 )
-from funtracks.data_model import SolutionTracks
 from funtracks.data_model.graph_attributes import NodeAttr
 
 
-def test_update_node_segs(segmentation_2d, graph_2d):
-    tracks = SolutionTracks(
-        graph_2d.copy(), segmentation=segmentation_2d.copy(), recompute_track_ids=False
-    )
+@pytest.mark.parametrize("ndim", [3, 4])
+def test_update_node_segs(get_tracks, ndim):
+    # Get tracks with segmentation
+    tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
+    reference_graph = copy.deepcopy(tracks.graph)
 
-    # add a couple pixels to the first node
-    new_seg = segmentation_2d.copy()
-    new_seg[0][0] = 1
+    original_seg = tracks.segmentation.copy()
+    original_area = tracks.graph.nodes[1][NodeAttr.AREA.value]
+    original_pos = tracks.graph.nodes[1][NodeAttr.POS.value]
+
+    # Add a couple pixels to the first node
+    new_seg = tracks.segmentation.copy()
+    if ndim == 3:
+        new_seg[0][0][0] = 1  # 2D spatial
+    else:
+        new_seg[0][0][0][0] = 1  # 3D spatial
     node = 1
 
-    pixels = np.nonzero(segmentation_2d != new_seg)
+    pixels = np.nonzero(original_seg != new_seg)
     action = UpdateNodeSeg(tracks, node, pixels=pixels, added=True)
 
-    assert set(tracks.graph.nodes()) == set(graph_2d.nodes())
-    assert tracks.graph.nodes[1][NodeAttr.AREA.value] == 1345
-    assert (
-        tracks.graph.nodes[1][NodeAttr.POS.value] != graph_2d.nodes[1][NodeAttr.POS.value]
-    )
+    assert set(tracks.graph.nodes()) == set(reference_graph.nodes())
+    assert tracks.graph.nodes[1][NodeAttr.AREA.value] > original_area
+    assert tracks.graph.nodes[1][NodeAttr.POS.value] != original_pos
     assert_array_almost_equal(tracks.segmentation, new_seg)
 
     inverse = action.inverse()
-    assert set(tracks.graph.nodes()) == set(graph_2d.nodes())
+    assert set(tracks.graph.nodes()) == set(reference_graph.nodes())
     for node, data in tracks.graph.nodes(data=True):
-        assert data == graph_2d.nodes[node]
-    assert_array_almost_equal(tracks.segmentation, segmentation_2d)
+        assert data == reference_graph.nodes[node]
+    assert_array_almost_equal(tracks.segmentation, original_seg)
 
     inverse.inverse()
 
-    assert set(tracks.graph.nodes()) == set(graph_2d.nodes())
-    assert tracks.graph.nodes[1][NodeAttr.AREA.value] == 1345
-    assert (
-        tracks.graph.nodes[1][NodeAttr.POS.value] != graph_2d.nodes[1][NodeAttr.POS.value]
-    )
+    assert set(tracks.graph.nodes()) == set(reference_graph.nodes())
+    assert tracks.graph.nodes[1][NodeAttr.AREA.value] > original_area
+    assert tracks.graph.nodes[1][NodeAttr.POS.value] != original_pos
     assert_array_almost_equal(tracks.segmentation, new_seg)

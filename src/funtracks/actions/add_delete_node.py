@@ -79,6 +79,12 @@ class AddNode(TracksAction):
         for attr, values in attrs.items():
             self.tracks._set_node_attr(self.node, attr, values)
 
+        # track_id is required for SolutionTracks
+        if NodeAttr.TRACK_ID.value not in attrs:
+            raise ValueError(
+                f"Must provide a {NodeAttr.TRACK_ID.value} attribute for each "
+                "node in SolutionTracks"
+            )
         track_id = attrs[NodeAttr.TRACK_ID.value]
         if track_id not in self.tracks.track_id_to_node:
             self.tracks.track_id_to_node[track_id] = []

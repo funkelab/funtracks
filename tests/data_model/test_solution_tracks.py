@@ -6,13 +6,17 @@ from funtracks.actions import AddNode
 from funtracks.data_model import NodeAttr, SolutionTracks, Tracks
 
 
-def test_recompute_track_ids(graph_2d):
-    tracks = SolutionTracks(graph_2d, ndim=3, recompute_track_ids=True)
+def test_recompute_track_ids(graph_2d_with_computed_features):
+    tracks = SolutionTracks(
+        graph_2d_with_computed_features, ndim=3, recompute_track_ids=True
+    )
     assert tracks.get_next_track_id() == 5
 
 
-def test_next_track_id(graph_2d):
-    tracks = SolutionTracks(graph_2d, ndim=3, recompute_track_ids=False)
+def test_next_track_id(graph_2d_with_computed_features):
+    tracks = SolutionTracks(
+        graph_2d_with_computed_features, ndim=3, recompute_track_ids=False
+    )
     assert tracks.get_next_track_id() == 6
     AddNode(
         tracks,
@@ -22,8 +26,8 @@ def test_next_track_id(graph_2d):
     assert tracks.get_next_track_id() == 11
 
 
-def test_node_id_to_track_id(graph_2d):
-    tracks = SolutionTracks(graph_2d, ndim=3)
+def test_node_id_to_track_id(graph_2d_with_computed_features):
+    tracks = SolutionTracks(graph_2d_with_computed_features, ndim=3)
     with pytest.warns(
         DeprecationWarning,
         match="node_id_to_track_id property will be removed in funtracks v2. ",
@@ -31,9 +35,13 @@ def test_node_id_to_track_id(graph_2d):
         tracks.node_id_to_track_id  # noqa B018
 
 
-def test_from_tracks_cls(graph_2d):
+def test_from_tracks_cls(graph_2d_with_computed_features):
     tracks = Tracks(
-        graph_2d, ndim=3, pos_attr="POSITION", time_attr="TIME", scale=(2, 2, 2)
+        graph_2d_with_computed_features,
+        ndim=3,
+        pos_attr="POSITION",
+        time_attr="TIME",
+        scale=(2, 2, 2),
     )
     solution_tracks = SolutionTracks.from_tracks(tracks)
     assert solution_tracks.graph == tracks.graph
@@ -59,8 +67,10 @@ def test_next_track_id_empty():
     assert tracks.get_next_track_id() == 1
 
 
-def test_export_to_csv(graph_2d, graph_3d, tmp_path):
-    tracks = SolutionTracks(graph_2d, ndim=3)
+def test_export_to_csv(
+    graph_2d_with_computed_features, graph_3d_with_computed_features, tmp_path
+):
+    tracks = SolutionTracks(graph_2d_with_computed_features, ndim=3)
     temp_file = tmp_path / "test_export_2d.csv"
     tracks.export_tracks(temp_file)
     with open(temp_file) as f:
@@ -71,7 +81,7 @@ def test_export_to_csv(graph_2d, graph_3d, tmp_path):
     header = ["t", "y", "x", "id", "parent_id", "track_id"]
     assert lines[0].strip().split(",") == header
 
-    tracks = SolutionTracks(graph_3d, ndim=4)
+    tracks = SolutionTracks(graph_3d_with_computed_features, ndim=4)
     temp_file = tmp_path / "test_export_3d.csv"
     tracks.export_tracks(temp_file)
     with open(temp_file) as f:

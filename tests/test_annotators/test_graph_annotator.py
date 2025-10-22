@@ -5,8 +5,8 @@ from funtracks.data_model import Tracks
 from funtracks.features import Time
 
 
-def test_base_graph_annotator(graph_2d, segmentation_2d):
-    tracks = Tracks(graph_2d, segmentation=segmentation_2d)
+def test_base_graph_annotator(graph_clean, segmentation_2d):
+    tracks = Tracks(graph_clean, segmentation=segmentation_2d)
     ann = GraphAnnotator(tracks, {})
     assert len(ann.features) == 0
 

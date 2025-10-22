@@ -6,38 +6,32 @@ from funtracks.data_model import Tracks
 
 @pytest.mark.parametrize("ndim", [3, 4])
 class TestRegionpropsAnnotator:
-    def get_tracks(self, request, ndim) -> Tracks:
-        seg_name = "segmentation_2d" if ndim == 3 else "segmentation_3d"
-        graph_name = "graph_2d" if ndim == 3 else "graph_3d"
-        seg = request.getfixturevalue(seg_name)
-        graph = request.getfixturevalue(graph_name)
-        # Tracks will automatically build features including managed ones
-        return Tracks(graph, segmentation=seg, ndim=ndim)
-
-    def test_init(self, request, ndim):
-        tracks = self.get_tracks(request, ndim)
+    def test_init(self, get_graph, get_segmentation, ndim):
+        graph = get_graph(ndim, with_features="clean")
+        seg = get_segmentation(ndim)
+        tracks = Tracks(graph, segmentation=seg, ndim=ndim)
         rp_ann = RegionpropsAnnotator(tracks)
         assert (
             len(rp_ann.features) == 5
         )  # pos, area, ellipse_axis_radii, circularity, perimeter
 
-    def test_compute_all(self, request, ndim):
-        tracks = self.get_tracks(request, ndim)
-        # Features are now automatically added during Tracks init
-        assert "pos" in tracks.features
-        assert "area" in tracks.features
-
+    def test_compute_all(self, get_graph, get_segmentation, ndim):
+        graph = get_graph(ndim, with_features="clean")
+        seg = get_segmentation(ndim)
+        tracks = Tracks(graph, segmentation=seg, ndim=ndim)
         rp_ann = RegionpropsAnnotator(tracks)
         all_feature_specs = RegionpropsAnnotator.get_feature_specs(tracks)
 
-        # Compute values (features already in tracks.features)
+        # Compute values
         rp_ann.compute()
         for node in tracks.nodes():
             for spec in all_feature_specs:
                 assert spec.key in tracks.graph.nodes[node]
 
-    def test_update_all(self, request, ndim):
-        tracks = self.get_tracks(request, ndim)
+    def test_update_all(self, get_graph, get_segmentation, ndim):
+        graph = get_graph(ndim, with_features="clean")
+        seg = get_segmentation(ndim)
+        tracks = Tracks(graph, segmentation=seg, ndim=ndim)
         node_id = 3
 
         orig_pixels = tracks.get_pixels(node_id)
@@ -70,8 +64,10 @@ class TestRegionpropsAnnotator:
         for spec in all_feature_specs:
             assert tracks.graph.nodes[node_id][spec.key] is None
 
-    def test_add_remove_feature(self, request, ndim: int):
-        tracks = self.get_tracks(request, ndim)
+    def test_add_remove_feature(self, get_graph, get_segmentation, ndim):
+        graph = get_graph(ndim, with_features="clean")
+        seg = get_segmentation(ndim)
+        tracks = Tracks(graph, segmentation=seg, ndim=ndim)
         rp_ann = tracks.annotator_manager.annotators["regionprops"]
         all_feature_specs = RegionpropsAnnotator.get_feature_specs(tracks)
         to_remove_key = all_feature_specs[1].key  # area
@@ -105,9 +101,9 @@ class TestRegionpropsAnnotator:
         # the one we added back in is now present
         assert tracks.get_node_attr(node_id, to_remove_key) is not None
 
-    def test_missing_seg(self, request, ndim):
-        tracks = self.get_tracks(request, ndim)
-        tracks.segmentation = None
+    def test_missing_seg(self, get_graph, ndim):
+        graph = get_graph(ndim, with_features="clean")
+        tracks = Tracks(graph, segmentation=None, ndim=ndim)
         assert RegionpropsAnnotator.get_feature_specs(tracks) == []
         rp_ann = RegionpropsAnnotator(tracks)
         with pytest.raises(

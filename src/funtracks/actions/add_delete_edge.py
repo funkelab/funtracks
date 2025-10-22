@@ -28,13 +28,15 @@ class AddEdge(TracksAction):
         - add each edge to the graph. Assumes all edges are valid (they should be checked
         at this point already)
         """
-        attrs: dict[str, Sequence[Any]] = {}
-        attrs.update(self.tracks._compute_edge_attrs(self.edge))
+        # Check that both endpoints exist before computing edge attributes
         for node in self.edge:
             if not self.tracks.graph.has_node(node):
                 raise ValueError(
                     f"Cannot add edge {self.edge}: endpoint {node} not in graph yet"
                 )
+
+        attrs: dict[str, Sequence[Any]] = {}
+        attrs.update(self.tracks._compute_edge_attrs(self.edge))
         self.tracks.graph.add_edge(self.edge[0], self.edge[1], **attrs)
 
 
