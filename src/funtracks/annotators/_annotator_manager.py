@@ -69,7 +69,9 @@ class AnnotatorManager:
             # Edge features
             from ._edge_annotator import IoU
 
-            features["IoU"] = IoU()
+            # TODO: I hate this. Why aren't we using the Annotators to define what
+            # features exist??
+            features["iou"] = IoU()
 
         # TrackAnnotator features (require SolutionTracks)
         if is_solution_tracks:

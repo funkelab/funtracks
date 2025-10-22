@@ -43,7 +43,7 @@ class EdgeAnnotator(GraphAnnotator):
     """
 
     def __init__(self, tracks: Tracks) -> None:
-        self.iou_key = "IoU"
+        self.iou_key = "iou"
         feats = {} if tracks.segmentation is None else {self.iou_key: IoU()}
         super().__init__(tracks, feats)
 

@@ -31,6 +31,7 @@ class SolutionTracks(Tracks):
         ndim: int | None = None,
         recompute_track_ids: bool = True,
         features: FeatureDict | None = None,
+        existing_features: list[str] | None = None,
     ):
         super().__init__(
             graph,
@@ -40,6 +41,7 @@ class SolutionTracks(Tracks):
             scale=scale,
             ndim=ndim,
             features=features,
+            existing_features=existing_features,
         )
         self.max_track_id: int
         self.track_id_to_node: dict[int, list[int]] = {}
