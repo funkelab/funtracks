@@ -16,8 +16,8 @@ from funtracks.data_model.graph_attributes import EdgeAttr
 @pytest.mark.parametrize("with_seg", [True, False])
 def test_add_delete_edges(get_tracks, ndim, with_seg):
     tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
-    graph_with_edges = tracks.graph
-    orig_segmentation = copy.deepcopy(tracks.segmentation)
+    reference_graph = copy.deepcopy(tracks.graph)
+    reference_seg = copy.deepcopy(tracks.segmentation)
 
     # Create an empty tracks with just nodes (no edges)
     node_graph = nx.create_empty_copy(tracks.graph, with_data=True)
@@ -28,28 +28,28 @@ def test_add_delete_edges(get_tracks, ndim, with_seg):
     action = ActionGroup(tracks=tracks, actions=[AddEdge(tracks, edge) for edge in edges])
     # TODO: What if adding an edge that already exists?
     # TODO: test all the edge cases, invalid operations, etc. for all actions
-    assert set(tracks.graph.nodes()) == set(graph_with_edges.nodes())
+    assert set(tracks.graph.nodes()) == set(reference_graph.nodes())
     if with_seg:
         for edge in tracks.graph.edges():
             assert tracks.graph.edges[edge][EdgeAttr.IOU.value] == pytest.approx(
-                graph_with_edges.edges[edge][EdgeAttr.IOU.value], abs=0.01
+                reference_graph.edges[edge][EdgeAttr.IOU.value], abs=0.01
             )
-        assert_array_almost_equal(tracks.segmentation, orig_segmentation)
+        assert_array_almost_equal(tracks.segmentation, reference_seg)
 
     inverse = action.inverse()
     assert set(tracks.graph.edges()) == set()
     if tracks.segmentation is not None:
-        assert_array_almost_equal(tracks.segmentation, orig_segmentation)
+        assert_array_almost_equal(tracks.segmentation, reference_seg)
 
     inverse.inverse()
-    assert set(tracks.graph.nodes()) == set(graph_with_edges.nodes())
-    assert set(tracks.graph.edges()) == set(graph_with_edges.edges())
+    assert set(tracks.graph.nodes()) == set(reference_graph.nodes())
+    assert set(tracks.graph.edges()) == set(reference_graph.edges())
     if with_seg:
         for edge in tracks.graph.edges():
             assert tracks.graph.edges[edge][EdgeAttr.IOU.value] == pytest.approx(
-                graph_with_edges.edges[edge][EdgeAttr.IOU.value], abs=0.01
+                reference_graph.edges[edge][EdgeAttr.IOU.value], abs=0.01
             )
-        assert_array_almost_equal(tracks.segmentation, orig_segmentation)
+        assert_array_almost_equal(tracks.segmentation, reference_seg)
 
 
 def test_add_edge_missing_endpoint(get_tracks):
