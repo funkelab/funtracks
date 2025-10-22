@@ -3,7 +3,7 @@ import pytest
 from funtracks.data_model import SolutionTracks, Tracks
 
 
-def test_annotator_manager_initialization_with_segmentation(graph_clean, segmentation_2d):
+def test_annotator_manager_init_with_segmentation(graph_clean, segmentation_2d):
     """Test AnnotatorManager initializes regionprops and edge annotators with
     segmentation."""
     tracks = Tracks(graph_clean, segmentation=segmentation_2d, ndim=3)
@@ -13,7 +13,7 @@ def test_annotator_manager_initialization_with_segmentation(graph_clean, segment
     assert "tracks" not in tracks.annotator_manager.annotators  # Not a SolutionTracks
 
 
-def test_annotator_manager_initialization_without_segmentation(graph_2d_with_position):
+def test_annotator_manager_init_without_segmentation(graph_2d_with_position):
     """Test AnnotatorManager doesn't create annotators without segmentation."""
     tracks = Tracks(graph_2d_with_position, segmentation=None, ndim=3)
 
@@ -22,7 +22,7 @@ def test_annotator_manager_initialization_without_segmentation(graph_2d_with_pos
     assert "tracks" not in tracks.annotator_manager.annotators
 
 
-def test_annotator_manager_initialization_solution_tracks(graph_clean, segmentation_2d):
+def test_annotator_manager_init_solution_tracks(graph_clean, segmentation_2d):
     """Test AnnotatorManager creates all annotators for SolutionTracks with
     segmentation."""
     tracks = SolutionTracks(graph_clean, segmentation=segmentation_2d, ndim=3)
