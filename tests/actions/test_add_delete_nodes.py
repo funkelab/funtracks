@@ -63,19 +63,19 @@ def test_add_delete_nodes(get_tracks, ndim, with_seg):
 
 def test_add_node_missing_time(get_tracks):
     tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
-    with pytest.raises(ValueError, match="Must provide a time attribute for each node"):
+    with pytest.raises(ValueError, match="Must provide a time attribute for node"):
         AddNode(tracks, 8, {})
 
 
 def test_add_node_missing_pos(get_tracks):
     tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
     # First test: missing track_id raises an error
-    with pytest.raises(ValueError, match="Must provide a track_id attribute"):
+    with pytest.raises(ValueError, match="Must provide a track_id attribute for node"):
         AddNode(tracks, 8, {"time": 2})
 
     # Second test: with track_id but without segmentation, missing pos raises an error
     tracks_no_seg = get_tracks(ndim=3, with_seg=False, is_solution=True)
     with pytest.raises(
-        ValueError, match="Must provide positions or segmentation and ids"
+        ValueError, match="Must provide position or segmentation for node"
     ):
         AddNode(tracks_no_seg, 8, {"time": 2, "track_id": 1})
