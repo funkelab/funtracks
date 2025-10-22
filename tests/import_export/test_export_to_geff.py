@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 import zarr
 
-from funtracks.data_model.tracks import Tracks
+from funtracks.data_model import SolutionTracks, Tracks
 from funtracks.import_export.export_to_geff import export_to_geff
 
 
@@ -20,11 +20,8 @@ def test_export_to_geff(
     pos_attr_type,
     tmp_path,
 ):
-    # Skip SolutionTracks for split pos testing - only test Tracks with split pos
-    if pos_attr_type is list and is_solution:
-        pytest.skip("Split pos attributes only tested with Tracks, not SolutionTracks")
-
-    # Skip split pos with segmentation - pre-existing bug in export_to_geff
+    # Skip split pos with segmentation - centroid will replace the list automatically
+    # TODO: allow centroid with split attribute storage
     if pos_attr_type is list and with_seg:
         pytest.skip(
             "Split pos attributes with segmentation not currently supported "
@@ -52,7 +49,8 @@ def test_export_to_geff(
         existing_features = list(pos_keys) if with_seg else None
         if with_seg:
             existing_features.extend(["area", "iou"])
-        tracks = Tracks(
+        tracks_cls = SolutionTracks if is_solution else Tracks
+        tracks = tracks_cls(
             graph,
             segmentation=segmentation,
             pos_attr=pos_keys,
