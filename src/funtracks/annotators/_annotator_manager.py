@@ -115,23 +115,14 @@ class AnnotatorManager:
     def update(self, element: int | tuple[int, int]) -> None:
         """Update features for a specific node or edge.
 
-        Routes the update to the appropriate annotator(s) based on element type.
+        Broadcasts the update to all annotators. Each annotator decides whether
+        to handle the element based on its type and responsibilities.
 
         Args:
             element: Either a node ID (int) or edge tuple (int, int)
         """
-        if isinstance(element, tuple):
-            # Edge update
-            if "edges" in self.annotators:
-                self.annotators["edges"].update(element)
-        elif isinstance(element, int):
-            # Node update
-            if "regionprops" in self.annotators:
-                self.annotators["regionprops"].update(element)
-        else:
-            raise ValueError(
-                f"Element must be int or tuple, got {element} of type {type(element)}"
-            )
+        for annotator in self.annotators.values():
+            annotator.update(element)
 
     def recompute_tracks(self) -> None:
         """Recompute track-level features (tracklet_id, lineage_id).

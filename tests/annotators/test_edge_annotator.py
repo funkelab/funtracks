@@ -50,11 +50,8 @@ class TestEdgeAnnotator:
 
         ann.update(edge_id)
         assert tracks.get_edge_attr(edge_id, "iou", required=True) == expected_iou
-        # update a node
-        with pytest.raises(
-            ValueError, match="EdgeAnnotator update expected an edge, got node"
-        ):
-            ann.update(3)
+        # update a node - should be silently ignored
+        ann.update(3)
 
         # segmentation is fully erased and you try to update
         node_id = 1

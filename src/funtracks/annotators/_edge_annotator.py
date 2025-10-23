@@ -107,21 +107,19 @@ class EdgeAnnotator(GraphAnnotator):
             self.tracks._set_edge_attr(edge, self.iou_key, 0)
 
     def update(self, element: int | tuple[int, int]):
-        """Update the regionprops features for the given node.
+        """Update the edge features for the given edge.
 
         Args:
-            element (int | tuple[int, int]): The edge to update. Should be an edge
-                and not a node, but has possible edge type to match generic signature.
+            element (int | tuple[int, int]): The edge to update. Nodes are ignored.
 
         Raises:
             ValueError: If the tracks do not have a segmentation
-            ValueError: If a node element is passed instead of an edge.
         """
         if self.tracks.segmentation is None:
             raise ValueError("Cannot update edge features without segmentation.")
 
         if isinstance(element, int):
-            raise ValueError(f"EdgeAnnotator update expected an edge, got node {element}")
+            return  # Silently ignore nodes
         if self.iou_key in self.features:
             source, target = element
             start_time = self.tracks.get_time(source)

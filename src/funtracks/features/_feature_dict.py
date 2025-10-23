@@ -26,10 +26,7 @@ class FeatureDict(dict[str, Feature]):
             features (dict[str, Feature]): Mapping from feature keys to Features
             time_key (str | None): The key for the time feature (must be in features)
             position_key (str | list[str] | None): The key(s) for position feature(s)
-                (must be in features)
-
-            tracklet_key (str | None): The key for the tracklet feature (must be in
-                features)
+            tracklet_key (str | None): The key for the tracklet feature
         """
         super().__init__(features)
         self.time_key = time_key
@@ -39,13 +36,14 @@ class FeatureDict(dict[str, Feature]):
         # Validate that time and position keys exist
         if time_key is not None and time_key not in self:
             raise KeyError(f"time_key '{time_key}' not found in features")
-        if isinstance(position_key, list):
-            for key in position_key:
-                if key not in self:
-                    raise KeyError(f"position_key '{key}' not found in features")
-        else:
-            if position_key is not None and position_key not in self:
-                raise KeyError(f"position_key '{position_key}' not found in features")
+        # TODO: Temporarily stopping validating the position key to simplify workflow
+        # if isinstance(position_key, list):
+        #     for key in position_key:
+        #         if key not in self:
+        #             raise KeyError(f"position_key '{key}' not found in features")
+        # else:
+        #     if position_key is not None and position_key not in self:
+        #         raise KeyError(f"position_key '{position_key}' not found in features")
 
     @property
     def node_features(self) -> dict[str, Feature]:

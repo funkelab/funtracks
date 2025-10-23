@@ -194,3 +194,15 @@ class TrackAnnotator(GraphAnnotator):
         max_id, ids_to_nodes = self._assign_ids(tracklets, self.tracklet_key)
         self.max_tracklet_id = max_id
         self.tracklet_id_to_nodes = ids_to_nodes
+
+    def update(self, element: int | tuple[int, int]) -> None:
+        """Update track-level features for a specific node or edge.
+
+        Currently not implemented - track features (tracklet_id, lineage_id) are
+        recomputed globally via recompute_tracks() when the graph structure changes.
+
+        Args:
+            element: Either a node ID (int) or edge tuple (int, int)
+        """
+        # TODO: Implement incremental updates for tracklet_id/lineage_id
+        # For now, track features must be recomputed globally

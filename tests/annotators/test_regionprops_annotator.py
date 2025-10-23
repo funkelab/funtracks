@@ -44,11 +44,8 @@ class TestRegionpropsAnnotator:
         assert tracks.get_area(node_id) == expected_area
         for key in rp_ann.features:
             assert key in tracks.graph.nodes[node_id]
-        # update an edge
-        with pytest.raises(
-            ValueError, match="RegionpropsAnnotator update expected a node, got edge"
-        ):
-            rp_ann.update((3, 4))
+        # update an edge - should be silently ignored
+        rp_ann.update((3, 4))
 
         # segmentation is fully erased and you try to update
         node_id = 1

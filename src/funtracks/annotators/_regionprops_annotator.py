@@ -189,20 +189,16 @@ class RegionpropsAnnotator(GraphAnnotator):
         """Update the regionprops features for the given node.
 
         Args:
-            element (int | tuple[int, int]): The node to update. Should be a node
-                and not an edge, but has possible edge type to match generic signature.
+            element (int | tuple[int, int]): The node to update. Edges are ignored.
 
         Raises:
             ValueError: If the tracks do not have a segmentation
-            ValueError: If an edge element is passed instead of a node.
         """
         if self.tracks.segmentation is None:
             raise ValueError("Cannot update regionprops features without segmentation.")
 
         if isinstance(element, tuple):
-            raise ValueError(
-                f"RegionpropsAnnotator update expected a node, got edge {element}"
-            )
+            return  # Silently ignore edges
 
         keys_to_compute = list(self.features.keys())
         if not keys_to_compute:
