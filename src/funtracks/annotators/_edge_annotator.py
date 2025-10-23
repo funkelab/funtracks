@@ -25,21 +25,35 @@ class EdgeAnnotator(GraphAnnotator):
         tracks (Tracks): The tracks to manage the edge features on
     """
 
-    @staticmethod
-    def get_available_features(segmentation: np.ndarray | None) -> dict[str, Feature]:
+    @classmethod
+    def can_annotate(cls, tracks) -> bool:
+        """Check if this annotator can annotate the given tracks.
+
+        Requires segmentation data to be present.
+
+        Args:
+            tracks: The tracks to check compatibility with
+
+        Returns:
+            True if tracks have segmentation, False otherwise
+        """
+        return tracks.segmentation is not None
+
+    @classmethod
+    def get_available_features(cls, tracks) -> dict[str, Feature]:
         """Get all features that can be computed by this annotator.
 
         Returns features with default keys. Custom keys can be specified at
         initialization time.
 
         Args:
-            segmentation: The segmentation array (or None if not available)
+            tracks: The tracks to get available features for
 
         Returns:
             Dictionary mapping feature keys to Feature definitions. Empty if no
             segmentation.
         """
-        if segmentation is None:
+        if not cls.can_annotate(tracks):
             return {}
         return {"iou": IoU()}
 

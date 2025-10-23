@@ -63,10 +63,15 @@ class TestRegionpropsAnnotator:
         graph = get_graph(ndim, with_features="clean")
         seg = get_segmentation(ndim)
         tracks = Tracks(graph, segmentation=seg, ndim=ndim)
-        rp_ann = tracks.annotator_manager.annotators["regionprops"]
+        # Get the RegionpropsAnnotator from the registry
+        rp_ann = next(
+            ann
+            for ann in tracks.annotators.annotators
+            if isinstance(ann, RegionpropsAnnotator)
+        )
         all_feature_keys = list(rp_ann.all_features.keys())
         to_remove_key = all_feature_keys[1]  # area
-        rp_ann.remove_feature(to_remove_key)
+        rp_ann.remove_features([to_remove_key])
 
         # Clear existing area attributes from graph (from fixture)
         for node in tracks.nodes():
@@ -78,10 +83,10 @@ class TestRegionpropsAnnotator:
             assert to_remove_key not in tracks.graph.nodes[node]
 
         # add it back in
-        rp_ann.add_feature(to_remove_key)
+        rp_ann.add_features([to_remove_key])
         # but remove a different one
         second_remove_key = all_feature_keys[2]  # ellipse_axis_radii
-        rp_ann.remove_feature(second_remove_key)
+        rp_ann.remove_features([second_remove_key])
 
         # remove all but one pixel
         node_id = 3

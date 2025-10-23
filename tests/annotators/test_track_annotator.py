@@ -68,14 +68,14 @@ class TestTrackAnnotator:
         orig_tra = tracks.get_node_attr(node_id, ann.tracklet_key, required=True)
 
         # remove one feature from computation (annotator level, not FeatureDict)
-        ann.remove_feature(to_remove_key)
+        ann.remove_features([to_remove_key])
         ann.compute()  # this should update tra but not lin
         # lineage_id is still in tracks.features but not recomputed
         assert tracks.get_node_attr(node_id, ann.lineage_key, required=True) == orig_lin
         assert tracks.get_node_attr(node_id, ann.tracklet_key, required=True) != orig_tra
 
         # add it back in
-        ann.add_feature(to_remove_key)
+        ann.add_features([to_remove_key])
         ann.compute()
         # now both are updated
         assert tracks.get_node_attr(node_id, ann.lineage_key, required=True) != orig_lin

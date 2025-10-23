@@ -29,6 +29,21 @@ class GraphAnnotator:
             what is currently being computed.
     """
 
+    @classmethod
+    def can_annotate(cls, tracks: Tracks) -> bool:
+        """Check if this annotator can annotate the given tracks.
+
+        Subclasses should override this method to specify their requirements
+        (e.g., segmentation, SolutionTracks, etc.).
+
+        Args:
+            tracks: The tracks to check compatibility with
+
+        Returns:
+            True if the annotator can annotate these tracks, False otherwise
+        """
+        return True
+
     def __init__(self, tracks: Tracks, features: dict[str, Feature]):
         self.tracks = tracks
         # Store (feature, is_included) for each key
@@ -36,36 +51,31 @@ class GraphAnnotator:
             key: (feat, True) for key, feat in features.items()
         }
 
-    def remove_feature(self, key: str) -> None:
-        """Stop computing the given feature in the annotation process.
+    def add_features(self, keys: list[str]) -> None:
+        """Start computing the given features in the annotation process.
 
-        This only affects whether the annotator computes values for this feature.
-        The feature remains in tracks.features (FeatureDict modifications should be
-        done through AnnotatorManager).
+        Filters the list to only features this annotator owns, ignoring others.
 
         Args:
-            key (str): The key of the feature to remove. Must be in all_features.
+            keys: List of feature keys to add. Only keys in all_features are added.
         """
-        if key in self.all_features:
-            feat, _ = self.all_features[key]
-            self.all_features[key] = (feat, False)
+        for key in keys:
+            if key in self.all_features:
+                feat, _ = self.all_features[key]
+                self.all_features[key] = (feat, True)
 
-    def add_feature(self, key: str) -> None:
-        """Start computing the given feature in the annotation process.
+    def remove_features(self, keys: list[str]) -> None:
+        """Stop computing the given features in the annotation process.
 
-        This only affects whether the annotator computes values for this feature.
-        The feature should already be in tracks.features (added during initialization).
+        Filters the list to only features this annotator owns, ignoring others.
 
         Args:
-            key (str): The key of the feature to add. Must be in all_features.
+            keys: List of feature keys to remove. Only keys in all_features are removed.
         """
-        if key in self.all_features:
-            feat, _ = self.all_features[key]
-            self.all_features[key] = (feat, True)
-        else:
-            raise ValueError(
-                f"Cannot add feature '{key}' - annotator cannot manage this feature."
-            )
+        for key in keys:
+            if key in self.all_features:
+                feat, _ = self.all_features[key]
+                self.all_features[key] = (feat, False)
 
     @property
     def features(self) -> dict[str, Feature]:

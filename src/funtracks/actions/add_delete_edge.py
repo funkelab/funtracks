@@ -38,7 +38,7 @@ class AddEdge(TracksAction):
                 )
 
         self.tracks.graph.add_edge(self.edge[0], self.edge[1])
-        self.tracks.annotator_manager.update(self.edge)
+        self.tracks.update_features(self.edge)
 
 
 class DeleteEdge(TracksAction):

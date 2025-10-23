@@ -316,6 +316,6 @@ def import_from_geff(
     )
     # compute the 'area' attribute if needed
     if tracks.segmentation is not None and extra_features.get("area"):
-        tracks.annotator_manager.enable_features(["area"])
+        tracks.enable_features(["area"])
 
     return tracks

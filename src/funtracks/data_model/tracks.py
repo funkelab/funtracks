@@ -85,11 +85,39 @@ class Tracks:
             self._get_feature_set(time_attr, pos_attr) if features is None else features
         )
 
-        # Initialize AnnotatorManager for managing feature computation
+        # Initialize AnnotatorRegistry for managing feature computation
         # Import here to avoid circular dependency
-        from funtracks.annotators import AnnotatorManager
+        from funtracks.annotators import (
+            AnnotatorRegistry,
+            RegionpropsAnnotator,
+            TrackAnnotator,
+        )
 
-        self.annotator_manager = AnnotatorManager(self, existing_features)
+        self.annotators = AnnotatorRegistry(self)
+
+        # Set special keys on FeatureDict from specific annotators
+        for annotator in self.annotators.annotators:
+            if isinstance(annotator, RegionpropsAnnotator):
+                self.features.position_key = annotator.pos_key
+            elif isinstance(annotator, TrackAnnotator):
+                self.features.tracklet_key = annotator.tracklet_key
+
+        # Determine which features to include
+        features_to_include = set(existing_features or [])
+
+        # Include only existing features in features and disable the rest
+        keys_to_disable = []
+        for key, (feature, _) in self.annotators.all_features.items():
+            if key in features_to_include:
+                # Include this feature (already computed)
+                if key not in self.features:
+                    self.features[key] = feature
+            else:
+                # Disable this feature (not yet computed)
+                keys_to_disable.append(key)
+
+        if keys_to_disable:
+            self.annotators.remove_features(keys_to_disable)
 
     @property
     def time_attr(self):
@@ -118,7 +146,7 @@ class Tracks:
 
         Static features are those provided by the user on the graph (time, position
         when segmentation is None). Managed features (computed from segmentation or
-        graph structure) are added by AnnotatorManager after initialization.
+        graph structure) are added by annotators after initialization.
 
         Args:
             time_attr: The attribute name for time
@@ -477,6 +505,78 @@ class Tracks:
 
     def get_edges_attr(self, edges: Iterable[Edge], attr: str, required: bool = False):
         return [self.get_edge_attr(edge, attr, required=required) for edge in edges]
+
+    # ========== Feature Management ==========
+
+    def update_features(self, element: int | tuple[int, int]) -> None:
+        """Update features for a specific node or edge.
+
+        Delegates to the annotator registry which broadcasts to all annotators.
+
+        Args:
+            element: Either a node ID (int) or edge tuple (int, int)
+        """
+        self.annotators.update(element)
+
+    def get_available_features(self) -> dict[str, Feature]:
+        """Get all features that can be computed across all annotators.
+
+        Returns:
+            Dictionary mapping feature keys to Feature definitions
+        """
+        return {k: feat for k, (feat, _) in self.annotators.all_features.items()}
+
+    def get_active_features(self) -> dict[str, Feature]:
+        """Get all currently active (included) features.
+
+        Returns:
+            Dictionary mapping feature keys to Feature definitions
+        """
+        return self.annotators.features
+
+    def enable_features(self, feature_keys: list[str]) -> None:
+        """Enable multiple features for computation efficiently.
+
+        Adds features to annotators and FeatureDict, then computes their values.
+
+        Args:
+            feature_keys: List of feature keys to enable
+
+        Raises:
+            KeyError: If any feature is not available (raised by annotators)
+        """
+        # Registry validates and adds features (will raise if invalid)
+        self.annotators.add_features(feature_keys)
+
+        # Add to FeatureDict
+        for key in feature_keys:
+            if key not in self.features:
+                feature, _ = self.annotators.all_features[key]
+                self.features[key] = feature
+
+        # Compute the features
+        self.annotators.compute(feature_keys)
+
+    def disable_features(self, feature_keys: list[str]) -> None:
+        """Disable multiple features from computation.
+
+        Removes features from annotators and FeatureDict.
+
+        Args:
+            feature_keys: List of feature keys to disable
+
+        Raises:
+            KeyError: If any feature is not available (raised by annotators)
+        """
+        # Registry validates and removes features (will raise if invalid)
+        self.annotators.remove_features(feature_keys)
+
+        # Remove from FeatureDict
+        for key in feature_keys:
+            if key in self.features:
+                del self.features[key]
+
+    # ========== Persistence ==========
 
     def save(self, directory: Path):
         """Save the tracks to the given directory.

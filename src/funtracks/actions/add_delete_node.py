@@ -72,7 +72,7 @@ class AddNode(TracksAction):
         self.tracks.graph.add_node(self.node)
         self.tracks.set_time(self.node, self.time)
         if self.tracks.segmentation is not None:
-            self.tracks.annotator_manager.update(self.node)
+            self.tracks.update_features(self.node)
         else:
             # can't be None because we validated it in the init
             self.tracks.set_position(self.node, self.position)

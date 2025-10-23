@@ -80,7 +80,7 @@ class TestEdgeAnnotator:
         orig_iou = tracks.get_edge_attr(edge_id, to_remove_key, required=True)
 
         # remove the IOU from computation (annotator level only)
-        ann.remove_feature(to_remove_key)
+        ann.remove_features([to_remove_key])
         # remove all but one pixel
         orig_pixels = tracks.get_pixels(node_id)
         assert orig_pixels is not None
@@ -92,7 +92,7 @@ class TestEdgeAnnotator:
         assert tracks.get_edge_attr(edge_id, to_remove_key, required=True) == orig_iou
 
         # add it back in
-        ann.add_feature(to_remove_key)
+        ann.add_features([to_remove_key])
         ann.update(edge_id)
         new_iou = pytest.approx(0.0, abs=0.001)
         # the feature is now updated

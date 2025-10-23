@@ -44,21 +44,35 @@ class TrackAnnotator(GraphAnnotator):
             tree)
     """
 
-    @staticmethod
-    def get_available_features(is_solution_tracks: bool) -> dict[str, Feature]:
+    @classmethod
+    def can_annotate(cls, tracks) -> bool:
+        """Check if this annotator can annotate the given tracks.
+
+        Requires tracks to be a SolutionTracks instance.
+
+        Args:
+            tracks: The tracks to check compatibility with
+
+        Returns:
+            True if tracks is a SolutionTracks instance, False otherwise
+        """
+        return isinstance(tracks, SolutionTracks)
+
+    @classmethod
+    def get_available_features(cls, tracks) -> dict[str, Feature]:
         """Get all features that can be computed by this annotator.
 
         Returns features with default keys. Custom keys can be specified at
         initialization time.
 
         Args:
-            is_solution_tracks: Whether the tracks are SolutionTracks
+            tracks: The tracks to get available features for
 
         Returns:
             Dictionary mapping feature keys to Feature definitions. Empty if not
             SolutionTracks.
         """
-        if not is_solution_tracks:
+        if not cls.can_annotate(tracks):
             return {}
         return {
             NodeAttr.TRACK_ID.value: TrackletID(),
@@ -198,8 +212,8 @@ class TrackAnnotator(GraphAnnotator):
     def update(self, element: int | tuple[int, int]) -> None:
         """Update track-level features for a specific node or edge.
 
-        Currently not implemented - track features (tracklet_id, lineage_id) are
-        recomputed globally via recompute_tracks() when the graph structure changes.
+        Currently not implemented - track features (tracklet_id, lineage_id) must be
+        recomputed globally when the graph structure changes.
 
         Args:
             element: Either a node ID (int) or edge tuple (int, int)

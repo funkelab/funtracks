@@ -49,6 +49,20 @@ class RegionpropsAnnotator(GraphAnnotator):
     the self.include value at the corresponding index to the feature in self.features.
     """
 
+    @classmethod
+    def can_annotate(cls, tracks) -> bool:
+        """Check if this annotator can annotate the given tracks.
+
+        Requires segmentation data to be present.
+
+        Args:
+            tracks: The tracks to check compatibility with
+
+        Returns:
+            True if tracks have segmentation, False otherwise
+        """
+        return tracks.segmentation is not None
+
     def __init__(
         self,
         tracks: Tracks,
@@ -65,9 +79,7 @@ class RegionpropsAnnotator(GraphAnnotator):
         self.perimeter_key = perimeter_key
 
         specs = RegionpropsAnnotator._build_feature_specs(
-            tracks.segmentation,
-            tracks.ndim,
-            tracks.axis_names,
+            tracks,
             pos_key,
             area_key,
             ellipse_axis_radii_key,
@@ -79,11 +91,10 @@ class RegionpropsAnnotator(GraphAnnotator):
         # Build regionprops name mapping from specs
         self.regionprops_names = {spec.key: spec.regionprops_attr for spec in specs}
 
-    @staticmethod
+    @classmethod
     def _build_feature_specs(
-        segmentation: np.ndarray | None,
-        ndim: int,
-        axis_names: list[str],
+        cls,
+        tracks: Tracks,
         pos_key: str = "pos",
         area_key: str = "area",
         ellipse_axis_radii_key: str = "ellipse_axis_radii",
@@ -96,9 +107,7 @@ class RegionpropsAnnotator(GraphAnnotator):
         that include the regionprops attribute mapping needed for computation.
 
         Args:
-            segmentation: The segmentation array (or None if not available)
-            ndim: Number of dimensions (3 or 4)
-            axis_names: Names of spatial axes
+            tracks: The tracks to build feature specs for
             pos_key: The key to use for the position/centroid feature. Defaults to "pos".
             area_key: The key to use for the area feature. Defaults to "area".
             ellipse_axis_radii_key: The key to use for the ellipse axis radii feature.
@@ -112,37 +121,37 @@ class RegionpropsAnnotator(GraphAnnotator):
             list[FeatureSpec]: List of feature specifications with key, feature,
                 and regionprops attribute name. Empty list if no segmentation.
         """
-        if segmentation is None:
+        if not cls.can_annotate(tracks):
             return []
         return [
-            FeatureSpec(pos_key, Position(axes=axis_names, recompute=True), "centroid"),
-            FeatureSpec(area_key, Area(ndim=ndim), "area"),
+            FeatureSpec(
+                pos_key, Position(axes=tracks.axis_names, recompute=True), "centroid"
+            ),
+            FeatureSpec(area_key, Area(ndim=tracks.ndim), "area"),
             # TODO: Add in intensity when image is passed
-            # FeatureSpec("intensity", Intensity(ndim=ndim), "intensity"),
-            FeatureSpec(ellipse_axis_radii_key, EllipsoidAxes(ndim=ndim), "axes"),
-            FeatureSpec(circularity_key, Circularity(ndim=ndim), "circularity"),
-            FeatureSpec(perimeter_key, Perimeter(ndim=ndim), "perimeter"),
+            # FeatureSpec("intensity", Intensity(ndim=tracks.ndim), "intensity"),
+            FeatureSpec(ellipse_axis_radii_key, EllipsoidAxes(ndim=tracks.ndim), "axes"),
+            FeatureSpec(circularity_key, Circularity(ndim=tracks.ndim), "circularity"),
+            FeatureSpec(perimeter_key, Perimeter(ndim=tracks.ndim), "perimeter"),
         ]
 
-    @staticmethod
-    def get_available_features(
-        segmentation: np.ndarray | None, ndim: int, axis_names: list[str]
-    ) -> dict[str, Feature]:
+    @classmethod
+    def get_available_features(cls, tracks) -> dict[str, Feature]:
         """Get all features that can be computed by this annotator.
 
         Returns features with default keys. Custom keys can be specified at
         initialization time.
 
         Args:
-            segmentation: The segmentation array (or None if not available)
-            ndim: Number of dimensions (3 or 4)
-            axis_names: Names of spatial axes
+            tracks: The tracks to get available features for
 
         Returns:
             Dictionary mapping feature keys to Feature definitions. Empty if no
             segmentation.
         """
-        specs = RegionpropsAnnotator._build_feature_specs(segmentation, ndim, axis_names)
+        if not cls.can_annotate(tracks):
+            return {}
+        specs = RegionpropsAnnotator._build_feature_specs(tracks)
         return {spec.key: spec.feature for spec in specs}
 
     def compute(self, feature_keys: list[str] | None = None) -> None:
