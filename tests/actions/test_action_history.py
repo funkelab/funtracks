@@ -10,9 +10,8 @@ from funtracks.data_model import SolutionTracks
 def test_action_history():
     history = ActionHistory()
     tracks = SolutionTracks(nx.DiGraph(), ndim=3)
-    action1 = AddNode(
-        tracks, node=0, attributes={"time": 0, "pos": [0, 1], "track_id": 1}
-    )
+    pos = [0, 1]
+    action1 = AddNode(tracks, node=0, attributes={"time": 0, "pos": pos, "track_id": 1})
 
     # empty history has no undo or redo
     assert not history.undo()
@@ -42,9 +41,7 @@ def test_action_history():
 
     # undo and then add new action
     assert history.undo()
-    action2 = AddNode(
-        tracks, node=10, attributes={"time": 10, "pos": [0, 1], "track_id": 2}
-    )
+    action2 = AddNode(tracks, node=10, attributes={"time": 10, "pos": pos, "track_id": 2})
     history.add_new_action(action2)
     assert tracks.graph.number_of_nodes() == 1
     # there are 3 things on the stack: action1, action1's inverse, and action 2

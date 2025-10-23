@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 import networkx as nx
 
-from funtracks.data_model import SolutionTracks
+from funtracks.data_model import NodeAttr, SolutionTracks
 from funtracks.features import Feature
 
 from ._graph_annotator import GraphAnnotator
@@ -85,7 +85,9 @@ class TrackAnnotator(GraphAnnotator):
         if not isinstance(tracks, SolutionTracks):
             raise ValueError("Currently the TrackAnnotator only works on SolutionTracks")
 
-        self.tracklet_key = tracklet_key if tracklet_key is not None else "tracklet_id"
+        self.tracklet_key = (
+            tracklet_key if tracklet_key is not None else NodeAttr.TRACK_ID.value
+        )
         self.lineage_key = lineage_key if lineage_key is not None else "lineage_id"
 
         feats = {

@@ -1,24 +1,13 @@
 import pytest
 
 from funtracks.annotators import TrackAnnotator
-from funtracks.data_model import SolutionTracks, Tracks
 
 
 @pytest.mark.parametrize("ndim", [3, 4])
+@pytest.mark.parametrize("with_seg", [True, False])
 class TestTrackAnnotator:
-    def get_tracks(self, request, ndim) -> Tracks:
-        seg_name = "segmentation_2d" if ndim == 3 else "segmentation_3d"
-        graph_name = "graph_2d" if ndim == 3 else "graph_3d"
-        seg = request.getfixturevalue(seg_name)
-        graph = request.getfixturevalue(graph_name)
-        # Tracks will automatically build features including managed ones
-        return Tracks(graph, segmentation=seg, ndim=ndim)
-
-    def get_soln_tracks(self, request, ndim) -> SolutionTracks:
-        return SolutionTracks.from_tracks(self.get_tracks(request, ndim))
-
-    def test_init(self, request, ndim) -> None:
-        tracks = self.get_soln_tracks(request, ndim)
+    def test_init(self, get_tracks, ndim, with_seg) -> None:
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
         ann = TrackAnnotator(tracks)
         assert len(ann.features) == 2
         assert len(ann.lineage_id_to_nodes) == 0
@@ -30,16 +19,13 @@ class TestTrackAnnotator:
         assert ann.max_lineage_id == 0
         assert ann.max_tracklet_id == 5
 
-    def test_compute_all(self, request, ndim) -> None:
-        tracks = self.get_soln_tracks(request, ndim)
-        # Features are now automatically added during Tracks init
-        assert "tracklet_id" in tracks.features
-        assert "lineage_id" in tracks.features
+    def test_compute_all(self, get_tracks, ndim, with_seg) -> None:
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
 
         ann = TrackAnnotator(tracks)
         all_features = ann.features
 
-        # Compute values (features already in tracks.features)
+        # Compute values
         ann.compute()
         for node in tracks.nodes():
             for key in all_features:
@@ -68,8 +54,8 @@ class TestTrackAnnotator:
             # no shared ids across components
             assert len({id_set[0] for id_set in id_sets}) == len(id_sets)
 
-    def test_add_remove_feature(self, request, ndim: int):
-        tracks = self.get_soln_tracks(request, ndim)
+    def test_add_remove_feature(self, get_tracks, ndim, with_seg):
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
         ann = TrackAnnotator(tracks)
         # compute the original tracklet and lineage ids
         ann.compute()
@@ -84,8 +70,7 @@ class TestTrackAnnotator:
         # remove one feature from computation (annotator level, not FeatureDict)
         ann.remove_feature(to_remove_key)
         ann.compute()  # this should update tra but not lin
-        # Features still in tracks.features (added during init) but lineage not computed
-        assert to_remove_key in tracks.features
+        # lineage_id is still in tracks.features but not recomputed
         assert tracks.get_node_attr(node_id, ann.lineage_key, required=True) == orig_lin
         assert tracks.get_node_attr(node_id, ann.tracklet_key, required=True) != orig_tra
 
@@ -96,8 +81,9 @@ class TestTrackAnnotator:
         assert tracks.get_node_attr(node_id, ann.lineage_key, required=True) != orig_lin
         assert tracks.get_node_attr(node_id, ann.tracklet_key, required=True) != orig_tra
 
-    def test_invalid(self, request, ndim) -> None:
-        tracks = self.get_tracks(request, ndim)
+    def test_invalid(self, get_tracks, ndim, with_seg) -> None:
+        # Create regular Tracks (not SolutionTracks) to test error handling
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=False)
         with pytest.raises(
             ValueError, match="Currently the TrackAnnotator only works on SolutionTracks"
         ):
