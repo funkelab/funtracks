@@ -316,13 +316,6 @@ def import_from_geff(
     )
     # compute the 'area' attribute if needed
     if tracks.segmentation is not None and extra_features.get("area"):
-        nodes = tracks.graph.nodes
-        times = tracks.get_times(nodes)
-        computed_attrs = [
-            tracks._compute_node_attrs(node, time)
-            for node, time in zip(nodes, times, strict=True)
-        ]
-        areas = [attr[NodeAttr.AREA.value] for attr in computed_attrs]
-        tracks._set_nodes_attr(nodes, NodeAttr.AREA.value, areas)
+        tracks.annotator_manager.enable_features(["area"])
 
     return tracks

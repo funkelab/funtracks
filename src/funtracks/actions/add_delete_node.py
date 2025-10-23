@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import numpy as np
-
 from funtracks.data_model.graph_attributes import NodeAttr
 from funtracks.data_model.solution_tracks import SolutionTracks
 
@@ -73,19 +71,12 @@ class AddNode(TracksAction):
         attrs = self.attributes
         self.tracks.graph.add_node(self.node)
         self.tracks.set_time(self.node, self.time)
-        final_pos: np.ndarray
         if self.tracks.segmentation is not None:
-            computed_attrs = self.tracks._compute_node_attrs(self.node, self.time)
-            if self.position is None:
-                final_pos = np.array(computed_attrs[NodeAttr.POS.value])
-            else:
-                final_pos = self.position
-            attrs[NodeAttr.AREA.value] = computed_attrs[NodeAttr.AREA.value]
+            self.tracks.annotator_manager.update(self.node)
         else:
             # can't be None because we validated it in the init
-            final_pos = self.position
+            self.tracks.set_position(self.node, self.position)
 
-        self.tracks.set_position(self.node, final_pos)
         for attr, values in attrs.items():
             self.tracks._set_node_attr(self.node, attr, values)
 

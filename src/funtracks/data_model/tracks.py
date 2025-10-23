@@ -13,7 +13,6 @@ from warnings import warn
 import networkx as nx
 import numpy as np
 from psygnal import Signal
-from skimage import measure
 
 from funtracks.features import Feature, FeatureDict, Position, Time
 
@@ -474,79 +473,6 @@ class Tracks:
 
     def get_edges_attr(self, edges: Iterable[Edge], attr: str, required: bool = False):
         return [self.get_edge_attr(edge, attr, required=required) for edge in edges]
-
-    def _compute_node_attrs(self, node: Node, time: int) -> dict[str, Any]:
-        """Get the segmentation controlled node attributes (area and position)
-        from the segmentation with label based on the node id in the given time point.
-
-        Args:
-            node (int): The node id to query the current segmentation for
-            time (int): The time frame of the current segmentation to query
-
-        Returns:
-            dict[str, int]: A dictionary containing the attributes that could be
-                determined from the segmentation. It will be empty if self.segmentation
-                is None. If self.segmentation exists but node id is not present in time,
-                area will be 0 and position will be None. If self.segmentation
-                exists and node id is present in time, area and position will be included.
-        """
-        if self.segmentation is None:
-            return {}
-
-        attrs: dict[str, Any] = {}
-        seg = self.segmentation[time] == node
-        pos_scale = self.scale[1:] if self.scale is not None else None
-        area = np.sum(seg)
-        if pos_scale is not None:
-            area *= np.prod(pos_scale)
-        # only include the position if the segmentation was actually there
-        pos = (
-            measure.centroid(seg, spacing=pos_scale)  # type: ignore
-            if area > 0
-            else np.array(
-                [
-                    None,
-                ]
-                * (self.ndim - 1)
-            )
-        )
-        attrs[NodeAttr.AREA.value] = area
-        attrs[NodeAttr.POS.value] = pos
-        return attrs
-
-    def _compute_edge_attrs(self, edge: Edge) -> dict[str, Any]:
-        """Get the segmentation controlled edge attributes (IOU)
-        from the segmentations associated with the endpoints of the edge.
-        The endpoints should already exist and have associated segmentations.
-
-        Args:
-            edge (Edge): The edge to compute the segmentation-based attributes from
-
-        Returns:
-            dict[str, int]: A dictionary containing the attributes that could be
-                determined from the segmentation. It will be empty if self.segmentation
-                is None or if self.segmentation exists but the endpoint segmentations
-                are not found.
-        """
-        if self.segmentation is None:
-            return {}
-
-        # Lazy import to avoid circular dependency
-        from funtracks.annotators._compute_ious import _compute_ious
-
-        attrs: dict[str, Any] = {}
-        source, target = edge
-        source_time = self.get_time(source)
-        target_time = self.get_time(target)
-
-        source_arr = self.segmentation[source_time] == source
-        target_arr = self.segmentation[target_time] == target
-
-        iou_list = _compute_ious(source_arr, target_arr)  # list of (id1, id2, iou)
-        iou = 0 if len(iou_list) == 0 else iou_list[0][2]
-
-        attrs[EdgeAttr.IOU.value] = iou
-        return attrs
 
     def save(self, directory: Path):
         """Save the tracks to the given directory.

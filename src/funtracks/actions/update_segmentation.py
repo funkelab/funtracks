@@ -2,10 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import numpy as np
-
-from funtracks.data_model.graph_attributes import NodeAttr
-
 from ._base import TracksAction
 
 if TYPE_CHECKING:
@@ -51,19 +47,12 @@ class UpdateNodeSeg(TracksAction):
 
     def _apply(self) -> None:
         """Set new attributes"""
-        times = self.tracks.get_time(self.node)
         value = self.node if self.added else 0
         self.tracks.set_pixels(self.pixels, value)
-        computed_attrs = self.tracks._compute_node_attrs(self.node, times)
-        position = np.array(computed_attrs[NodeAttr.POS.value])
-        self.tracks.set_position(self.node, position)
-        self.tracks._set_node_attr(
-            self.node, NodeAttr.AREA.value, computed_attrs[NodeAttr.AREA.value]
-        )
+        self.tracks.annotator_manager.update(self.node)
 
         incident_edges = list(self.tracks.graph.in_edges(self.node)) + list(
             self.tracks.graph.out_edges(self.node)
         )
         for edge in incident_edges:
-            new_edge_attrs = self.tracks._compute_edge_attrs(edge)
-            self.tracks._set_edge_attributes(edge, new_edge_attrs)
+            self.tracks.annotator_manager.update(edge)

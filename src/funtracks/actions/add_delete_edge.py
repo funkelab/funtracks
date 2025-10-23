@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from ._base import TracksAction
 
@@ -38,9 +37,8 @@ class AddEdge(TracksAction):
                     f"Cannot add edge {self.edge}: endpoint {node} not in graph yet"
                 )
 
-        attrs: dict[str, Sequence[Any]] = {}
-        attrs.update(self.tracks._compute_edge_attrs(self.edge))
-        self.tracks.graph.add_edge(self.edge[0], self.edge[1], **attrs)
+        self.tracks.graph.add_edge(self.edge[0], self.edge[1])
+        self.tracks.annotator_manager.update(self.edge)
 
 
 class DeleteEdge(TracksAction):
