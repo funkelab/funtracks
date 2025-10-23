@@ -6,46 +6,12 @@ from typing import TYPE_CHECKING
 import networkx as nx
 
 from funtracks.data_model import NodeAttr, SolutionTracks
-from funtracks.features import Feature
+from funtracks.features import LineageID, TrackletID
 
 from ._graph_annotator import GraphAnnotator
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
-
-
-def TrackletID() -> Feature:
-    """A feature representing tracklet ID for nodes.
-
-    Returns:
-        Feature: A feature dict representing tracklet ID
-    """
-    return {
-        "feature_type": "node",
-        "value_type": "int",
-        "num_values": 1,
-        "display_name": "Tracklet ID",
-        "recompute": False,
-        "required": True,
-        "default_value": None,
-    }
-
-
-def LineageID() -> Feature:
-    """A feature representing lineage ID for nodes.
-
-    Returns:
-        Feature: A feature dict representing lineage ID
-    """
-    return {
-        "feature_type": "node",
-        "value_type": "int",
-        "num_values": 1,
-        "display_name": "Lineage ID",
-        "recompute": False,
-        "required": True,
-        "default_value": None,
-    }
 
 
 class TrackAnnotator(GraphAnnotator):

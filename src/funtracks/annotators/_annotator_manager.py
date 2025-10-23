@@ -2,7 +2,17 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from funtracks.features import Feature
+from funtracks.features import (
+    Area,
+    Centroid,
+    Circularity,
+    EllipsoidAxes,
+    Feature,
+    IoU,
+    LineageID,
+    Perimeter,
+    TrackletID,
+)
 
 from ._edge_annotator import EdgeAnnotator
 from ._graph_annotator import GraphAnnotator
@@ -47,14 +57,6 @@ class AnnotatorManager:
         Returns:
             Dictionary mapping feature keys to Feature definitions
         """
-        from funtracks.features import (
-            Area,
-            Centroid,
-            Circularity,
-            EllipsoidAxes,
-            Perimeter,
-        )
-
         features: dict[str, Feature] = {}
 
         # RegionpropsAnnotator and EdgeAnnotator features (require segmentation)
@@ -67,16 +69,12 @@ class AnnotatorManager:
             features["perimeter"] = Perimeter(ndim=ndim)
 
             # Edge features
-            from ._edge_annotator import IoU
-
             # TODO: I hate this. Why aren't we using the Annotators to define what
             # features exist??
             features["iou"] = IoU()
 
         # TrackAnnotator features (require SolutionTracks)
         if is_solution_tracks:
-            from ._track_annotator import LineageID, TrackletID
-
             features["tracklet_id"] = TrackletID()
             features["lineage_id"] = LineageID()
 

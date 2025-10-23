@@ -6,30 +6,13 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from funtracks.features import Feature
+from funtracks.features import IoU
 
 from ._compute_ious import _compute_ious
 from ._graph_annotator import GraphAnnotator
 
 if TYPE_CHECKING:
     from funtracks.data_model import Tracks
-
-
-def IoU() -> Feature:
-    """A feature representing Intersection over Union for edges.
-
-    Returns:
-        Feature: A feature dict representing IoU
-    """
-    return {
-        "feature_type": "edge",
-        "value_type": "float",
-        "num_values": 1,
-        "display_name": "IoU",
-        "recompute": True,
-        "required": True,
-        "default_value": None,
-    }
 
 
 class EdgeAnnotator(GraphAnnotator):
