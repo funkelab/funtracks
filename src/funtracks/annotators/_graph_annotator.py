@@ -101,19 +101,6 @@ class GraphAnnotator:
 
         return feature_keys
 
-    def add_features_to_set(self) -> None:
-        """Add the currently included features to the tracks FeatureDict.
-
-        Usually performed during initial computation.
-
-        Raises:
-            KeyError: If any key already exists in the feature dict.
-        """
-        for key, feature in self.features.items():
-            if key in self.tracks.features:
-                raise KeyError(f"Key '{key}' already in feature set")
-            self.tracks.features[key] = feature
-
     def compute(self, feature_keys: list[str] | None = None) -> None:
         """Compute a set of features and add them to the tracks.
 
