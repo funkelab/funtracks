@@ -53,11 +53,11 @@ class SolutionTracks(Tracks):
         self._initialize_track_ids(recompute)
 
     @classmethod
-    def from_tracks(cls, tracks: Tracks, recompute_track_ids: bool = False):
-        # Get existing features from tracks, and add track_id if not recomputing
+    def from_tracks(cls, tracks: Tracks):
+        # Get existing features from tracks
         existing_features = list(tracks.features.keys())
-        if not recompute_track_ids and "track_id" not in existing_features:
-            existing_features.append("track_id")
+        # don't recompute the track ids
+        existing_features.append(NodeAttr.TRACK_ID.value)
 
         return cls(
             tracks.graph,
