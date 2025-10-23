@@ -5,12 +5,12 @@ from typing import Any, Literal, TypedDict
 
 
 class Feature(TypedDict):
-    """Data class for storing metadata associated with a graph feature.
+    """TypedDict for storing metadata associated with a graph feature.
 
-    A TypedDict representing feature metadata. Use factory functions like
-    Time(), Position(), Area() etc. to create features with proper defaults.
+    Use factory functions like Time(), Position(), Area() etc. to create features with
+    standard defaults.
 
-    The key is stored separately in the FeatureSet mapping (not in the Feature itself).
+    The key is stored separately in the FeatureDict mapping (not in the Feature itself).
 
     Attributes:
         feature_type (Literal["node", "edge"]): Specifies which graph elements
