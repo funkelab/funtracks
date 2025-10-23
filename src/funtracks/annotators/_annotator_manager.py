@@ -82,7 +82,9 @@ class AnnotatorManager:
         # Always try to create all annotators
         # RegionpropsAnnotator requires segmentation
         if tracks.segmentation is not None:
-            self.annotators["regionprops"] = RegionpropsAnnotator(tracks)
+            rp_annotator = RegionpropsAnnotator(tracks)
+            self.annotators["regionprops"] = rp_annotator
+            tracks.features.position_key = rp_annotator.pos_key
 
         # EdgeAnnotator requires segmentation
         if tracks.segmentation is not None:
@@ -90,7 +92,9 @@ class AnnotatorManager:
 
         # TrackAnnotator requires SolutionTracks
         if isinstance(tracks, SolutionTracks):
-            self.annotators["tracks"] = TrackAnnotator(tracks)
+            track_annotator = TrackAnnotator(tracks)
+            self.annotators["tracks"] = track_annotator
+            tracks.features.tracklet_key = track_annotator.tracklet_key
 
         # Determine which features to include
         features_to_include = set(existing_features or [])
@@ -102,9 +106,6 @@ class AnnotatorManager:
                     # Include this feature (already computed)
                     if key not in tracks.features:
                         tracks.features[key] = feature
-                    # Update position_key if this is the position feature
-                    if key == "pos" and tracks.features.position_key is None:
-                        tracks.features.position_key = "pos"
                 else:
                     # Disable this feature (not yet computed)
                     annotator.remove_feature(key)

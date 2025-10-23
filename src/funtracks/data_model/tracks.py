@@ -158,8 +158,12 @@ class Tracks:
             # With segmentation - position will be added by AnnotatorManager
             position_key = None
 
+        # tracklet_key will be added by AnnotatorManager
         return FeatureDict(
-            features=features, time_key=time_key, position_key=position_key
+            features=features,
+            time_key=time_key,
+            position_key=position_key,
+            tracklet_key=None,
         )
 
     def nodes(self):

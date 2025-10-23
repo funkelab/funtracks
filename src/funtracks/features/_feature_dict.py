@@ -19,6 +19,7 @@ class FeatureDict(dict[str, Feature]):
         features: dict[str, Feature],
         time_key: str | None,
         position_key: str | list[str] | None,
+        tracklet_key: str | None,
     ):
         """
         Args:
@@ -26,10 +27,14 @@ class FeatureDict(dict[str, Feature]):
             time_key (str | None): The key for the time feature (must be in features)
             position_key (str | list[str] | None): The key(s) for position feature(s)
                 (must be in features)
+
+            tracklet_key (str | None): The key for the tracklet feature (must be in
+                features)
         """
         super().__init__(features)
         self.time_key = time_key
         self.position_key = position_key
+        self.tracklet_key = tracklet_key
 
         # Validate that time and position keys exist
         if time_key is not None and time_key not in self:
@@ -57,13 +62,14 @@ class FeatureDict(dict[str, Feature]):
 
         Returns:
             dict: A map from the key "FeatureDict" containing features, time_key,
-                and position_key
+                position_key, and tracklet_key
         """
         return {
             "FeatureDict": {
                 "features": {k: dict(v) for k, v in self.items()},
                 "time_key": self.time_key,
                 "position_key": self.position_key,
+                "tracklet_key": self.tracklet_key,
             }
         }
 
@@ -73,7 +79,7 @@ class FeatureDict(dict[str, Feature]):
 
         Args:
             json_dict (dict): A dictionary with the key "FeatureDict" containing
-                features, time_key, and position_key
+                features, time_key, position_key, and tracklet_key
 
         Returns:
             FeatureDict: A FeatureDict object containing the features from the dictionary
@@ -83,4 +89,17 @@ class FeatureDict(dict[str, Feature]):
             features=data["features"],
             time_key=data["time_key"],
             position_key=data["position_key"],
+            # Use get() for backwards compatibility with old JSON files
+            tracklet_key=data.get("tracklet_key"),
         )
+
+    def get_protected_node_keys(self) -> list[str]:
+        protected_keys: list[str] = []
+        # can't change time or tracklet key manually
+        for key in self.time_key, self.tracklet_key:
+            if key is not None:
+                protected_keys.append(key)
+        for key, feat in self.node_features.items():
+            if feat["recompute"]:
+                protected_keys.append(key)
+        return protected_keys
