@@ -8,20 +8,23 @@ from funtracks.data_model import NodeAttr, SolutionTracks, Tracks
 
 def test_recompute_track_ids(graph_2d_with_computed_features):
     tracks = SolutionTracks(
-        graph_2d_with_computed_features, ndim=3, recompute_track_ids=True
+        graph_2d_with_computed_features,
+        ndim=3,
     )
     assert tracks.get_next_track_id() == 5
 
 
 def test_next_track_id(graph_2d_with_computed_features):
     tracks = SolutionTracks(
-        graph_2d_with_computed_features, ndim=3, recompute_track_ids=False
+        graph_2d_with_computed_features,
+        ndim=3,
+        existing_features=[NodeAttr.TRACK_ID.value],
     )
     assert tracks.get_next_track_id() == 6
     AddNode(
         tracks,
         node=10,
-        attributes={"time": 3, "pos": [0, 0, 0, 0], "track_id": 10},
+        attributes={"time": 3, "pos": [0, 0, 0, 0], NodeAttr.TRACK_ID.value: 10},
     )
     assert tracks.get_next_track_id() == 11
 

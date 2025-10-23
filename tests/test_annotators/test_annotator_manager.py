@@ -1,6 +1,6 @@
 import pytest
 
-from funtracks.data_model import SolutionTracks, Tracks
+from funtracks.data_model import NodeAttr, SolutionTracks, Tracks
 
 
 def test_annotator_manager_init_with_segmentation(graph_clean, segmentation_2d):
@@ -121,17 +121,17 @@ def test_recompute_tracks(graph_clean, segmentation_2d):
     manager = tracks.annotator_manager
 
     # Enable tracklet_id
-    manager.enable_features(["tracklet_id"])
+    manager.enable_features([NodeAttr.TRACK_ID.value])
 
     # tracklet_id should be set
     nodes = list(tracks.graph.nodes())
-    assert tracks.graph.nodes[nodes[0]].get("tracklet_id") is not None
+    assert tracks.graph.nodes[nodes[0]].get(NodeAttr.TRACK_ID.value) is not None
 
     # Recompute tracks
     manager.recompute_tracks()
 
     # tracklet_id should still exist
-    assert tracks.graph.nodes[nodes[0]].get("tracklet_id") is not None
+    assert tracks.graph.nodes[nodes[0]].get(NodeAttr.TRACK_ID.value) is not None
 
 
 def test_get_available_features(graph_clean, segmentation_2d):
@@ -145,7 +145,7 @@ def test_get_available_features(graph_clean, segmentation_2d):
     assert "pos" in available  # regionprops
     assert "area" in available  # regionprops
     assert "iou" in available  # edges
-    assert "tracklet_id" in available  # tracks
+    assert NodeAttr.TRACK_ID.value in available  # tracks
 
 
 def test_enable_disable_features(graph_clean, segmentation_2d):
@@ -217,7 +217,7 @@ def test_get_feature_source(graph_clean, segmentation_2d):
     assert manager.get_feature_source("pos") == "regionprops"
     assert manager.get_feature_source("area") == "regionprops"
     assert manager.get_feature_source("iou") == "edges"
-    assert manager.get_feature_source("tracklet_id") == "tracks"
+    assert manager.get_feature_source(NodeAttr.TRACK_ID.value) == "tracks"
     assert manager.get_feature_source("nonexistent") is None
 
 

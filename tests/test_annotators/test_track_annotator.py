@@ -1,16 +1,13 @@
 import pytest
 
 from funtracks.annotators import TrackAnnotator
-from funtracks.data_model import SolutionTracks, Tracks
 
 
 @pytest.mark.parametrize("ndim", [3, 4])
+@pytest.mark.parametrize("with_seg", [True, False])
 class TestTrackAnnotator:
-    def test_init(self, get_graph, get_segmentation, ndim) -> None:
-        graph = get_graph(ndim, with_features="clean")
-        seg = get_segmentation(ndim)
-        base_tracks = Tracks(graph, segmentation=seg, ndim=ndim)
-        tracks = SolutionTracks.from_tracks(base_tracks)
+    def test_init(self, get_tracks, ndim, with_seg) -> None:
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
         ann = TrackAnnotator(tracks)
         assert len(ann.features) == 2
         assert len(ann.lineage_id_to_nodes) == 0
@@ -22,11 +19,8 @@ class TestTrackAnnotator:
         assert ann.max_lineage_id == 0
         assert ann.max_tracklet_id == 5
 
-    def test_compute_all(self, get_graph, get_segmentation, ndim) -> None:
-        graph = get_graph(ndim, with_features="clean")
-        seg = get_segmentation(ndim)
-        base_tracks = Tracks(graph, segmentation=seg, ndim=ndim)
-        tracks = SolutionTracks.from_tracks(base_tracks)
+    def test_compute_all(self, get_tracks, ndim, with_seg) -> None:
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
 
         ann = TrackAnnotator(tracks)
         all_features = ann.features
@@ -60,11 +54,8 @@ class TestTrackAnnotator:
             # no shared ids across components
             assert len({id_set[0] for id_set in id_sets}) == len(id_sets)
 
-    def test_add_remove_feature(self, get_graph, get_segmentation, ndim):
-        graph = get_graph(ndim, with_features="clean")
-        seg = get_segmentation(ndim)
-        base_tracks = Tracks(graph, segmentation=seg, ndim=ndim)
-        tracks = SolutionTracks.from_tracks(base_tracks)
+    def test_add_remove_feature(self, get_tracks, ndim, with_seg):
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
         ann = TrackAnnotator(tracks)
         # compute the original tracklet and lineage ids
         ann.compute()
@@ -90,10 +81,9 @@ class TestTrackAnnotator:
         assert tracks.get_node_attr(node_id, ann.lineage_key, required=True) != orig_lin
         assert tracks.get_node_attr(node_id, ann.tracklet_key, required=True) != orig_tra
 
-    def test_invalid(self, get_graph, get_segmentation, ndim) -> None:
-        graph = get_graph(ndim, with_features="clean")
-        seg = get_segmentation(ndim)
-        tracks = Tracks(graph, segmentation=seg, ndim=ndim)
+    def test_invalid(self, get_tracks, ndim, with_seg) -> None:
+        # Create regular Tracks (not SolutionTracks) to test error handling
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=False)
         with pytest.raises(
             ValueError, match="Currently the TrackAnnotator only works on SolutionTracks"
         ):

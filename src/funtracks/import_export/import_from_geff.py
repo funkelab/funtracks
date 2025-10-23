@@ -301,7 +301,9 @@ def import_from_geff(
     # Put segmentation data in memory now.
     if segmentation is not None and isinstance(segmentation, da.Array):
         segmentation = segmentation.compute()
-
+    existing_features = []
+    if recompute_track_ids:
+        existing_features.append(NodeAttr.TRACK_ID.value)
     # Create the tracks.
     tracks = SolutionTracks(
         graph=graph,
@@ -310,7 +312,7 @@ def import_from_geff(
         time_attr=time_attr,
         ndim=ndims,
         scale=scale,
-        recompute_track_ids=recompute_track_ids,
+        existing_features=existing_features,
     )
     # compute the 'area' attribute if needed
     if tracks.segmentation is not None and extra_features.get("area"):

@@ -10,8 +10,8 @@ from funtracks.data_model import NodeAttr
 # Feature list constants for consistent test usage
 FEATURES_WITH_SEG = ["pos", "area", "iou"]
 FEATURES_NO_SEG = ["pos"]
-SOLUTION_FEATURES_WITH_SEG = ["pos", "area", "iou", "tracklet_id"]
-SOLUTION_FEATURES_NO_SEG = ["pos", "tracklet_id"]
+SOLUTION_FEATURES_WITH_SEG = ["pos", "area", "iou", NodeAttr.TRACK_ID.value]
+SOLUTION_FEATURES_NO_SEG = ["pos", NodeAttr.TRACK_ID.value]
 
 
 @pytest.fixture
