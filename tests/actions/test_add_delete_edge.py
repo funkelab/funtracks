@@ -23,7 +23,7 @@ def test_add_delete_edges(get_tracks, ndim, with_seg):
     node_graph = nx.create_empty_copy(tracks.graph, with_data=True)
     tracks.graph = node_graph
 
-    edges = [[1, 2], [1, 3], [3, 4], [4, 5]]
+    edges = [(1, 2), (1, 3), (3, 4), (4, 5)]
 
     action = ActionGroup(tracks=tracks, actions=[AddEdge(tracks, edge) for edge in edges])
     # TODO: What if adding an edge that already exists?

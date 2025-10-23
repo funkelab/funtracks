@@ -123,10 +123,14 @@ class AnnotatorManager:
             # Edge update
             if "edges" in self.annotators:
                 self.annotators["edges"].update(element)
-        else:
+        elif isinstance(element, int):
             # Node update
             if "regionprops" in self.annotators:
                 self.annotators["regionprops"].update(element)
+        else:
+            raise ValueError(
+                f"Element must be int or tuple, got {element} of type {type(element)}"
+            )
 
     def recompute_tracks(self) -> None:
         """Recompute track-level features (tracklet_id, lineage_id).
