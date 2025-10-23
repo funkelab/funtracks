@@ -41,7 +41,7 @@ def Position(axes: Sequence[str], recompute: bool = False) -> Feature:
         "feature_type": "node",
         "value_type": "float",
         "num_values": len(axes),
-        "display_name": list(axes),
+        "display_name": axes,
         "recompute": recompute,
         "required": True,
         "default_value": None,
