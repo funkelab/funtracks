@@ -5,27 +5,7 @@ from typing import TYPE_CHECKING
 from ._feature import Feature
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-
-
-def Centroid(axes: Sequence[str]) -> Feature:
-    """A regionprops feature for computing the centroid.
-
-    Args:
-        axes (Sequence[str]): The names of the axes to use for display names.
-
-    Returns:
-        Feature: A feature dict representing centroid
-    """
-    return {
-        "feature_type": "node",
-        "value_type": "float",
-        "num_values": len(axes),
-        "display_name": list(axes),
-        "recompute": True,
-        "required": True,
-        "default_value": None,
-    }
+    pass
 
 
 def Area(ndim: int = 3) -> Feature:

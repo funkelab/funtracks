@@ -7,11 +7,11 @@ import numpy as np
 
 from funtracks.features import (
     Area,
-    Centroid,
     Circularity,
     EllipsoidAxes,
     Feature,
     Perimeter,
+    Position,
 )
 
 from ._graph_annotator import GraphAnnotator
@@ -115,7 +115,7 @@ class RegionpropsAnnotator(GraphAnnotator):
         if segmentation is None:
             return []
         return [
-            FeatureSpec(pos_key, Centroid(axes=axis_names), "centroid"),
+            FeatureSpec(pos_key, Position(axes=axis_names, recompute=True), "centroid"),
             FeatureSpec(area_key, Area(ndim=ndim), "area"),
             # TODO: Add in intensity when image is passed
             # FeatureSpec("intensity", Intensity(ndim=ndim), "intensity"),

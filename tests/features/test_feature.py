@@ -1,6 +1,5 @@
 from funtracks.features import (
     Area,
-    Centroid,
     Circularity,
     EllipsoidAxes,
     Perimeter,
@@ -29,18 +28,6 @@ def test_position_feature():
     assert feat["num_values"] == 2
     assert feat["display_name"] == ["y", "x"]
     assert feat["recompute"] is False
-    assert feat["required"] is True
-    assert feat["default_value"] is None
-
-
-def test_centroid_feature():
-    """Test that Centroid() returns a valid Feature TypedDict"""
-    feat = Centroid(axes=["z", "y", "x"])
-    assert feat["feature_type"] == "node"
-    assert feat["value_type"] == "float"
-    assert feat["num_values"] == 3
-    assert feat["display_name"] == ["z", "y", "x"]
-    assert feat["recompute"] is True
     assert feat["required"] is True
     assert feat["default_value"] is None
 

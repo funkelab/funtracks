@@ -4,7 +4,6 @@ from ._feature_dict import FeatureDict
 from ._node_features import Position, Time
 from ._regionprops_features import (
     Area,
-    Centroid,
     Circularity,
     EllipsoidAxes,
     Intensity,
@@ -17,7 +16,6 @@ __all__ = [
     "FeatureDict",
     "Position",
     "Time",
-    "Centroid",
     "EllipsoidAxes",
     "Circularity",
     "Perimeter",
