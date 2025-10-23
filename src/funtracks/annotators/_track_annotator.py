@@ -13,6 +13,8 @@ from ._graph_annotator import GraphAnnotator
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
+    from funtracks.features import Feature
+
 
 class TrackAnnotator(GraphAnnotator):
     """A graph annotator to compute tracklet and lineage IDs for SolutionTracks only.
@@ -41,6 +43,24 @@ class TrackAnnotator(GraphAnnotator):
         ValueError: if the provided Tracks are not SolutionTracks (not a binary lineage
             tree)
     """
+
+    @staticmethod
+    def get_available_features(is_solution_tracks: bool) -> dict[str, Feature]:
+        """Get all features that can be computed by this annotator.
+
+        Args:
+            is_solution_tracks: Whether the tracks are SolutionTracks
+
+        Returns:
+            Dictionary mapping feature keys to Feature definitions. Empty if not
+            SolutionTracks.
+        """
+        if not is_solution_tracks:
+            return {}
+        return {
+            NodeAttr.TRACK_ID.value: TrackletID(),
+            "lineage_id": LineageID(),
+        }
 
     def __init__(
         self,

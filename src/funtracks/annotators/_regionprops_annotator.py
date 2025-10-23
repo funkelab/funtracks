@@ -57,8 +57,41 @@ class RegionpropsAnnotator(GraphAnnotator):
         self.regionprops_names = {spec.key: spec.regionprops_attr for spec in specs}
 
     @staticmethod
+    def _build_feature_specs(
+        segmentation: np.ndarray | None, ndim: int, axis_names: list[str]
+    ) -> list[FeatureSpec]:
+        """Build feature specifications for all supported regionprops features.
+
+        Single source of truth for feature definitions. Returns FeatureSpec objects
+        that include the regionprops attribute mapping needed for computation.
+
+        Args:
+            segmentation: The segmentation array (or None if not available)
+            ndim: Number of dimensions (3 or 4)
+            axis_names: Names of spatial axes
+
+        Returns:
+            list[FeatureSpec]: List of feature specifications with key, feature,
+                and regionprops attribute name. Empty list if no segmentation.
+        """
+        if segmentation is None:
+            return []
+        return [
+            FeatureSpec("pos", Centroid(axes=axis_names), "centroid"),
+            FeatureSpec("area", Area(ndim=ndim), "area"),
+            # TODO: Add in intensity when image is passed
+            # FeatureSpec("intensity", Intensity(ndim=ndim), "intensity"),
+            FeatureSpec("ellipse_axis_radii", EllipsoidAxes(ndim=ndim), "axes"),
+            FeatureSpec("circularity", Circularity(ndim=ndim), "circularity"),
+            FeatureSpec("perimeter", Perimeter(ndim=ndim), "perimeter"),
+        ]
+
+    @staticmethod
     def get_feature_specs(tracks: Tracks) -> list[FeatureSpec]:
         """Get specifications for all supported regionprops features.
+
+        Returns full FeatureSpec objects including regionprops attribute mappings.
+        Used internally and by tests.
 
         Args:
             tracks (Tracks): The tracks to get feature specs for.
@@ -67,18 +100,30 @@ class RegionpropsAnnotator(GraphAnnotator):
             list[FeatureSpec]: List of feature specifications with key, feature,
                 and regionprops attribute name. Empty list if no segmentation.
         """
-        if tracks.segmentation is None:
-            return []
-        ndim = tracks.ndim
-        return [
-            FeatureSpec("pos", Centroid(axes=tracks.axis_names), "centroid"),
-            FeatureSpec("area", Area(ndim=ndim), "area"),
-            # TODO: Add in intensity when image is passed
-            # FeatureSpec("intensity", Intensity(ndim=ndim), "intensity"),
-            FeatureSpec("ellipse_axis_radii", EllipsoidAxes(ndim=ndim), "axes"),
-            FeatureSpec("circularity", Circularity(ndim=ndim), "circularity"),
-            FeatureSpec("perimeter", Perimeter(ndim=ndim), "perimeter"),
-        ]
+        return RegionpropsAnnotator._build_feature_specs(
+            tracks.segmentation, tracks.ndim, tracks.axis_names
+        )
+
+    @staticmethod
+    def get_available_features(
+        segmentation: np.ndarray | None, ndim: int, axis_names: list[str]
+    ) -> dict[str, Feature]:
+        """Get all features that can be computed by this annotator.
+
+        Lightweight method for AnnotatorManager that returns just the feature
+        definitions without internal regionprops mappings.
+
+        Args:
+            segmentation: The segmentation array (or None if not available)
+            ndim: Number of dimensions (3 or 4)
+            axis_names: Names of spatial axes
+
+        Returns:
+            Dictionary mapping feature keys to Feature definitions. Empty if no
+            segmentation.
+        """
+        specs = RegionpropsAnnotator._build_feature_specs(segmentation, ndim, axis_names)
+        return {spec.key: spec.feature for spec in specs}
 
     def compute(self, feature_keys: list[str] | None = None) -> None:
         """Compute the currently included features and add them to the tracks.

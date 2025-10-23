@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from funtracks.features import IoU
+from funtracks.features import Feature, IoU
 
 from ._compute_ious import _compute_ious
 from ._graph_annotator import GraphAnnotator
@@ -25,9 +25,24 @@ class EdgeAnnotator(GraphAnnotator):
         tracks (Tracks): The tracks to manage the edge features on
     """
 
+    @staticmethod
+    def get_available_features(segmentation: np.ndarray | None) -> dict[str, Feature]:
+        """Get all features that can be computed by this annotator.
+
+        Args:
+            segmentation: The segmentation array (or None if not available)
+
+        Returns:
+            Dictionary mapping feature keys to Feature definitions. Empty if no
+            segmentation.
+        """
+        if segmentation is None:
+            return {}
+        return {"iou": IoU()}
+
     def __init__(self, tracks: Tracks) -> None:
         self.iou_key = "iou"
-        feats = {} if tracks.segmentation is None else {self.iou_key: IoU()}
+        feats = self.get_available_features(tracks.segmentation)
         super().__init__(tracks, feats)
 
     def compute(self, feature_keys: list[str] | None = None) -> None:

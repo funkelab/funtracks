@@ -2,17 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from funtracks.features import (
-    Area,
-    Centroid,
-    Circularity,
-    EllipsoidAxes,
-    Feature,
-    IoU,
-    LineageID,
-    Perimeter,
-    TrackletID,
-)
+from funtracks.features import Feature
 
 from ._edge_annotator import EdgeAnnotator
 from ._graph_annotator import GraphAnnotator
@@ -48,6 +38,9 @@ class AnnotatorManager:
         This is a class method so it can be called before creating a Tracks instance,
         allowing Tracks to build a complete FeatureDict from the start.
 
+        Queries each annotator for its available features based on the provided
+        parameters.
+
         Args:
             segmentation: The segmentation array (or None)
             ndim: Number of dimensions (3 or 4)
@@ -59,24 +52,12 @@ class AnnotatorManager:
         """
         features: dict[str, Feature] = {}
 
-        # RegionpropsAnnotator and EdgeAnnotator features (require segmentation)
-        if segmentation is not None:
-            # Regionprops features
-            features["pos"] = Centroid(axes=axis_names)
-            features["area"] = Area(ndim=ndim)
-            features["ellipse_axis_radii"] = EllipsoidAxes(ndim=ndim)
-            features["circularity"] = Circularity(ndim=ndim)
-            features["perimeter"] = Perimeter(ndim=ndim)
-
-            # Edge features
-            # TODO: I hate this. Why aren't we using the Annotators to define what
-            # features exist??
-            features["iou"] = IoU()
-
-        # TrackAnnotator features (require SolutionTracks)
-        if is_solution_tracks:
-            features["tracklet_id"] = TrackletID()
-            features["lineage_id"] = LineageID()
+        # Get features from each annotator
+        features.update(
+            RegionpropsAnnotator.get_available_features(segmentation, ndim, axis_names)
+        )
+        features.update(EdgeAnnotator.get_available_features(segmentation))
+        features.update(TrackAnnotator.get_available_features(is_solution_tracks))
 
         return features
 
