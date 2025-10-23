@@ -32,7 +32,7 @@ def test_update_node_segs(get_tracks, ndim):
     action = UpdateNodeSeg(tracks, node, pixels=pixels, added=True)
 
     assert set(tracks.graph.nodes()) == set(reference_graph.nodes())
-    assert tracks.graph.nodes[1][NodeAttr.AREA.value] > original_area
+    assert tracks.graph.nodes[1][NodeAttr.AREA.value] == original_area + 1
     assert tracks.graph.nodes[1][NodeAttr.POS.value] != original_pos
     assert_array_almost_equal(tracks.segmentation, new_seg)
 
