@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 import networkx as nx
 
-from funtracks.features import FeatureSet
+from funtracks.features import FeatureDict
 
 from .graph_attributes import NodeAttr
 from .tracks import Tracks
@@ -29,8 +29,8 @@ class SolutionTracks(Tracks):
         pos_attr: str | tuple[str] | list[str] | None = NodeAttr.POS.value,
         scale: list[float] | None = None,
         ndim: int | None = None,
-        recompute_track_ids: bool = True,
-        features: FeatureSet | None = None,
+        features: FeatureDict | None = None,
+        existing_features: list[str] | None = None,
     ):
         super().__init__(
             graph,
@@ -40,15 +40,25 @@ class SolutionTracks(Tracks):
             scale=scale,
             ndim=ndim,
             features=features,
+            existing_features=existing_features,
         )
         self.max_track_id: int
         self.track_id_to_node: dict[int, list[int]] = {}
 
-        # recompute track_id if requested or missing
-        self._initialize_track_ids(recompute_track_ids)
+        # Check if track_id should be recomputed based on existing_features
+        recompute = True
+        if existing_features is not None and "track_id" in existing_features:
+            recompute = False
+
+        self._initialize_track_ids(recompute)
 
     @classmethod
     def from_tracks(cls, tracks: Tracks):
+        # Get existing features from tracks
+        existing_features = list(tracks.features.keys())
+        # don't recompute the track ids
+        existing_features.append(NodeAttr.TRACK_ID.value)
+
         return cls(
             tracks.graph,
             segmentation=tracks.segmentation,
@@ -56,8 +66,8 @@ class SolutionTracks(Tracks):
             pos_attr=None,
             scale=tracks.scale,
             ndim=tracks.ndim,
-            recompute_track_ids=False,
             features=tracks.features,
+            existing_features=existing_features,
         )
 
     @property

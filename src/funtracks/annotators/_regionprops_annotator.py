@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
 
 from funtracks.features import (
     Area,
-    Centroid,
     Circularity,
     EllipsoidAxes,
     Feature,
     Perimeter,
+    Position,
 )
 
 from ._graph_annotator import GraphAnnotator
@@ -19,6 +19,20 @@ from ._regionprops_extended import regionprops_extended
 
 if TYPE_CHECKING:
     from funtracks.data_model import Tracks
+
+
+class FeatureSpec(NamedTuple):
+    """Specification for a regionprops feature.
+
+    Attributes:
+        key: The key to use in the graph attributes and feature dict
+        feature: The Feature TypedDict definition
+        regionprops_attr: The name of the corresponding regionprops attribute
+    """
+
+    key: str
+    feature: Feature
+    regionprops_attr: str
 
 
 class RegionpropsAnnotator(GraphAnnotator):
@@ -35,39 +49,109 @@ class RegionpropsAnnotator(GraphAnnotator):
     the self.include value at the corresponding index to the feature in self.features.
     """
 
-    def __init__(self, tracks: Tracks):
-        super().__init__(tracks, RegionpropsAnnotator.all_supported_features(tracks))
+    def __init__(
+        self,
+        tracks: Tracks,
+        pos_key: str = "pos",
+        area_key: str = "area",
+        ellipse_axis_radii_key: str = "ellipse_axis_radii",
+        circularity_key: str = "circularity",
+        perimeter_key: str = "perimeter",
+    ):
+        self.pos_key = pos_key
+        self.area_key = area_key
+        self.ellipse_axis_radii_key = ellipse_axis_radii_key
+        self.circularity_key = circularity_key
+        self.perimeter_key = perimeter_key
 
-    @classmethod
-    def all_supported_features(cls, tracks: Tracks) -> list[Feature]:
-        """Get a list of all regionprops features that can be computed for the tracks.
+        specs = RegionpropsAnnotator._build_feature_specs(
+            tracks.segmentation,
+            tracks.ndim,
+            tracks.axis_names,
+            pos_key,
+            area_key,
+            ellipse_axis_radii_key,
+            circularity_key,
+            perimeter_key,
+        )
+        feats = {spec.key: spec.feature for spec in specs}
+        super().__init__(tracks, feats)
+        # Build regionprops name mapping from specs
+        self.regionprops_names = {spec.key: spec.regionprops_attr for spec in specs}
+
+    @staticmethod
+    def _build_feature_specs(
+        segmentation: np.ndarray | None,
+        ndim: int,
+        axis_names: list[str],
+        pos_key: str = "pos",
+        area_key: str = "area",
+        ellipse_axis_radii_key: str = "ellipse_axis_radii",
+        circularity_key: str = "circularity",
+        perimeter_key: str = "perimeter",
+    ) -> list[FeatureSpec]:
+        """Build feature specifications for all supported regionprops features.
+
+        Single source of truth for feature definitions. Returns FeatureSpec objects
+        that include the regionprops attribute mapping needed for computation.
 
         Args:
-            tracks (Tracks): The tracks to get regionprops features for.
+            segmentation: The segmentation array (or None if not available)
+            ndim: Number of dimensions (3 or 4)
+            axis_names: Names of spatial axes
+            pos_key: The key to use for the position/centroid feature. Defaults to "pos".
+            area_key: The key to use for the area feature. Defaults to "area".
+            ellipse_axis_radii_key: The key to use for the ellipse axis radii feature.
+                Defaults to "ellipse_axis_radii".
+            circularity_key: The key to use for the circularity feature.
+                Defaults to "circularity".
+            perimeter_key: The key to use for the perimeter feature.
+                Defaults to "perimeter".
 
         Returns:
-            list[Feature]: A list of all regionprops features that can be computed
+            list[FeatureSpec]: List of feature specifications with key, feature,
+                and regionprops attribute name. Empty list if no segmentation.
         """
-        if tracks.segmentation is None:
+        if segmentation is None:
             return []
-        ndim = tracks.ndim
-        features = [
-            Centroid(axes=tracks.axis_names),
-            Area(ndim=ndim),
-            # Intensity(ndim=ndim),  # TODO: Add in intensity when image is passed
-            EllipsoidAxes(ndim=ndim),
-            Circularity(ndim=ndim),
-            Perimeter(ndim=ndim),
+        return [
+            FeatureSpec(pos_key, Position(axes=axis_names, recompute=True), "centroid"),
+            FeatureSpec(area_key, Area(ndim=ndim), "area"),
+            # TODO: Add in intensity when image is passed
+            # FeatureSpec("intensity", Intensity(ndim=ndim), "intensity"),
+            FeatureSpec(ellipse_axis_radii_key, EllipsoidAxes(ndim=ndim), "axes"),
+            FeatureSpec(circularity_key, Circularity(ndim=ndim), "circularity"),
+            FeatureSpec(perimeter_key, Perimeter(ndim=ndim), "perimeter"),
         ]
-        return features
 
-    def compute(self, add_to_set=False) -> None:
+    @staticmethod
+    def get_available_features(
+        segmentation: np.ndarray | None, ndim: int, axis_names: list[str]
+    ) -> dict[str, Feature]:
+        """Get all features that can be computed by this annotator.
+
+        Returns features with default keys. Custom keys can be specified at
+        initialization time.
+
+        Args:
+            segmentation: The segmentation array (or None if not available)
+            ndim: Number of dimensions (3 or 4)
+            axis_names: Names of spatial axes
+
+        Returns:
+            Dictionary mapping feature keys to Feature definitions. Empty if no
+            segmentation.
+        """
+        specs = RegionpropsAnnotator._build_feature_specs(segmentation, ndim, axis_names)
+        return {spec.key: spec.feature for spec in specs}
+
+    def compute(self, feature_keys: list[str] | None = None) -> None:
         """Compute the currently included features and add them to the tracks.
 
         Args:
-            add_to_set (bool, optional): Whether to add the Features to the Tracks
-            FeatureSet. Defaults to False. Should usually be set to True on the initial
-            computation, but False on subsequent re-computations.
+            feature_keys: Optional list of specific feature keys to compute.
+                If None, computes all currently active features. Keys not in
+                self.features (not enabled) are ignored.
 
         Raises:
             ValueError: If the segmentation is missing from the tracks.
@@ -75,29 +159,31 @@ class RegionpropsAnnotator(GraphAnnotator):
         if self.tracks.segmentation is None:
             raise ValueError("Cannot compute regionprops features without segmentation.")
 
-        if add_to_set:
-            self.add_features_to_set()
+        keys_to_compute = self._filter_feature_keys(feature_keys)
+        if not keys_to_compute:
+            return
 
         seg = self.tracks.segmentation
         for t in range(seg.shape[0]):
-            self._regionprops_update(seg[t])
+            self._regionprops_update(seg[t], keys_to_compute)
 
-    def _regionprops_update(self, seg_frame: np.ndarray) -> None:
+    def _regionprops_update(self, seg_frame: np.ndarray, feature_keys: list[str]) -> None:
         """Perform the regionprops computation and update all feature values for a
         single frame of segmentation data.
 
         Args:
             seg_frame (np.ndarray): A 2D or 3D numpy array representing one time point
                 of segmentation data.
+            feature_keys: List of feature keys to compute (already filtered to enabled).
         """
         spacing = None if self.tracks.scale is None else tuple(self.tracks.scale[1:])
         for region in regionprops_extended(seg_frame, spacing=spacing):
             node = region.label
-            for feature in self.features:
-                value = getattr(region, feature.regionprops_name)
+            for key in feature_keys:
+                value = getattr(region, self.regionprops_names[key])
                 if isinstance(value, tuple):
                     value = list(value)
-                self.tracks._set_node_attr(node, feature.key, value)
+                self.tracks._set_node_attr(node, key, value)
 
     def update(self, element: int | tuple[int, int]):
         """Update the regionprops features for the given node.
@@ -118,6 +204,10 @@ class RegionpropsAnnotator(GraphAnnotator):
                 f"RegionpropsAnnotator update expected a node, got edge {element}"
             )
 
+        keys_to_compute = list(self.features.keys())
+        if not keys_to_compute:
+            return
+
         time = self.tracks.get_time(element)
         seg_frame = self.tracks.segmentation[time]
         masked_frame = np.where(seg_frame == element, element, 0)
@@ -128,8 +218,8 @@ class RegionpropsAnnotator(GraphAnnotator):
                 "updating regionprops values to None",
                 stacklevel=2,
             )
-            for feature in self.features:
+            for key in keys_to_compute:
                 value = None
-                self.tracks._set_node_attr(element, feature.key, value)
+                self.tracks._set_node_attr(element, key, value)
         else:
-            self._regionprops_update(masked_frame)
+            self._regionprops_update(masked_frame, keys_to_compute)

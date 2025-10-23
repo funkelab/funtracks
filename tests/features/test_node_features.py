@@ -1,26 +1,96 @@
-import pytest
-
-from funtracks.features import Position, Time, ValueType
-
-
-@pytest.mark.parametrize("key", [None, "t"])
-def test_time(key):
-    feat = Time(key=key)
-    assert feat.key == key if key is not None else "time"
-    assert feat.required
-    assert not feat.recompute
-    assert feat.display_name == "Time"
-    assert feat.value_type == ValueType.int
+from funtracks.features import (
+    Area,
+    Circularity,
+    EllipsoidAxes,
+    Perimeter,
+    Position,
+    Time,
+)
 
 
-@pytest.mark.parametrize("key", [None, "location"])
-@pytest.mark.parametrize("recompute", [False, True])
-@pytest.mark.parametrize(("axes", "num_values"), [(["x", "y"], 2), (["z", "y", "x"], 3)])
-def test_position(key, recompute, axes, num_values):
-    feat = Position(key=key, recompute=recompute, axes=axes)
-    assert feat.key == key if key is not None else "pos"
-    assert feat.required
-    assert feat.recompute == recompute
-    assert feat.display_name == axes
-    assert feat.value_type == ValueType.float
-    assert feat.num_values == num_values
+def test_time_feature():
+    """Test that Time() returns a valid Feature TypedDict"""
+    feat = Time()
+    assert feat["feature_type"] == "node"
+    assert feat["value_type"] == "int"
+    assert feat["num_values"] == 1
+    assert feat["display_name"] == "Time"
+    assert feat["recompute"] is False
+    assert feat["required"] is True
+    assert feat["default_value"] is None
+
+
+def test_position_feature():
+    """Test that Position() returns a valid Feature TypedDict"""
+    feat = Position(axes=["y", "x"])
+    assert feat["feature_type"] == "node"
+    assert feat["value_type"] == "float"
+    assert feat["num_values"] == 2
+    assert feat["display_name"] == ["y", "x"]
+    assert feat["recompute"] is False
+    assert feat["required"] is True
+    assert feat["default_value"] is None
+
+
+def test_area_feature():
+    """Test that Area() returns a valid Feature TypedDict"""
+    feat = Area(ndim=3)
+    assert feat["feature_type"] == "node"
+    assert feat["value_type"] == "float"
+    assert feat["num_values"] == 1
+    assert feat["display_name"] == "Area"
+    assert feat["recompute"] is True
+    assert feat["required"] is True
+    assert feat["default_value"] is None
+
+    feat = Area(ndim=4)
+    assert feat["display_name"] == "Volume"
+
+
+def test_ellipsoid_axes_feature():
+    """Test that EllipsoidAxes() returns a valid Feature TypedDict"""
+    feat = EllipsoidAxes(ndim=3)
+    assert feat["feature_type"] == "node"
+    assert feat["value_type"] == "float"
+    assert feat["num_values"] == 1
+    assert feat["display_name"] == "Ellipse axis radii"
+
+    feat = EllipsoidAxes(ndim=4)
+    assert feat["num_values"] == 1
+    assert feat["display_name"] == "Ellipsoid axis radii"
+
+
+def test_circularity_feature():
+    """Test that Circularity() returns a valid Feature TypedDict"""
+    feat = Circularity(ndim=3)
+    assert feat["feature_type"] == "node"
+    assert feat["value_type"] == "float"
+    assert feat["num_values"] == 1
+    assert feat["display_name"] == "Circularity"
+
+    feat = Circularity(ndim=4)
+    assert feat["display_name"] == "Sphericity"
+
+
+def test_perimeter_feature():
+    """Test that Perimeter() returns a valid Feature TypedDict"""
+    feat = Perimeter(ndim=3)
+    assert feat["feature_type"] == "node"
+    assert feat["value_type"] == "float"
+    assert feat["num_values"] == 1
+    assert feat["display_name"] == "Perimeter"
+
+    feat = Perimeter(ndim=4)
+    assert feat["display_name"] == "Surface Area"
+
+
+def test_feature_as_dict():
+    """Test that Features are valid dicts"""
+    feat = Time()
+    assert isinstance(feat, dict)
+    assert "feature_type" in feat
+    assert "value_type" in feat
+
+    # Can convert to regular dict
+    regular_dict = dict(feat)
+    assert regular_dict == feat

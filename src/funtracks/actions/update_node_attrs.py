@@ -36,7 +36,7 @@ class UpdateNodeAttrs(TracksAction):
         """
         super().__init__(tracks)
         protected_attrs = [
-            tracks.features.time.key,
+            tracks.features.time_key,
             NodeAttr.AREA.value,
             NodeAttr.TRACK_ID.value,
         ]

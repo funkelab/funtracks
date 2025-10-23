@@ -5,9 +5,11 @@ from funtracks.data_model.solution_tracks import SolutionTracks
 from funtracks.data_model.tracks_controller import TracksController
 
 
-def test__add_nodes_no_seg(graph_2d):
+def test__add_nodes_no_seg(graph_2d_with_computed_features):
     # add without segmentation
-    tracks = SolutionTracks(graph_2d, ndim=3)
+    tracks = SolutionTracks(
+        graph_2d_with_computed_features, ndim=3, existing_features=["pos", "tracklet_id"]
+    )
     controller = TracksController(tracks)
 
     num_edges = tracks.graph.number_of_edges()
@@ -62,9 +64,13 @@ def test__add_nodes_no_seg(graph_2d):
     assert not tracks.graph.has_edge(4, 5)
 
 
-def test__add_nodes_with_seg(graph_2d, segmentation_2d):
+def test__add_nodes_with_seg(graph_2d_with_computed_features, segmentation_2d):
     # add with segmentation
-    tracks = SolutionTracks(graph_2d, segmentation=segmentation_2d)
+    tracks = SolutionTracks(
+        graph_2d_with_computed_features,
+        segmentation=segmentation_2d,
+        existing_features=["pos", "area", "iou", "tracklet_id"],
+    )
     controller = TracksController(tracks)
 
     num_edges = tracks.graph.number_of_edges()
@@ -163,8 +169,10 @@ def test__add_nodes_with_seg(graph_2d, segmentation_2d):
     assert not tracks.graph.has_edge(4, 5)
 
 
-def test__delete_nodes_no_seg(graph_2d):
-    tracks = SolutionTracks(graph_2d, ndim=3)
+def test__delete_nodes_no_seg(graph_2d_with_computed_features):
+    tracks = SolutionTracks(
+        graph_2d_with_computed_features, ndim=3, existing_features=["pos", "tracklet_id"]
+    )
     controller = TracksController(tracks)
     num_edges = tracks.graph.number_of_edges()
 
@@ -207,8 +215,12 @@ def test__delete_nodes_no_seg(graph_2d):
     assert tracks.get_track_id(2) == 1  # update track id for other child
 
 
-def test__delete_nodes_with_seg(graph_2d, segmentation_2d):
-    tracks = SolutionTracks(graph_2d, segmentation=segmentation_2d)
+def test__delete_nodes_with_seg(graph_2d_with_computed_features, segmentation_2d):
+    tracks = SolutionTracks(
+        graph_2d_with_computed_features,
+        segmentation=segmentation_2d,
+        existing_features=["pos", "area", "iou", "tracklet_id"],
+    )
     controller = TracksController(tracks)
     num_edges = tracks.graph.number_of_edges()
 
@@ -267,8 +279,10 @@ def test__delete_nodes_with_seg(graph_2d, segmentation_2d):
     assert tracks.get_track_id(5) == 1  # update track id for other child
 
 
-def test__add_remove_edges_no_seg(graph_2d):
-    tracks = SolutionTracks(graph_2d, ndim=3)
+def test__add_remove_edges_no_seg(graph_2d_with_computed_features):
+    tracks = SolutionTracks(
+        graph_2d_with_computed_features, ndim=3, existing_features=["pos", "tracklet_id"]
+    )
     controller = TracksController(tracks)
     num_edges = tracks.graph.number_of_edges()
 

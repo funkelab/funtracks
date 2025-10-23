@@ -1,10 +1,11 @@
 import json
+from collections.abc import Sequence
 
 import pytest
 from networkx.utils import graphs_equal
 from numpy.testing import assert_array_almost_equal
 
-from funtracks.data_model import SolutionTracks, Tracks
+from funtracks.data_model import Tracks
 from funtracks.import_export.internal_format import (
     delete_tracks,
     load_tracks,
@@ -12,39 +13,56 @@ from funtracks.import_export.internal_format import (
 )
 
 
-@pytest.mark.parametrize("use_seg", [True, False])
-@pytest.mark.parametrize("ndim", [2, 3])
-@pytest.mark.parametrize("track_type", (Tracks, SolutionTracks))
+@pytest.mark.parametrize("with_seg", [True, False])
+@pytest.mark.parametrize("ndim", [3, 4])
+@pytest.mark.parametrize("is_solution", [True, False])
 def test_save_load(
-    use_seg,
+    get_tracks,
+    with_seg,
     ndim,
-    track_type,
+    is_solution,
     tmp_path,
-    request,
 ):
-    if ndim == 2:
-        graph = request.getfixturevalue("graph_2d")
-        seg = request.getfixturevalue("segmentation_2d")
-    else:
-        graph = request.getfixturevalue("graph_3d")
-        seg = request.getfixturevalue("segmentation_3d")
-    if not use_seg:
-        seg = None
-    tracks = track_type(graph, seg, ndim=ndim + 1)
+    tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=is_solution)
     save_tracks(tracks, tmp_path)
 
-    solution = bool(issubclass(track_type, SolutionTracks))
-    loaded = load_tracks(tmp_path, solution=solution)
+    loaded = load_tracks(tmp_path, solution=is_solution)
     assert loaded.ndim == tracks.ndim
-    assert loaded.features.position.model_dump() == tracks.features.position.model_dump()
-    assert loaded.features.time.model_dump() == tracks.features.time.model_dump()
+    # Check feature keys and important properties match (allow tuple vs list diff)
+    assert loaded.features.time_key == tracks.features.time_key
+    assert loaded.features.position_key == tracks.features.position_key
+
+    # Check that features dictionaries have same keys
+    assert set(loaded.features.keys()) == set(tracks.features.keys())
+
+    # Check that each feature has matching values
+    for key in tracks.features:
+        loaded_feature = loaded.features[key]
+        tracks_feature = tracks.features[key]
+
+        for attr_name, attr_value in tracks_feature.items():
+            loaded_attr_value = loaded_feature[attr_name]
+
+            # For sequence attributes, cast to list to compare (handles tuple vs list)
+            if isinstance(attr_value, Sequence) and not isinstance(attr_value, str):
+                assert list(loaded_attr_value) == list(attr_value), (
+                    f"Feature '{key}' attribute '{attr_name}' mismatch: "
+                    f"{loaded_attr_value} != {attr_value}"
+                )
+            # For non-sequence attributes, direct equality
+            else:
+                assert loaded_attr_value == attr_value, (
+                    f"Feature '{key}' attribute '{attr_name}' mismatch: "
+                    f"{loaded_attr_value} != {attr_value}"
+                )
+
     assert loaded.scale == tracks.scale
     assert loaded.ndim == tracks.ndim
 
-    if issubclass(track_type, SolutionTracks):
+    if is_solution:
         assert loaded.track_id_to_node == tracks.track_id_to_node
 
-    if use_seg:
+    if with_seg:
         assert_array_almost_equal(loaded.segmentation, tracks.segmentation)
     else:
         assert loaded.segmentation is None
@@ -52,26 +70,18 @@ def test_save_load(
     assert graphs_equal(loaded.graph, tracks.graph)
 
 
-@pytest.mark.parametrize("use_seg", [True, False])
-@pytest.mark.parametrize("ndim", [2, 3])
-@pytest.mark.parametrize("track_type", (Tracks, SolutionTracks))
+@pytest.mark.parametrize("with_seg", [True, False])
+@pytest.mark.parametrize("ndim", [3, 4])
+@pytest.mark.parametrize("is_solution", [True, False])
 def test_delete(
-    use_seg,
+    get_tracks,
+    with_seg,
     ndim,
-    track_type,
+    is_solution,
     tmp_path,
-    request,
 ):
     tracks_path = tmp_path / "test_tracks"
-    if ndim == 2:
-        graph = request.getfixturevalue("graph_2d")
-        seg = request.getfixturevalue("segmentation_2d")
-    else:
-        graph = request.getfixturevalue("graph_3d")
-        seg = request.getfixturevalue("segmentation_3d")
-    if not use_seg:
-        seg = None
-    tracks = track_type(graph, seg, ndim=ndim + 1)
+    tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=is_solution)
     save_tracks(tracks, tracks_path)
     delete_tracks(tracks_path)
     with pytest.raises(StopIteration):
@@ -79,8 +89,8 @@ def test_delete(
 
 
 # for backward compatibility
-def test_load_without_features(tmp_path, graph_2d):
-    tracks = Tracks(graph_2d, ndim=3)
+def test_load_without_features(tmp_path, graph_2d_with_computed_features):
+    tracks = Tracks(graph_2d_with_computed_features, ndim=3)
     tracks_path = tmp_path / "test_tracks"
     save_tracks(tracks, tracks_path)
     attrs_path = tracks_path / "attrs.json"
@@ -94,5 +104,5 @@ def test_load_without_features(tmp_path, graph_2d):
         json.dump(attrs, f)
 
     imported_tracks = load_tracks(tracks_path)
-    assert imported_tracks.features.time.key == "time"
-    assert imported_tracks.features.position.key == "pos"
+    assert imported_tracks.features.time_key == "time"
+    assert imported_tracks.features.position_key == "pos"

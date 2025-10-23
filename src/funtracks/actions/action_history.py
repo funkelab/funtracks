@@ -28,7 +28,7 @@ class ActionHistory:
             action (TracksAction): The new action to be added to the history.
         """
         if len(self.redo_stack) > 0:
-            # add all the redo stuff to the undo stack, so that both the originial and
+            # add all the redo stuff to the undo stack, so that both the original and
             # inverse are on the stack
             self.undo_stack.extend(self.redo_stack)
             self.redo_stack = []

@@ -3,7 +3,7 @@ from collections import Counter
 import numpy as np
 import pytest
 
-from funtracks.data_model import EdgeAttr, NodeAttr, SolutionTracks
+from funtracks.data_model import EdgeAttr, NodeAttr
 from funtracks.user_actions import UserUpdateSegmentation
 
 
@@ -13,21 +13,8 @@ from funtracks.user_actions import UserUpdateSegmentation
     [3],
 )
 class TestUpdateNodeSeg:
-    def get_tracks(self, request, ndim) -> SolutionTracks:
-        seg_name = "segmentation_2d" if ndim == 3 else "segmentation_3d"
-        seg = request.getfixturevalue(seg_name)
-
-        gt_graph = self.get_gt_graph(request, ndim)
-        tracks = SolutionTracks(gt_graph, segmentation=seg, ndim=ndim)
-        return tracks
-
-    def get_gt_graph(self, request, ndim):
-        graph_name = "graph_2d" if ndim == 3 else "graph_3d"
-        gt_graph = request.getfixturevalue(graph_name)
-        return gt_graph
-
-    def test_user_update_seg_smaller(self, request, ndim):
-        tracks: SolutionTracks = self.get_tracks(request, ndim)
+    def test_user_update_seg_smaller(self, get_tracks, ndim):
+        tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
         node_id = 3
         edge = (1, 3)
 
@@ -78,8 +65,8 @@ class TestUpdateNodeSeg:
     def pixel_equals(self, pixels1, pixels2):
         return Counter(zip(*pixels1, strict=True)) == Counter(zip(*pixels2, strict=True))
 
-    def test_user_update_seg_bigger(self, request, ndim):
-        tracks: SolutionTracks = self.get_tracks(request, ndim)
+    def test_user_update_seg_bigger(self, get_tracks, ndim):
+        tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
         node_id = 3
         edge = (1, 3)
 
@@ -121,8 +108,8 @@ class TestUpdateNodeSeg:
         assert tracks.get_area(node_id) == orig_area + 1
         assert tracks.get_edge_attr(edge, EdgeAttr.IOU.value) != orig_iou
 
-    def test_user_erase_seg(self, request, ndim):
-        tracks: SolutionTracks = self.get_tracks(request, ndim)
+    def test_user_erase_seg(self, get_tracks, ndim):
+        tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
         node_id = 3
         edge = (1, 3)
 
@@ -158,8 +145,8 @@ class TestUpdateNodeSeg:
         inverse.inverse()
         assert not tracks.graph.has_node(node_id)
 
-    def test_user_add_seg(self, request, ndim):
-        tracks: SolutionTracks = self.get_tracks(request, ndim)
+    def test_user_add_seg(self, get_tracks, ndim):
+        tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
         # draw a new node just like node 6 but in time 3 (instead of 4)
         old_node_id = 6
         node_id = 7
@@ -199,7 +186,7 @@ class TestUpdateNodeSeg:
         assert tracks.get_track_id(node_id) == 10
 
 
-def test_missing_seg(graph_2d):
-    tracks = SolutionTracks(graph_2d, ndim=3)
+def test_missing_seg(get_tracks):
+    tracks = get_tracks(ndim=3, with_seg=False, is_solution=True)
     with pytest.raises(ValueError, match="Cannot update non-existing segmentation"):
         UserUpdateSegmentation(tracks, 0, [], 1)

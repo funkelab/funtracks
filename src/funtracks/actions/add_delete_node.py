@@ -39,12 +39,23 @@ class AddNode(TracksAction):
             attributes (Attrs): Includes times, track_ids, and optionally positions
             pixels (SegMask | None, optional): The segmentation associated with
                 the node. Defaults to None.
+        Raises:
+            ValueError: If time attribute is not in attributes.
+            ValueError: If track_id is not in attributes.
+            ValueError: If pixels is None and position is not in attributes.
         """
         super().__init__(tracks)
         self.node = node
         user_attrs = attributes.copy()
+        # validate the input
         if NodeAttr.TIME.value not in attributes:
-            raise ValueError("Must provide a time attribute for each node")
+            raise ValueError(f"Must provide a time attribute for node {node}")
+        if NodeAttr.TRACK_ID.value not in attributes:
+            raise ValueError(
+                f"Must provide a {NodeAttr.TRACK_ID.value} attribute for node {node}"
+            )
+        if pixels is None and NodeAttr.POS.value not in attributes:
+            raise ValueError(f"Must provide position or segmentation for node {node}")
         self.time = attributes.pop(NodeAttr.TIME.value)
         self.position = attributes.pop(NodeAttr.POS.value, None)
         self.pixels = pixels
@@ -70,9 +81,8 @@ class AddNode(TracksAction):
             else:
                 final_pos = self.position
             attrs[NodeAttr.AREA.value] = computed_attrs[NodeAttr.AREA.value]
-        elif self.position is None:
-            raise ValueError("Must provide positions or segmentation and ids")
         else:
+            # can't be None because we validated it in the init
             final_pos = self.position
 
         self.tracks.set_position(self.node, final_pos)
@@ -99,8 +109,10 @@ class DeleteNode(TracksAction):
     ):
         super().__init__(tracks)
         self.node = node
+        if self.tracks.features.time_key is None:
+            raise ValueError("time_key must be set")
         self.attributes = {
-            self.tracks.features.time.key: self.tracks.get_time(node),
+            self.tracks.features.time_key: self.tracks.get_time(node),
             NodeAttr.POS.value: self.tracks.get_position(node),
             NodeAttr.TRACK_ID.value: self.tracks.get_node_attr(
                 node, NodeAttr.TRACK_ID.value
