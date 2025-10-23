@@ -302,7 +302,7 @@ def import_from_geff(
     if segmentation is not None and isinstance(segmentation, da.Array):
         segmentation = segmentation.compute()
     existing_features = []
-    if recompute_track_ids:
+    if not recompute_track_ids:
         existing_features.append(NodeAttr.TRACK_ID.value)
     # Create the tracks.
     tracks = SolutionTracks(
