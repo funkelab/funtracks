@@ -49,8 +49,31 @@ class RegionpropsAnnotator(GraphAnnotator):
     the self.include value at the corresponding index to the feature in self.features.
     """
 
-    def __init__(self, tracks: Tracks):
-        specs = RegionpropsAnnotator.get_feature_specs(tracks)
+    def __init__(
+        self,
+        tracks: Tracks,
+        pos_key: str = "pos",
+        area_key: str = "area",
+        ellipse_axis_radii_key: str = "ellipse_axis_radii",
+        circularity_key: str = "circularity",
+        perimeter_key: str = "perimeter",
+    ):
+        self.pos_key = pos_key
+        self.area_key = area_key
+        self.ellipse_axis_radii_key = ellipse_axis_radii_key
+        self.circularity_key = circularity_key
+        self.perimeter_key = perimeter_key
+
+        specs = RegionpropsAnnotator._build_feature_specs(
+            tracks.segmentation,
+            tracks.ndim,
+            tracks.axis_names,
+            pos_key,
+            area_key,
+            ellipse_axis_radii_key,
+            circularity_key,
+            perimeter_key,
+        )
         feats = {spec.key: spec.feature for spec in specs}
         super().__init__(tracks, feats)
         # Build regionprops name mapping from specs
@@ -58,7 +81,14 @@ class RegionpropsAnnotator(GraphAnnotator):
 
     @staticmethod
     def _build_feature_specs(
-        segmentation: np.ndarray | None, ndim: int, axis_names: list[str]
+        segmentation: np.ndarray | None,
+        ndim: int,
+        axis_names: list[str],
+        pos_key: str = "pos",
+        area_key: str = "area",
+        ellipse_axis_radii_key: str = "ellipse_axis_radii",
+        circularity_key: str = "circularity",
+        perimeter_key: str = "perimeter",
     ) -> list[FeatureSpec]:
         """Build feature specifications for all supported regionprops features.
 
@@ -69,6 +99,14 @@ class RegionpropsAnnotator(GraphAnnotator):
             segmentation: The segmentation array (or None if not available)
             ndim: Number of dimensions (3 or 4)
             axis_names: Names of spatial axes
+            pos_key: The key to use for the position/centroid feature. Defaults to "pos".
+            area_key: The key to use for the area feature. Defaults to "area".
+            ellipse_axis_radii_key: The key to use for the ellipse axis radii feature.
+                Defaults to "ellipse_axis_radii".
+            circularity_key: The key to use for the circularity feature.
+                Defaults to "circularity".
+            perimeter_key: The key to use for the perimeter feature.
+                Defaults to "perimeter".
 
         Returns:
             list[FeatureSpec]: List of feature specifications with key, feature,
@@ -77,32 +115,14 @@ class RegionpropsAnnotator(GraphAnnotator):
         if segmentation is None:
             return []
         return [
-            FeatureSpec("pos", Centroid(axes=axis_names), "centroid"),
-            FeatureSpec("area", Area(ndim=ndim), "area"),
+            FeatureSpec(pos_key, Centroid(axes=axis_names), "centroid"),
+            FeatureSpec(area_key, Area(ndim=ndim), "area"),
             # TODO: Add in intensity when image is passed
             # FeatureSpec("intensity", Intensity(ndim=ndim), "intensity"),
-            FeatureSpec("ellipse_axis_radii", EllipsoidAxes(ndim=ndim), "axes"),
-            FeatureSpec("circularity", Circularity(ndim=ndim), "circularity"),
-            FeatureSpec("perimeter", Perimeter(ndim=ndim), "perimeter"),
+            FeatureSpec(ellipse_axis_radii_key, EllipsoidAxes(ndim=ndim), "axes"),
+            FeatureSpec(circularity_key, Circularity(ndim=ndim), "circularity"),
+            FeatureSpec(perimeter_key, Perimeter(ndim=ndim), "perimeter"),
         ]
-
-    @staticmethod
-    def get_feature_specs(tracks: Tracks) -> list[FeatureSpec]:
-        """Get specifications for all supported regionprops features.
-
-        Returns full FeatureSpec objects including regionprops attribute mappings.
-        Used internally and by tests.
-
-        Args:
-            tracks (Tracks): The tracks to get feature specs for.
-
-        Returns:
-            list[FeatureSpec]: List of feature specifications with key, feature,
-                and regionprops attribute name. Empty list if no segmentation.
-        """
-        return RegionpropsAnnotator._build_feature_specs(
-            tracks.segmentation, tracks.ndim, tracks.axis_names
-        )
 
     @staticmethod
     def get_available_features(
@@ -110,8 +130,8 @@ class RegionpropsAnnotator(GraphAnnotator):
     ) -> dict[str, Feature]:
         """Get all features that can be computed by this annotator.
 
-        Lightweight method for AnnotatorManager that returns just the feature
-        definitions without internal regionprops mappings.
+        Returns features with default keys. Custom keys can be specified at
+        initialization time.
 
         Args:
             segmentation: The segmentation array (or None if not available)

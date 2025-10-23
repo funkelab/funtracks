@@ -29,6 +29,9 @@ class EdgeAnnotator(GraphAnnotator):
     def get_available_features(segmentation: np.ndarray | None) -> dict[str, Feature]:
         """Get all features that can be computed by this annotator.
 
+        Returns features with default keys. Custom keys can be specified at
+        initialization time.
+
         Args:
             segmentation: The segmentation array (or None if not available)
 
@@ -40,9 +43,10 @@ class EdgeAnnotator(GraphAnnotator):
             return {}
         return {"iou": IoU()}
 
-    def __init__(self, tracks: Tracks) -> None:
-        self.iou_key = "iou"
-        feats = self.get_available_features(tracks.segmentation)
+    def __init__(self, tracks: Tracks, iou_key: str = "iou") -> None:
+        self.iou_key = iou_key
+        # Build features dict with custom key
+        feats = {} if tracks.segmentation is None else {iou_key: IoU()}
         super().__init__(tracks, feats)
 
     def compute(self, feature_keys: list[str] | None = None) -> None:

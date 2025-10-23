@@ -48,6 +48,9 @@ class TrackAnnotator(GraphAnnotator):
     def get_available_features(is_solution_tracks: bool) -> dict[str, Feature]:
         """Get all features that can be computed by this annotator.
 
+        Returns features with default keys. Custom keys can be specified at
+        initialization time.
+
         Args:
             is_solution_tracks: Whether the tracks are SolutionTracks
 

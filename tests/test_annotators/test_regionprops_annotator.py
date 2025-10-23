@@ -20,13 +20,12 @@ class TestRegionpropsAnnotator:
         seg = get_segmentation(ndim)
         tracks = Tracks(graph, segmentation=seg, ndim=ndim)
         rp_ann = RegionpropsAnnotator(tracks)
-        all_feature_specs = RegionpropsAnnotator.get_feature_specs(tracks)
 
         # Compute values
         rp_ann.compute()
         for node in tracks.nodes():
-            for spec in all_feature_specs:
-                assert spec.key in tracks.graph.nodes[node]
+            for key in rp_ann.features:
+                assert key in tracks.graph.nodes[node]
 
     def test_update_all(self, get_graph, get_segmentation, ndim):
         graph = get_graph(ndim, with_features="clean")
@@ -41,11 +40,10 @@ class TestRegionpropsAnnotator:
         expected_area = 1
 
         rp_ann = RegionpropsAnnotator(tracks)
-        all_feature_specs = RegionpropsAnnotator.get_feature_specs(tracks)
         rp_ann.update(node_id)
         assert tracks.get_area(node_id) == expected_area
-        for spec in all_feature_specs:
-            assert spec.key in tracks.graph.nodes[node_id]
+        for key in rp_ann.features:
+            assert key in tracks.graph.nodes[node_id]
         # update an edge
         with pytest.raises(
             ValueError, match="RegionpropsAnnotator update expected a node, got edge"
@@ -61,16 +59,16 @@ class TestRegionpropsAnnotator:
         ):
             rp_ann.update(node_id)
 
-        for spec in all_feature_specs:
-            assert tracks.graph.nodes[node_id][spec.key] is None
+        for key in rp_ann.features:
+            assert tracks.graph.nodes[node_id][key] is None
 
     def test_add_remove_feature(self, get_graph, get_segmentation, ndim):
         graph = get_graph(ndim, with_features="clean")
         seg = get_segmentation(ndim)
         tracks = Tracks(graph, segmentation=seg, ndim=ndim)
         rp_ann = tracks.annotator_manager.annotators["regionprops"]
-        all_feature_specs = RegionpropsAnnotator.get_feature_specs(tracks)
-        to_remove_key = all_feature_specs[1].key  # area
+        all_feature_keys = list(rp_ann.all_features.keys())
+        to_remove_key = all_feature_keys[1]  # area
         rp_ann.remove_feature(to_remove_key)
 
         # Clear existing area attributes from graph (from fixture)
@@ -85,7 +83,7 @@ class TestRegionpropsAnnotator:
         # add it back in
         rp_ann.add_feature(to_remove_key)
         # but remove a different one
-        second_remove_key = all_feature_specs[2].key  # ellipse_axis_radii
+        second_remove_key = all_feature_keys[2]  # ellipse_axis_radii
         rp_ann.remove_feature(second_remove_key)
 
         # remove all but one pixel
@@ -104,8 +102,8 @@ class TestRegionpropsAnnotator:
     def test_missing_seg(self, get_graph, ndim):
         graph = get_graph(ndim, with_features="clean")
         tracks = Tracks(graph, segmentation=None, ndim=ndim)
-        assert RegionpropsAnnotator.get_feature_specs(tracks) == []
         rp_ann = RegionpropsAnnotator(tracks)
+        assert len(rp_ann.features) == 0
         with pytest.raises(
             ValueError, match="Cannot compute regionprops features without segmentation."
         ):

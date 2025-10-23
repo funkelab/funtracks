@@ -38,8 +38,8 @@ class AnnotatorManager:
         This is a class method so it can be called before creating a Tracks instance,
         allowing Tracks to build a complete FeatureDict from the start.
 
-        Queries each annotator for its available features based on the provided
-        parameters.
+        Returns features with default keys. Custom keys can be specified when
+        creating annotator instances.
 
         Args:
             segmentation: The segmentation array (or None)
@@ -52,7 +52,7 @@ class AnnotatorManager:
         """
         features: dict[str, Feature] = {}
 
-        # Get features from each annotator
+        # Get features from each annotator (with default keys)
         features.update(
             RegionpropsAnnotator.get_available_features(segmentation, ndim, axis_names)
         )
