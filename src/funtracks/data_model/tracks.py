@@ -178,7 +178,6 @@ class Tracks:
                         "value_type": "float",
                         "num_values": 1,
                         "display_name": None,
-                        "recompute": False,
                         "required": True,
                         "default_value": None,
                     }
@@ -188,7 +187,7 @@ class Tracks:
             else:
                 # Single position attribute
                 single_position_key = pos_attr if pos_attr is not None else "pos"
-                pos_feature = Position(axes=self.axis_names, recompute=False)
+                pos_feature = Position(axes=self.axis_names)
                 feature_dict.register_position_feature(single_position_key, pos_feature)
 
         return feature_dict

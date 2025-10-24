@@ -12,7 +12,6 @@ def test_create_tracks(graph_3d_with_computed_features: nx.DiGraph, segmentation
     tracks = Tracks(graph=nx.DiGraph(), ndim=3)
     assert tracks.features.position_key == "pos"
     assert isinstance(tracks.features["pos"], dict)
-    assert not tracks.features["pos"]["recompute"]
     with pytest.raises(KeyError):
         tracks.get_positions([1])
 
@@ -26,7 +25,6 @@ def test_create_tracks(graph_3d_with_computed_features: nx.DiGraph, segmentation
     assert pos_key == "pos"
     assert isinstance(pos_key, str)
     assert isinstance(tracks.features[pos_key], dict)
-    assert not tracks.features[pos_key]["recompute"]
     assert tracks.get_positions([1]).tolist() == [[50, 50, 50]]
     assert tracks.get_time(1) == 0
     with pytest.raises(KeyError):
@@ -42,7 +40,6 @@ def test_create_tracks(graph_3d_with_computed_features: nx.DiGraph, segmentation
     assert pos_key == "pos"
     assert isinstance(pos_key, str)
     assert isinstance(tracks.features[pos_key], dict)
-    assert tracks.features[pos_key]["recompute"]
     assert tracks.get_positions([1]).tolist() == [[50, 50, 50]]
     assert tracks.get_time(1) == 0
     assert tracks.get_positions([1], incl_time=True).tolist() == [[0, 50, 50, 50]]

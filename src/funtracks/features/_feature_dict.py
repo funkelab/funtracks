@@ -111,14 +111,3 @@ class FeatureDict(dict[str, Feature]):
         """
         self.tracklet_key = key
         self[key] = feature
-
-    def get_protected_node_keys(self) -> list[str]:
-        protected_keys: list[str] = []
-        # can't change time or tracklet key manually
-        for key in self.time_key, self.tracklet_key:
-            if key is not None:
-                protected_keys.append(key)
-        for key, feat in self.node_features.items():
-            if feat["recompute"]:
-                protected_keys.append(key)
-        return protected_keys

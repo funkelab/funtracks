@@ -127,9 +127,7 @@ class RegionpropsAnnotator(GraphAnnotator):
         if not cls.can_annotate(tracks):
             return []
         return [
-            FeatureSpec(
-                pos_key, Position(axes=tracks.axis_names, recompute=True), "centroid"
-            ),
+            FeatureSpec(pos_key, Position(axes=tracks.axis_names), "centroid"),
             FeatureSpec(area_key, Area(ndim=tracks.ndim), "area"),
             # TODO: Add in intensity when image is passed
             # FeatureSpec("intensity", Intensity(ndim=tracks.ndim), "intensity"),

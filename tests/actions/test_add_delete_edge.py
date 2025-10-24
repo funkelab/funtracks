@@ -76,9 +76,30 @@ def test_custom_edge_attributes_preserved(get_tracks, ndim, with_seg):
 
     # Register custom edge features so they get saved by DeleteEdge
     custom_features = {
-        "edge_type": Feature(feature_type="edge", dtype="str", recompute=False),
-        "confidence": Feature(feature_type="edge", dtype="float", recompute=False),
-        "weight": Feature(feature_type="edge", dtype="float", recompute=False),
+        "edge_type": Feature(
+            feature_type="edge",
+            value_type="str",
+            num_values=1,
+            display_name="Edge Type",
+            required=False,
+            default_value=None,
+        ),
+        "confidence": Feature(
+            feature_type="edge",
+            value_type="float",
+            num_values=1,
+            display_name="Confidence",
+            required=False,
+            default_value=None,
+        ),
+        "weight": Feature(
+            feature_type="edge",
+            value_type="float",
+            num_values=1,
+            display_name="Weight",
+            required=False,
+            default_value=None,
+        ),
     }
     for key, feature in custom_features.items():
         tracks.features[key] = feature

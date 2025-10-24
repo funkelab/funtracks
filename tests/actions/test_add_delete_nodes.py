@@ -88,9 +88,30 @@ def test_custom_attributes_preserved(get_tracks, ndim, with_seg):
 
     # Register custom features so they get saved by DeleteNode
     custom_features = {
-        "cell_type": Feature(feature_type="node", dtype="str", recompute=False),
-        "confidence": Feature(feature_type="node", dtype="float", recompute=False),
-        "user_label": Feature(feature_type="node", dtype="str", recompute=False),
+        "cell_type": Feature(
+            feature_type="node",
+            value_type="str",
+            num_values=1,
+            display_name="Cell Type",
+            required=False,
+            default_value=None,
+        ),
+        "confidence": Feature(
+            feature_type="node",
+            value_type="float",
+            num_values=1,
+            display_name="Confidence",
+            required=False,
+            default_value=None,
+        ),
+        "user_label": Feature(
+            feature_type="node",
+            value_type="str",
+            num_values=1,
+            display_name="User Label",
+            required=False,
+            default_value=None,
+        ),
     }
     for key, feature in custom_features.items():
         tracks.features[key] = feature
