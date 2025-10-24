@@ -91,6 +91,26 @@ class FeatureDict(dict[str, Feature]):
             tracklet_key=data.get("tracklet_key"),
         )
 
+    def register_position_feature(self, key: str, feature: Feature) -> None:
+        """Register the position feature and set the position_key.
+
+        Args:
+            key: The key to use for the position feature
+            feature: The Feature to register
+        """
+        self.position_key = key
+        self[key] = feature
+
+    def register_tracklet_feature(self, key: str, feature: Feature) -> None:
+        """Register the tracklet/track_id feature and set the tracklet_key.
+
+        Args:
+            key: The key to use for the tracklet feature
+            feature: The Feature to register
+        """
+        self.tracklet_key = key
+        self[key] = feature
+
     def get_protected_node_keys(self) -> list[str]:
         protected_keys: list[str] = []
         # can't change time or tracklet key manually

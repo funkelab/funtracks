@@ -53,9 +53,6 @@ def test_add_delete_nodes(get_tracks, ndim, with_seg):
     assert set(tracks.graph.nodes()) == set(reference_graph.nodes())
     for node, data in tracks.graph.nodes(data=True):
         reference_data = copy.deepcopy(reference_graph.nodes[node])
-        # TODO: get back custom attrs https://github.com/funkelab/funtracks/issues/1
-        if not with_seg and "area" in reference_data:
-            del reference_data["area"]
         assert data == reference_data
     if with_seg:
         assert_array_almost_equal(tracks.segmentation, reference_seg)
@@ -79,3 +76,73 @@ def test_add_node_missing_pos(get_tracks):
         ValueError, match="Must provide position or segmentation for node"
     ):
         AddNode(tracks_no_seg, 8, {"time": 2, "track_id": 1})
+
+
+@pytest.mark.parametrize("ndim", [3, 4])
+@pytest.mark.parametrize("with_seg", [True, False])
+def test_custom_attributes_preserved(get_tracks, ndim, with_seg):
+    """Test custom node attributes preserved through add/delete/re-add cycles."""
+    from funtracks.features import Feature
+
+    tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+
+    # Register custom features so they get saved by DeleteNode
+    custom_features = {
+        "cell_type": Feature(feature_type="node", dtype="str", recompute=False),
+        "confidence": Feature(feature_type="node", dtype="float", recompute=False),
+        "user_label": Feature(feature_type="node", dtype="str", recompute=False),
+    }
+    for key, feature in custom_features.items():
+        tracks.features[key] = feature
+
+    # Define attributes including custom ones
+    custom_attrs = {
+        "time": 2,
+        "track_id": 10,
+        "pos": [50.0, 50.0] if ndim == 3 else [50.0, 50.0, 50.0],
+        # Custom user attributes
+        "cell_type": "neuron",
+        "confidence": 0.95,
+        "user_label": "important_cell",
+    }
+
+    # Create segmentation if needed
+    if with_seg:
+        from conftest import sphere
+        from skimage.draw import disk
+
+        if ndim == 3:
+            rr, cc = disk(center=(50, 50), radius=5, shape=(100, 100))
+            pixels = (np.array([2]), rr, cc)
+        else:
+            mask = sphere(center=(50, 50, 50), radius=5, shape=(100, 100, 100))
+            # Create proper 4D pixel coordinates (t, z, y, x)
+            pixels = (np.array([2]), *np.nonzero(mask))
+        custom_attrs.pop("pos")  # pos will be computed from segmentation
+    else:
+        pixels = None
+
+    # Add a node with custom attributes
+    node_id = 100
+    action = AddNode(tracks, node_id, custom_attrs, pixels=pixels)
+
+    # Verify all attributes are present after adding
+    assert tracks.graph.has_node(node_id)
+    for key, value in custom_attrs.items():
+        assert tracks.graph.nodes[node_id][key] == value, (
+            f"Attribute {key} not preserved after add"
+        )
+
+    # Delete the node
+    delete_action = action.inverse()
+    assert not tracks.graph.has_node(node_id)
+
+    # Re-add the node by inverting the delete
+    delete_action.inverse()
+    assert tracks.graph.has_node(node_id)
+
+    # Verify all custom attributes are still present after re-adding
+    for key, value in custom_attrs.items():
+        assert tracks.graph.nodes[node_id][key] == value, (
+            f"Attribute {key} not preserved after delete/re-add cycle"
+        )

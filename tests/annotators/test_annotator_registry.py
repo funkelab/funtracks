@@ -40,8 +40,10 @@ def test_enable_features(graph_clean, segmentation_2d):
     """Test enable_features enables and computes multiple features efficiently."""
     tracks = Tracks(graph_clean, segmentation=segmentation_2d, ndim=3)
 
-    # Features should NOT be in tracks.features initially
-    assert "pos" not in tracks.features
+    # Core features (time, pos) should be in tracks.features, but not enabled
+    assert "pos" in tracks.features
+    assert "time" in tracks.features
+    # Other features should NOT be in tracks.features initially
     assert "area" not in tracks.features
     assert "iou" not in tracks.features
 
@@ -51,7 +53,7 @@ def test_enable_features(graph_clean, segmentation_2d):
     # Enable multiple features at once
     tracks.enable_features(["pos", "area", "iou"])
 
-    # Features should now be in FeatureDict
+    # All features should now be in FeatureDict
     assert "pos" in tracks.features
     assert "area" in tracks.features
     assert "iou" in tracks.features
@@ -82,18 +84,13 @@ def test_enable_disable_features(graph_clean, segmentation_2d):
     """Test enable_features, disable_features, and get_active_features."""
     tracks = Tracks(graph_clean, segmentation=segmentation_2d, ndim=3)
 
-    # Initially, no features are active or in FeatureDict
+    # Core features (time, pos) are in FeatureDict but not enabled by default
     active = tracks.get_active_features()
     assert len(active) == 0
-    assert "pos" not in tracks.features
+    assert "pos" in tracks.features  # Core feature, always present
+    assert "time" in tracks.features  # Core feature, always present
     assert "area" not in tracks.features
     assert "iou" not in tracks.features
-
-    # Verify features are not on the graph yet
-    nodes = list(tracks.graph.nodes())
-    edges = list(tracks.graph.edges())
-    assert tracks.graph.nodes[nodes[0]].get("pos") is None
-    assert tracks.graph.nodes[nodes[0]].get("area") is None
 
     # Enable multiple features at once
     tracks.enable_features(["pos", "area", "iou"])
@@ -109,6 +106,8 @@ def test_enable_disable_features(graph_clean, segmentation_2d):
     assert "iou" in tracks.features
 
     # Verify values are actually computed on the graph
+    nodes = list(tracks.graph.nodes())
+    edges = list(tracks.graph.edges())
     assert tracks.graph.nodes[nodes[0]].get("pos") is not None
     assert tracks.graph.nodes[nodes[0]].get("area") is not None
     if edges:

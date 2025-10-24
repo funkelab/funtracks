@@ -97,12 +97,14 @@ class Tracks:
 
         self.annotators = AnnotatorRegistry(self)
 
-        # Set special keys on FeatureDict from specific annotators
+        # Register core features from annotators in the features dict
         for annotator in self.annotators.annotators:
             if isinstance(annotator, RegionpropsAnnotator):
-                self.features.position_key = annotator.pos_key
+                feature = annotator.all_features[annotator.pos_key][0]
+                self.features.register_position_feature(annotator.pos_key, feature)
             elif isinstance(annotator, TrackAnnotator):
-                self.features.tracklet_key = annotator.tracklet_key
+                feature = annotator.all_features[annotator.tracklet_key][0]
+                self.features.register_tracklet_feature(annotator.tracklet_key, feature)
 
         if existing_features is not None:
             for key in existing_features:
@@ -155,13 +157,21 @@ class Tracks:
         # Build static features dict - always include time
         features: dict[str, Feature] = {time_key: Time()}
 
-        # Handle position features
-        position_key: str | list[str] | None
+        # Create FeatureDict with time feature
+        # Position and tracklet features will be registered separately
+        feature_dict = FeatureDict(
+            features=features,
+            time_key=time_key,
+            position_key=None,
+            tracklet_key=None,
+        )
+
+        # Register position feature if no segmentation (static position)
         if self.segmentation is None:
             # No segmentation - position is provided by user (static)
             if isinstance(pos_attr, tuple | list):
                 # Multiple position attributes (one per axis)
-                position_key = list(pos_attr)
+                multi_position_key = list(pos_attr)
                 for attr in pos_attr:
                     features[attr] = {
                         "feature_type": "node",
@@ -172,21 +182,16 @@ class Tracks:
                         "required": True,
                         "default_value": None,
                     }
+                # For multi-axis, set position_key directly
+                # (not a single feature to register)
+                feature_dict.position_key = multi_position_key
             else:
                 # Single position attribute
-                position_key = pos_attr if pos_attr is not None else "pos"
-                features[position_key] = Position(axes=self.axis_names, recompute=False)
-        else:
-            # With segmentation - position will be added by AnnotatorManager
-            position_key = None
+                single_position_key = pos_attr if pos_attr is not None else "pos"
+                pos_feature = Position(axes=self.axis_names, recompute=False)
+                feature_dict.register_position_feature(single_position_key, pos_feature)
 
-        # tracklet_key will be added by AnnotatorManager
-        return FeatureDict(
-            features=features,
-            time_key=time_key,
-            position_key=position_key,
-            tracklet_key=None,
-        )
+        return feature_dict
 
     def nodes(self):
         return np.array(self.graph.nodes())

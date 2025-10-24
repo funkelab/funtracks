@@ -64,3 +64,53 @@ def test_delete_missing_edge(get_tracks):
         ValueError, match="Edge .* not in the graph, and cannot be removed"
     ):
         DeleteEdge(tracks, (10, 11))
+
+
+@pytest.mark.parametrize("ndim", [3, 4])
+@pytest.mark.parametrize("with_seg", [True, False])
+def test_custom_edge_attributes_preserved(get_tracks, ndim, with_seg):
+    """Test custom edge attributes preserved through add/delete/re-add cycles."""
+    from funtracks.features import Feature
+
+    tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+
+    # Register custom edge features so they get saved by DeleteEdge
+    custom_features = {
+        "edge_type": Feature(feature_type="edge", dtype="str", recompute=False),
+        "confidence": Feature(feature_type="edge", dtype="float", recompute=False),
+        "weight": Feature(feature_type="edge", dtype="float", recompute=False),
+    }
+    for key, feature in custom_features.items():
+        tracks.features[key] = feature
+
+    # Define custom edge attributes
+    custom_attrs = {
+        "edge_type": "division",
+        "confidence": 0.92,
+        "weight": 1.5,
+    }
+
+    # Add an edge with custom attributes
+    edge = (1, 2)
+    action = AddEdge(tracks, edge, attributes=custom_attrs)
+
+    # Verify all attributes are present after adding
+    assert tracks.graph.has_edge(*edge)
+    for key, value in custom_attrs.items():
+        assert tracks.graph.edges[edge][key] == value, (
+            f"Attribute {key} not preserved after add"
+        )
+
+    # Delete the edge
+    delete_action = action.inverse()
+    assert not tracks.graph.has_edge(*edge)
+
+    # Re-add the edge by inverting the delete
+    delete_action.inverse()
+    assert tracks.graph.has_edge(*edge)
+
+    # Verify all custom attributes are still present after re-adding
+    for key, value in custom_attrs.items():
+        assert tracks.graph.edges[edge][key] == value, (
+            f"Attribute {key} not preserved after delete/re-add cycle"
+        )

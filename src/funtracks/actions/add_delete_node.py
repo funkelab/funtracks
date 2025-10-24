@@ -104,13 +104,14 @@ class DeleteNode(TracksAction):
         self.node = node
         if self.tracks.features.time_key is None:
             raise ValueError("time_key must be set")
-        self.attributes = {
-            self.tracks.features.time_key: self.tracks.get_time(node),
-            NodeAttr.POS.value: self.tracks.get_position(node),
-            NodeAttr.TRACK_ID.value: self.tracks.get_node_attr(
-                node, NodeAttr.TRACK_ID.value
-            ),
-        }
+
+        # Save all node feature values from the features dict
+        self.attributes = {}
+        for key in self.tracks.features.node_features:
+            val = self.tracks.get_node_attr(node, key)
+            if val is not None:
+                self.attributes[key] = val
+
         self.pixels = self.tracks.get_pixels(node) if pixels is None else pixels
         self._apply()
 
