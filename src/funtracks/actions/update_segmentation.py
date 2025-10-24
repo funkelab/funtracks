@@ -49,4 +49,4 @@ class UpdateNodeSeg(TracksAction):
         """Set new attributes"""
         value = self.node if self.added else 0
         self.tracks.set_pixels(self.pixels, value)
-        self.tracks.update_features(self)
+        self.tracks.notify_annotators(self)

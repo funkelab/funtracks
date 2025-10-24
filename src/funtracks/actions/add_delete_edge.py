@@ -54,8 +54,8 @@ class AddEdge(TracksAction):
 
         self.tracks.graph.add_edge(self.edge[0], self.edge[1], **self.attributes)
 
-        # Recompute features (will overwrite any computed features in attributes)
-        self.tracks.update_features(self)
+        # Notify annotators to recompute features (will overwrite computed ones)
+        self.tracks.notify_annotators(self)
 
 
 class DeleteEdge(TracksAction):

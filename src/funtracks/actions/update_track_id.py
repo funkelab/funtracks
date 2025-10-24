@@ -32,7 +32,7 @@ class UpdateTrackID(TracksAction):
     def _apply(self) -> None:
         """Assign a new track id to the track starting with start_node.
 
-        Delegates to TrackAnnotator via update_features(), which performs the
+        Delegates to TrackAnnotator via notify_annotators(), which performs the
         actual track ID walking and updates.
         """
-        self.tracks.update_features(self)
+        self.tracks.notify_annotators(self)

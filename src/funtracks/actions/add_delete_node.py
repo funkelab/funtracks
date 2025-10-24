@@ -87,8 +87,8 @@ class AddNode(TracksAction):
             self.tracks.track_id_to_node[track_id] = []
         self.tracks.track_id_to_node[track_id].append(self.node)
 
-        # Always call update_features - annotators will check their own preconditions
-        self.tracks.update_features(self)
+        # Always notify annotators - they will check their own preconditions
+        self.tracks.notify_annotators(self)
 
 
 class DeleteNode(TracksAction):

@@ -500,14 +500,14 @@ class Tracks:
 
     # ========== Feature Management ==========
 
-    def update_features(self, action: TracksAction) -> None:
-        """Update features based on the given action.
+    def notify_annotators(self, action: TracksAction) -> None:
+        """Notify annotators about an action so they can recompute affected features.
 
         Delegates to the annotator registry which broadcasts to all annotators.
         The action contains all necessary information about which elements to update.
 
         Args:
-            action: The action that triggered this update
+            action: The action that triggered this notification
         """
         self.annotators.update(action)
 
