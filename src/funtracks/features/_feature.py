@@ -20,8 +20,6 @@ class Feature(TypedDict):
         num_values (int): The number of values expected for this feature.
         display_name (str | Sequence[str] | None): The name to use to display the
             feature.
-        recompute (bool): If True, the feature should be recomputed
-            when the element changes.
         required (bool): If True, all nodes/edges in the graph are required
             to have this feature.
         default_value (Any): If required is False, this value is returned
@@ -32,6 +30,5 @@ class Feature(TypedDict):
     value_type: Literal["int", "float", "str"]
     num_values: int
     display_name: str | Sequence[str] | None
-    recompute: bool
     required: bool
     default_value: Any

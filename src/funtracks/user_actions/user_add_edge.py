@@ -27,6 +27,7 @@ class UserAddEdge(ActionGroup):
         force: bool = False,
     ):
         super().__init__(tracks, actions=[])
+        self.tracks: SolutionTracks  # Narrow type from base class
         source, target = edge
         if not tracks.graph.has_node(source):
             raise ValueError(

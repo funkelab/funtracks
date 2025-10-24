@@ -5,12 +5,12 @@ from typing import TYPE_CHECKING
 from typing_extensions import override
 
 if TYPE_CHECKING:
-    from funtracks.data_model import SolutionTracks
+    from funtracks.data_model import Tracks
 
 
 class TracksAction:
-    def __init__(self, tracks: SolutionTracks):
-        """An modular change that can be applied to the given Tracks. The tracks must
+    def __init__(self, tracks: Tracks):
+        """A modular change that can be applied to the given Tracks. The tracks must
         be passed in at construction time so that metadata needed to invert the action
         can be extracted.
         The change should be applied in the init function.
@@ -37,7 +37,7 @@ class TracksAction:
 class ActionGroup(TracksAction):
     def __init__(
         self,
-        tracks: SolutionTracks,
+        tracks: Tracks,
         actions: list[TracksAction],
     ):
         """A group of actions that is also an action, used to modify the given tracks.

@@ -4,6 +4,7 @@ import logging
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from funtracks.actions import TracksAction
     from funtracks.data_model import Tracks
     from funtracks.features.feature import Feature
 
@@ -26,46 +27,56 @@ class GraphAnnotator:
     Attributes:
         all_features (dict[str, tuple[Feature, bool]]): Maps feature keys to
             (feature, is_included) tuples. Tracks both what can be computed and
-            what is currently being computed.
+            what is currently being computed. Defaults to computing nothing.
     """
+
+    @classmethod
+    def can_annotate(cls, tracks: Tracks) -> bool:
+        """Check if this annotator can annotate the given tracks.
+
+        Subclasses should override this method to specify their requirements
+        (e.g., segmentation, SolutionTracks, etc.).
+
+        Args:
+            tracks: The tracks to check compatibility with
+
+        Returns:
+            True if the annotator can annotate these tracks, False otherwise
+        """
+        return True
 
     def __init__(self, tracks: Tracks, features: dict[str, Feature]):
         self.tracks = tracks
-        # Store (feature, is_included) for each key
+        # Store (feature, is_included) for each key - default to False (disabled)
         self.all_features: dict[str, tuple[Feature, bool]] = {
-            key: (feat, True) for key, feat in features.items()
+            key: (feat, False) for key, feat in features.items()
         }
 
-    def remove_feature(self, key: str) -> None:
-        """Stop computing the given feature in the annotation process.
+    def enable_features(self, keys: list[str]) -> None:
+        """Enable computation of the given features in the annotation process.
 
-        This only affects whether the annotator computes values for this feature.
-        The feature remains in tracks.features (FeatureDict modifications should be
-        done through AnnotatorManager).
+        Filters the list to only features this annotator owns, ignoring others.
 
         Args:
-            key (str): The key of the feature to remove. Must be in all_features.
+            keys: List of feature keys to enable. Only keys in all_features are enabled.
         """
-        if key in self.all_features:
-            feat, _ = self.all_features[key]
-            self.all_features[key] = (feat, False)
+        for key in keys:
+            if key in self.all_features:
+                feat, _ = self.all_features[key]
+                self.all_features[key] = (feat, True)
 
-    def add_feature(self, key: str) -> None:
-        """Start computing the given feature in the annotation process.
+    def disable_features(self, keys: list[str]) -> None:
+        """Disable computation of the given features in the annotation process.
 
-        This only affects whether the annotator computes values for this feature.
-        The feature should already be in tracks.features (added during initialization).
+        Filters the list to only features this annotator owns, ignoring others.
 
         Args:
-            key (str): The key of the feature to add. Must be in all_features.
+            keys: List of feature keys to disable. Only keys in all_features are disabled.
         """
-        if key in self.all_features:
-            feat, _ = self.all_features[key]
-            self.all_features[key] = (feat, True)
-        else:
-            raise ValueError(
-                f"Cannot add feature '{key}' - annotator cannot manage this feature."
-            )
+        for key in keys:
+            if key in self.all_features:
+                feat, _ = self.all_features[key]
+                self.all_features[key] = (feat, False)
 
     @property
     def features(self) -> dict[str, Feature]:
@@ -118,19 +129,19 @@ class GraphAnnotator:
         """
         raise NotImplementedError("Must implement compute in the annotator subclass")
 
-    def update(
-        self,
-        element: int | tuple[int, int],
-    ) -> None:
-        """Update a set of features for a given node or edge.
+    def update(self, action: TracksAction) -> None:
+        """Update a set of features based on the given action.
 
         This involves both updating the node or edge attributes on the tracks.graph
         and adding the features to the FeatureDict, if necessary. This is distinct
         from `compute` to allow more efficient computation of features for single
         elements.
 
+        The action contains all necessary information about which elements to update
+        (e.g., AddNode.node, AddEdge.edge, UpdateNodeSeg.node).
+
         Args:
-            element (int | tuple[int, int]): The node or edge to update
+            action (TracksAction): The action that triggered this update
 
         Raises:
             NotImplementedError: If not implemented in subclass.

@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import numpy as np
-
 from funtracks.data_model.graph_attributes import NodeAttr
 from funtracks.data_model.solution_tracks import SolutionTracks
 
@@ -45,6 +43,7 @@ class AddNode(TracksAction):
             ValueError: If pixels is None and position is not in attributes.
         """
         super().__init__(tracks)
+        self.tracks: SolutionTracks  # Narrow type from base class
         self.node = node
         user_attrs = attributes.copy()
         # validate the input
@@ -73,26 +72,23 @@ class AddNode(TracksAction):
         attrs = self.attributes
         self.tracks.graph.add_node(self.node)
         self.tracks.set_time(self.node, self.time)
-        final_pos: np.ndarray
-        if self.tracks.segmentation is not None:
-            computed_attrs = self.tracks._compute_node_attrs(self.node, self.time)
-            if self.position is None:
-                final_pos = np.array(computed_attrs[NodeAttr.POS.value])
-            else:
-                final_pos = self.position
-            attrs[NodeAttr.AREA.value] = computed_attrs[NodeAttr.AREA.value]
-        else:
-            # can't be None because we validated it in the init
-            final_pos = self.position
 
-        self.tracks.set_position(self.node, final_pos)
+        # If no segmentation, manually set position from attributes
+        if self.tracks.segmentation is None:
+            # can't be None because we validated it in the init
+            self.tracks.set_position(self.node, self.position)
+
         for attr, values in attrs.items():
             self.tracks._set_node_attr(self.node, attr, values)
 
+        # TODO: only keep track of max track id and track_id to node in one location
         track_id = attrs[NodeAttr.TRACK_ID.value]
         if track_id not in self.tracks.track_id_to_node:
             self.tracks.track_id_to_node[track_id] = []
         self.tracks.track_id_to_node[track_id].append(self.node)
+
+        # Always notify annotators - they will check their own preconditions
+        self.tracks.notify_annotators(self)
 
 
 class DeleteNode(TracksAction):
@@ -108,16 +104,16 @@ class DeleteNode(TracksAction):
         pixels: SegMask | None = None,
     ):
         super().__init__(tracks)
+        self.tracks: SolutionTracks  # Narrow type from base class
         self.node = node
-        if self.tracks.features.time_key is None:
-            raise ValueError("time_key must be set")
-        self.attributes = {
-            self.tracks.features.time_key: self.tracks.get_time(node),
-            NodeAttr.POS.value: self.tracks.get_position(node),
-            NodeAttr.TRACK_ID.value: self.tracks.get_node_attr(
-                node, NodeAttr.TRACK_ID.value
-            ),
-        }
+
+        # Save all node feature values from the features dict
+        self.attributes = {}
+        for key in self.tracks.features.node_features:
+            val = self.tracks.get_node_attr(node, key)
+            if val is not None:
+                self.attributes[key] = val
+
         self.pixels = self.tracks.get_pixels(node) if pixels is None else pixels
         self._apply()
 

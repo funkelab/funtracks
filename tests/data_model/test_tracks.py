@@ -4,7 +4,7 @@ import pytest
 from networkx.utils import graphs_equal
 from numpy.testing import assert_array_almost_equal
 
-from funtracks.data_model import EdgeAttr, NodeAttr, Tracks
+from funtracks.data_model import NodeAttr, Tracks
 
 
 def test_create_tracks(graph_3d_with_computed_features: nx.DiGraph, segmentation_3d):
@@ -12,7 +12,6 @@ def test_create_tracks(graph_3d_with_computed_features: nx.DiGraph, segmentation
     tracks = Tracks(graph=nx.DiGraph(), ndim=3)
     assert tracks.features.position_key == "pos"
     assert isinstance(tracks.features["pos"], dict)
-    assert not tracks.features["pos"]["recompute"]
     with pytest.raises(KeyError):
         tracks.get_positions([1])
 
@@ -26,7 +25,6 @@ def test_create_tracks(graph_3d_with_computed_features: nx.DiGraph, segmentation
     assert pos_key == "pos"
     assert isinstance(pos_key, str)
     assert isinstance(tracks.features[pos_key], dict)
-    assert not tracks.features[pos_key]["recompute"]
     assert tracks.get_positions([1]).tolist() == [[50, 50, 50]]
     assert tracks.get_time(1) == 0
     with pytest.raises(KeyError):
@@ -42,7 +40,6 @@ def test_create_tracks(graph_3d_with_computed_features: nx.DiGraph, segmentation
     assert pos_key == "pos"
     assert isinstance(pos_key, str)
     assert isinstance(tracks.features[pos_key], dict)
-    assert tracks.features[pos_key]["recompute"]
     assert tracks.get_positions([1]).tolist() == [[50, 50, 50]]
     assert tracks.get_time(1) == 0
     assert tracks.get_positions([1], incl_time=True).tolist() == [[0, 50, 50, 50]]
@@ -258,40 +255,6 @@ def test_set_edge_attributes(graph_2d_with_computed_features, caplog):
     assert any(
         "Edge (4, 6) not found in the graph." in message for message in caplog.messages
     )
-
-
-def test_compute_node_attrs(graph_2d_with_computed_features, segmentation_2d):
-    tracks = Tracks(
-        graph_2d_with_computed_features,
-        segmentation=segmentation_2d,
-        ndim=3,
-        scale=(1, 2, 2),
-    )
-    attrs = tracks._compute_node_attrs(1, 0)
-    assert NodeAttr.POS.value in attrs
-    assert NodeAttr.AREA.value in attrs
-    assert attrs[NodeAttr.AREA.value] == 1245 * 4
-    attrs = tracks._compute_node_attrs(2, 1)
-    assert attrs[NodeAttr.AREA.value] == 305 * 4
-
-    # cannot compute node attributes without segmentation
-    tracks = Tracks(graph_2d_with_computed_features, segmentation=None, ndim=3)
-    attrs = tracks._compute_node_attrs(1, 0)
-    assert not bool(attrs)
-
-
-def test_compute_edge_attrs(graph_2d_with_computed_features, segmentation_2d):
-    tracks = Tracks(graph_2d_with_computed_features, segmentation_2d, ndim=3)
-    attrs = tracks._compute_edge_attrs((1, 2))
-    assert EdgeAttr.IOU.value in attrs
-    assert attrs[EdgeAttr.IOU.value] == 0.0
-    attrs = tracks._compute_edge_attrs((1, 3))
-    assert np.isclose(attrs[EdgeAttr.IOU.value], 0.395, rtol=1e-2)
-
-    # cannot compute IOU without segmentation
-    tracks = Tracks(graph_2d_with_computed_features, segmentation=None, ndim=3)
-    attrs = tracks._compute_edge_attrs((1, 2))
-    assert not bool(attrs)
 
 
 def test_get_pixels_and_set_pixels(graph_2d_with_computed_features, segmentation_2d):

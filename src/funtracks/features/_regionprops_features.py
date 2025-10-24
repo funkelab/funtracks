@@ -23,7 +23,6 @@ def Area(ndim: int = 3) -> Feature:
         "value_type": "float",
         "num_values": 1,
         "display_name": "Area" if ndim == 3 else "Volume",
-        "recompute": True,
         "required": True,
         "default_value": None,
     }
@@ -40,7 +39,6 @@ def Intensity() -> Feature:
         "value_type": "float",
         "num_values": 1,
         "display_name": "Intensity",
-        "recompute": True,
         "required": True,
         "default_value": None,
     }
@@ -61,7 +59,6 @@ def EllipsoidAxes(ndim: int = 3) -> Feature:
         "value_type": "float",
         "num_values": 1,
         "display_name": "Ellipse axis radii" if ndim == 3 else "Ellipsoid axis radii",
-        "recompute": True,
         "required": True,
         "default_value": None,
     }
@@ -82,7 +79,6 @@ def Circularity(ndim: int = 3) -> Feature:
         "value_type": "float",
         "num_values": 1,
         "display_name": "Circularity" if ndim == 3 else "Sphericity",
-        "recompute": True,
         "required": True,
         "default_value": None,
     }
@@ -103,7 +99,6 @@ def Perimeter(ndim: int = 3) -> Feature:
         "value_type": "float",
         "num_values": 1,
         "display_name": "Perimeter" if ndim == 3 else "Surface Area",
-        "recompute": True,
         "required": True,
         "default_value": None,
     }

@@ -1,6 +1,8 @@
 import pytest
 
+from funtracks.actions import UpdateNodeSeg
 from funtracks.annotators import TrackAnnotator
+from funtracks.data_model import NodeAttr
 
 
 @pytest.mark.parametrize("ndim", [3, 4])
@@ -9,11 +11,14 @@ class TestTrackAnnotator:
     def test_init(self, get_tracks, ndim, with_seg) -> None:
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
         ann = TrackAnnotator(tracks)
-        assert len(ann.features) == 2
+        # Features start disabled by default
+        assert len(ann.all_features) == 2
+        assert len(ann.features) == 0
         assert len(ann.lineage_id_to_nodes) == 0
 
         ann = TrackAnnotator(tracks, tracklet_key="track_id")
-        assert len(ann.features) == 2
+        assert len(ann.all_features) == 2
+        assert len(ann.features) == 0
         assert len(ann.lineage_id_to_nodes) == 0
         assert len(ann.tracklet_id_to_nodes) == 4
         assert ann.max_lineage_id == 0
@@ -23,6 +28,8 @@ class TestTrackAnnotator:
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
 
         ann = TrackAnnotator(tracks)
+        # Enable features
+        ann.enable_features(list(ann.all_features.keys()))
         all_features = ann.features
 
         # Compute values
@@ -57,6 +64,8 @@ class TestTrackAnnotator:
     def test_add_remove_feature(self, get_tracks, ndim, with_seg):
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
         ann = TrackAnnotator(tracks)
+        # Enable features
+        ann.enable_features(list(ann.all_features.keys()))
         # compute the original tracklet and lineage ids
         ann.compute()
         # add an edge
@@ -68,14 +77,14 @@ class TestTrackAnnotator:
         orig_tra = tracks.get_node_attr(node_id, ann.tracklet_key, required=True)
 
         # remove one feature from computation (annotator level, not FeatureDict)
-        ann.remove_feature(to_remove_key)
+        ann.disable_features([to_remove_key])
         ann.compute()  # this should update tra but not lin
         # lineage_id is still in tracks.features but not recomputed
         assert tracks.get_node_attr(node_id, ann.lineage_key, required=True) == orig_lin
         assert tracks.get_node_attr(node_id, ann.tracklet_key, required=True) != orig_tra
 
         # add it back in
-        ann.add_feature(to_remove_key)
+        ann.enable_features([to_remove_key])
         ann.compute()
         # now both are updated
         assert tracks.get_node_attr(node_id, ann.lineage_key, required=True) != orig_lin
@@ -88,3 +97,27 @@ class TestTrackAnnotator:
             ValueError, match="Currently the TrackAnnotator only works on SolutionTracks"
         ):
             TrackAnnotator(tracks)  # type: ignore
+
+    def test_ignores_irrelevant_actions(self, get_tracks, ndim, with_seg):
+        """Test that TrackAnnotator ignores actions that don't affect track IDs."""
+        if not with_seg:
+            pytest.skip("Test requires segmentation")
+
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        tracks.enable_features(["area", NodeAttr.TRACK_ID.value])
+
+        node_id = 3
+        initial_track_id = tracks.get_track_id(node_id)
+
+        # UpdateNodeSeg should not trigger track ID update
+        orig_pixels = tracks.get_pixels(node_id)
+        assert orig_pixels is not None
+        pixels_to_remove = tuple(orig_pixels[d][1:] for d in range(len(orig_pixels)))
+
+        # Perform UpdateNodeSeg action
+        UpdateNodeSeg(tracks, node_id, pixels_to_remove, added=False)
+
+        # Track ID should remain unchanged (no track update happened)
+        assert tracks.get_track_id(node_id) == initial_track_id
+        # But area should be updated
+        assert tracks.get_area(node_id) == 1

@@ -2,14 +2,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from funtracks.data_model.graph_attributes import NodeAttr
-
 from ._base import TracksAction
 
 if TYPE_CHECKING:
     from typing import Any
 
-    from funtracks.data_model import SolutionTracks
+    from funtracks.data_model import Tracks
     from funtracks.data_model.tracks import Node
 
 
@@ -20,7 +18,7 @@ class UpdateNodeAttrs(TracksAction):
 
     def __init__(
         self,
-        tracks: SolutionTracks,
+        tracks: Tracks,
         node: Node,
         attrs: dict[str, Any],
     ):
@@ -35,11 +33,10 @@ class UpdateNodeAttrs(TracksAction):
             ValueError: If a protected attribute is in the given attribute mapping.
         """
         super().__init__(tracks)
-        protected_attrs = [
-            tracks.features.time_key,
-            NodeAttr.AREA.value,
-            NodeAttr.TRACK_ID.value,
-        ]
+        # Cannot modify annotator-managed features or time
+        protected_attrs = set(tracks.annotators.all_features.keys())
+        protected_attrs.add(tracks.features.time_key)
+
         for attr in attrs:
             if attr in protected_attrs:
                 raise ValueError(f"Cannot update attribute {attr} manually")

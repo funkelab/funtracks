@@ -14,7 +14,6 @@ def IoU() -> Feature:
         "value_type": "float",
         "num_values": 1,
         "display_name": "IoU",
-        "recompute": True,
         "required": True,
         "default_value": None,
     }

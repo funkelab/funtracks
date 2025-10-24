@@ -47,6 +47,7 @@ class UserAddNode(ActionGroup):
                 divided in a previous time point.
         """
         super().__init__(tracks, actions=[])
+        self.tracks: SolutionTracks  # Narrow type from base class
         if NodeAttr.TIME.value not in attributes:
             raise ValueError(
                 f"Cannot add node without time. Please add "

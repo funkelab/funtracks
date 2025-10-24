@@ -14,7 +14,6 @@ def TrackletID() -> Feature:
         "value_type": "int",
         "num_values": 1,
         "display_name": "Tracklet ID",
-        "recompute": False,
         "required": True,
         "default_value": None,
     }
@@ -31,7 +30,6 @@ def LineageID() -> Feature:
         "value_type": "int",
         "num_values": 1,
         "display_name": "Lineage ID",
-        "recompute": False,
         "required": True,
         "default_value": None,
     }

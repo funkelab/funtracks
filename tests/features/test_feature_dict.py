@@ -7,7 +7,9 @@ class TestFeatureDict:
     def test_init(self):
         """Test basic initialization of FeatureDict"""
         features = {"time": Time(), "pos": Position(("y", "x"))}
-        fd = FeatureDict(features=features, time_key="time", position_key="pos")
+        fd = FeatureDict(
+            features=features, time_key="time", position_key="pos", tracklet_key=None
+        )
 
         assert len(fd) == 2
         assert fd.time_key == "time"
@@ -38,7 +40,9 @@ class TestFeatureDict:
                 "default_value": None,
             },
         }
-        fd = FeatureDict(features=features, time_key="time", position_key=["y", "x"])
+        fd = FeatureDict(
+            features=features, time_key="time", position_key=["y", "x"], tracklet_key=None
+        )
 
         assert len(fd) == 3
         assert fd.time_key == "time"
@@ -53,15 +57,21 @@ class TestFeatureDict:
 
         # Missing time key
         with pytest.raises(KeyError, match="time_key 'invalid' not found"):
-            FeatureDict(features, time_key="invalid", position_key="pos")
+            FeatureDict(
+                features, time_key="invalid", position_key="pos", tracklet_key=None
+            )
 
         # Missing position key
         with pytest.raises(KeyError, match="position_key 'invalid' not found"):
-            FeatureDict(features, time_key="time", position_key="invalid")
+            FeatureDict(
+                features, time_key="time", position_key="invalid", tracklet_key=None
+            )
 
         # Missing one of multiple position keys
         with pytest.raises(KeyError, match="position_key 'z' not found"):
-            FeatureDict(features, time_key="time", position_key=["z", "y"])
+            FeatureDict(
+                features, time_key="time", position_key=["z", "y"], tracklet_key=None
+            )
 
     def test_node_features(self):
         """Test node_features property filters correctly"""
@@ -78,7 +88,7 @@ class TestFeatureDict:
                 "default_value": None,
             },
         }
-        fd = FeatureDict(features, time_key="time", position_key="pos")
+        fd = FeatureDict(features, time_key="time", position_key="pos", tracklet_key=None)
 
         node_feats = fd.node_features
         assert len(node_feats) == 2
@@ -101,7 +111,7 @@ class TestFeatureDict:
                 "default_value": None,
             },
         }
-        fd = FeatureDict(features, time_key="time", position_key="pos")
+        fd = FeatureDict(features, time_key="time", position_key="pos", tracklet_key=None)
 
         edge_feats = fd.edge_features
         assert len(edge_feats) == 1
@@ -138,13 +148,16 @@ class TestFeatureDict:
                 },
             }
 
-        fd = FeatureDict(features, time_key="time", position_key=pos_key)
+        fd = FeatureDict(
+            features, time_key="time", position_key=pos_key, tracklet_key=None
+        )
         json_dict = fd.dump_json()
 
         assert "FeatureDict" in json_dict
         assert "features" in json_dict["FeatureDict"]
         assert "time_key" in json_dict["FeatureDict"]
         assert "position_key" in json_dict["FeatureDict"]
+        assert "tracklet_key" in json_dict["FeatureDict"]
 
         # Load back from JSON
         loaded_fd = FeatureDict.from_json(json_dict)
@@ -160,7 +173,7 @@ class TestFeatureDict:
     def test_dict_behavior(self):
         """Test that FeatureDict behaves like a dict"""
         features = {"time": Time(), "pos": Position(("y", "x"))}
-        fd = FeatureDict(features, time_key="time", position_key="pos")
+        fd = FeatureDict(features, time_key="time", position_key="pos", tracklet_key=None)
 
         # Can iterate over keys
         keys = list(fd.keys())
