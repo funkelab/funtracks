@@ -102,22 +102,14 @@ class Tracks:
             elif isinstance(annotator, TrackAnnotator):
                 self.features.tracklet_key = annotator.tracklet_key
 
-        # Determine which features to include
-        features_to_include = set(existing_features or [])
-
-        # Include only existing features in features and disable the rest
-        keys_to_disable = []
-        for key, (feature, _) in self.annotators.all_features.items():
-            if key in features_to_include:
-                # Include this feature (already computed)
-                if key not in self.features:
-                    self.features[key] = feature
-            else:
-                # Disable this feature (not yet computed)
-                keys_to_disable.append(key)
-
-        if keys_to_disable:
-            self.annotators.remove_features(keys_to_disable)
+        if existing_features is not None:
+            for key in existing_features:
+                if key in self.annotators.all_features:
+                    feature, _ = self.annotators.all_features[key]
+                    # Add to FeatureDict if not already there
+                    if key not in self.features:
+                        self.features[key] = feature
+                    self.annotators.enable_features([key])
 
     @property
     def time_attr(self):
@@ -545,8 +537,8 @@ class Tracks:
         Raises:
             KeyError: If any feature is not available (raised by annotators)
         """
-        # Registry validates and adds features (will raise if invalid)
-        self.annotators.add_features(feature_keys)
+        # Registry validates and enables features (will raise if invalid)
+        self.annotators.enable_features(feature_keys)
 
         # Add to FeatureDict
         for key in feature_keys:
@@ -568,8 +560,8 @@ class Tracks:
         Raises:
             KeyError: If any feature is not available (raised by annotators)
         """
-        # Registry validates and removes features (will raise if invalid)
-        self.annotators.remove_features(feature_keys)
+        # Registry validates and disables features (will raise if invalid)
+        self.annotators.disable_features(feature_keys)
 
         # Remove from FeatureDict
         for key in feature_keys:

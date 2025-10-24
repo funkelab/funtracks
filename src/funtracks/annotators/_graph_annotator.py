@@ -26,7 +26,7 @@ class GraphAnnotator:
     Attributes:
         all_features (dict[str, tuple[Feature, bool]]): Maps feature keys to
             (feature, is_included) tuples. Tracks both what can be computed and
-            what is currently being computed.
+            what is currently being computed. Defaults to computing nothing.
     """
 
     @classmethod
@@ -46,31 +46,31 @@ class GraphAnnotator:
 
     def __init__(self, tracks: Tracks, features: dict[str, Feature]):
         self.tracks = tracks
-        # Store (feature, is_included) for each key
+        # Store (feature, is_included) for each key - default to False (disabled)
         self.all_features: dict[str, tuple[Feature, bool]] = {
-            key: (feat, True) for key, feat in features.items()
+            key: (feat, False) for key, feat in features.items()
         }
 
-    def add_features(self, keys: list[str]) -> None:
-        """Start computing the given features in the annotation process.
+    def enable_features(self, keys: list[str]) -> None:
+        """Enable computation of the given features in the annotation process.
 
         Filters the list to only features this annotator owns, ignoring others.
 
         Args:
-            keys: List of feature keys to add. Only keys in all_features are added.
+            keys: List of feature keys to enable. Only keys in all_features are enabled.
         """
         for key in keys:
             if key in self.all_features:
                 feat, _ = self.all_features[key]
                 self.all_features[key] = (feat, True)
 
-    def remove_features(self, keys: list[str]) -> None:
-        """Stop computing the given features in the annotation process.
+    def disable_features(self, keys: list[str]) -> None:
+        """Disable computation of the given features in the annotation process.
 
         Filters the list to only features this annotator owns, ignoring others.
 
         Args:
-            keys: List of feature keys to remove. Only keys in all_features are removed.
+            keys: List of feature keys to disable. Only keys in all_features are disabled.
         """
         for key in keys:
             if key in self.all_features:

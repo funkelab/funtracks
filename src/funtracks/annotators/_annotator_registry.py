@@ -109,11 +109,11 @@ class AnnotatorRegistry(GraphAnnotator):
         for annotator in self.annotators:
             annotator.update(element)
 
-    def add_features(self, keys: list[str]) -> None:
-        """Add features across all annotators.
+    def enable_features(self, keys: list[str]) -> None:
+        """Enable features across all annotators.
 
         Args:
-            keys: List of feature keys to add
+            keys: List of feature keys to enable
 
         Raises:
             KeyError: If any feature keys are not available
@@ -124,15 +124,15 @@ class AnnotatorRegistry(GraphAnnotator):
         if not_found:
             raise KeyError(f"Features not available: {not_found}")
 
-        # All features exist - proceed with adding
+        # All features exist - proceed with enabling
         for annotator in self.annotators:
-            annotator.add_features(keys)
+            annotator.enable_features(keys)
 
-    def remove_features(self, keys: list[str]) -> None:
-        """Remove features across all annotators.
+    def disable_features(self, keys: list[str]) -> None:
+        """Disable features across all annotators.
 
         Args:
-            keys: List of feature keys to remove
+            keys: List of feature keys to disable
 
         Raises:
             KeyError: If any feature keys are not available
@@ -143,6 +143,6 @@ class AnnotatorRegistry(GraphAnnotator):
         if not_found:
             raise KeyError(f"Features not available: {not_found}")
 
-        # All features exist - proceed with removing
+        # All features exist - proceed with disabling
         for annotator in self.annotators:
-            annotator.remove_features(keys)
+            annotator.disable_features(keys)

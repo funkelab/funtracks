@@ -11,6 +11,11 @@ class TestRegionpropsAnnotator:
         seg = get_segmentation(ndim)
         tracks = Tracks(graph, segmentation=seg, ndim=ndim)
         rp_ann = RegionpropsAnnotator(tracks)
+        # Features start disabled by default
+        assert len(rp_ann.all_features) == 5
+        assert len(rp_ann.features) == 0
+        # Enable features
+        rp_ann.enable_features(list(rp_ann.all_features.keys()))
         assert (
             len(rp_ann.features) == 5
         )  # pos, area, ellipse_axis_radii, circularity, perimeter
@@ -20,6 +25,8 @@ class TestRegionpropsAnnotator:
         seg = get_segmentation(ndim)
         tracks = Tracks(graph, segmentation=seg, ndim=ndim)
         rp_ann = RegionpropsAnnotator(tracks)
+        # Enable features
+        rp_ann.enable_features(list(rp_ann.all_features.keys()))
 
         # Compute values
         rp_ann.compute()
@@ -40,6 +47,8 @@ class TestRegionpropsAnnotator:
         expected_area = 1
 
         rp_ann = RegionpropsAnnotator(tracks)
+        # Enable features
+        rp_ann.enable_features(list(rp_ann.all_features.keys()))
         rp_ann.update(node_id)
         assert tracks.get_area(node_id) == expected_area
         for key in rp_ann.features:
@@ -71,7 +80,7 @@ class TestRegionpropsAnnotator:
         )
         all_feature_keys = list(rp_ann.all_features.keys())
         to_remove_key = all_feature_keys[1]  # area
-        rp_ann.remove_features([to_remove_key])
+        rp_ann.disable_features([to_remove_key])
 
         # Clear existing area attributes from graph (from fixture)
         for node in tracks.nodes():
@@ -83,10 +92,10 @@ class TestRegionpropsAnnotator:
             assert to_remove_key not in tracks.graph.nodes[node]
 
         # add it back in
-        rp_ann.add_features([to_remove_key])
+        rp_ann.enable_features([to_remove_key])
         # but remove a different one
         second_remove_key = all_feature_keys[2]  # ellipse_axis_radii
-        rp_ann.remove_features([second_remove_key])
+        rp_ann.disable_features([second_remove_key])
 
         # remove all but one pixel
         node_id = 3

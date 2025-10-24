@@ -12,6 +12,11 @@ def test_base_graph_annotator(graph_clean, segmentation_2d):
 
     feat = Time()
     ann = GraphAnnotator(tracks, {"time": feat})
+    # Features start disabled by default
+    assert len(ann.all_features) == 1
+    assert len(ann.features) == 0
+    # Enable to test
+    ann.enable_features(["time"])
     assert len(ann.features) == 1
 
     with pytest.raises(NotImplementedError):

@@ -12,8 +12,11 @@ class TestEdgeAnnotator:
         seg = get_segmentation(ndim)
         tracks = Tracks(graph, segmentation=seg, ndim=ndim)
         ann = EdgeAnnotator(tracks)
-        # When created directly, all features are enabled
+        # Features start disabled by default
         assert len(ann.all_features) == 1
+        assert len(ann.features) == 0
+        # Enable features to test
+        ann.enable_features(list(ann.all_features.keys()))
         assert len(ann.features) == 1
 
     def test_compute_all(self, get_graph, get_segmentation, ndim):
@@ -21,6 +24,8 @@ class TestEdgeAnnotator:
         seg = get_segmentation(ndim)
         tracks = Tracks(graph, segmentation=seg, ndim=ndim)
         ann = EdgeAnnotator(tracks)
+        # Enable features
+        ann.enable_features(list(ann.all_features.keys()))
         all_features = ann.features
 
         # Compute values
@@ -34,6 +39,8 @@ class TestEdgeAnnotator:
         seg = get_segmentation(ndim)
         tracks = Tracks(graph, segmentation=seg, ndim=ndim)
         ann = EdgeAnnotator(tracks)
+        # Enable features
+        ann.enable_features(list(ann.all_features.keys()))
 
         node_id = 3
         edge_id = (1, 3)
@@ -70,6 +77,8 @@ class TestEdgeAnnotator:
         seg = get_segmentation(ndim)
         tracks = Tracks(graph, segmentation=seg, ndim=ndim)
         ann = EdgeAnnotator(tracks)
+        # Enable features
+        ann.enable_features(list(ann.all_features.keys()))
 
         # Compute initial values
         ann.compute()
@@ -80,7 +89,7 @@ class TestEdgeAnnotator:
         orig_iou = tracks.get_edge_attr(edge_id, to_remove_key, required=True)
 
         # remove the IOU from computation (annotator level only)
-        ann.remove_features([to_remove_key])
+        ann.disable_features([to_remove_key])
         # remove all but one pixel
         orig_pixels = tracks.get_pixels(node_id)
         assert orig_pixels is not None
@@ -92,7 +101,7 @@ class TestEdgeAnnotator:
         assert tracks.get_edge_attr(edge_id, to_remove_key, required=True) == orig_iou
 
         # add it back in
-        ann.add_features([to_remove_key])
+        ann.enable_features([to_remove_key])
         ann.update(edge_id)
         new_iou = pytest.approx(0.0, abs=0.001)
         # the feature is now updated
