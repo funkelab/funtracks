@@ -36,14 +36,15 @@ class FeatureDict(dict[str, Feature]):
         # Validate that time and position keys exist
         if time_key is not None and time_key not in self:
             raise KeyError(f"time_key '{time_key}' not found in features")
-        # TODO: Temporarily stopping validating the position key to simplify workflow
-        # if isinstance(position_key, list):
-        #     for key in position_key:
-        #         if key not in self:
-        #             raise KeyError(f"position_key '{key}' not found in features")
-        # else:
-        #     if position_key is not None and position_key not in self:
-        #         raise KeyError(f"position_key '{position_key}' not found in features")
+        # Validate position_key - now that we use register_position_feature(),
+        # position_key passed at init should always be in features
+        if isinstance(position_key, list):
+            for key in position_key:
+                if key not in self:
+                    raise KeyError(f"position_key '{key}' not found in features")
+        else:
+            if position_key is not None and position_key not in self:
+                raise KeyError(f"position_key '{position_key}' not found in features")
 
     @property
     def node_features(self) -> dict[str, Feature]:

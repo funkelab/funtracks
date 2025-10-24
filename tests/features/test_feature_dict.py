@@ -60,18 +60,18 @@ class TestFeatureDict:
             FeatureDict(
                 features, time_key="invalid", position_key="pos", tracklet_key=None
             )
-        # TODO: maybe add this back? but maybe not?
-        # # Missing position key
-        # with pytest.raises(KeyError, match="position_key 'invalid' not found"):
-        #     FeatureDict(
-        #         features, time_key="time", position_key="invalid", tracklet_key=None
-        #     )
 
-        # # Missing one of multiple position keys
-        # with pytest.raises(KeyError, match="position_key 'z' not found"):
-        #     FeatureDict(
-        #         features, time_key="time", position_key=["z", "y"], tracklet_key=None
-        #     )
+        # Missing position key
+        with pytest.raises(KeyError, match="position_key 'invalid' not found"):
+            FeatureDict(
+                features, time_key="time", position_key="invalid", tracklet_key=None
+            )
+
+        # Missing one of multiple position keys
+        with pytest.raises(KeyError, match="position_key 'z' not found"):
+            FeatureDict(
+                features, time_key="time", position_key=["z", "y"], tracklet_key=None
+            )
 
     def test_node_features(self):
         """Test node_features property filters correctly"""
