@@ -101,15 +101,14 @@ class AnnotatorRegistry(GraphAnnotator):
                 if keys_for_annotator:
                     annotator.compute(keys_for_annotator)
 
-    def update(self, element: int | tuple[int, int], action: TracksAction) -> None:
-        """Update features for a specific node or edge across all annotators.
+    def update(self, action: TracksAction) -> None:
+        """Update features across all annotators based on the action.
 
         Args:
-            element: Either a node ID (int) or edge tuple (int, int)
             action: The action that triggered this update
         """
         for annotator in self.annotators:
-            annotator.update(element, action)
+            annotator.update(action)
 
     def enable_features(self, keys: list[str]) -> None:
         """Enable features across all annotators.

@@ -502,18 +502,16 @@ class Tracks:
 
     # ========== Feature Management ==========
 
-    def update_features(
-        self, element: int | tuple[int, int], action: TracksAction
-    ) -> None:
-        """Update features for a specific node or edge.
+    def update_features(self, action: TracksAction) -> None:
+        """Update features based on the given action.
 
         Delegates to the annotator registry which broadcasts to all annotators.
+        The action contains all necessary information about which elements to update.
 
         Args:
-            element: Either a node ID (int) or edge tuple (int, int)
             action: The action that triggered this update
         """
-        self.annotators.update(element, action)
+        self.annotators.update(action)
 
     def get_available_features(self) -> dict[str, Feature]:
         """Get all features that can be computed across all annotators.

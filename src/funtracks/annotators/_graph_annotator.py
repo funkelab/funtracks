@@ -129,20 +129,18 @@ class GraphAnnotator:
         """
         raise NotImplementedError("Must implement compute in the annotator subclass")
 
-    def update(
-        self,
-        element: int | tuple[int, int],
-        action: TracksAction,
-    ) -> None:
-        """Update a set of features for a given node or edge.
+    def update(self, action: TracksAction) -> None:
+        """Update a set of features based on the given action.
 
         This involves both updating the node or edge attributes on the tracks.graph
         and adding the features to the FeatureDict, if necessary. This is distinct
         from `compute` to allow more efficient computation of features for single
         elements.
 
+        The action contains all necessary information about which elements to update
+        (e.g., AddNode.node, AddEdge.edge, UpdateNodeSeg.node).
+
         Args:
-            element (int | tuple[int, int]): The node or edge to update
             action (TracksAction): The action that triggered this update
 
         Raises:

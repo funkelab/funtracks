@@ -212,14 +212,13 @@ class TrackAnnotator(GraphAnnotator):
         self.max_tracklet_id = max_id
         self.tracklet_id_to_nodes = ids_to_nodes
 
-    def update(self, element: int | tuple[int, int], action: TracksAction) -> None:
-        """Update track-level features for a specific node or edge.
+    def update(self, action: TracksAction) -> None:
+        """Update track-level features based on the action.
 
         Handles incremental updates for UpdateTrackID actions. Other actions are ignored
         (topology changes require full recomputation for now).
 
         Args:
-            element: Either a node ID (int) or edge tuple (int, int)
             action: The action that triggered this update
         """
         # Only handle UpdateTrackID actions incrementally

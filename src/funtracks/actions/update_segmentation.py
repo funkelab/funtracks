@@ -49,10 +49,4 @@ class UpdateNodeSeg(TracksAction):
         """Set new attributes"""
         value = self.node if self.added else 0
         self.tracks.set_pixels(self.pixels, value)
-        self.tracks.update_features(self.node, self)
-
-        incident_edges = list(self.tracks.graph.in_edges(self.node)) + list(
-            self.tracks.graph.out_edges(self.node)
-        )
-        for edge in incident_edges:
-            self.tracks.update_features(edge, self)
+        self.tracks.update_features(self)

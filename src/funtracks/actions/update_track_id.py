@@ -35,4 +35,4 @@ class UpdateTrackID(TracksAction):
         Delegates to TrackAnnotator via update_features(), which performs the
         actual track ID walking and updates.
         """
-        self.tracks.update_features(self.start_node, self)
+        self.tracks.update_features(self)

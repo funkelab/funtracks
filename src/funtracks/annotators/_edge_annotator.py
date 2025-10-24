@@ -123,13 +123,12 @@ class EdgeAnnotator(GraphAnnotator):
         for edge in edges:
             self.tracks._set_edge_attr(edge, self.iou_key, 0)
 
-    def update(self, element: int | tuple[int, int], action: TracksAction):
-        """Update the edge features for the given edge.
+    def update(self, action: TracksAction):
+        """Update the edge features based on the action.
 
         Only responds to AddEdge and UpdateNodeSeg actions that affect edge IoU.
 
         Args:
-            element (int | tuple[int, int]): The edge to update. Nodes are ignored.
             action (TracksAction): The action that triggered this update
 
         Raises:
@@ -142,11 +141,22 @@ class EdgeAnnotator(GraphAnnotator):
         if self.tracks.segmentation is None:
             raise ValueError("Cannot update edge features without segmentation.")
 
-        # TODO: only rely on action, not element
-        if isinstance(element, int):
-            return  # Silently ignore nodes
-        if self.iou_key in self.features:
-            source, target = element
+        if self.iou_key not in self.features:
+            return
+
+        # Get edges to update based on action type
+        if isinstance(action, AddEdge):
+            edges_to_update = [action.edge]
+        else:  # UpdateNodeSeg
+            # Get all incident edges to the modified node
+            node = action.node
+            edges_to_update = list(self.tracks.graph.in_edges(node)) + list(
+                self.tracks.graph.out_edges(node)
+            )
+
+        # Update IoU for each edge
+        for edge in edges_to_update:
+            source, target = edge
             start_time = self.tracks.get_time(source)
             end_time = self.tracks.get_time(target)
             start_seg = self.tracks.segmentation[start_time]
@@ -156,11 +166,11 @@ class EdgeAnnotator(GraphAnnotator):
             if np.max(masked_start) == 0 or np.max(masked_end) == 0:
                 warnings.warn(
                     f"Cannot find label {source} in frame {start_time} or label {target} "
-                    "in frame {end_time}: updating edge IOU value to 0",
+                    f"in frame {end_time}: updating edge IOU value to 0",
                     stacklevel=2,
                 )
-                self.tracks._set_edge_attr(element, self.iou_key, 0)
-
-            iou_list = _compute_ious(masked_start, masked_end)
-            iou = 0 if len(iou_list) == 0 else iou_list[0][2]
-            self.tracks._set_edge_attr(element, self.iou_key, iou)
+                self.tracks._set_edge_attr(edge, self.iou_key, 0)
+            else:
+                iou_list = _compute_ious(masked_start, masked_end)
+                iou = 0 if len(iou_list) == 0 else iou_list[0][2]
+                self.tracks._set_edge_attr(edge, self.iou_key, iou)

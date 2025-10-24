@@ -25,4 +25,4 @@ def test_base_graph_annotator(graph_clean, segmentation_2d):
 
     with pytest.raises(NotImplementedError):
         action = TracksAction(tracks)
-        ann.update(1, action)
+        ann.update(action)

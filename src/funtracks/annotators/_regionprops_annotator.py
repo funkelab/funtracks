@@ -197,13 +197,12 @@ class RegionpropsAnnotator(GraphAnnotator):
                     value = list(value)
                 self.tracks._set_node_attr(node, key, value)
 
-    def update(self, element: int | tuple[int, int], action: TracksAction):
-        """Update the regionprops features for the given node.
+    def update(self, action: TracksAction):
+        """Update the regionprops features based on the action.
 
         Only responds to AddNode and UpdateNodeSeg actions that affect segmentation.
 
         Args:
-            element (int | tuple[int, int]): The node to update. Edges are ignored.
             action (TracksAction): The action that triggered this update
 
         Raises:
@@ -216,25 +215,25 @@ class RegionpropsAnnotator(GraphAnnotator):
         if self.tracks.segmentation is None:
             raise ValueError("Cannot update regionprops features without segmentation.")
 
-        if isinstance(element, tuple):
-            return  # Silently ignore edges
+        # Get the node from the action
+        node = action.node
 
         keys_to_compute = list(self.features.keys())
         if not keys_to_compute:
             return
 
-        time = self.tracks.get_time(element)
+        time = self.tracks.get_time(node)
         seg_frame = self.tracks.segmentation[time]
-        masked_frame = np.where(seg_frame == element, element, 0)
+        masked_frame = np.where(seg_frame == node, node, 0)
 
         if np.max(masked_frame) == 0:
             warnings.warn(
-                f"Cannot find label {element} in frame {time}: "
+                f"Cannot find label {node} in frame {time}: "
                 "updating regionprops values to None",
                 stacklevel=2,
             )
             for key in keys_to_compute:
                 value = None
-                self.tracks._set_node_attr(element, key, value)
+                self.tracks._set_node_attr(node, key, value)
         else:
             self._regionprops_update(masked_frame, keys_to_compute)
