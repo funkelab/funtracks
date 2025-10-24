@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ._base import TracksAction
+from ._base import BasicAction
 
 if TYPE_CHECKING:
     from funtracks.data_model import Tracks
     from funtracks.data_model.tracks import Node, SegMask
 
 
-class UpdateNodeSeg(TracksAction):
+class UpdateNodeSeg(BasicAction):
     """Action for updating the segmentation associated with a node.
 
     New nodes call AddNode with pixels instead of this action.
@@ -36,7 +36,7 @@ class UpdateNodeSeg(TracksAction):
         self.added = added
         self._apply()
 
-    def inverse(self) -> TracksAction:
+    def inverse(self) -> BasicAction:
         """Restore previous attributes"""
         return UpdateNodeSeg(
             self.tracks,

@@ -21,7 +21,7 @@ from .graph_attributes import EdgeAttr, NodeAttr
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from funtracks.actions import TracksAction
+    from funtracks.actions import BasicAction
 
 AttrValue: TypeAlias = Any
 Node: TypeAlias = int
@@ -500,7 +500,7 @@ class Tracks:
 
     # ========== Feature Management ==========
 
-    def notify_annotators(self, action: TracksAction) -> None:
+    def notify_annotators(self, action: BasicAction) -> None:
         """Notify annotators about an action so they can recompute affected features.
 
         Delegates to the annotator registry which broadcasts to all annotators.

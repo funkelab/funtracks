@@ -20,7 +20,7 @@ from ._graph_annotator import GraphAnnotator
 from ._regionprops_extended import regionprops_extended
 
 if TYPE_CHECKING:
-    from funtracks.actions import TracksAction
+    from funtracks.actions import BasicAction
     from funtracks.data_model import Tracks
 
 
@@ -193,13 +193,13 @@ class RegionpropsAnnotator(GraphAnnotator):
                     value = list(value)
                 self.tracks._set_node_attr(node, key, value)
 
-    def update(self, action: TracksAction):
+    def update(self, action: BasicAction):
         """Update the regionprops features based on the action.
 
         Only responds to AddNode and UpdateNodeSeg actions that affect segmentation.
 
         Args:
-            action (TracksAction): The action that triggered this update
+            action (BasicAction): The action that triggered this update
         """
         # Only update for actions that change segmentation
         if not isinstance(action, (AddNode, UpdateNodeSeg)):

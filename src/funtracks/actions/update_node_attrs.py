@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ._base import TracksAction
+from ._base import BasicAction
 
 if TYPE_CHECKING:
     from typing import Any
@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from funtracks.data_model.tracks import Node
 
 
-class UpdateNodeAttrs(TracksAction):
+class UpdateNodeAttrs(BasicAction):
     """Action for user updates to node attributes. Cannot update protected
     attributes (time, area, track id), as these are controlled by internal application
     logic."""
@@ -45,7 +45,7 @@ class UpdateNodeAttrs(TracksAction):
         self.new_attrs = attrs
         self._apply()
 
-    def inverse(self) -> TracksAction:
+    def inverse(self) -> BasicAction:
         """Restore previous attributes"""
         return UpdateNodeAttrs(
             self.tracks,

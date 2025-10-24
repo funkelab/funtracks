@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from funtracks.data_model.graph_attributes import NodeAttr
 from funtracks.data_model.solution_tracks import SolutionTracks
 
-from ._base import TracksAction
+from ._base import BasicAction
 
 if TYPE_CHECKING:
     from typing import Any
@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from funtracks.data_model.tracks import Node, SegMask
 
 
-class AddNode(TracksAction):
+class AddNode(BasicAction):
     """Action for adding new nodes. If a segmentation should also be added, the
     pixels for each node should be provided. The label to set the pixels will
     be taken from the node id. The existing pixel values are assumed to be
@@ -61,7 +61,7 @@ class AddNode(TracksAction):
         self.attributes = user_attrs
         self._apply()
 
-    def inverse(self) -> TracksAction:
+    def inverse(self) -> BasicAction:
         """Invert the action to delete nodes instead"""
         return DeleteNode(self.tracks, self.node)
 
@@ -91,7 +91,7 @@ class AddNode(TracksAction):
         self.tracks.notify_annotators(self)
 
 
-class DeleteNode(TracksAction):
+class DeleteNode(BasicAction):
     """Action of deleting existing nodes
     If the tracks contain a segmentation, this action also constructs a reversible
     operation for setting involved pixels to zero
@@ -117,7 +117,7 @@ class DeleteNode(TracksAction):
         self.pixels = self.tracks.get_pixels(node) if pixels is None else pixels
         self._apply()
 
-    def inverse(self) -> TracksAction:
+    def inverse(self) -> BasicAction:
         """Invert this action, and provide inverse segmentation operation if given"""
 
         return AddNode(self.tracks, self.node, self.attributes, pixels=self.pixels)

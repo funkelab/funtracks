@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ._base import TracksAction  # noqa
+    from ._base import Action
 
 
 class ActionHistory:
@@ -15,17 +15,17 @@ class ActionHistory:
     """
 
     def __init__(self) -> None:
-        self.undo_stack: list[TracksAction] = []  # list of actions that can be undone
-        self.redo_stack: list[TracksAction] = []  # list of actions that can be redone
+        self.undo_stack: list[Action] = []  # list of actions that can be undone
+        self.redo_stack: list[Action] = []  # list of actions that can be redone
 
     @property
     def _undo_pointer(self):
         return len(self.undo_stack) - len(self.redo_stack) - 1
 
-    def add_new_action(self, action: TracksAction) -> None:
+    def add_new_action(self, action: Action) -> None:
         """Add a newly performed action to the history.
         Args:
-            action (TracksAction): The new action to be added to the history.
+            action (Action): The new action to be added to the history.
         """
         if len(self.redo_stack) > 0:
             # add all the redo stuff to the undo stack, so that both the original and

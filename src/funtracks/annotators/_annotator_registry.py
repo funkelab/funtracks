@@ -8,7 +8,7 @@ from ._regionprops_annotator import RegionpropsAnnotator
 from ._track_annotator import TrackAnnotator
 
 if TYPE_CHECKING:
-    from funtracks.actions import TracksAction
+    from funtracks.actions import BasicAction
     from funtracks.data_model import Tracks
     from funtracks.features import Feature
 
@@ -101,7 +101,7 @@ class AnnotatorRegistry(GraphAnnotator):
                 if keys_for_annotator:
                     annotator.compute(keys_for_annotator)
 
-    def update(self, action: TracksAction) -> None:
+    def update(self, action: BasicAction) -> None:
         """Update features across all annotators based on the action.
 
         Args:

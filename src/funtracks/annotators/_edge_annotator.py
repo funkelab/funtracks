@@ -14,7 +14,7 @@ from ._compute_ious import _compute_ious
 from ._graph_annotator import GraphAnnotator
 
 if TYPE_CHECKING:
-    from funtracks.actions import TracksAction
+    from funtracks.actions import BasicAction
     from funtracks.data_model import Tracks
 
 
@@ -121,13 +121,13 @@ class EdgeAnnotator(GraphAnnotator):
         for edge in edges:
             self.tracks._set_edge_attr(edge, self.iou_key, 0)
 
-    def update(self, action: TracksAction):
+    def update(self, action: BasicAction):
         """Update the edge features based on the action.
 
         Only responds to AddEdge and UpdateNodeSeg actions that affect edge IoU.
 
         Args:
-            action (TracksAction): The action that triggered this update
+            action (BasicAction): The action that triggered this update
         """
         # Only update for actions that change edges or segmentation
         if not isinstance(action, (AddEdge, UpdateNodeSeg)):

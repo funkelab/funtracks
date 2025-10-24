@@ -14,7 +14,7 @@ from ._graph_annotator import GraphAnnotator
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    from funtracks.actions import TracksAction
+    from funtracks.actions import BasicAction
     from funtracks.features import Feature
 
 
@@ -212,7 +212,7 @@ class TrackAnnotator(GraphAnnotator):
         self.max_tracklet_id = max_id
         self.tracklet_id_to_nodes = ids_to_nodes
 
-    def update(self, action: TracksAction) -> None:
+    def update(self, action: BasicAction) -> None:
         """Update track-level features based on the action.
 
         Handles incremental updates for UpdateTrackID actions. Other actions are ignored

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ._base import TracksAction
+from ._base import BasicAction
 
 if TYPE_CHECKING:
     from typing import Any
@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from funtracks.data_model.tracks import Edge
 
 
-class AddEdge(TracksAction):
+class AddEdge(BasicAction):
     """Action for adding a new edge. Endpoints must exist already."""
 
     def __init__(
@@ -31,7 +31,7 @@ class AddEdge(TracksAction):
         self.attributes = attributes if attributes is not None else {}
         self._apply()
 
-    def inverse(self) -> TracksAction:
+    def inverse(self) -> BasicAction:
         """Delete edges"""
         return DeleteEdge(self.tracks, self.edge)
 
@@ -58,7 +58,7 @@ class AddEdge(TracksAction):
         self.tracks.notify_annotators(self)
 
 
-class DeleteEdge(TracksAction):
+class DeleteEdge(BasicAction):
     """Action for deleting an edge. Edge must exist already."""
 
     def __init__(self, tracks: Tracks, edge: Edge):
@@ -84,7 +84,7 @@ class DeleteEdge(TracksAction):
 
         self._apply()
 
-    def inverse(self) -> TracksAction:
+    def inverse(self) -> BasicAction:
         """Restore edge and their attributes"""
         return AddEdge(self.tracks, self.edge, attributes=self.attributes)
 

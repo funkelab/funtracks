@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ._base import TracksAction
+from ._base import BasicAction
 
 if TYPE_CHECKING:
     from funtracks.data_model import SolutionTracks
     from funtracks.data_model.tracks import Node
 
 
-class UpdateTrackID(TracksAction):
+class UpdateTrackID(BasicAction):
     def __init__(self, tracks: SolutionTracks, start_node: Node, track_id: int):
         """
         Args:
@@ -25,7 +25,7 @@ class UpdateTrackID(TracksAction):
         self.new_track_id = track_id
         self._apply()
 
-    def inverse(self) -> TracksAction:
+    def inverse(self) -> BasicAction:
         """Restore the previous track_id"""
         return UpdateTrackID(self.tracks, self.start_node, self.old_track_id)
 

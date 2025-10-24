@@ -4,7 +4,7 @@ import logging
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from funtracks.actions import TracksAction
+    from funtracks.actions import BasicAction
     from funtracks.data_model import Tracks
     from funtracks.features.feature import Feature
 
@@ -129,7 +129,7 @@ class GraphAnnotator:
         """
         raise NotImplementedError("Must implement compute in the annotator subclass")
 
-    def update(self, action: TracksAction) -> None:
+    def update(self, action: BasicAction) -> None:
         """Update a set of features based on the given action.
 
         This involves both updating the node or edge attributes on the tracks.graph
@@ -141,7 +141,7 @@ class GraphAnnotator:
         (e.g., AddNode.node, AddEdge.edge, UpdateNodeSeg.node).
 
         Args:
-            action (TracksAction): The action that triggered this update
+            action (BasicAction): The action that triggered this update
 
         Raises:
             NotImplementedError: If not implemented in subclass.
