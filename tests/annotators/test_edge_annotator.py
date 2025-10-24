@@ -1,5 +1,6 @@
 import pytest
 
+from funtracks.actions import TracksAction
 from funtracks.annotators import EdgeAnnotator
 from funtracks.data_model import Tracks
 
@@ -55,10 +56,11 @@ class TestEdgeAnnotator:
         tracks.set_pixels(pixels_to_remove, 0)
         expected_iou = pytest.approx(0.0, abs=0.001)
 
-        ann.update(edge_id)
+        action = TracksAction(tracks)
+        ann.update(edge_id, action)
         assert tracks.get_edge_attr(edge_id, "iou", required=True) == expected_iou
         # update a node - should be silently ignored
-        ann.update(3)
+        ann.update(3, action)
 
         # segmentation is fully erased and you try to update
         node_id = 1
@@ -68,7 +70,7 @@ class TestEdgeAnnotator:
         with pytest.warns(
             match="Cannot find label 1 in frame .*: updating edge IOU value to 0"
         ):
-            ann.update(edge_id)
+            ann.update(edge_id, action)
 
         assert tracks.graph.edges[edge_id]["iou"] == 0
 
@@ -102,7 +104,8 @@ class TestEdgeAnnotator:
 
         # add it back in
         ann.enable_features([to_remove_key])
-        ann.update(edge_id)
+        action = TracksAction(tracks)
+        ann.update(edge_id, action)
         new_iou = pytest.approx(0.0, abs=0.001)
         # the feature is now updated
         assert tracks.get_edge_attr(edge_id, to_remove_key, required=True) == new_iou
@@ -120,4 +123,5 @@ class TestEdgeAnnotator:
         with pytest.raises(
             ValueError, match="Cannot update edge features without segmentation."
         ):
-            ann.update((1, 3))
+            action = TracksAction(tracks)
+            ann.update((1, 3), action)

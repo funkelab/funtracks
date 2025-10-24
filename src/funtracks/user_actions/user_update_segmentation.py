@@ -39,6 +39,7 @@ class UserUpdateSegmentation(ActionGroup):
                 the currently selected track id in the viewer.
         """
         super().__init__(tracks, actions=[])
+        self.tracks: SolutionTracks  # Narrow type from base class
         self.nodes_added = []
         if self.tracks.segmentation is None:
             raise ValueError("Cannot update non-existing segmentation.")

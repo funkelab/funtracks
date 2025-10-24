@@ -1,5 +1,6 @@
 import pytest
 
+from funtracks.actions import TracksAction
 from funtracks.annotators import RegionpropsAnnotator
 from funtracks.data_model import Tracks
 
@@ -49,12 +50,13 @@ class TestRegionpropsAnnotator:
         rp_ann = RegionpropsAnnotator(tracks)
         # Enable features
         rp_ann.enable_features(list(rp_ann.all_features.keys()))
-        rp_ann.update(node_id)
+        action = TracksAction(tracks)
+        rp_ann.update(node_id, action)
         assert tracks.get_area(node_id) == expected_area
         for key in rp_ann.features:
             assert key in tracks.graph.nodes[node_id]
         # update an edge - should be silently ignored
-        rp_ann.update((3, 4))
+        rp_ann.update((3, 4), action)
 
         # segmentation is fully erased and you try to update
         node_id = 1
@@ -63,7 +65,7 @@ class TestRegionpropsAnnotator:
         with pytest.warns(
             match="Cannot find label 1 in frame .*: updating regionprops values to None"
         ):
-            rp_ann.update(node_id)
+            rp_ann.update(node_id, action)
 
         for key in rp_ann.features:
             assert tracks.graph.nodes[node_id][key] is None
@@ -104,7 +106,8 @@ class TestRegionpropsAnnotator:
         assert orig_pixels is not None
         pixels_to_remove = tuple(orig_pixels[d][1:] for d in range(len(orig_pixels)))
         tracks.set_pixels(pixels_to_remove, 0)
-        rp_ann.update(node_id)
+        action = TracksAction(tracks)
+        rp_ann.update(node_id, action)
         # the new one we removed is not updated
         assert tracks.get_node_attr(node_id, second_remove_key) == prev_value
         # the one we added back in is now present
@@ -122,4 +125,5 @@ class TestRegionpropsAnnotator:
         with pytest.raises(
             ValueError, match="Cannot update regionprops features without segmentation."
         ):
-            rp_ann.update(3)
+            action = TracksAction(tracks)
+            rp_ann.update(3, action)

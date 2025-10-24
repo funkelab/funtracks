@@ -19,6 +19,7 @@ class UpdateTrackID(TracksAction):
             track_id (int): The new track id to assign.
         """
         super().__init__(tracks)
+        self.tracks: SolutionTracks  # Narrow type from base class
         self.start_node = start_node
         self.old_track_id = self.tracks.get_track_id(start_node)
         self.new_track_id = track_id

@@ -18,6 +18,7 @@ class UserDeleteNode(ActionGroup):
         pixels: None | tuple[np.ndarray, ...] = None,
     ):
         super().__init__(tracks, actions=[])
+        self.tracks: SolutionTracks  # Narrow type from base class
         # delete adjacent edges
         for pred in self.tracks.predecessors(node):
             siblings = self.tracks.successors(pred)

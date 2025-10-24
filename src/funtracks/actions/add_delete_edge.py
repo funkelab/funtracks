@@ -5,14 +5,14 @@ from typing import TYPE_CHECKING
 from ._base import TracksAction
 
 if TYPE_CHECKING:
-    from funtracks.data_model import SolutionTracks
+    from funtracks.data_model import Tracks
     from funtracks.data_model.tracks import Edge
 
 
 class AddEdge(TracksAction):
     """Action for adding a new edge. Endpoints must exist already."""
 
-    def __init__(self, tracks: SolutionTracks, edge: Edge):
+    def __init__(self, tracks: Tracks, edge: Edge):
         super().__init__(tracks)
         self.edge = edge
         self._apply()
@@ -38,17 +38,17 @@ class AddEdge(TracksAction):
                 )
 
         self.tracks.graph.add_edge(self.edge[0], self.edge[1])
-        self.tracks.update_features(self.edge)
+        self.tracks.update_features(self.edge, self)
 
 
 class DeleteEdge(TracksAction):
     """Action for deleting an edge. Edge must exist already."""
 
-    def __init__(self, tracks: SolutionTracks, edge: Edge):
+    def __init__(self, tracks: Tracks, edge: Edge):
         """Action for deleting an edge. Edge must exist already.
 
         Args:
-            tracks (SolutionTracks): The tracks to delete the edge from
+            tracks (Tracks): The tracks to delete the edge from
             edge (Edge): The edge to delete
         Raises:
             ValueError: If the edge does not exist on the graph

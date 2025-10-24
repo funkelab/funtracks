@@ -21,6 +21,8 @@ from .graph_attributes import EdgeAttr, NodeAttr
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from funtracks.actions import TracksAction
+
 AttrValue: TypeAlias = Any
 Node: TypeAlias = int
 Edge: TypeAlias = tuple[Node, Node]
@@ -500,15 +502,18 @@ class Tracks:
 
     # ========== Feature Management ==========
 
-    def update_features(self, element: int | tuple[int, int]) -> None:
+    def update_features(
+        self, element: int | tuple[int, int], action: TracksAction
+    ) -> None:
         """Update features for a specific node or edge.
 
         Delegates to the annotator registry which broadcasts to all annotators.
 
         Args:
             element: Either a node ID (int) or edge tuple (int, int)
+            action: The action that triggered this update
         """
-        self.annotators.update(element)
+        self.annotators.update(element, action)
 
     def get_available_features(self) -> dict[str, Feature]:
         """Get all features that can be computed across all annotators.

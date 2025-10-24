@@ -12,6 +12,7 @@ from ._compute_ious import _compute_ious
 from ._graph_annotator import GraphAnnotator
 
 if TYPE_CHECKING:
+    from funtracks.actions import TracksAction
     from funtracks.data_model import Tracks
 
 
@@ -120,11 +121,12 @@ class EdgeAnnotator(GraphAnnotator):
         for edge in edges:
             self.tracks._set_edge_attr(edge, self.iou_key, 0)
 
-    def update(self, element: int | tuple[int, int]):
+    def update(self, element: int | tuple[int, int], action: TracksAction):
         """Update the edge features for the given edge.
 
         Args:
             element (int | tuple[int, int]): The edge to update. Nodes are ignored.
+            action (TracksAction): The action that triggered this update
 
         Raises:
             ValueError: If the tracks do not have a segmentation

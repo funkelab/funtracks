@@ -4,6 +4,7 @@ import logging
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from funtracks.actions import TracksAction
     from funtracks.data_model import Tracks
     from funtracks.features.feature import Feature
 
@@ -131,6 +132,7 @@ class GraphAnnotator:
     def update(
         self,
         element: int | tuple[int, int],
+        action: TracksAction,
     ) -> None:
         """Update a set of features for a given node or edge.
 
@@ -141,6 +143,7 @@ class GraphAnnotator:
 
         Args:
             element (int | tuple[int, int]): The node or edge to update
+            action (TracksAction): The action that triggered this update
 
         Raises:
             NotImplementedError: If not implemented in subclass.

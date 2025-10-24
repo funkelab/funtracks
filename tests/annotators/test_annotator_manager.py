@@ -1,5 +1,6 @@
 import pytest
 
+from funtracks.actions import TracksAction
 from funtracks.annotators import EdgeAnnotator, RegionpropsAnnotator, TrackAnnotator
 from funtracks.data_model import NodeAttr, SolutionTracks, Tracks
 
@@ -84,7 +85,8 @@ def test_update_node(graph_2d_with_computed_features, segmentation_2d):
     expected_area = 1
 
     # Update the node - should recompute regionprops features
-    tracks.update_features(node_id)
+    action = TracksAction(tracks)
+    tracks.update_features(node_id, action)
 
     # Check that features were updated
     assert tracks.get_area(node_id) == expected_area
@@ -109,7 +111,8 @@ def test_update_edge(graph_2d_with_computed_features, segmentation_2d):
     tracks.set_pixels(pixels_to_remove, 0)
 
     # Update the edge - should recompute IoU
-    tracks.update_features(edge_id)
+    action = TracksAction(tracks)
+    tracks.update_features(edge_id, action)
 
     # Check that IoU was recomputed
     new_iou = tracks.graph.edges[edge_id]["iou"]

@@ -43,6 +43,7 @@ class AddNode(TracksAction):
             ValueError: If pixels is None and position is not in attributes.
         """
         super().__init__(tracks)
+        self.tracks: SolutionTracks  # Narrow type from base class
         self.node = node
         user_attrs = attributes.copy()
         # validate the input
@@ -72,7 +73,7 @@ class AddNode(TracksAction):
         self.tracks.graph.add_node(self.node)
         self.tracks.set_time(self.node, self.time)
         if self.tracks.segmentation is not None:
-            self.tracks.update_features(self.node)
+            self.tracks.update_features(self.node, self)
         else:
             # can't be None because we validated it in the init
             self.tracks.set_position(self.node, self.position)
@@ -99,6 +100,7 @@ class DeleteNode(TracksAction):
         pixels: SegMask | None = None,
     ):
         super().__init__(tracks)
+        self.tracks: SolutionTracks  # Narrow type from base class
         self.node = node
         if self.tracks.features.time_key is None:
             raise ValueError("time_key must be set")

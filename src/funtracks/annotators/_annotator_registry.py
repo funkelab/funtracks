@@ -8,6 +8,7 @@ from ._regionprops_annotator import RegionpropsAnnotator
 from ._track_annotator import TrackAnnotator
 
 if TYPE_CHECKING:
+    from funtracks.actions import TracksAction
     from funtracks.data_model import Tracks
     from funtracks.features import Feature
 
@@ -100,14 +101,15 @@ class AnnotatorRegistry(GraphAnnotator):
                 if keys_for_annotator:
                     annotator.compute(keys_for_annotator)
 
-    def update(self, element: int | tuple[int, int]) -> None:
+    def update(self, element: int | tuple[int, int], action: TracksAction) -> None:
         """Update features for a specific node or edge across all annotators.
 
         Args:
             element: Either a node ID (int) or edge tuple (int, int)
+            action: The action that triggered this update
         """
         for annotator in self.annotators:
-            annotator.update(element)
+            annotator.update(element, action)
 
     def enable_features(self, keys: list[str]) -> None:
         """Enable features across all annotators.

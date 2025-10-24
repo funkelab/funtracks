@@ -13,6 +13,7 @@ from ._graph_annotator import GraphAnnotator
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
+    from funtracks.actions import TracksAction
     from funtracks.features import Feature
 
 
@@ -209,7 +210,7 @@ class TrackAnnotator(GraphAnnotator):
         self.max_tracklet_id = max_id
         self.tracklet_id_to_nodes = ids_to_nodes
 
-    def update(self, element: int | tuple[int, int]) -> None:
+    def update(self, element: int | tuple[int, int], action: TracksAction) -> None:
         """Update track-level features for a specific node or edge.
 
         Currently not implemented - track features (tracklet_id, lineage_id) must be
@@ -217,6 +218,7 @@ class TrackAnnotator(GraphAnnotator):
 
         Args:
             element: Either a node ID (int) or edge tuple (int, int)
+            action: The action that triggered this update
         """
         # TODO: Implement incremental updates for tracklet_id/lineage_id
         # For now, track features must be recomputed globally

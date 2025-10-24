@@ -18,6 +18,7 @@ from ._graph_annotator import GraphAnnotator
 from ._regionprops_extended import regionprops_extended
 
 if TYPE_CHECKING:
+    from funtracks.actions import TracksAction
     from funtracks.data_model import Tracks
 
 
@@ -194,11 +195,12 @@ class RegionpropsAnnotator(GraphAnnotator):
                     value = list(value)
                 self.tracks._set_node_attr(node, key, value)
 
-    def update(self, element: int | tuple[int, int]):
+    def update(self, element: int | tuple[int, int], action: TracksAction):
         """Update the regionprops features for the given node.
 
         Args:
             element (int | tuple[int, int]): The node to update. Edges are ignored.
+            action (TracksAction): The action that triggered this update
 
         Raises:
             ValueError: If the tracks do not have a segmentation

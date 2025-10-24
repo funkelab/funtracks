@@ -5,18 +5,19 @@ from typing import TYPE_CHECKING
 from ._base import TracksAction
 
 if TYPE_CHECKING:
-    from funtracks.data_model import SolutionTracks
+    from funtracks.data_model import Tracks
     from funtracks.data_model.tracks import Node, SegMask
 
 
 class UpdateNodeSeg(TracksAction):
-    """Action for updating the segmentation associated with nodes. Cannot mix adding
-    and removing pixels from segmentation: the added flag applies to all nodes
+    """Action for updating the segmentation associated with a node.
+
+    New nodes call AddNode with pixels instead of this action.
     """
 
     def __init__(
         self,
-        tracks: SolutionTracks,
+        tracks: Tracks,
         node: Node,
         pixels: SegMask,
         added: bool = True,
@@ -27,8 +28,7 @@ class UpdateNodeSeg(TracksAction):
             node (Node): The node with updated segmenatation
             pixels (SegMask): The pixels that were updated for the node
             added (bool, optional): If the provided pixels were added (True) or deleted
-                (False) from all nodes. Defaults to True. Cannot mix adding and deleting
-                pixels in one action.
+                (False) from this node. Defaults to True
         """
         super().__init__(tracks)
         self.node = node
@@ -49,10 +49,10 @@ class UpdateNodeSeg(TracksAction):
         """Set new attributes"""
         value = self.node if self.added else 0
         self.tracks.set_pixels(self.pixels, value)
-        self.tracks.update_features(self.node)
+        self.tracks.update_features(self.node, self)
 
         incident_edges = list(self.tracks.graph.in_edges(self.node)) + list(
             self.tracks.graph.out_edges(self.node)
         )
         for edge in incident_edges:
-            self.tracks.update_features(edge)
+            self.tracks.update_features(edge, self)

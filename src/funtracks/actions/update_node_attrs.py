@@ -7,7 +7,7 @@ from ._base import TracksAction
 if TYPE_CHECKING:
     from typing import Any
 
-    from funtracks.data_model import SolutionTracks
+    from funtracks.data_model import Tracks
     from funtracks.data_model.tracks import Node
 
 
@@ -18,7 +18,7 @@ class UpdateNodeAttrs(TracksAction):
 
     def __init__(
         self,
-        tracks: SolutionTracks,
+        tracks: Tracks,
         node: Node,
         attrs: dict[str, Any],
     ):

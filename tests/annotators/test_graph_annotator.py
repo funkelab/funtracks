@@ -1,5 +1,6 @@
 import pytest
 
+from funtracks.actions import TracksAction
 from funtracks.annotators import GraphAnnotator
 from funtracks.data_model import Tracks
 from funtracks.features import Time
@@ -23,4 +24,5 @@ def test_base_graph_annotator(graph_clean, segmentation_2d):
         ann.compute()
 
     with pytest.raises(NotImplementedError):
-        ann.update(1)
+        action = TracksAction(tracks)
+        ann.update(1, action)
