@@ -10,21 +10,21 @@ class FeatureDict(dict[str, Feature]):
     Provides convenient access to time and position features through properties.
 
     Attributes:
-        time_key (str | None): The key used for the time feature
+        time_key (str): The key used for the time feature
         position_key (str | list[str] | None): The key(s) used for position feature(s)
     """
 
     def __init__(
         self,
         features: dict[str, Feature],
-        time_key: str | None,
+        time_key: str,
         position_key: str | list[str] | None,
         tracklet_key: str | None,
     ):
         """
         Args:
             features (dict[str, Feature]): Mapping from feature keys to Features
-            time_key (str | None): The key for the time feature (must be in features)
+            time_key (str): The key for the time feature (must be in features)
             position_key (str | list[str] | None): The key(s) for position feature(s)
             tracklet_key (str | None): The key for the tracklet feature
         """
@@ -34,7 +34,7 @@ class FeatureDict(dict[str, Feature]):
         self.tracklet_key = tracklet_key
 
         # Validate that time and position keys exist
-        if time_key is not None and time_key not in self:
+        if time_key not in self:
             raise KeyError(f"time_key '{time_key}' not found in features")
         # Validate position_key - now that we use register_position_feature(),
         # position_key passed at init should always be in features

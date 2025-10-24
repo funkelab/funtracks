@@ -35,8 +35,7 @@ class UpdateNodeAttrs(TracksAction):
         super().__init__(tracks)
         # Cannot modify annotator-managed features or time
         protected_attrs = set(tracks.annotators.all_features.keys())
-        if tracks.features.time_key is not None:
-            protected_attrs.add(tracks.features.time_key)
+        protected_attrs.add(tracks.features.time_key)
 
         for attr in attrs:
             if attr in protected_attrs:

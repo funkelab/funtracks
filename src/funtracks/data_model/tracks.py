@@ -247,8 +247,6 @@ class Tracks:
             )
 
         if incl_time:
-            if self.features.time_key is None:
-                raise ValueError("time_key must be set")
             times = np.array(
                 self.get_nodes_attr(nodes, self.features.time_key, required=True)
             )
@@ -300,8 +298,6 @@ class Tracks:
         )
 
     def get_times(self, nodes: Iterable[Node]) -> Sequence[int]:
-        if self.features.time_key is None:
-            raise ValueError("time_key must be set")
         return self.get_nodes_attr(nodes, self.features.time_key, required=True)
 
     def get_time(self, node: Node) -> int:
@@ -317,8 +313,6 @@ class Tracks:
         return int(self.get_times([node])[0])
 
     def set_times(self, nodes: Iterable[Node], times: Iterable[int]):
-        if self.features.time_key is None:
-            raise ValueError("time_key must be set")
         times = [int(t) for t in times]
         self._set_nodes_attr(nodes, self.features.time_key, times)
 

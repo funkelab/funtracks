@@ -102,8 +102,6 @@ class DeleteNode(TracksAction):
         super().__init__(tracks)
         self.tracks: SolutionTracks  # Narrow type from base class
         self.node = node
-        if self.tracks.features.time_key is None:
-            raise ValueError("time_key must be set")
 
         # Save all node feature values from the features dict
         self.attributes = {}
