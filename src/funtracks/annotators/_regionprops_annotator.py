@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
 
+from funtracks.actions.add_delete_node import AddNode
+from funtracks.actions.update_segmentation import UpdateNodeSeg
 from funtracks.features import (
     Area,
     Circularity,
@@ -198,6 +200,8 @@ class RegionpropsAnnotator(GraphAnnotator):
     def update(self, element: int | tuple[int, int], action: TracksAction):
         """Update the regionprops features for the given node.
 
+        Only responds to AddNode and UpdateNodeSeg actions that affect segmentation.
+
         Args:
             element (int | tuple[int, int]): The node to update. Edges are ignored.
             action (TracksAction): The action that triggered this update
@@ -205,6 +209,10 @@ class RegionpropsAnnotator(GraphAnnotator):
         Raises:
             ValueError: If the tracks do not have a segmentation
         """
+        # Only update for actions that change segmentation
+        if not isinstance(action, (AddNode, UpdateNodeSeg)):
+            return
+
         if self.tracks.segmentation is None:
             raise ValueError("Cannot update regionprops features without segmentation.")
 

@@ -1,6 +1,5 @@
 import pytest
 
-from funtracks.actions import TracksAction
 from funtracks.annotators import EdgeAnnotator, RegionpropsAnnotator, TrackAnnotator
 from funtracks.data_model import NodeAttr, SolutionTracks, Tracks
 
@@ -64,59 +63,6 @@ def test_enable_features(graph_clean, segmentation_2d):
     # Check that edge attributes were computed
     if edges:
         assert tracks.graph.edges[edges[0]].get("iou") is not None
-
-
-def test_update_node(graph_2d_with_computed_features, segmentation_2d):
-    """Test update routes node updates to regionprops annotator."""
-    tracks = Tracks(
-        graph_2d_with_computed_features,
-        segmentation=segmentation_2d,
-        ndim=3,
-        existing_features=["pos", "area"],
-    )
-
-    node_id = 3
-
-    # Modify the segmentation by removing all but one pixel
-    orig_pixels = tracks.get_pixels(node_id)
-    assert orig_pixels is not None
-    pixels_to_remove = tuple(orig_pixels[d][1:] for d in range(len(orig_pixels)))
-    tracks.set_pixels(pixels_to_remove, 0)
-    expected_area = 1
-
-    # Update the node - should recompute regionprops features
-    action = TracksAction(tracks)
-    tracks.update_features(node_id, action)
-
-    # Check that features were updated
-    assert tracks.get_area(node_id) == expected_area
-
-
-def test_update_edge(graph_2d_with_computed_features, segmentation_2d):
-    """Test update routes edge updates to edge annotator."""
-    tracks = Tracks(
-        graph_2d_with_computed_features,
-        segmentation=segmentation_2d,
-        ndim=3,
-        existing_features=["pos", "iou"],
-    )
-
-    edge_id = (1, 3)
-    node_id = 3
-
-    # Modify the segmentation by removing all but one pixel from node 3
-    orig_pixels = tracks.get_pixels(node_id)
-    assert orig_pixels is not None
-    pixels_to_remove = tuple(orig_pixels[d][1:] for d in range(len(orig_pixels)))
-    tracks.set_pixels(pixels_to_remove, 0)
-
-    # Update the edge - should recompute IoU
-    action = TracksAction(tracks)
-    tracks.update_features(edge_id, action)
-
-    # Check that IoU was recomputed
-    new_iou = tracks.graph.edges[edge_id]["iou"]
-    assert new_iou == pytest.approx(0.0, abs=0.001)
 
 
 def test_get_available_features(graph_clean, segmentation_2d):

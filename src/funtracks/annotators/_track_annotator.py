@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 import networkx as nx
 
+from funtracks.actions.update_track_id import UpdateTrackID
 from funtracks.data_model import NodeAttr, SolutionTracks
 from funtracks.features import LineageID, TrackletID
 
@@ -89,6 +90,7 @@ class TrackAnnotator(GraphAnnotator):
         if not isinstance(tracks, SolutionTracks):
             raise ValueError("Currently the TrackAnnotator only works on SolutionTracks")
 
+        self.tracks: SolutionTracks  # Narrow type from base class
         self.tracklet_key = (
             tracklet_key if tracklet_key is not None else NodeAttr.TRACK_ID.value
         )
@@ -213,12 +215,55 @@ class TrackAnnotator(GraphAnnotator):
     def update(self, element: int | tuple[int, int], action: TracksAction) -> None:
         """Update track-level features for a specific node or edge.
 
-        Currently not implemented - track features (tracklet_id, lineage_id) must be
-        recomputed globally when the graph structure changes.
+        Handles incremental updates for UpdateTrackID actions. Other actions are ignored
+        (topology changes require full recomputation for now).
 
         Args:
             element: Either a node ID (int) or edge tuple (int, int)
             action: The action that triggered this update
         """
-        # TODO: Implement incremental updates for tracklet_id/lineage_id
-        # For now, track features must be recomputed globally
+        # Only handle UpdateTrackID actions incrementally
+        if not isinstance(action, UpdateTrackID):
+            return
+
+        # Only update if track_id feature is enabled
+        if self.tracklet_key not in self.features:
+            return
+
+        # Get the parameters from the action
+        start_node = action.start_node
+        new_track_id = action.new_track_id
+        old_track_id = action.old_track_id
+
+        # Walk the track and update all nodes with old_track_id to new_track_id
+        curr_node = start_node
+        updated_nodes = []
+        while self.tracks.get_track_id(curr_node) == old_track_id:
+            # Update the track id
+            self.tracks.set_track_id(curr_node, new_track_id)
+            updated_nodes.append(curr_node)
+
+            # Get the next node (picks first successor if there are multiple)
+            successors = list(self.tracks.graph.successors(curr_node))
+            if len(successors) == 0:
+                break
+            curr_node = successors[0]
+
+        # Update internal bookkeeping: tracklet_id_to_nodes
+        # Remove nodes from old track_id list
+        if old_track_id in self.tracklet_id_to_nodes:
+            for node in updated_nodes:
+                if node in self.tracklet_id_to_nodes[old_track_id]:
+                    self.tracklet_id_to_nodes[old_track_id].remove(node)
+            # Clean up empty list
+            if not self.tracklet_id_to_nodes[old_track_id]:
+                del self.tracklet_id_to_nodes[old_track_id]
+
+        # Add nodes to new track_id list
+        if new_track_id not in self.tracklet_id_to_nodes:
+            self.tracklet_id_to_nodes[new_track_id] = []
+        self.tracklet_id_to_nodes[new_track_id].extend(updated_nodes)
+
+        # Update max_tracklet_id if needed
+        if new_track_id > self.max_tracklet_id:
+            self.max_tracklet_id = new_track_id

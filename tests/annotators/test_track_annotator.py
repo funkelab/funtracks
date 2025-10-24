@@ -1,6 +1,8 @@
 import pytest
 
+from funtracks.actions import UpdateNodeSeg
 from funtracks.annotators import TrackAnnotator
+from funtracks.data_model import NodeAttr
 
 
 @pytest.mark.parametrize("ndim", [3, 4])
@@ -95,3 +97,27 @@ class TestTrackAnnotator:
             ValueError, match="Currently the TrackAnnotator only works on SolutionTracks"
         ):
             TrackAnnotator(tracks)  # type: ignore
+
+    def test_ignores_irrelevant_actions(self, get_tracks, ndim, with_seg):
+        """Test that TrackAnnotator ignores actions that don't affect track IDs."""
+        if not with_seg:
+            pytest.skip("Test requires segmentation")
+
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        tracks.enable_features(["area", NodeAttr.TRACK_ID.value])
+
+        node_id = 3
+        initial_track_id = tracks.get_track_id(node_id)
+
+        # UpdateNodeSeg should not trigger track ID update
+        orig_pixels = tracks.get_pixels(node_id)
+        assert orig_pixels is not None
+        pixels_to_remove = tuple(orig_pixels[d][1:] for d in range(len(orig_pixels)))
+
+        # Perform UpdateNodeSeg action
+        UpdateNodeSeg(tracks, node_id, pixels_to_remove, added=False)
+
+        # Track ID should remain unchanged (no track update happened)
+        assert tracks.get_track_id(node_id) == initial_track_id
+        # But area should be updated
+        assert tracks.get_area(node_id) == 1

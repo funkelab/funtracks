@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
+from funtracks.actions.add_delete_edge import AddEdge
+from funtracks.actions.update_segmentation import UpdateNodeSeg
 from funtracks.features import Feature, IoU
 
 from ._compute_ious import _compute_ious
@@ -124,6 +126,8 @@ class EdgeAnnotator(GraphAnnotator):
     def update(self, element: int | tuple[int, int], action: TracksAction):
         """Update the edge features for the given edge.
 
+        Only responds to AddEdge and UpdateNodeSeg actions that affect edge IoU.
+
         Args:
             element (int | tuple[int, int]): The edge to update. Nodes are ignored.
             action (TracksAction): The action that triggered this update
@@ -131,9 +135,14 @@ class EdgeAnnotator(GraphAnnotator):
         Raises:
             ValueError: If the tracks do not have a segmentation
         """
+        # Only update for actions that change edges or segmentation
+        if not isinstance(action, (AddEdge, UpdateNodeSeg)):
+            return
+
         if self.tracks.segmentation is None:
             raise ValueError("Cannot update edge features without segmentation.")
 
+        # TODO: only rely on action, not element
         if isinstance(element, int):
             return  # Silently ignore nodes
         if self.iou_key in self.features:

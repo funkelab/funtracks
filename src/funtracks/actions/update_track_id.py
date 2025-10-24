@@ -30,14 +30,9 @@ class UpdateTrackID(TracksAction):
         return UpdateTrackID(self.tracks, self.start_node, self.old_track_id)
 
     def _apply(self) -> None:
-        """Assign a new track id to the track starting with start_node."""
-        old_track_id = self.tracks.get_track_id(self.start_node)
-        curr_node = self.start_node
-        while self.tracks.get_track_id(curr_node) == old_track_id:
-            # update the track id
-            self.tracks.set_track_id(curr_node, self.new_track_id)
-            # getting the next node (picks one if there are two)
-            successors = list(self.tracks.graph.successors(curr_node))
-            if len(successors) == 0:
-                break
-            curr_node = successors[0]
+        """Assign a new track id to the track starting with start_node.
+
+        Delegates to TrackAnnotator via update_features(), which performs the
+        actual track ID walking and updates.
+        """
+        self.tracks.update_features(self.start_node, self)
