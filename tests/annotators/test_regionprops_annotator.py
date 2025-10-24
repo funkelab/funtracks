@@ -115,17 +115,13 @@ class TestRegionpropsAnnotator:
         assert tracks.get_node_attr(node_id, to_remove_key) is not None
 
     def test_missing_seg(self, get_graph, ndim):
+        """Test that RegionpropsAnnotator gracefully handles missing segmentation."""
         graph = get_graph(ndim, with_features="clean")
         tracks = Tracks(graph, segmentation=None, ndim=ndim)
         rp_ann = RegionpropsAnnotator(tracks)
         assert len(rp_ann.features) == 0
-        with pytest.raises(
-            ValueError, match="Cannot compute regionprops features without segmentation."
-        ):
-            rp_ann.compute()
-        # Note: Cannot test update() without segmentation because UpdateNodeSeg
-        # requires segmentation to exist. The ValueError check is in the update
-        # method itself as a safeguard.
+        # Should not raise an error, just return silently
+        rp_ann.compute()  # No error expected
 
     def test_ignores_irrelevant_actions(self, get_graph, get_segmentation, ndim):
         """Test that RegionpropsAnnotator ignores actions that don't affect

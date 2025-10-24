@@ -162,12 +162,10 @@ class RegionpropsAnnotator(GraphAnnotator):
             feature_keys: Optional list of specific feature keys to compute.
                 If None, computes all currently active features. Keys not in
                 self.features (not enabled) are ignored.
-
-        Raises:
-            ValueError: If the segmentation is missing from the tracks.
         """
+        # Can only compute features if segmentation is present
         if self.tracks.segmentation is None:
-            raise ValueError("Cannot compute regionprops features without segmentation.")
+            return
 
         keys_to_compute = self._filter_feature_keys(feature_keys)
         if not keys_to_compute:
@@ -202,16 +200,14 @@ class RegionpropsAnnotator(GraphAnnotator):
 
         Args:
             action (TracksAction): The action that triggered this update
-
-        Raises:
-            ValueError: If the tracks do not have a segmentation
         """
         # Only update for actions that change segmentation
         if not isinstance(action, (AddNode, UpdateNodeSeg)):
             return
 
+        # Can only compute features if segmentation is present
         if self.tracks.segmentation is None:
-            raise ValueError("Cannot update regionprops features without segmentation.")
+            return
 
         # Get the node from the action
         node = action.node

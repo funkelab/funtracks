@@ -72,19 +72,23 @@ class AddNode(TracksAction):
         attrs = self.attributes
         self.tracks.graph.add_node(self.node)
         self.tracks.set_time(self.node, self.time)
-        if self.tracks.segmentation is not None:
-            self.tracks.update_features(self)
-        else:
+
+        # If no segmentation, manually set position from attributes
+        if self.tracks.segmentation is None:
             # can't be None because we validated it in the init
             self.tracks.set_position(self.node, self.position)
 
         for attr, values in attrs.items():
             self.tracks._set_node_attr(self.node, attr, values)
 
+        # TODO: only keep track of max track id and track_id to node in one location
         track_id = attrs[NodeAttr.TRACK_ID.value]
         if track_id not in self.tracks.track_id_to_node:
             self.tracks.track_id_to_node[track_id] = []
         self.tracks.track_id_to_node[track_id].append(self.node)
+
+        # Always call update_features - annotators will check their own preconditions
+        self.tracks.update_features(self)
 
 
 class DeleteNode(TracksAction):

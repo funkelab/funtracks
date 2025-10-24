@@ -73,12 +73,10 @@ class EdgeAnnotator(GraphAnnotator):
             feature_keys: Optional list of specific feature keys to compute.
                 If None, computes all currently active features. Keys not in
                 self.features (not enabled) are ignored.
-
-        Raises:
-            ValueError: If the segmentation is missing from the tracks.
         """
+        # Can only compute features if segmentation is present
         if self.tracks.segmentation is None:
-            raise ValueError("Cannot compute edge features without segmentation.")
+            return
 
         keys_to_compute = self._filter_feature_keys(feature_keys)
         if not keys_to_compute:
@@ -130,16 +128,14 @@ class EdgeAnnotator(GraphAnnotator):
 
         Args:
             action (TracksAction): The action that triggered this update
-
-        Raises:
-            ValueError: If the tracks do not have a segmentation
         """
         # Only update for actions that change edges or segmentation
         if not isinstance(action, (AddEdge, UpdateNodeSeg)):
             return
 
+        # Can only compute features if segmentation is present
         if self.tracks.segmentation is None:
-            raise ValueError("Cannot update edge features without segmentation.")
+            return
 
         if self.iou_key not in self.features:
             return

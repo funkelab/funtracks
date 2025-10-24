@@ -110,18 +110,14 @@ class TestEdgeAnnotator:
         assert tracks.get_edge_attr(edge_id, to_remove_key, required=True) == new_iou
 
     def test_missing_seg(self, get_graph, ndim) -> None:
+        """Test that EdgeAnnotator gracefully handles missing segmentation."""
         graph = get_graph(ndim, with_features="clean")
         tracks = Tracks(graph, segmentation=None, ndim=ndim)
 
         ann = EdgeAnnotator(tracks)
         assert len(ann.features) == 0
-        with pytest.raises(
-            ValueError, match="Cannot compute edge features without segmentation."
-        ):
-            ann.compute()
-        # Note: Cannot test update() without segmentation because UpdateNodeSeg
-        # requires segmentation to exist. The ValueError check is in the update
-        # method itself as a safeguard.
+        # Should not raise an error, just return silently
+        ann.compute()  # No error expected
 
     def test_ignores_irrelevant_actions(self, get_graph, get_segmentation, ndim):
         """Test that EdgeAnnotator ignores actions that don't affect edges."""
