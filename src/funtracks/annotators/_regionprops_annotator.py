@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
 
+from funtracks.actions.add_delete_node import AddNode
+from funtracks.actions.update_segmentation import UpdateNodeSeg
 from funtracks.features import (
     Area,
     Circularity,
@@ -18,6 +20,7 @@ from ._graph_annotator import GraphAnnotator
 from ._regionprops_extended import regionprops_extended
 
 if TYPE_CHECKING:
+    from funtracks.actions import BasicAction
     from funtracks.data_model import Tracks
 
 
@@ -49,6 +52,20 @@ class RegionpropsAnnotator(GraphAnnotator):
     the self.include value at the corresponding index to the feature in self.features.
     """
 
+    @classmethod
+    def can_annotate(cls, tracks) -> bool:
+        """Check if this annotator can annotate the given tracks.
+
+        Requires segmentation data to be present.
+
+        Args:
+            tracks: The tracks to check compatibility with
+
+        Returns:
+            True if tracks have segmentation, False otherwise
+        """
+        return tracks.segmentation is not None
+
     def __init__(
         self,
         tracks: Tracks,
@@ -64,10 +81,8 @@ class RegionpropsAnnotator(GraphAnnotator):
         self.circularity_key = circularity_key
         self.perimeter_key = perimeter_key
 
-        specs = RegionpropsAnnotator._build_feature_specs(
-            tracks.segmentation,
-            tracks.ndim,
-            tracks.axis_names,
+        specs = RegionpropsAnnotator._define_features(
+            tracks,
             pos_key,
             area_key,
             ellipse_axis_radii_key,
@@ -79,26 +94,23 @@ class RegionpropsAnnotator(GraphAnnotator):
         # Build regionprops name mapping from specs
         self.regionprops_names = {spec.key: spec.regionprops_attr for spec in specs}
 
-    @staticmethod
-    def _build_feature_specs(
-        segmentation: np.ndarray | None,
-        ndim: int,
-        axis_names: list[str],
+    @classmethod
+    def _define_features(
+        cls,
+        tracks: Tracks,
         pos_key: str = "pos",
         area_key: str = "area",
         ellipse_axis_radii_key: str = "ellipse_axis_radii",
         circularity_key: str = "circularity",
         perimeter_key: str = "perimeter",
     ) -> list[FeatureSpec]:
-        """Build feature specifications for all supported regionprops features.
+        """Define all supported regionprops features along with keys and function names.
 
         Single source of truth for feature definitions. Returns FeatureSpec objects
         that include the regionprops attribute mapping needed for computation.
 
         Args:
-            segmentation: The segmentation array (or None if not available)
-            ndim: Number of dimensions (3 or 4)
-            axis_names: Names of spatial axes
+            tracks: The tracks to build feature specs for
             pos_key: The key to use for the position/centroid feature. Defaults to "pos".
             area_key: The key to use for the area feature. Defaults to "area".
             ellipse_axis_radii_key: The key to use for the ellipse axis radii feature.
@@ -112,37 +124,35 @@ class RegionpropsAnnotator(GraphAnnotator):
             list[FeatureSpec]: List of feature specifications with key, feature,
                 and regionprops attribute name. Empty list if no segmentation.
         """
-        if segmentation is None:
+        if not cls.can_annotate(tracks):
             return []
         return [
-            FeatureSpec(pos_key, Position(axes=axis_names, recompute=True), "centroid"),
-            FeatureSpec(area_key, Area(ndim=ndim), "area"),
+            FeatureSpec(pos_key, Position(axes=tracks.axis_names), "centroid"),
+            FeatureSpec(area_key, Area(ndim=tracks.ndim), "area"),
             # TODO: Add in intensity when image is passed
-            # FeatureSpec("intensity", Intensity(ndim=ndim), "intensity"),
-            FeatureSpec(ellipse_axis_radii_key, EllipsoidAxes(ndim=ndim), "axes"),
-            FeatureSpec(circularity_key, Circularity(ndim=ndim), "circularity"),
-            FeatureSpec(perimeter_key, Perimeter(ndim=ndim), "perimeter"),
+            # FeatureSpec("intensity", Intensity(ndim=tracks.ndim), "intensity"),
+            FeatureSpec(ellipse_axis_radii_key, EllipsoidAxes(ndim=tracks.ndim), "axes"),
+            FeatureSpec(circularity_key, Circularity(ndim=tracks.ndim), "circularity"),
+            FeatureSpec(perimeter_key, Perimeter(ndim=tracks.ndim), "perimeter"),
         ]
 
-    @staticmethod
-    def get_available_features(
-        segmentation: np.ndarray | None, ndim: int, axis_names: list[str]
-    ) -> dict[str, Feature]:
+    @classmethod
+    def get_available_features(cls, tracks) -> dict[str, Feature]:
         """Get all features that can be computed by this annotator.
 
         Returns features with default keys. Custom keys can be specified at
         initialization time.
 
         Args:
-            segmentation: The segmentation array (or None if not available)
-            ndim: Number of dimensions (3 or 4)
-            axis_names: Names of spatial axes
+            tracks: The tracks to get available features for
 
         Returns:
             Dictionary mapping feature keys to Feature definitions. Empty if no
             segmentation.
         """
-        specs = RegionpropsAnnotator._build_feature_specs(segmentation, ndim, axis_names)
+        if not cls.can_annotate(tracks):
+            return {}
+        specs = RegionpropsAnnotator._define_features(tracks)
         return {spec.key: spec.feature for spec in specs}
 
     def compute(self, feature_keys: list[str] | None = None) -> None:
@@ -152,12 +162,10 @@ class RegionpropsAnnotator(GraphAnnotator):
             feature_keys: Optional list of specific feature keys to compute.
                 If None, computes all currently active features. Keys not in
                 self.features (not enabled) are ignored.
-
-        Raises:
-            ValueError: If the segmentation is missing from the tracks.
         """
+        # Can only compute features if segmentation is present
         if self.tracks.segmentation is None:
-            raise ValueError("Cannot compute regionprops features without segmentation.")
+            return
 
         keys_to_compute = self._filter_feature_keys(feature_keys)
         if not keys_to_compute:
@@ -185,41 +193,41 @@ class RegionpropsAnnotator(GraphAnnotator):
                     value = list(value)
                 self.tracks._set_node_attr(node, key, value)
 
-    def update(self, element: int | tuple[int, int]):
-        """Update the regionprops features for the given node.
+    def update(self, action: BasicAction):
+        """Update the regionprops features based on the action.
+
+        Only responds to AddNode and UpdateNodeSeg actions that affect segmentation.
 
         Args:
-            element (int | tuple[int, int]): The node to update. Should be a node
-                and not an edge, but has possible edge type to match generic signature.
-
-        Raises:
-            ValueError: If the tracks do not have a segmentation
-            ValueError: If an edge element is passed instead of a node.
+            action (BasicAction): The action that triggered this update
         """
-        if self.tracks.segmentation is None:
-            raise ValueError("Cannot update regionprops features without segmentation.")
+        # Only update for actions that change segmentation
+        if not isinstance(action, (AddNode, UpdateNodeSeg)):
+            return
 
-        if isinstance(element, tuple):
-            raise ValueError(
-                f"RegionpropsAnnotator update expected a node, got edge {element}"
-            )
+        # Can only compute features if segmentation is present
+        if self.tracks.segmentation is None:
+            return
+
+        # Get the node from the action
+        node = action.node
 
         keys_to_compute = list(self.features.keys())
         if not keys_to_compute:
             return
 
-        time = self.tracks.get_time(element)
+        time = self.tracks.get_time(node)
         seg_frame = self.tracks.segmentation[time]
-        masked_frame = np.where(seg_frame == element, element, 0)
+        masked_frame = np.where(seg_frame == node, node, 0)
 
         if np.max(masked_frame) == 0:
             warnings.warn(
-                f"Cannot find label {element} in frame {time}: "
+                f"Cannot find label {node} in frame {time}: "
                 "updating regionprops values to None",
                 stacklevel=2,
             )
             for key in keys_to_compute:
                 value = None
-                self.tracks._set_node_attr(element, key, value)
+                self.tracks._set_node_attr(node, key, value)
         else:
             self._regionprops_update(masked_frame, keys_to_compute)

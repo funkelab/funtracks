@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 import networkx as nx
 
+from funtracks.actions import AddNode, DeleteNode, UpdateTrackID
 from funtracks.data_model import NodeAttr, SolutionTracks
 from funtracks.features import LineageID, TrackletID
 
@@ -13,6 +14,7 @@ from ._graph_annotator import GraphAnnotator
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
+    from funtracks.actions import BasicAction
     from funtracks.features import Feature
 
 
@@ -44,21 +46,35 @@ class TrackAnnotator(GraphAnnotator):
             tree)
     """
 
-    @staticmethod
-    def get_available_features(is_solution_tracks: bool) -> dict[str, Feature]:
+    @classmethod
+    def can_annotate(cls, tracks) -> bool:
+        """Check if this annotator can annotate the given tracks.
+
+        Requires tracks to be a SolutionTracks instance.
+
+        Args:
+            tracks: The tracks to check compatibility with
+
+        Returns:
+            True if tracks is a SolutionTracks instance, False otherwise
+        """
+        return isinstance(tracks, SolutionTracks)
+
+    @classmethod
+    def get_available_features(cls, tracks) -> dict[str, Feature]:
         """Get all features that can be computed by this annotator.
 
         Returns features with default keys. Custom keys can be specified at
         initialization time.
 
         Args:
-            is_solution_tracks: Whether the tracks are SolutionTracks
+            tracks: The tracks to get available features for
 
         Returns:
             Dictionary mapping feature keys to Feature definitions. Empty if not
             SolutionTracks.
         """
-        if not is_solution_tracks:
+        if not cls.can_annotate(tracks):
             return {}
         return {
             NodeAttr.TRACK_ID.value: TrackletID(),
@@ -74,6 +90,7 @@ class TrackAnnotator(GraphAnnotator):
         if not isinstance(tracks, SolutionTracks):
             raise ValueError("Currently the TrackAnnotator only works on SolutionTracks")
 
+        self.tracks: SolutionTracks  # Narrow type from base class
         self.tracklet_key = (
             tracklet_key if tracklet_key is not None else NodeAttr.TRACK_ID.value
         )
@@ -90,11 +107,13 @@ class TrackAnnotator(GraphAnnotator):
         self.max_tracklet_id = 0
         self.max_lineage_id = 0
 
-        if tracklet_key is not None and tracks.graph.number_of_nodes() > 0:
+        # Initialize tracklet bookkeeping if track IDs already exist in the graph
+        if tracks.graph.number_of_nodes() > 0:
             max_id, id_to_nodes = self._get_max_id_and_map(self.tracklet_key)
             self.max_tracklet_id = max_id
             self.tracklet_id_to_nodes = id_to_nodes
 
+        # Initialize lineage bookkeeping if lineage IDs already exist
         if lineage_key is not None and tracks.graph.number_of_nodes() > 0:
             max_id, id_to_nodes = self._get_max_id_and_map(self.lineage_key)
             self.max_lineage_id = max_id
@@ -111,10 +130,14 @@ class TrackAnnotator(GraphAnnotator):
                 ids to a list of nodes with that id.
         """
         id_to_nodes = defaultdict(list)
+        max_id = 0
         for node in self.tracks.nodes():
             _id: int = self.tracks.get_node_attr(node, key)
+            if _id is None:
+                continue
             id_to_nodes[_id].append(node)
-        max_id = max(id_to_nodes.keys()) if len(id_to_nodes) > 0 else 0
+            if _id > max_id:
+                max_id = _id
         return max_id, dict(id_to_nodes)
 
     def compute(self, feature_keys: list[str] | None = None) -> None:
@@ -194,3 +217,99 @@ class TrackAnnotator(GraphAnnotator):
         max_id, ids_to_nodes = self._assign_ids(tracklets, self.tracklet_key)
         self.max_tracklet_id = max_id
         self.tracklet_id_to_nodes = ids_to_nodes
+
+    def update(self, action: BasicAction) -> None:
+        """Update track-level features based on the action.
+
+        Handles incremental updates for UpdateTrackID, AddNode, and DeleteNode actions.
+        Other actions are ignored.
+
+        Args:
+            action: The action that triggered this update
+        """
+
+        # Only update if track_id feature is enabled
+        if self.tracklet_key not in self.features:
+            return
+
+        if isinstance(action, UpdateTrackID):
+            self._handle_update_track_id(action)
+        elif isinstance(action, AddNode):
+            self._handle_add_node(action)
+        elif isinstance(action, DeleteNode):
+            self._handle_delete_node(action)
+
+    def _handle_update_track_id(self, action: UpdateTrackID) -> None:
+        """Handle UpdateTrackID action to change track ids and update bookkeeping.
+
+        Args:
+            action: The UpdateTrackID action
+        """
+        # Get the parameters from the action
+        start_node = action.start_node
+        new_track_id = action.new_track_id
+        old_track_id = action.old_track_id
+
+        # Walk the track and update all nodes with old_track_id to new_track_id
+        curr_node = start_node
+        updated_nodes = []
+        while self.tracks.get_track_id(curr_node) == old_track_id:
+            # Update the track id
+            self.tracks._set_node_attr(curr_node, self.tracklet_key, new_track_id)
+            updated_nodes.append(curr_node)
+
+            # Get the next node (picks first successor if there are multiple)
+            successors = list(self.tracks.graph.successors(curr_node))
+            if len(successors) == 0:
+                break
+            curr_node = successors[0]
+
+        # Update internal bookkeeping: tracklet_id_to_nodes
+        # Remove nodes from old track_id list
+        if old_track_id in self.tracklet_id_to_nodes:
+            for node in updated_nodes:
+                if node in self.tracklet_id_to_nodes[old_track_id]:
+                    self.tracklet_id_to_nodes[old_track_id].remove(node)
+            # Clean up empty list
+            if not self.tracklet_id_to_nodes[old_track_id]:
+                del self.tracklet_id_to_nodes[old_track_id]
+
+        # Add nodes to new track_id list
+        if new_track_id not in self.tracklet_id_to_nodes:
+            self.tracklet_id_to_nodes[new_track_id] = []
+        self.tracklet_id_to_nodes[new_track_id].extend(updated_nodes)
+
+        # Update max_tracklet_id if needed
+        if new_track_id > self.max_tracklet_id:
+            self.max_tracklet_id = new_track_id
+
+    def _handle_add_node(self, action) -> None:
+        """Handle AddNode action to update track id bookkeeping.
+
+        TODO: Decide if we need to update the max if we delete it?
+
+        Args:
+            action: The AddNode action
+        """
+        track_id = self.tracks.get_track_id(action.node)
+        if track_id not in self.tracklet_id_to_nodes:
+            self.tracklet_id_to_nodes[track_id] = []
+        self.tracklet_id_to_nodes[track_id].append(action.node)
+
+        # Update max_tracklet_id if needed
+        if track_id > self.max_tracklet_id:
+            self.max_tracklet_id = track_id
+
+    def _handle_delete_node(self, action) -> None:
+        """Handle DeleteNode action to update track id bookkeeping.
+
+        Args:
+            action: The DeleteNode action
+        """
+        track_id = action.attributes.get(self.tracklet_key)
+        if track_id is not None and track_id in self.tracklet_id_to_nodes:
+            if action.node in self.tracklet_id_to_nodes[track_id]:
+                self.tracklet_id_to_nodes[track_id].remove(action.node)
+            # Clean up empty list
+            if not self.tracklet_id_to_nodes[track_id]:
+                del self.tracklet_id_to_nodes[track_id]

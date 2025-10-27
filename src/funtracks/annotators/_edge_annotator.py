@@ -6,12 +6,15 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
+from funtracks.actions.add_delete_edge import AddEdge
+from funtracks.actions.update_segmentation import UpdateNodeSeg
 from funtracks.features import Feature, IoU
 
 from ._compute_ious import _compute_ious
 from ._graph_annotator import GraphAnnotator
 
 if TYPE_CHECKING:
+    from funtracks.actions import BasicAction
     from funtracks.data_model import Tracks
 
 
@@ -25,21 +28,35 @@ class EdgeAnnotator(GraphAnnotator):
         tracks (Tracks): The tracks to manage the edge features on
     """
 
-    @staticmethod
-    def get_available_features(segmentation: np.ndarray | None) -> dict[str, Feature]:
+    @classmethod
+    def can_annotate(cls, tracks) -> bool:
+        """Check if this annotator can annotate the given tracks.
+
+        Requires segmentation data to be present.
+
+        Args:
+            tracks: The tracks to check compatibility with
+
+        Returns:
+            True if tracks have segmentation, False otherwise
+        """
+        return tracks.segmentation is not None
+
+    @classmethod
+    def get_available_features(cls, tracks) -> dict[str, Feature]:
         """Get all features that can be computed by this annotator.
 
         Returns features with default keys. Custom keys can be specified at
         initialization time.
 
         Args:
-            segmentation: The segmentation array (or None if not available)
+            tracks: The tracks to get available features for
 
         Returns:
             Dictionary mapping feature keys to Feature definitions. Empty if no
             segmentation.
         """
-        if segmentation is None:
+        if not cls.can_annotate(tracks):
             return {}
         return {"iou": IoU()}
 
@@ -56,12 +73,10 @@ class EdgeAnnotator(GraphAnnotator):
             feature_keys: Optional list of specific feature keys to compute.
                 If None, computes all currently active features. Keys not in
                 self.features (not enabled) are ignored.
-
-        Raises:
-            ValueError: If the segmentation is missing from the tracks.
         """
+        # Can only compute features if segmentation is present
         if self.tracks.segmentation is None:
-            raise ValueError("Cannot compute edge features without segmentation.")
+            return
 
         keys_to_compute = self._filter_feature_keys(feature_keys)
         if not keys_to_compute:
@@ -106,24 +121,38 @@ class EdgeAnnotator(GraphAnnotator):
         for edge in edges:
             self.tracks._set_edge_attr(edge, self.iou_key, 0)
 
-    def update(self, element: int | tuple[int, int]):
-        """Update the regionprops features for the given node.
+    def update(self, action: BasicAction):
+        """Update the edge features based on the action.
+
+        Only responds to AddEdge and UpdateNodeSeg actions that affect edge IoU.
 
         Args:
-            element (int | tuple[int, int]): The edge to update. Should be an edge
-                and not a node, but has possible edge type to match generic signature.
-
-        Raises:
-            ValueError: If the tracks do not have a segmentation
-            ValueError: If a node element is passed instead of an edge.
+            action (BasicAction): The action that triggered this update
         """
-        if self.tracks.segmentation is None:
-            raise ValueError("Cannot update edge features without segmentation.")
+        # Only update for actions that change edges or segmentation
+        if not isinstance(action, (AddEdge, UpdateNodeSeg)):
+            return
 
-        if isinstance(element, int):
-            raise ValueError(f"EdgeAnnotator update expected an edge, got node {element}")
-        if self.iou_key in self.features:
-            source, target = element
+        # Can only compute features if segmentation is present
+        if self.tracks.segmentation is None:
+            return
+
+        if self.iou_key not in self.features:
+            return
+
+        # Get edges to update based on action type
+        if isinstance(action, AddEdge):
+            edges_to_update = [action.edge]
+        else:  # UpdateNodeSeg
+            # Get all incident edges to the modified node
+            node = action.node
+            edges_to_update = list(self.tracks.graph.in_edges(node)) + list(
+                self.tracks.graph.out_edges(node)
+            )
+
+        # Update IoU for each edge
+        for edge in edges_to_update:
+            source, target = edge
             start_time = self.tracks.get_time(source)
             end_time = self.tracks.get_time(target)
             start_seg = self.tracks.segmentation[start_time]
@@ -133,11 +162,11 @@ class EdgeAnnotator(GraphAnnotator):
             if np.max(masked_start) == 0 or np.max(masked_end) == 0:
                 warnings.warn(
                     f"Cannot find label {source} in frame {start_time} or label {target} "
-                    "in frame {end_time}: updating edge IOU value to 0",
+                    f"in frame {end_time}: updating edge IOU value to 0",
                     stacklevel=2,
                 )
-                self.tracks._set_edge_attr(element, self.iou_key, 0)
-
-            iou_list = _compute_ious(masked_start, masked_end)
-            iou = 0 if len(iou_list) == 0 else iou_list[0][2]
-            self.tracks._set_edge_attr(element, self.iou_key, iou)
+                self.tracks._set_edge_attr(edge, self.iou_key, 0)
+            else:
+                iou_list = _compute_ious(masked_start, masked_end)
+                iou = 0 if len(iou_list) == 0 else iou_list[0][2]
+                self.tracks._set_edge_attr(edge, self.iou_key, iou)

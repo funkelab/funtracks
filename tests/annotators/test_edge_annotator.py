@@ -1,7 +1,8 @@
 import pytest
 
+from funtracks.actions import UpdateNodeSeg, UpdateTrackID
 from funtracks.annotators import EdgeAnnotator
-from funtracks.data_model import Tracks
+from funtracks.data_model import NodeAttr, SolutionTracks, Tracks
 
 
 @pytest.mark.parametrize("ndim", [3, 4])
@@ -12,8 +13,11 @@ class TestEdgeAnnotator:
         seg = get_segmentation(ndim)
         tracks = Tracks(graph, segmentation=seg, ndim=ndim)
         ann = EdgeAnnotator(tracks)
-        # When created directly, all features are enabled
+        # Features start disabled by default
         assert len(ann.all_features) == 1
+        assert len(ann.features) == 0
+        # Enable features to test
+        ann.enable_features(list(ann.all_features.keys()))
         assert len(ann.features) == 1
 
     def test_compute_all(self, get_graph, get_segmentation, ndim):
@@ -21,6 +25,8 @@ class TestEdgeAnnotator:
         seg = get_segmentation(ndim)
         tracks = Tracks(graph, segmentation=seg, ndim=ndim)
         ann = EdgeAnnotator(tracks)
+        # Enable features
+        ann.enable_features(list(ann.all_features.keys()))
         all_features = ann.features
 
         # Compute values
@@ -33,38 +39,34 @@ class TestEdgeAnnotator:
         graph = get_graph(ndim, with_features="clean")
         seg = get_segmentation(ndim)
         tracks = Tracks(graph, segmentation=seg, ndim=ndim)
-        ann = EdgeAnnotator(tracks)
+        # Get the EdgeAnnotator from the registry
+        ann = next(
+            ann for ann in tracks.annotators.annotators if isinstance(ann, EdgeAnnotator)
+        )
+        # Enable features through tracks (which updates the registry)
+        tracks.enable_features(list(ann.all_features.keys()))
 
         node_id = 3
         edge_id = (1, 3)
-
-        # Compute initial values
-        ann.compute()
 
         orig_pixels = tracks.get_pixels(node_id)
         assert orig_pixels is not None
         # remove all but one pixel
         pixels_to_remove = tuple(orig_pixels[d][1:] for d in range(len(orig_pixels)))
-        tracks.set_pixels(pixels_to_remove, 0)
         expected_iou = pytest.approx(0.0, abs=0.001)
 
-        ann.update(edge_id)
+        # Use UpdateNodeSeg action to modify segmentation and update edge
+        UpdateNodeSeg(tracks, node_id, pixels_to_remove, added=False)
         assert tracks.get_edge_attr(edge_id, "iou", required=True) == expected_iou
-        # update a node
-        with pytest.raises(
-            ValueError, match="EdgeAnnotator update expected an edge, got node"
-        ):
-            ann.update(3)
 
         # segmentation is fully erased and you try to update
         node_id = 1
         pixels = tracks.get_pixels(node_id)
         assert pixels is not None
-        tracks.set_pixels(pixels, 0)
         with pytest.warns(
             match="Cannot find label 1 in frame .*: updating edge IOU value to 0"
         ):
-            ann.update(edge_id)
+            UpdateNodeSeg(tracks, node_id, pixels, added=False)
 
         assert tracks.graph.edges[edge_id]["iou"] == 0
 
@@ -72,46 +74,83 @@ class TestEdgeAnnotator:
         graph = get_graph(ndim, with_features="clean")
         seg = get_segmentation(ndim)
         tracks = Tracks(graph, segmentation=seg, ndim=ndim)
-        ann = EdgeAnnotator(tracks)
-
-        # Compute initial values
-        ann.compute()
+        # Get the EdgeAnnotator from the registry
+        ann = next(
+            ann for ann in tracks.annotators.annotators if isinstance(ann, EdgeAnnotator)
+        )
+        # Enable features through tracks
+        tracks.enable_features(list(ann.all_features.keys()))
 
         node_id = 3
         edge_id = (1, 3)
         to_remove_key = next(iter(ann.features))
         orig_iou = tracks.get_edge_attr(edge_id, to_remove_key, required=True)
 
-        # remove the IOU from computation (annotator level only)
-        ann.remove_feature(to_remove_key)
+        # remove the IOU from computation (tracks level)
+        tracks.disable_features([to_remove_key])
         # remove all but one pixel
         orig_pixels = tracks.get_pixels(node_id)
         assert orig_pixels is not None
         pixels_to_remove = tuple(orig_pixels[d][1:] for d in range(len(orig_pixels)))
         tracks.set_pixels(pixels_to_remove, 0)
 
-        ann.compute()  # this should not update the removed feature
+        # Compute at tracks level - this should not update the removed feature
+        for a in tracks.annotators.annotators:
+            if isinstance(a, EdgeAnnotator):
+                a.compute()
         # IoU was computed before removal, so value is still there
         assert tracks.get_edge_attr(edge_id, to_remove_key, required=True) == orig_iou
 
         # add it back in
-        ann.add_feature(to_remove_key)
-        ann.update(edge_id)
+        tracks.enable_features([to_remove_key])
+        # Use UpdateNodeSeg action to modify segmentation and update edge
+        UpdateNodeSeg(tracks, node_id, pixels_to_remove, added=False)
         new_iou = pytest.approx(0.0, abs=0.001)
         # the feature is now updated
         assert tracks.get_edge_attr(edge_id, to_remove_key, required=True) == new_iou
 
     def test_missing_seg(self, get_graph, ndim) -> None:
+        """Test that EdgeAnnotator gracefully handles missing segmentation."""
         graph = get_graph(ndim, with_features="clean")
         tracks = Tracks(graph, segmentation=None, ndim=ndim)
 
         ann = EdgeAnnotator(tracks)
         assert len(ann.features) == 0
-        with pytest.raises(
-            ValueError, match="Cannot compute edge features without segmentation."
-        ):
-            ann.compute()
-        with pytest.raises(
-            ValueError, match="Cannot update edge features without segmentation."
-        ):
-            ann.update((1, 3))
+        # Should not raise an error, just return silently
+        ann.compute()  # No error expected
+
+    def test_ignores_irrelevant_actions(self, get_graph, get_segmentation, ndim):
+        """Test that EdgeAnnotator ignores actions that don't affect edges."""
+        graph = get_graph(ndim, with_features="clean")
+        seg = get_segmentation(ndim)
+        tracks = SolutionTracks(graph, segmentation=seg, ndim=ndim)
+        tracks.enable_features(["iou", NodeAttr.TRACK_ID.value])
+
+        edge_id = (1, 3)
+        initial_iou = tracks.graph.edges[edge_id]["iou"]
+
+        # Manually modify segmentation (without triggering an action)
+        # Remove half the pixels from node 3 (target of the edge)
+        node_id = 3
+        orig_pixels = tracks.get_pixels(node_id)
+        assert orig_pixels is not None
+        pixels_to_remove = tuple(
+            orig_pixels[d][: len(orig_pixels[d]) // 2] for d in range(len(orig_pixels))
+        )
+        tracks.set_pixels(pixels_to_remove, 0)
+
+        # If we recomputed IoU now, it would be different
+        # But we won't - we'll just call UpdateTrackID on node 1
+
+        # UpdateTrackID should not trigger edge update
+        node_id = 1
+        original_track_id = tracks.get_track_id(node_id)
+        new_track_id = original_track_id + 100
+
+        # Perform UpdateTrackID action
+        UpdateTrackID(tracks, node_id, new_track_id)
+
+        # IoU should remain unchanged (no recomputation happened despite seg change)
+        assert tracks.graph.edges[edge_id]["iou"] == initial_iou
+        # But track_id should be updated
+        assert tracks.get_track_id(node_id) == new_track_id

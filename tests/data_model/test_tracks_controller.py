@@ -8,7 +8,7 @@ from funtracks.data_model.tracks_controller import TracksController
 def test__add_nodes_no_seg(graph_2d_with_computed_features):
     # add without segmentation
     tracks = SolutionTracks(
-        graph_2d_with_computed_features, ndim=3, existing_features=["pos", "tracklet_id"]
+        graph_2d_with_computed_features, ndim=3, existing_features=["pos", "track_id"]
     )
     controller = TracksController(tracks)
 
@@ -69,7 +69,7 @@ def test__add_nodes_with_seg(graph_2d_with_computed_features, segmentation_2d):
     tracks = SolutionTracks(
         graph_2d_with_computed_features,
         segmentation=segmentation_2d,
-        existing_features=["pos", "area", "iou", "tracklet_id"],
+        existing_features=["pos", "area", "iou", "track_id"],
     )
     controller = TracksController(tracks)
 
@@ -171,7 +171,7 @@ def test__add_nodes_with_seg(graph_2d_with_computed_features, segmentation_2d):
 
 def test__delete_nodes_no_seg(graph_2d_with_computed_features):
     tracks = SolutionTracks(
-        graph_2d_with_computed_features, ndim=3, existing_features=["pos", "tracklet_id"]
+        graph_2d_with_computed_features, ndim=3, existing_features=["pos", "track_id"]
     )
     controller = TracksController(tracks)
     num_edges = tracks.graph.number_of_edges()
@@ -219,7 +219,7 @@ def test__delete_nodes_with_seg(graph_2d_with_computed_features, segmentation_2d
     tracks = SolutionTracks(
         graph_2d_with_computed_features,
         segmentation=segmentation_2d,
-        existing_features=["pos", "area", "iou", "tracklet_id"],
+        existing_features=["pos", "area", "iou", "track_id"],
     )
     controller = TracksController(tracks)
     num_edges = tracks.graph.number_of_edges()
@@ -281,7 +281,7 @@ def test__delete_nodes_with_seg(graph_2d_with_computed_features, segmentation_2d
 
 def test__add_remove_edges_no_seg(graph_2d_with_computed_features):
     tracks = SolutionTracks(
-        graph_2d_with_computed_features, ndim=3, existing_features=["pos", "tracklet_id"]
+        graph_2d_with_computed_features, ndim=3, existing_features=["pos", "track_id"]
     )
     controller = TracksController(tracks)
     num_edges = tracks.graph.number_of_edges()

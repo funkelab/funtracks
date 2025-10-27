@@ -13,7 +13,6 @@ from warnings import warn
 import networkx as nx
 import numpy as np
 from psygnal import Signal
-from skimage import measure
 
 from funtracks.features import Feature, FeatureDict, Position, Time
 
@@ -21,6 +20,8 @@ from .graph_attributes import EdgeAttr, NodeAttr
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from funtracks.actions import BasicAction
 
 AttrValue: TypeAlias = Any
 Node: TypeAlias = int
@@ -86,11 +87,33 @@ class Tracks:
             self._get_feature_set(time_attr, pos_attr) if features is None else features
         )
 
-        # Initialize AnnotatorManager for managing feature computation
+        # Initialize AnnotatorRegistry for managing feature computation
         # Import here to avoid circular dependency
-        from funtracks.annotators import AnnotatorManager
+        from funtracks.annotators import (
+            AnnotatorRegistry,
+            RegionpropsAnnotator,
+            TrackAnnotator,
+        )
 
-        self.annotator_manager = AnnotatorManager(self, existing_features)
+        self.annotators = AnnotatorRegistry(self)
+
+        # Register core features from annotators in the features dict
+        for annotator in self.annotators.annotators:
+            if isinstance(annotator, RegionpropsAnnotator):
+                feature = annotator.all_features[annotator.pos_key][0]
+                self.features.register_position_feature(annotator.pos_key, feature)
+            elif isinstance(annotator, TrackAnnotator):
+                feature = annotator.all_features[annotator.tracklet_key][0]
+                self.features.register_tracklet_feature(annotator.tracklet_key, feature)
+
+        if existing_features is not None:
+            for key in existing_features:
+                if key in self.annotators.all_features:
+                    feature, _ = self.annotators.all_features[key]
+                    # Add to FeatureDict if not already there
+                    if key not in self.features:
+                        self.features[key] = feature
+                    self.annotators.enable_features([key])
 
     @property
     def time_attr(self):
@@ -119,7 +142,7 @@ class Tracks:
 
         Static features are those provided by the user on the graph (time, position
         when segmentation is None). Managed features (computed from segmentation or
-        graph structure) are added by AnnotatorManager after initialization.
+        graph structure) are added by annotators after initialization.
 
         Args:
             time_attr: The attribute name for time
@@ -134,34 +157,40 @@ class Tracks:
         # Build static features dict - always include time
         features: dict[str, Feature] = {time_key: Time()}
 
-        # Handle position features
-        position_key: str | list[str] | None
+        # Create FeatureDict with time feature
+        # Position and tracklet features will be registered separately
+        feature_dict = FeatureDict(
+            features=features,
+            time_key=time_key,
+            position_key=None,
+            tracklet_key=None,
+        )
+
+        # Register position feature if no segmentation (static position)
         if self.segmentation is None:
             # No segmentation - position is provided by user (static)
             if isinstance(pos_attr, tuple | list):
                 # Multiple position attributes (one per axis)
-                position_key = list(pos_attr)
+                multi_position_key = list(pos_attr)
                 for attr in pos_attr:
                     features[attr] = {
                         "feature_type": "node",
                         "value_type": "float",
                         "num_values": 1,
                         "display_name": None,
-                        "recompute": False,
                         "required": True,
                         "default_value": None,
                     }
+                # For multi-axis, set position_key directly
+                # (not a single feature to register)
+                feature_dict.position_key = multi_position_key
             else:
                 # Single position attribute
-                position_key = pos_attr if pos_attr is not None else "pos"
-                features[position_key] = Position(axes=self.axis_names, recompute=False)
-        else:
-            # With segmentation - position will be added by AnnotatorManager
-            position_key = None
+                single_position_key = pos_attr if pos_attr is not None else "pos"
+                pos_feature = Position(axes=self.axis_names)
+                feature_dict.register_position_feature(single_position_key, pos_feature)
 
-        return FeatureDict(
-            features=features, time_key=time_key, position_key=position_key
-        )
+        return feature_dict
 
     def nodes(self):
         return np.array(self.graph.nodes())
@@ -218,8 +247,6 @@ class Tracks:
             )
 
         if incl_time:
-            if self.features.time_key is None:
-                raise ValueError("time_key must be set")
             times = np.array(
                 self.get_nodes_attr(nodes, self.features.time_key, required=True)
             )
@@ -271,8 +298,6 @@ class Tracks:
         )
 
     def get_times(self, nodes: Iterable[Node]) -> Sequence[int]:
-        if self.features.time_key is None:
-            raise ValueError("time_key must be set")
         return self.get_nodes_attr(nodes, self.features.time_key, required=True)
 
     def get_time(self, node: Node) -> int:
@@ -288,8 +313,6 @@ class Tracks:
         return int(self.get_times([node])[0])
 
     def set_times(self, nodes: Iterable[Node], times: Iterable[int]):
-        if self.features.time_key is None:
-            raise ValueError("time_key must be set")
         times = [int(t) for t in times]
         self._set_nodes_attr(nodes, self.features.time_key, times)
 
@@ -475,78 +498,78 @@ class Tracks:
     def get_edges_attr(self, edges: Iterable[Edge], attr: str, required: bool = False):
         return [self.get_edge_attr(edge, attr, required=required) for edge in edges]
 
-    def _compute_node_attrs(self, node: Node, time: int) -> dict[str, Any]:
-        """Get the segmentation controlled node attributes (area and position)
-        from the segmentation with label based on the node id in the given time point.
+    # ========== Feature Management ==========
+
+    def notify_annotators(self, action: BasicAction) -> None:
+        """Notify annotators about an action so they can recompute affected features.
+
+        Delegates to the annotator registry which broadcasts to all annotators.
+        The action contains all necessary information about which elements to update.
 
         Args:
-            node (int): The node id to query the current segmentation for
-            time (int): The time frame of the current segmentation to query
+            action: The action that triggered this notification
+        """
+        self.annotators.update(action)
+
+    def get_available_features(self) -> dict[str, Feature]:
+        """Get all features that can be computed across all annotators.
 
         Returns:
-            dict[str, int]: A dictionary containing the attributes that could be
-                determined from the segmentation. It will be empty if self.segmentation
-                is None. If self.segmentation exists but node id is not present in time,
-                area will be 0 and position will be None. If self.segmentation
-                exists and node id is present in time, area and position will be included.
+            Dictionary mapping feature keys to Feature definitions
         """
-        if self.segmentation is None:
-            return {}
+        return {k: feat for k, (feat, _) in self.annotators.all_features.items()}
 
-        attrs: dict[str, Any] = {}
-        seg = self.segmentation[time] == node
-        pos_scale = self.scale[1:] if self.scale is not None else None
-        area = np.sum(seg)
-        if pos_scale is not None:
-            area *= np.prod(pos_scale)
-        # only include the position if the segmentation was actually there
-        pos = (
-            measure.centroid(seg, spacing=pos_scale)  # type: ignore
-            if area > 0
-            else np.array(
-                [
-                    None,
-                ]
-                * (self.ndim - 1)
-            )
-        )
-        attrs[NodeAttr.AREA.value] = area
-        attrs[NodeAttr.POS.value] = pos
-        return attrs
+    def get_active_features(self) -> dict[str, Feature]:
+        """Get all currently active (included) features.
 
-    def _compute_edge_attrs(self, edge: Edge) -> dict[str, Any]:
-        """Get the segmentation controlled edge attributes (IOU)
-        from the segmentations associated with the endpoints of the edge.
-        The endpoints should already exist and have associated segmentations.
+        Returns:
+            Dictionary mapping feature keys to Feature definitions
+        """
+        return self.annotators.features
+
+    def enable_features(self, feature_keys: list[str]) -> None:
+        """Enable multiple features for computation efficiently.
+
+        Adds features to annotators and FeatureDict, then computes their values.
 
         Args:
-            edge (Edge): The edge to compute the segmentation-based attributes from
+            feature_keys: List of feature keys to enable
 
-        Returns:
-            dict[str, int]: A dictionary containing the attributes that could be
-                determined from the segmentation. It will be empty if self.segmentation
-                is None or if self.segmentation exists but the endpoint segmentations
-                are not found.
+        Raises:
+            KeyError: If any feature is not available (raised by annotators)
         """
-        if self.segmentation is None:
-            return {}
+        # Registry validates and enables features (will raise if invalid)
+        self.annotators.enable_features(feature_keys)
 
-        # Lazy import to avoid circular dependency
-        from funtracks.annotators._compute_ious import _compute_ious
+        # Add to FeatureDict
+        for key in feature_keys:
+            if key not in self.features:
+                feature, _ = self.annotators.all_features[key]
+                self.features[key] = feature
 
-        attrs: dict[str, Any] = {}
-        source, target = edge
-        source_time = self.get_time(source)
-        target_time = self.get_time(target)
+        # Compute the features
+        self.annotators.compute(feature_keys)
 
-        source_arr = self.segmentation[source_time] == source
-        target_arr = self.segmentation[target_time] == target
+    def disable_features(self, feature_keys: list[str]) -> None:
+        """Disable multiple features from computation.
 
-        iou_list = _compute_ious(source_arr, target_arr)  # list of (id1, id2, iou)
-        iou = 0 if len(iou_list) == 0 else iou_list[0][2]
+        Removes features from annotators and FeatureDict.
 
-        attrs[EdgeAttr.IOU.value] = iou
-        return attrs
+        Args:
+            feature_keys: List of feature keys to disable
+
+        Raises:
+            KeyError: If any feature is not available (raised by annotators)
+        """
+        # Registry validates and disables features (will raise if invalid)
+        self.annotators.disable_features(feature_keys)
+
+        # Remove from FeatureDict
+        for key in feature_keys:
+            if key in self.features:
+                del self.features[key]
+
+    # ========== Persistence ==========
 
     def save(self, directory: Path):
         """Save the tracks to the given directory.

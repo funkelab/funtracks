@@ -14,6 +14,7 @@ class UserDeleteEdge(ActionGroup):
         edge: tuple[int, int],
     ):
         super().__init__(tracks, actions=[])
+        self.tracks: SolutionTracks  # Narrow type from base class
         if not self.tracks.graph.has_edge(*edge):
             raise ValueError(f"Edge {edge} not in solution, can't remove")
 

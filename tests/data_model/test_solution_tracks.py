@@ -54,10 +54,20 @@ def test_from_tracks_cls(graph_2d_with_computed_features):
     assert solution_tracks.scale == tracks.scale
     assert solution_tracks.ndim == tracks.ndim
     assert solution_tracks.get_node_attr(6, NodeAttr.TRACK_ID.value) == 5
+
+
+def test_from_tracks_cls_recompute(graph_2d_with_computed_features):
+    tracks = Tracks(
+        graph_2d_with_computed_features,
+        ndim=3,
+        pos_attr="POSITION",
+        time_attr="TIME",
+        scale=(2, 2, 2),
+    )
     # delete track id on one node triggers reassignment of track_ids even when recompute
     # is False.
-    solution_tracks.graph.nodes[1].pop(NodeAttr.TRACK_ID.value, None)
-    solution_tracks._initialize_track_ids(recompute=False)
+    tracks.graph.nodes[1].pop(NodeAttr.TRACK_ID.value, None)
+    solution_tracks = SolutionTracks.from_tracks(tracks)
     # should have reassigned new track_id to node 6
     assert solution_tracks.get_node_attr(6, NodeAttr.TRACK_ID.value) == 4
     assert solution_tracks.get_node_attr(1, NodeAttr.TRACK_ID.value) == 1  # still 1
