@@ -30,7 +30,10 @@ from funtracks.data_model.solution_tracks import SolutionTracks
 def relabel_seg_id_to_node_id(
     times: ArrayLike, ids: ArrayLike, seg_ids: ArrayLike, segmentation: da.Array
 ) -> np.ndarray:
-    """Relabel the segmentation from seg_id to unique node id.
+    """Create a new segmentation where masks are relabeled to match node ids.
+
+    TODO: How does this relate to motile_toolbox.ensure_unique_labels? Just lazy/dask?
+
     Args:
         times (ArrayLike): array of time points, one per node
         ids (ArrayLike): array of node ids
@@ -59,8 +62,9 @@ def validate_graph_seg_match(
     scale: list[float],
     position_attr: list[str],
 ) -> bool:
-    """Validate if the given geff matches the provided segmentation data. Raises a value
-    error if no valid seg ids are provided, if the metadata axes do not match the
+    """Validate if the given geff matches the provided segmentation data.
+
+    Raises an error if no valid seg ids are provided, if the metadata axes do not match
     segmentation shape, or if the seg_id value of the last node does not match the pixel
     value at the (scaled) node coordinates. Returns a boolean indicating whether
     relabeling of the segmentation to match it to node id values is required.
@@ -89,16 +93,14 @@ def validate_graph_seg_match(
     node_props = in_memory_geff["node_props"]
 
     # Check if valid seg_ids are provided
-    if name_map.get(NodeAttr.SEG_ID.value) is not None:
-        seg_ids_valid, errors = has_valid_seg_id(
-            in_memory_geff, name_map[NodeAttr.SEG_ID.value]
-        )
+    if name_map.get("seg_id") is not None:
+        seg_ids_valid, errors = has_valid_seg_id(in_memory_geff, name_map["seg_id"])
         if not seg_ids_valid:
             error_msg = "Error in validating the segmentation ids:\n" + "\n".join(
                 f"- {e}" for e in errors
             )
             raise ValueError(error_msg)
-        seg_id = int(node_props[name_map[NodeAttr.SEG_ID.value]]["values"][-1])
+        seg_id = int(node_props[name_map["seg_id"]]["values"][-1])
     else:
         # assign the node id as seg_id instead and check in the next step if this is valid
         seg_id = int(node_ids[-1])
@@ -272,7 +274,7 @@ def import_from_geff(
         if relabel:
             times = node_props[name_map[NodeAttr.TIME.value]]["values"][:]
             ids = node_ids[:]
-            seg_ids = node_props[name_map[NodeAttr.SEG_ID.value]]["values"][:]
+            seg_ids = node_props[name_map["seg_id"]]["values"][:]
 
             if not len(times) == len(ids) == len(seg_ids):
                 raise ValueError(
