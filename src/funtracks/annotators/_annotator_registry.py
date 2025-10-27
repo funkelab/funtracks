@@ -88,18 +88,8 @@ class AnnotatorRegistry(GraphAnnotator):
             feature_keys: Optional list of specific feature keys to compute.
                 If None, computes all currently active features.
         """
-        if feature_keys is None:
-            # Compute all active features for each annotator
-            for annotator in self.annotators:
-                annotator.compute(None)
-        else:
-            # Filter keys for each annotator - only pass features it owns
-            for annotator in self.annotators:
-                keys_for_annotator = [
-                    k for k in feature_keys if k in annotator.all_features
-                ]
-                if keys_for_annotator:
-                    annotator.compute(keys_for_annotator)
+        for annotator in self.annotators:
+            annotator.compute(feature_keys)
 
     def update(self, action: BasicAction) -> None:
         """Update features across all annotators based on the action.

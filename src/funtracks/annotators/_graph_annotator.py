@@ -95,22 +95,11 @@ class GraphAnnotator:
 
         Returns:
             List of feature keys that are enabled.
-
-        Raises:
-            KeyError: If any keys in feature_keys are not currently enabled.
         """
         if feature_keys is None:
             return list(self.features.keys())
 
-        # Strict validation - all requested keys must be enabled
-        invalid_keys = [k for k in feature_keys if k not in self.features]
-        if invalid_keys:
-            raise KeyError(
-                f"Features not available or not enabled: {invalid_keys}. "
-                f"Available features: {list(self.features.keys())}"
-            )
-
-        return feature_keys
+        return [k for k in feature_keys if k in self.features]
 
     def compute(self, feature_keys: list[str] | None = None) -> None:
         """Compute a set of features and add them to the tracks.

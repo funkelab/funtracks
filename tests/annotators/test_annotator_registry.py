@@ -183,19 +183,12 @@ def test_compute_strict_validation(graph_clean, segmentation_2d):
     # Valid feature key should work
     rp_ann.compute(["area"])
 
-    # Invalid feature key should raise KeyError
-    with pytest.raises(KeyError, match="Features not available or not enabled"):
-        rp_ann.compute(["nonexistent_feature"])
+    # Invalid feature key should not raise KeyError
+    rp_ann.compute(["nonexistent_feature"])
 
-    # Disabled feature should raise KeyError
+    # Disabled feature should not raise KeyError
     tracks.disable_features(["area"])
-    with pytest.raises(KeyError, match="Features not available or not enabled"):
-        rp_ann.compute(["area"])
-
-    # Mix of valid and invalid should raise KeyError
-    tracks.enable_features(["area"])
-    with pytest.raises(KeyError, match="Features not available or not enabled"):
-        rp_ann.compute(["area", "nonexistent"])
+    rp_ann.compute(["area"])
 
     # None should still work (compute all enabled features)
     rp_ann.compute()
