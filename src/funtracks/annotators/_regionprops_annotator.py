@@ -81,7 +81,7 @@ class RegionpropsAnnotator(GraphAnnotator):
         self.circularity_key = circularity_key
         self.perimeter_key = perimeter_key
 
-        specs = RegionpropsAnnotator._build_feature_specs(
+        specs = RegionpropsAnnotator._define_features(
             tracks,
             pos_key,
             area_key,
@@ -95,7 +95,7 @@ class RegionpropsAnnotator(GraphAnnotator):
         self.regionprops_names = {spec.key: spec.regionprops_attr for spec in specs}
 
     @classmethod
-    def _build_feature_specs(
+    def _define_features(
         cls,
         tracks: Tracks,
         pos_key: str = "pos",
@@ -104,7 +104,7 @@ class RegionpropsAnnotator(GraphAnnotator):
         circularity_key: str = "circularity",
         perimeter_key: str = "perimeter",
     ) -> list[FeatureSpec]:
-        """Build feature specifications for all supported regionprops features.
+        """Define all supported regionprops features along with keys and function names.
 
         Single source of truth for feature definitions. Returns FeatureSpec objects
         that include the regionprops attribute mapping needed for computation.
@@ -152,7 +152,7 @@ class RegionpropsAnnotator(GraphAnnotator):
         """
         if not cls.can_annotate(tracks):
             return {}
-        specs = RegionpropsAnnotator._build_feature_specs(tracks)
+        specs = RegionpropsAnnotator._define_features(tracks)
         return {spec.key: spec.feature for spec in specs}
 
     def compute(self, feature_keys: list[str] | None = None) -> None:
