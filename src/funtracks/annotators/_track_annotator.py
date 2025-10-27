@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 import networkx as nx
 
-from funtracks.actions.update_track_id import UpdateTrackID
+from funtracks.actions import AddNode, DeleteNode, UpdateTrackID
 from funtracks.data_model import NodeAttr, SolutionTracks
 from funtracks.features import LineageID, TrackletID
 
@@ -107,11 +107,13 @@ class TrackAnnotator(GraphAnnotator):
         self.max_tracklet_id = 0
         self.max_lineage_id = 0
 
-        if tracklet_key is not None and tracks.graph.number_of_nodes() > 0:
+        # Initialize tracklet bookkeeping if track IDs already exist in the graph
+        if tracks.graph.number_of_nodes() > 0:
             max_id, id_to_nodes = self._get_max_id_and_map(self.tracklet_key)
             self.max_tracklet_id = max_id
             self.tracklet_id_to_nodes = id_to_nodes
 
+        # Initialize lineage bookkeeping if lineage IDs already exist
         if lineage_key is not None and tracks.graph.number_of_nodes() > 0:
             max_id, id_to_nodes = self._get_max_id_and_map(self.lineage_key)
             self.max_lineage_id = max_id
@@ -128,10 +130,14 @@ class TrackAnnotator(GraphAnnotator):
                 ids to a list of nodes with that id.
         """
         id_to_nodes = defaultdict(list)
+        max_id = 0
         for node in self.tracks.nodes():
             _id: int = self.tracks.get_node_attr(node, key)
+            if _id is None:
+                continue
             id_to_nodes[_id].append(node)
-        max_id = max(id_to_nodes.keys()) if len(id_to_nodes) > 0 else 0
+            if _id > max_id:
+                max_id = _id
         return max_id, dict(id_to_nodes)
 
     def compute(self, feature_keys: list[str] | None = None) -> None:
@@ -215,20 +221,30 @@ class TrackAnnotator(GraphAnnotator):
     def update(self, action: BasicAction) -> None:
         """Update track-level features based on the action.
 
-        Handles incremental updates for UpdateTrackID actions. Other actions are ignored
-        (topology changes require full recomputation for now).
+        Handles incremental updates for UpdateTrackID, AddNode, and DeleteNode actions.
+        Other actions are ignored.
 
         Args:
             action: The action that triggered this update
         """
-        # Only handle UpdateTrackID actions incrementally
-        if not isinstance(action, UpdateTrackID):
-            return
 
         # Only update if track_id feature is enabled
         if self.tracklet_key not in self.features:
             return
 
+        if isinstance(action, UpdateTrackID):
+            self._handle_update_track_id(action)
+        elif isinstance(action, AddNode):
+            self._handle_add_node(action)
+        elif isinstance(action, DeleteNode):
+            self._handle_delete_node(action)
+
+    def _handle_update_track_id(self, action: UpdateTrackID) -> None:
+        """Handle UpdateTrackID action to change track ids and update bookkeeping.
+
+        Args:
+            action: The UpdateTrackID action
+        """
         # Get the parameters from the action
         start_node = action.start_node
         new_track_id = action.new_track_id
@@ -239,7 +255,7 @@ class TrackAnnotator(GraphAnnotator):
         updated_nodes = []
         while self.tracks.get_track_id(curr_node) == old_track_id:
             # Update the track id
-            self.tracks.set_track_id(curr_node, new_track_id)
+            self.tracks._set_node_attr(curr_node, self.tracklet_key, new_track_id)
             updated_nodes.append(curr_node)
 
             # Get the next node (picks first successor if there are multiple)
@@ -266,3 +282,34 @@ class TrackAnnotator(GraphAnnotator):
         # Update max_tracklet_id if needed
         if new_track_id > self.max_tracklet_id:
             self.max_tracklet_id = new_track_id
+
+    def _handle_add_node(self, action) -> None:
+        """Handle AddNode action to update track id bookkeeping.
+
+        TODO: Decide if we need to update the max if we delete it?
+
+        Args:
+            action: The AddNode action
+        """
+        track_id = self.tracks.get_track_id(action.node)
+        if track_id not in self.tracklet_id_to_nodes:
+            self.tracklet_id_to_nodes[track_id] = []
+        self.tracklet_id_to_nodes[track_id].append(action.node)
+
+        # Update max_tracklet_id if needed
+        if track_id > self.max_tracklet_id:
+            self.max_tracklet_id = track_id
+
+    def _handle_delete_node(self, action) -> None:
+        """Handle DeleteNode action to update track id bookkeeping.
+
+        Args:
+            action: The DeleteNode action
+        """
+        track_id = action.attributes.get(self.tracklet_key)
+        if track_id is not None and track_id in self.tracklet_id_to_nodes:
+            if action.node in self.tracklet_id_to_nodes[track_id]:
+                self.tracklet_id_to_nodes[track_id].remove(action.node)
+            # Clean up empty list
+            if not self.tracklet_id_to_nodes[track_id]:
+                del self.tracklet_id_to_nodes[track_id]

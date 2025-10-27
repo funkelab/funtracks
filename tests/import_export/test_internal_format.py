@@ -60,7 +60,11 @@ def test_save_load(
     assert loaded.ndim == tracks.ndim
 
     if is_solution:
-        assert loaded.track_id_to_node == tracks.track_id_to_node
+        loaded_annotator = loaded.track_annotator
+        tracks_annotator = tracks.track_annotator
+        assert (
+            loaded_annotator.tracklet_id_to_nodes == tracks_annotator.tracklet_id_to_nodes
+        )
 
     if with_seg:
         assert_array_almost_equal(loaded.segmentation, tracks.segmentation)

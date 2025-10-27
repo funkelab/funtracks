@@ -81,12 +81,6 @@ class AddNode(BasicAction):
         for attr, values in attrs.items():
             self.tracks._set_node_attr(self.node, attr, values)
 
-        # TODO: only keep track of max track id and track_id to node in one location
-        track_id = attrs[NodeAttr.TRACK_ID.value]
-        if track_id not in self.tracks.track_id_to_node:
-            self.tracks.track_id_to_node[track_id] = []
-        self.tracks.track_id_to_node[track_id].append(self.node)
-
         # Always notify annotators - they will check their own preconditions
         self.tracks.notify_annotators(self)
 
@@ -133,9 +127,5 @@ class DeleteNode(BasicAction):
         if self.pixels is not None:
             self.tracks.set_pixels(self.pixels, 0)
 
-        if isinstance(self.tracks, SolutionTracks):
-            self.tracks.track_id_to_node[self.tracks.get_track_id(self.node)].remove(
-                self.node
-            )
-
         self.tracks.graph.remove_node(self.node)
+        self.tracks.notify_annotators(self)
