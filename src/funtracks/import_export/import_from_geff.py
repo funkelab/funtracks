@@ -135,7 +135,7 @@ def import_from_geff(
     name_map: dict[str, str],
     segmentation_path: Path | None = None,
     scale: list[float] | None = None,
-    extra_features: dict[str, bool] | None = None,
+    node_features: dict[str, bool] | None = None,
     edge_prop_filter: list[str] | None = None,
 ):
     """Load Tracks from a geff directory. Takes a name_map to map graph attributes
@@ -163,7 +163,7 @@ def import_from_geff(
                 (lineage_id), optional, if it is a solution
         segmentation_path (Path | None = None): path to segmentation data.
         scale (list[float]): scaling information (pixel to world coordinates).
-        extra_features (dict[str: bool] | None=None): optional features to include in the
+        node_features (dict[str: bool] | None=None): optional features to include in the
             Tracks object. The keys are the feature names, and the boolean value indicates
             whether to recompute the feature (area) or load it as a static node attribute.
         edge_prop_filter (list[str]): List of edge properties to include. If None all
@@ -176,8 +176,16 @@ def import_from_geff(
     node_prop_filter = [
         prop for key, prop in name_map.items() if name_map[key] is not None
     ]
-    if extra_features is not None:
-        node_prop_filter.extend(list(extra_features.keys()))
+    if node_features is not None:
+        # Only load features from geff that should NOT be computed (value=False)
+        # Features with value=True will be computed by annotators after loading
+        node_prop_filter.extend(
+            [
+                feature_name
+                for feature_name, should_compute in node_features.items()
+                if not should_compute
+            ]
+        )
 
     in_memory_geff = read_to_memory(
         directory, node_props=node_prop_filter, edge_props=edge_prop_filter
@@ -187,7 +195,7 @@ def import_from_geff(
     node_props = in_memory_geff["node_props"]
     edge_ids = in_memory_geff["edge_ids"]
     edge_props = in_memory_geff["edge_props"]
-    selected_attrs = []
+    node_attrs_to_load_from_geff = []
     segmentation = None
 
     # Check that the spatiotemporal key mapping does not contain None or duplicate values.
@@ -211,9 +219,9 @@ def import_from_geff(
     # Extract the time and position attributes from the name_map, containing and optional
     # z coordinate.
     time_attr = name_map[NodeAttr.TIME.value]
-    selected_attrs.append(name_map[NodeAttr.TIME.value])
+    node_attrs_to_load_from_geff.append(name_map[NodeAttr.TIME.value])
     position_attr = [name_map[k] for k in ("z", "y", "x") if k in name_map]
-    selected_attrs.extend(position_attr)
+    node_attrs_to_load_from_geff.extend(position_attr)
     ndims = len(position_attr) + 1
 
     # if no scale is provided, load from metadata if available.
@@ -235,8 +243,8 @@ def import_from_geff(
             tracklet_ids=node_props[name_map[NodeAttr.TRACK_ID.value]]["values"],
         )
         if valid_track_ids:
-            selected_attrs.append(NodeAttr.TRACK_ID.value)
-    recompute_track_ids = NodeAttr.TRACK_ID.value not in selected_attrs
+            node_attrs_to_load_from_geff.append(NodeAttr.TRACK_ID.value)
+    recompute_track_ids = NodeAttr.TRACK_ID.value not in node_attrs_to_load_from_geff
 
     # Check if a lineage_id was provided, and if it is valid add it to list of selected
     # attributes. If it is not provided, it will be a static feature (for now).
@@ -247,7 +255,7 @@ def import_from_geff(
             lineage_ids=node_props[name_map["lineage_id"]]["values"],
         )
         if valid_lineages:
-            selected_attrs.append(name_map["lineage_id"])
+            node_attrs_to_load_from_geff.append(name_map["lineage_id"])
 
     # Try to load the segmentation data, if it was provided.
     if segmentation_path is not None:
@@ -272,13 +280,22 @@ def import_from_geff(
                 )
             segmentation = relabel_seg_id_to_node_id(times, ids, seg_ids, segmentation)
 
-    # Add optional extra features.
-    if extra_features is None:
-        extra_features = {}
-    selected_attrs.extend(extra_features.keys())
+    # Add optional extra features that were loaded from geff (not computed).
+    if node_features is None:
+        node_features = {}
+    # Only include features that should be loaded from geff (value=False)
+    node_attrs_to_load_from_geff.extend(
+        [
+            feature_name
+            for feature_name, should_compute in node_features.items()
+            if not should_compute
+        ]
+    )
 
     # All pre-checks have passed, load the graph now.
-    filtered_node_props = {k: v for k, v in node_props.items() if k in selected_attrs}
+    filtered_node_props = {
+        k: v for k, v in node_props.items() if k in node_attrs_to_load_from_geff
+    }
     graph = geff.construct(
         metadata=in_memory_geff["metadata"],
         node_ids=in_memory_geff["node_ids"],
@@ -301,9 +318,6 @@ def import_from_geff(
     # Put segmentation data in memory now.
     if segmentation is not None and isinstance(segmentation, da.Array):
         segmentation = segmentation.compute()
-    existing_features = []
-    if not recompute_track_ids:
-        existing_features.append(NodeAttr.TRACK_ID.value)
     # Create the tracks.
     tracks = SolutionTracks(
         graph=graph,
@@ -312,10 +326,16 @@ def import_from_geff(
         time_attr=time_attr,
         ndim=ndims,
         scale=scale,
-        existing_features=existing_features,
+        existing_features=node_attrs_to_load_from_geff,
     )
-    # compute the 'area' attribute if needed
-    if tracks.segmentation is not None and extra_features.get("area"):
-        tracks.enable_features(["area"])
+    # Compute any extra features that were requested  but not already loaded from geff
+    features_to_compute = [
+        feature_name
+        for feature_name, _ in node_features.items()
+        if feature_name not in node_attrs_to_load_from_geff
+    ]
+
+    if features_to_compute:
+        tracks.enable_features(features_to_compute)
 
     return tracks
