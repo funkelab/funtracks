@@ -3,10 +3,10 @@ from collections import Counter
 import numpy as np
 import pytest
 
-from funtracks.data_model import NodeAttr
 from funtracks.user_actions import UserUpdateSegmentation
 
 iou_key = "iou"
+area_key = "area"
 
 
 # TODO: add area to the 4d testing graph
@@ -22,8 +22,8 @@ class TestUpdateNodeSeg:
 
         orig_pixels = tracks.get_pixels(node_id)
         orig_position = tracks.get_position(node_id)
-        orig_area = tracks.get_node_attr(node_id, NodeAttr.AREA.value)
-        orig_iou = tracks.get_edge_attr(edge, "iou")
+        orig_area = tracks.get_node_attr(node_id, area_key)
+        orig_iou = tracks.get_edge_attr(edge, iou_key)
 
         # remove all but one pixel
         pixels_to_remove = tuple(orig_pixels[d][1:] for d in range(len(orig_pixels)))

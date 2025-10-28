@@ -7,7 +7,6 @@ class NodeAttr(Enum):
     implementations of commonly used ones, listed here.
     """
 
-    AREA = "area"
     TRACK_ID = "track_id"
 
 

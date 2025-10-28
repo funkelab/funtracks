@@ -16,8 +16,6 @@ from psygnal import Signal
 
 from funtracks.features import Feature, FeatureDict, Position, Time
 
-from .graph_attributes import NodeAttr
-
 if TYPE_CHECKING:
     from pathlib import Path
 
@@ -336,25 +334,45 @@ class Tracks:
         is not in the graph. Returns None if the given node does not have an Area
         attribute.
 
+        .. deprecated:: 1.0
+            `get_areas` will be removed in funtracks v2.0.
+            Use `get_nodes_attr(nodes, "area")` instead.
+
         Args:
             node (Node): The node id to get the area/volume for
 
         Returns:
             int: The area/volume of the node
         """
-        return self.get_nodes_attr(nodes, NodeAttr.AREA.value)
+        warnings.warn(
+            "`get_areas` is deprecated and will be removed in funtracks v2.0. "
+            "Use `get_nodes_attr(nodes, 'area')` instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.get_nodes_attr(nodes, "area")
 
     def get_area(self, node: Node) -> int | None:
         """Get the area/volume of a given node. Raises a KeyError if the node
         is not in the graph. Returns None if the given node does not have an Area
         attribute.
 
+        .. deprecated:: 1.0
+            `get_area` will be removed in funtracks v2.0.
+            Use `get_node_attr(node, "area")` instead.
+
         Args:
             node (Node): The node id to get the area/volume for
 
         Returns:
             int: The area/volume of the node
         """
+        warnings.warn(
+            "`get_area` is deprecated and will be removed in funtracks v2.0. "
+            "Use `get_node_attr(node, 'area')` instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.get_areas([node])[0]
 
     def get_ious(self, edges: Iterable[Edge]):
