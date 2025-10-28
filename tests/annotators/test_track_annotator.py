@@ -2,7 +2,6 @@ import pytest
 
 from funtracks.actions import UpdateNodeSeg
 from funtracks.annotators import TrackAnnotator
-from funtracks.data_model import NodeAttr
 
 
 @pytest.mark.parametrize("ndim", [3, 4])
@@ -104,7 +103,7 @@ class TestTrackAnnotator:
             pytest.skip("Test requires segmentation")
 
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
-        tracks.enable_features(["area", NodeAttr.TRACK_ID.value])
+        tracks.enable_features(["area", tracks.features.tracklet_key])
 
         node_id = 3
         initial_track_id = tracks.get_track_id(node_id)

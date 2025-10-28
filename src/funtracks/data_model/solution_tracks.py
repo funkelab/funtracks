@@ -7,7 +7,6 @@ import networkx as nx
 
 from funtracks.features import FeatureDict
 
-from .graph_attributes import NodeAttr
 from .tracks import Tracks
 
 if TYPE_CHECKING:
@@ -75,18 +74,22 @@ class SolutionTracks(Tracks):
     def from_tracks(cls, tracks: Tracks):
         # Get existing features from tracks
         existing_features = list(tracks.features.keys())
+        if (tracklet_key := tracks.features.tracklet_key) is not None:
+            # Check if all nodes have track_id before trusting existing track IDs
+            # Short circuit on first missing track_id
+            all_nodes_have_track_id = True
+            for node in tracks.graph.nodes():
+                if tracks.get_node_attr(node, tracklet_key) is None:
+                    all_nodes_have_track_id = False
+                    break
 
-        # Check if all nodes have track_id before trusting existing track IDs
-        # Short circuit on first missing track_id
-        all_nodes_have_track_id = True
-        for node in tracks.graph.nodes():
-            if tracks.get_node_attr(node, NodeAttr.TRACK_ID.value) is None:
-                all_nodes_have_track_id = False
-                break
-
-        # Only add track_id to existing_features if ALL nodes have it
-        if all_nodes_have_track_id:
-            existing_features.append(NodeAttr.TRACK_ID.value)
+            # Only add track_id to existing_features if ALL nodes have it
+            if all_nodes_have_track_id:
+                existing_features.append(tracklet_key)
+            else:
+                if tracklet_key in tracks.features:
+                    del tracks.features[tracklet_key]
+                tracks.features.tracklet_key = None
 
         return cls(
             tracks.graph,
