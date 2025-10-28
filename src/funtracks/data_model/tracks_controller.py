@@ -19,7 +19,6 @@ from ..user_actions import (
     UserDeleteNode,
     UserUpdateSegmentation,
 )
-from .graph_attributes import NodeAttr
 from .solution_tracks import SolutionTracks
 from .tracks import Attrs, Edge, Node, SegMask
 
@@ -95,7 +94,7 @@ class TracksController:
                 or None if there is no segmentation. These pixels will be updated
                 in the tracks.segmentation, set to the new node id
         """
-        times = attributes[NodeAttr.TIME.value]
+        times = attributes[self.tracks.features.time_key]
         nodes: list[Node]
         if pixels is not None:
             nodes = attributes["node_id"]
