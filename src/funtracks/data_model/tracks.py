@@ -63,8 +63,9 @@ class Tracks:
         self,
         graph: nx.DiGraph,
         segmentation: np.ndarray | None = None,
-        time_attr: str | None = NodeAttr.TIME.value,
-        pos_attr: str | tuple[str, ...] | list[str] | None = NodeAttr.POS.value,
+        time_attr: str = "time",
+        pos_attr: str | tuple[str, ...] | list[str] = "pos",
+        tracklet_attr: str = "track_id",
         scale: list[float] | None = None,
         ndim: int | None = None,
         features: FeatureDict | None = None,
@@ -78,13 +79,13 @@ class Tracks:
             )
         self.graph = graph
         self.segmentation = segmentation
-        self._time_attr = time_attr
-        self._pos_attr = pos_attr
         self.scale = scale
         self.ndim = self._compute_ndim(segmentation, scale, ndim)
         self.axis_names = ["z", "y", "x"] if self.ndim == 4 else ["y", "x"]
         self.features = (
-            self._get_feature_set(time_attr, pos_attr) if features is None else features
+            self._get_feature_set(time_attr, pos_attr, tracklet_attr)
+            if features is None
+            else features
         )
 
         # Initialize AnnotatorRegistry for managing feature computation
@@ -118,25 +119,28 @@ class Tracks:
     @property
     def time_attr(self):
         warn(
-            "Deprecating Tracks.time_attr in favor of tracks.features.time."
+            "Deprecating Tracks.time_attr in favor of tracks.features.time_key."
             " Will be removed in funtracks v2.0.",
             DeprecationWarning,
             stacklevel=2,
         )
-        return self._time_attr
+        return self.features.time_key
 
     @property
     def pos_attr(self):
         warn(
-            "Deprecating Tracks.pos_attr in favor of tracks.features.position."
+            "Deprecating Tracks.pos_attr in favor of tracks.features.position_key."
             " Will be removed in funtracks v2.0.",
             DeprecationWarning,
             stacklevel=2,
         )
-        return self._pos_attr
+        return self.features.position_key
 
     def _get_feature_set(
-        self, time_attr: str | None, pos_attr: str | tuple[str, ...] | list[str] | None
+        self,
+        time_attr: str,
+        pos_attr: str | tuple[str, ...] | list[str],
+        tracklet_key: str,
     ):
         """Create a FeatureDict with static features only.
 
@@ -152,7 +156,7 @@ class Tracks:
             FeatureDict with static features
         """
         # Determine keys
-        time_key = time_attr if time_attr is not None else "time"
+        time_key = time_attr
 
         # Build static features dict - always include time
         features: dict[str, Feature] = {time_key: Time()}
@@ -163,7 +167,7 @@ class Tracks:
             features=features,
             time_key=time_key,
             position_key=None,
-            tracklet_key=None,
+            tracklet_key=tracklet_key,
         )
 
         # Register position feature if no segmentation (static position)
@@ -186,7 +190,7 @@ class Tracks:
                 feature_dict.position_key = multi_position_key
             else:
                 # Single position attribute
-                single_position_key = pos_attr if pos_attr is not None else "pos"
+                single_position_key = pos_attr
                 pos_feature = Position(axes=self.axis_names)
                 feature_dict.register_position_feature(single_position_key, pos_feature)
 

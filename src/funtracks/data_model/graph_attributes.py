@@ -7,8 +7,6 @@ class NodeAttr(Enum):
     implementations of commonly used ones, listed here.
     """
 
-    POS = "pos"
-    TIME = "time"
     AREA = "area"
     TRACK_ID = "track_id"
 

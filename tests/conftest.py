@@ -5,13 +5,11 @@ import numpy as np
 import pytest
 from skimage.draw import disk
 
-from funtracks.data_model import NodeAttr
-
 # Feature list constants for consistent test usage
 FEATURES_WITH_SEG = ["pos", "area", "iou"]
 FEATURES_NO_SEG = ["pos"]
-SOLUTION_FEATURES_WITH_SEG = ["pos", "area", "iou", NodeAttr.TRACK_ID.value]
-SOLUTION_FEATURES_NO_SEG = ["pos", NodeAttr.TRACK_ID.value]
+SOLUTION_FEATURES_WITH_SEG = ["pos", "area", "iou", "track_id"]
+SOLUTION_FEATURES_NO_SEG = ["pos", "track_id"]
 
 
 @pytest.fixture
@@ -193,9 +191,9 @@ def graph_2d_list():
             {
                 "y": 100,
                 "x": 50,
-                NodeAttr.TIME.value: 0,
-                NodeAttr.AREA.value: 1245,
-                NodeAttr.TRACK_ID.value: 1,
+                "time": 0,
+                "area": 1245,
+                "track_id": 1,
             },
         ),
         (
@@ -203,9 +201,9 @@ def graph_2d_list():
             {
                 "y": 20,
                 "x": 100,
-                NodeAttr.TIME.value: 1,
-                NodeAttr.AREA.value: 500,
-                NodeAttr.TRACK_ID.value: 2,
+                "time": 1,
+                "area": 500,
+                "track_id": 2,
             },
         ),
     ]

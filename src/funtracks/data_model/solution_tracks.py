@@ -25,8 +25,9 @@ class SolutionTracks(Tracks):
         self,
         graph: nx.DiGraph,
         segmentation: np.ndarray | None = None,
-        time_attr: str | None = NodeAttr.TIME.value,
-        pos_attr: str | tuple[str] | list[str] | None = NodeAttr.POS.value,
+        time_attr: str = "time",
+        pos_attr: str | tuple[str] | list[str] = "pos",
+        tracklet_attr: str = "tracklet_id",
         scale: list[float] | None = None,
         ndim: int | None = None,
         features: FeatureDict | None = None,
@@ -37,6 +38,7 @@ class SolutionTracks(Tracks):
             segmentation=segmentation,
             time_attr=time_attr,
             pos_attr=pos_attr,
+            tracklet_attr=tracklet_attr,
             scale=scale,
             ndim=ndim,
             features=features,
@@ -89,8 +91,6 @@ class SolutionTracks(Tracks):
         return cls(
             tracks.graph,
             segmentation=tracks.segmentation,
-            time_attr=None,
-            pos_attr=None,
             scale=tracks.scale,
             ndim=tracks.ndim,
             features=tracks.features,
@@ -105,7 +105,7 @@ class SolutionTracks(Tracks):
             DeprecationWarning,
             stacklevel=2,
         )
-        return nx.get_node_attributes(self.graph, NodeAttr.TRACK_ID.value)
+        return nx.get_node_attributes(self.graph, self.features.tracklet_key)
 
     def get_next_track_id(self) -> int:
         """Return the next available track_id and update max_tracklet_id in TrackAnnotator
@@ -118,7 +118,9 @@ class SolutionTracks(Tracks):
         return annotator.max_tracklet_id
 
     def get_track_id(self, node) -> int:
-        track_id = self.get_node_attr(node, NodeAttr.TRACK_ID.value, required=True)
+        if self.features.tracklet_key is None:
+            raise ValueError("Tracklet key not initialized in features")
+        track_id = self.get_node_attr(node, self.features.tracklet_key, required=True)
         return track_id
 
     def export_tracks(self, outfile: Path | str):

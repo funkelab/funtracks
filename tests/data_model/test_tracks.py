@@ -4,7 +4,7 @@ import pytest
 from networkx.utils import graphs_equal
 from numpy.testing import assert_array_almost_equal
 
-from funtracks.data_model import NodeAttr, Tracks
+from funtracks.data_model import Tracks
 
 
 def test_create_tracks(graph_3d_with_computed_features: nx.DiGraph, segmentation_3d):
@@ -63,9 +63,9 @@ def test_create_tracks(graph_3d_with_computed_features: nx.DiGraph, segmentation
     # test multiple position attrs
     pos_attr = ("z", "y", "x")
     for node in graph_3d_with_computed_features.nodes():
-        pos = graph_3d_with_computed_features.nodes[node][NodeAttr.POS.value]
+        pos = graph_3d_with_computed_features.nodes[node]["pos"]
         z, y, x = pos
-        del graph_3d_with_computed_features.nodes[node][NodeAttr.POS.value]
+        del graph_3d_with_computed_features.nodes[node]["pos"]
         graph_3d_with_computed_features.nodes[node]["z"] = z
         graph_3d_with_computed_features.nodes[node]["y"] = y
         graph_3d_with_computed_features.nodes[node]["x"] = x

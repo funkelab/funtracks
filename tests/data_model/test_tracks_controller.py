@@ -1,6 +1,5 @@
 import numpy as np
 
-from funtracks.data_model.graph_attributes import NodeAttr
 from funtracks.data_model.solution_tracks import SolutionTracks
 from funtracks.data_model.tracks_controller import TracksController
 
@@ -16,9 +15,9 @@ def test__add_nodes_no_seg(graph_2d_with_computed_features):
 
     # start a new track with multiple nodes
     attrs = {
-        NodeAttr.TIME.value: [0, 1],
-        NodeAttr.POS.value: np.array([[1, 3], [1, 3]]),
-        NodeAttr.TRACK_ID.value: [6, 6],
+        "time": [0, 1],
+        "pos": np.array([[1, 3], [1, 3]]),
+        "track_id": [6, 6],
     }
 
     action, node_ids = controller._add_nodes(attrs)
@@ -32,9 +31,9 @@ def test__add_nodes_no_seg(graph_2d_with_computed_features):
 
     # add nodes to end of existing track
     attrs = {
-        NodeAttr.TIME.value: [2, 3],
-        NodeAttr.POS.value: np.array([[1, 3], [1, 3]]),
-        NodeAttr.TRACK_ID.value: [2, 2],
+        "time": [2, 3],
+        "pos": np.array([[1, 3], [1, 3]]),
+        "track_id": [2, 2],
     }
 
     action, node_ids = controller._add_nodes(attrs)
@@ -48,9 +47,9 @@ def test__add_nodes_no_seg(graph_2d_with_computed_features):
 
     # add node to middle of existing track
     attrs = {
-        NodeAttr.TIME.value: [3],
-        NodeAttr.POS.value: np.array([[1, 3]]),
-        NodeAttr.TRACK_ID.value: [3],
+        "time": [3],
+        "pos": np.array([[1, 3]]),
+        "track_id": [3],
     }
 
     action, node_ids = controller._add_nodes(attrs)
@@ -85,8 +84,8 @@ def test__add_nodes_with_seg(graph_2d_with_computed_features, segmentation_2d):
     expected_center = [94.5, 1.5]
     # start a new track
     attrs = {
-        NodeAttr.TIME.value: [time, time + 1],
-        NodeAttr.TRACK_ID.value: [track_id, track_id],
+        "time": [time, time + 1],
+        "track_id": [track_id, track_id],
         "node_id": [node1, node2],
     }
 
@@ -121,8 +120,8 @@ def test__add_nodes_with_seg(graph_2d_with_computed_features, segmentation_2d):
     expected_center = [4.5, 1.5]
     # start a new track
     attrs = {
-        NodeAttr.TIME.value: [time, time + 1],
-        NodeAttr.TRACK_ID.value: [track_id, track_id],
+        "time": [time, time + 1],
+        "track_id": [track_id, track_id],
         "node_id": [node1, node2],
     }
 
@@ -148,8 +147,8 @@ def test__add_nodes_with_seg(graph_2d_with_computed_features, segmentation_2d):
     new_seg[time, 0:10, 0:4] = node1
     expected_center = [4.5, 1.5]
     attrs = {
-        NodeAttr.TIME.value: [time],
-        NodeAttr.TRACK_ID.value: [track_id],
+        "time": [time],
+        "track_id": [track_id],
         "node_id": [node1],
     }
 

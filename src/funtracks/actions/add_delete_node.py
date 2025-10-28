@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from funtracks.data_model.solution_tracks import SolutionTracks
-
 from ._base import BasicAction
 
 if TYPE_CHECKING:

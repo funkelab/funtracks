@@ -106,7 +106,7 @@ def validate_graph_seg_match(
         seg_id = int(node_ids[-1])
 
     # Get the coordinates for the last node.
-    t = node_props[name_map[NodeAttr.TIME.value]]["values"][-1]
+    t = node_props[name_map["time"]]["values"][-1]
     z = node_props[name_map["z"]]["values"][-1] if len(position_attr) == 3 else None
     y = node_props[name_map["y"]]["values"][-1]
     x = node_props[name_map["x"]]["values"][-1]
@@ -203,7 +203,7 @@ def import_from_geff(
     # Check that the spatiotemporal key mapping does not contain None or duplicate values.
     # It is allowed to not include z, but it is not allowed to include z with a None or
     # duplicate value.
-    spatio_temporal_keys = [NodeAttr.TIME.value, "z", "y", "x"]
+    spatio_temporal_keys = ["time", "z", "y", "x"]
     spatio_temporal_map = {
         key: name_map[key] for key in spatio_temporal_keys if key in name_map
     }
@@ -220,8 +220,8 @@ def import_from_geff(
 
     # Extract the time and position attributes from the name_map, containing and optional
     # z coordinate.
-    time_attr = name_map[NodeAttr.TIME.value]
-    node_attrs_to_load_from_geff.append(name_map[NodeAttr.TIME.value])
+    time_attr = name_map["time"]
+    node_attrs_to_load_from_geff.append(name_map["time"])
     position_attr = [name_map[k] for k in ("z", "y", "x") if k in name_map]
     node_attrs_to_load_from_geff.extend(position_attr)
     ndims = len(position_attr) + 1
@@ -272,7 +272,7 @@ def import_from_geff(
         # If the provided segmentation has seg ids that are not identical to node ids,
         # relabel it now.
         if relabel:
-            times = node_props[name_map[NodeAttr.TIME.value]]["values"][:]
+            times = node_props[name_map["time"]]["values"][:]
             ids = node_ids[:]
             seg_ids = node_props[name_map["seg_id"]]["values"][:]
 
