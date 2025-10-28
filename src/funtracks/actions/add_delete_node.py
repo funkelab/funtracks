@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from funtracks.data_model.graph_attributes import NodeAttr
 from funtracks.data_model.solution_tracks import SolutionTracks
 
 from ._base import BasicAction
@@ -46,17 +45,41 @@ class AddNode(BasicAction):
         self.tracks: SolutionTracks  # Narrow type from base class
         self.node = node
         user_attrs = attributes.copy()
+
+        # Get keys from tracks features
+        time_key = tracks.features.time_key
+        track_id_key = tracks.features.tracklet_key
+        pos_key = tracks.features.position_key
+
         # validate the input
-        if NodeAttr.TIME.value not in attributes:
+        if time_key not in attributes:
             raise ValueError(f"Must provide a time attribute for node {node}")
-        if NodeAttr.TRACK_ID.value not in attributes:
-            raise ValueError(
-                f"Must provide a {NodeAttr.TRACK_ID.value} attribute for node {node}"
-            )
-        if pixels is None and NodeAttr.POS.value not in attributes:
-            raise ValueError(f"Must provide position or segmentation for node {node}")
-        self.time = attributes.pop(NodeAttr.TIME.value)
-        self.position = attributes.pop(NodeAttr.POS.value, None)
+        if track_id_key not in attributes:
+            raise ValueError(f"Must provide a {track_id_key} attribute for node {node}")
+
+        # Check for position - handle both single key and list of keys
+        if pixels is None:
+            if isinstance(pos_key, list):
+                # Multi-axis position keys
+                if not all(key in attributes for key in pos_key):
+                    raise ValueError(
+                        f"Must provide position or segmentation for node {node}"
+                    )
+            else:
+                # Single position key
+                if pos_key not in attributes:
+                    raise ValueError(
+                        f"Must provide position or segmentation for node {node}"
+                    )
+
+        self.time = attributes.pop(time_key)
+        # Pop position key(s) if present
+        if pos_key is None:
+            raise ValueError("Position key is not set in tracks features")
+        if isinstance(pos_key, list):
+            self.position = [attributes.pop(key, None) for key in pos_key]
+        else:
+            self.position = attributes.pop(pos_key, None)
         self.pixels = pixels
         self.attributes = user_attrs
         self._apply()
