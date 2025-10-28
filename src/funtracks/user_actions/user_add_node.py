@@ -1,15 +1,17 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from funtracks.data_model.solution_tracks import SolutionTracks
 from funtracks.exceptions import InvalidActionError
 
 from ..actions._base import ActionGroup
 from ..actions.add_delete_edge import AddEdge, DeleteEdge
 from ..actions.add_delete_node import AddNode
+
+if TYPE_CHECKING:
+    from funtracks.data_model.solution_tracks import SolutionTracks
 
 
 class UserAddNode(ActionGroup):

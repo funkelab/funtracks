@@ -1,13 +1,16 @@
 from __future__ import annotations
 
-import numpy as np
+from typing import TYPE_CHECKING
 
-from funtracks.data_model import SolutionTracks
+import numpy as np
 
 from ..actions._base import ActionGroup
 from ..actions.add_delete_edge import AddEdge, DeleteEdge
 from ..actions.add_delete_node import DeleteNode
 from ..actions.update_track_id import UpdateTrackID
+
+if TYPE_CHECKING:
+    from funtracks.data_model import SolutionTracks
 
 
 class UserDeleteNode(ActionGroup):
