@@ -3,8 +3,10 @@ from collections import Counter
 import numpy as np
 import pytest
 
-from funtracks.data_model import EdgeAttr, NodeAttr
+from funtracks.data_model import NodeAttr
 from funtracks.user_actions import UserUpdateSegmentation
+
+iou_key = "iou"
 
 
 # TODO: add area to the 4d testing graph
@@ -21,7 +23,7 @@ class TestUpdateNodeSeg:
         orig_pixels = tracks.get_pixels(node_id)
         orig_position = tracks.get_position(node_id)
         orig_area = tracks.get_node_attr(node_id, NodeAttr.AREA.value)
-        orig_iou = tracks.get_edge_attr(edge, EdgeAttr.IOU.value)
+        orig_iou = tracks.get_edge_attr(edge, "iou")
 
         # remove all but one pixel
         pixels_to_remove = tuple(orig_pixels[d][1:] for d in range(len(orig_pixels)))
@@ -41,26 +43,20 @@ class TestUpdateNodeSeg:
         assert self.pixel_equals(tracks.get_pixels(node_id), remaining_pixels)
         assert tracks.get_position(node_id) == new_position
         assert tracks.get_area(node_id) == 1
-        assert tracks.get_edge_attr(edge, EdgeAttr.IOU.value) == pytest.approx(
-            0.0, abs=0.01
-        )
+        assert tracks.get_edge_attr(edge, iou_key) == pytest.approx(0.0, abs=0.01)
 
         inverse = action.inverse()
         assert tracks.graph.has_node(node_id)
         assert self.pixel_equals(tracks.get_pixels(node_id), orig_pixels)
         assert tracks.get_position(node_id) == orig_position
         assert tracks.get_area(node_id) == orig_area
-        assert tracks.get_edge_attr(edge, EdgeAttr.IOU.value) == pytest.approx(
-            orig_iou, abs=0.01
-        )
+        assert tracks.get_edge_attr(edge, iou_key) == pytest.approx(orig_iou, abs=0.01)
 
         inverse.inverse()
         assert self.pixel_equals(tracks.get_pixels(node_id), remaining_pixels)
         assert tracks.get_position(node_id) == new_position
         assert tracks.get_area(node_id) == 1
-        assert tracks.get_edge_attr(edge, EdgeAttr.IOU.value) == pytest.approx(
-            0.0, abs=0.01
-        )
+        assert tracks.get_edge_attr(edge, iou_key) == pytest.approx(0.0, abs=0.01)
 
     def pixel_equals(self, pixels1, pixels2):
         return Counter(zip(*pixels1, strict=True)) == Counter(zip(*pixels2, strict=True))
@@ -73,7 +69,7 @@ class TestUpdateNodeSeg:
         orig_pixels = tracks.get_pixels(node_id)
         orig_position = tracks.get_position(node_id)
         orig_area = tracks.get_area(node_id)
-        orig_iou = tracks.get_edge_attr(edge, EdgeAttr.IOU.value)
+        orig_iou = tracks.get_edge_attr(edge, iou_key)
 
         # add one pixel
         pixels_to_add = tuple(
@@ -91,22 +87,20 @@ class TestUpdateNodeSeg:
         assert tracks.graph.has_node(node_id)
         assert self.pixel_equals(all_pixels, tracks.get_pixels(node_id))
         assert tracks.get_area(node_id) == orig_area + 1
-        assert tracks.get_edge_attr(edge, EdgeAttr.IOU.value) != orig_iou
+        assert tracks.get_edge_attr(edge, iou_key) != orig_iou
 
         inverse = action.inverse()
         assert tracks.graph.has_node(node_id)
         assert self.pixel_equals(orig_pixels, tracks.get_pixels(node_id))
         assert tracks.get_position(node_id) == orig_position
         assert tracks.get_area(node_id) == orig_area
-        assert tracks.get_edge_attr(edge, EdgeAttr.IOU.value) == pytest.approx(
-            orig_iou, abs=0.01
-        )
+        assert tracks.get_edge_attr(edge, iou_key) == pytest.approx(orig_iou, abs=0.01)
 
         inverse.inverse()
         assert tracks.graph.has_node(node_id)
         assert self.pixel_equals(all_pixels, tracks.get_pixels(node_id))
         assert tracks.get_area(node_id) == orig_area + 1
-        assert tracks.get_edge_attr(edge, EdgeAttr.IOU.value) != orig_iou
+        assert tracks.get_edge_attr(edge, iou_key) != orig_iou
 
     def test_user_erase_seg(self, get_tracks, ndim):
         tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
@@ -116,7 +110,7 @@ class TestUpdateNodeSeg:
         orig_pixels = tracks.get_pixels(node_id)
         orig_position = tracks.get_position(node_id)
         orig_area = tracks.get_area(node_id)
-        orig_iou = tracks.get_edge_attr(edge, EdgeAttr.IOU.value)
+        orig_iou = tracks.get_edge_attr(edge, iou_key)
 
         # remove all pixels
         pixels_to_remove = orig_pixels
@@ -137,9 +131,7 @@ class TestUpdateNodeSeg:
         self.pixel_equals(tracks.get_pixels(node_id), orig_pixels)
         assert tracks.get_position(node_id) == orig_position
         assert tracks.get_area(node_id) == orig_area
-        assert tracks.get_edge_attr(edge, EdgeAttr.IOU.value) == pytest.approx(
-            orig_iou, abs=0.01
-        )
+        assert tracks.get_edge_attr(edge, iou_key) == pytest.approx(orig_iou, abs=0.01)
 
         tracks.set_pixels(pixels_to_remove, 0)
         inverse.inverse()

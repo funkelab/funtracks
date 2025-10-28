@@ -16,7 +16,7 @@ from psygnal import Signal
 
 from funtracks.features import Feature, FeatureDict, Position, Time
 
-from .graph_attributes import EdgeAttr, NodeAttr
+from .graph_attributes import NodeAttr
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -358,10 +358,46 @@ class Tracks:
         return self.get_areas([node])[0]
 
     def get_ious(self, edges: Iterable[Edge]):
-        return self.get_edges_attr(edges, EdgeAttr.IOU.value)
+        """Get the IoU values for the given edges.
+
+        .. deprecated:: 1.0
+            `get_ious` will be removed in funtracks v2.0.
+            Use `get_edges_attr(edges, "iou")` instead.
+
+        Args:
+            edges: An iterable of edges to get IoU values for.
+
+        Returns:
+            The IoU values for the edges.
+        """
+        warnings.warn(
+            "`get_ious` is deprecated and will be removed in funtracks v2.0. "
+            "Use `get_edges_attr(edges, 'iou')` instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.get_edges_attr(edges, "iou")
 
     def get_iou(self, edge: Edge):
-        return self.get_edge_attr(edge, EdgeAttr.IOU.value)
+        """Get the IoU value for the given edge.
+
+        .. deprecated:: 1.0
+            `get_iou` will be removed in funtracks v2.0.
+            Use `get_edge_attr(edge, "iou")` instead.
+
+        Args:
+            edge: An edge to get the IoU value for.
+
+        Returns:
+            The IoU value for the edge.
+        """
+        warnings.warn(
+            "`get_iou` is deprecated and will be removed in funtracks v2.0. "
+            "Use `get_edge_attr(edge, 'iou')` instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.get_edge_attr(edge, "iou")
 
     def get_pixels(self, node: Node) -> tuple[np.ndarray, ...] | None:
         """Get the pixels corresponding to each node in the nodes list.
