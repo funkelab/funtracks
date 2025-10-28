@@ -53,7 +53,9 @@ def test_export_to_geff(
         tracks = tracks_cls(
             graph,
             segmentation=segmentation,
+            time_attr="t",
             pos_attr=pos_keys,
+            tracklet_attr="track_id",
             ndim=ndim,
             existing_features=existing_features,
         )

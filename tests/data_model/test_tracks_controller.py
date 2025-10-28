@@ -7,7 +7,11 @@ from funtracks.data_model.tracks_controller import TracksController
 def test__add_nodes_no_seg(graph_2d_with_computed_features):
     # add without segmentation
     tracks = SolutionTracks(
-        graph_2d_with_computed_features, ndim=3, existing_features=["pos", "track_id"]
+        graph_2d_with_computed_features,
+        ndim=3,
+        time_attr="t",
+        tracklet_attr="track_id",
+        existing_features=["pos", "track_id"],
     )
     controller = TracksController(tracks)
 
@@ -15,7 +19,7 @@ def test__add_nodes_no_seg(graph_2d_with_computed_features):
 
     # start a new track with multiple nodes
     attrs = {
-        "time": [0, 1],
+        "t": [0, 1],
         "pos": np.array([[1, 3], [1, 3]]),
         "track_id": [6, 6],
     }
@@ -31,7 +35,7 @@ def test__add_nodes_no_seg(graph_2d_with_computed_features):
 
     # add nodes to end of existing track
     attrs = {
-        "time": [2, 3],
+        "t": [2, 3],
         "pos": np.array([[1, 3], [1, 3]]),
         "track_id": [2, 2],
     }
@@ -47,7 +51,7 @@ def test__add_nodes_no_seg(graph_2d_with_computed_features):
 
     # add node to middle of existing track
     attrs = {
-        "time": [3],
+        "t": [3],
         "pos": np.array([[1, 3]]),
         "track_id": [3],
     }
@@ -68,6 +72,8 @@ def test__add_nodes_with_seg(graph_2d_with_computed_features, segmentation_2d):
     tracks = SolutionTracks(
         graph_2d_with_computed_features,
         segmentation=segmentation_2d,
+        time_attr="t",
+        tracklet_attr="track_id",
         existing_features=["pos", "area", "iou", "track_id"],
     )
     controller = TracksController(tracks)
@@ -84,7 +90,7 @@ def test__add_nodes_with_seg(graph_2d_with_computed_features, segmentation_2d):
     expected_center = [94.5, 1.5]
     # start a new track
     attrs = {
-        "time": [time, time + 1],
+        "t": [time, time + 1],
         "track_id": [track_id, track_id],
         "node_id": [node1, node2],
     }
@@ -120,7 +126,7 @@ def test__add_nodes_with_seg(graph_2d_with_computed_features, segmentation_2d):
     expected_center = [4.5, 1.5]
     # start a new track
     attrs = {
-        "time": [time, time + 1],
+        "t": [time, time + 1],
         "track_id": [track_id, track_id],
         "node_id": [node1, node2],
     }
@@ -147,7 +153,7 @@ def test__add_nodes_with_seg(graph_2d_with_computed_features, segmentation_2d):
     new_seg[time, 0:10, 0:4] = node1
     expected_center = [4.5, 1.5]
     attrs = {
-        "time": [time],
+        "t": [time],
         "track_id": [track_id],
         "node_id": [node1],
     }
@@ -170,7 +176,11 @@ def test__add_nodes_with_seg(graph_2d_with_computed_features, segmentation_2d):
 
 def test__delete_nodes_no_seg(graph_2d_with_computed_features):
     tracks = SolutionTracks(
-        graph_2d_with_computed_features, ndim=3, existing_features=["pos", "track_id"]
+        graph_2d_with_computed_features,
+        ndim=3,
+        time_attr="t",
+        tracklet_attr="track_id",
+        existing_features=["pos", "track_id"],
     )
     controller = TracksController(tracks)
     num_edges = tracks.graph.number_of_edges()
@@ -218,6 +228,8 @@ def test__delete_nodes_with_seg(graph_2d_with_computed_features, segmentation_2d
     tracks = SolutionTracks(
         graph_2d_with_computed_features,
         segmentation=segmentation_2d,
+        time_attr="t",
+        tracklet_attr="track_id",
         existing_features=["pos", "area", "iou", "track_id"],
     )
     controller = TracksController(tracks)
@@ -280,7 +292,11 @@ def test__delete_nodes_with_seg(graph_2d_with_computed_features, segmentation_2d
 
 def test__add_remove_edges_no_seg(graph_2d_with_computed_features):
     tracks = SolutionTracks(
-        graph_2d_with_computed_features, ndim=3, existing_features=["pos", "track_id"]
+        graph_2d_with_computed_features,
+        ndim=3,
+        time_attr="t",
+        tracklet_attr="track_id",
+        existing_features=["pos", "track_id"],
     )
     controller = TracksController(tracks)
     num_edges = tracks.graph.number_of_edges()

@@ -5,9 +5,11 @@ from funtracks.annotators import GraphAnnotator
 from funtracks.data_model import Tracks
 from funtracks.features import Time
 
+track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
+
 
 def test_base_graph_annotator(graph_clean, segmentation_2d):
-    tracks = Tracks(graph_clean, segmentation=segmentation_2d)
+    tracks = Tracks(graph_clean, segmentation=segmentation_2d, **track_attrs)
     ann = GraphAnnotator(tracks, {})
     assert len(ann.features) == 0
 

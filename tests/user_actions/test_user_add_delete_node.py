@@ -12,7 +12,7 @@ class TestUserAddDeleteNode:
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
         # duplicate node
         with pytest.raises(ValueError, match="Node .* already exists"):
-            attrs = {"time": 5, "track_id": 1}
+            attrs = {"t": 5, "track_id": 1}
             UserAddNode(tracks, node=1, attributes=attrs)
 
         # no time
@@ -22,7 +22,7 @@ class TestUserAddDeleteNode:
 
         # no track_id
         with pytest.raises(ValueError, match="Cannot add node without track id"):
-            attrs = {"time": 1}
+            attrs = {"t": 1}
             UserAddNode(tracks, node=7, attributes=attrs)
 
         # upstream division
@@ -30,7 +30,7 @@ class TestUserAddDeleteNode:
             InvalidActionError,
             match="Cannot add node here - upstream division event detected",
         ):
-            attrs = {"time": 2, "track_id": 1}
+            attrs = {"t": 2, "track_id": 1}
             UserAddNode(tracks, node=7, attributes=attrs)
 
     def test_user_add_node(self, get_tracks, ndim, with_seg):
@@ -43,7 +43,7 @@ class TestUserAddDeleteNode:
         attributes = {
             "track_id": track_id,
             "pos": position,
-            "time": time,
+            "t": time,
         }
         if with_seg:
             seg_copy = tracks.segmentation.copy()

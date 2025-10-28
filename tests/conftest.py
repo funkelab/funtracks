@@ -44,12 +44,12 @@ def graph_clean():
     """Base graph with only time and track_id - no positions or computed features."""
     graph = nx.DiGraph()
     nodes = [
-        (1, {"time": 0, "track_id": 1}),
-        (2, {"time": 1, "track_id": 2}),
-        (3, {"time": 1, "track_id": 3}),
-        (4, {"time": 2, "track_id": 3}),
-        (5, {"time": 4, "track_id": 3}),
-        (6, {"time": 4, "track_id": 5}),
+        (1, {"t": 0, "track_id": 1}),
+        (2, {"t": 1, "track_id": 2}),
+        (3, {"t": 1, "track_id": 3}),
+        (4, {"t": 2, "track_id": 3}),
+        (5, {"t": 4, "track_id": 3}),
+        (6, {"t": 4, "track_id": 5}),
     ]
     edges = [(1, 2), (1, 3), (3, 4), (4, 5)]
     graph.add_nodes_from(nodes)
@@ -172,11 +172,21 @@ def get_tracks(request):
         # Create the appropriate Tracks type
         if is_solution:
             return SolutionTracks(
-                graph, segmentation=seg, ndim=ndim, existing_features=existing_features
+                graph,
+                segmentation=seg,
+                ndim=ndim,
+                time_attr="t",
+                tracklet_attr="track_id",
+                existing_features=existing_features,
             )
         else:
             return Tracks(
-                graph, segmentation=seg, ndim=ndim, existing_features=existing_features
+                graph,
+                segmentation=seg,
+                ndim=ndim,
+                time_attr="t",
+                tracklet_attr="track_id",
+                existing_features=existing_features,
             )
 
     return _make_tracks
@@ -191,7 +201,7 @@ def graph_2d_list():
             {
                 "y": 100,
                 "x": 50,
-                "time": 0,
+                "t": 0,
                 "area": 1245,
                 "track_id": 1,
             },
@@ -201,7 +211,7 @@ def graph_2d_list():
             {
                 "y": 20,
                 "x": 100,
-                "time": 1,
+                "t": 1,
                 "area": 500,
                 "track_id": 2,
             },

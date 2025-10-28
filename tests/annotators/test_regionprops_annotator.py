@@ -2,7 +2,9 @@ import pytest
 
 from funtracks.actions import UpdateNodeSeg, UpdateTrackID
 from funtracks.annotators import RegionpropsAnnotator
-from funtracks.data_model import NodeAttr, SolutionTracks, Tracks
+from funtracks.data_model import SolutionTracks, Tracks
+
+track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
 
 
 @pytest.mark.parametrize("ndim", [3, 4])
@@ -10,7 +12,7 @@ class TestRegionpropsAnnotator:
     def test_init(self, get_graph, get_segmentation, ndim):
         graph = get_graph(ndim, with_features="clean")
         seg = get_segmentation(ndim)
-        tracks = Tracks(graph, segmentation=seg, ndim=ndim)
+        tracks = Tracks(graph, segmentation=seg, ndim=ndim, **track_attrs)
         rp_ann = RegionpropsAnnotator(tracks)
         # Features start disabled by default
         assert len(rp_ann.all_features) == 5
@@ -24,7 +26,7 @@ class TestRegionpropsAnnotator:
     def test_compute_all(self, get_graph, get_segmentation, ndim):
         graph = get_graph(ndim, with_features="clean")
         seg = get_segmentation(ndim)
-        tracks = Tracks(graph, segmentation=seg, ndim=ndim)
+        tracks = Tracks(graph, segmentation=seg, ndim=ndim, **track_attrs)
         rp_ann = RegionpropsAnnotator(tracks)
         # Enable features
         rp_ann.enable_features(list(rp_ann.all_features.keys()))
@@ -38,7 +40,7 @@ class TestRegionpropsAnnotator:
     def test_update_all(self, get_graph, get_segmentation, ndim):
         graph = get_graph(ndim, with_features="clean")
         seg = get_segmentation(ndim)
-        tracks = Tracks(graph, segmentation=seg, ndim=ndim)
+        tracks = Tracks(graph, segmentation=seg, ndim=ndim, **track_attrs)
         node_id = 3
 
         # Get the RegionpropsAnnotator from the registry
@@ -75,7 +77,7 @@ class TestRegionpropsAnnotator:
     def test_add_remove_feature(self, get_graph, get_segmentation, ndim):
         graph = get_graph(ndim, with_features="clean")
         seg = get_segmentation(ndim)
-        tracks = Tracks(graph, segmentation=seg, ndim=ndim)
+        tracks = Tracks(graph, segmentation=seg, ndim=ndim, **track_attrs)
         # Get the RegionpropsAnnotator from the registry
         rp_ann = next(
             ann
@@ -117,7 +119,7 @@ class TestRegionpropsAnnotator:
     def test_missing_seg(self, get_graph, ndim):
         """Test that RegionpropsAnnotator gracefully handles missing segmentation."""
         graph = get_graph(ndim, with_features="clean")
-        tracks = Tracks(graph, segmentation=None, ndim=ndim)
+        tracks = Tracks(graph, segmentation=None, ndim=ndim, **track_attrs)
         rp_ann = RegionpropsAnnotator(tracks)
         assert len(rp_ann.features) == 0
         # Should not raise an error, just return silently
@@ -129,8 +131,8 @@ class TestRegionpropsAnnotator:
         """
         graph = get_graph(ndim, with_features="clean")
         seg = get_segmentation(ndim)
-        tracks = SolutionTracks(graph, segmentation=seg, ndim=ndim)
-        tracks.enable_features(["area", NodeAttr.TRACK_ID.value])
+        tracks = SolutionTracks(graph, segmentation=seg, ndim=ndim, **track_attrs)
+        tracks.enable_features(["area", "track_id"])
 
         node_id = 1
         initial_area = tracks.get_area(node_id)

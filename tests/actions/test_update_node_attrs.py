@@ -21,7 +21,7 @@ def test_update_node_attrs(get_tracks, ndim):
     assert tracks.get_node_attr(node, "score") == 1.0
 
 
-@pytest.mark.parametrize("attr", ["time", "area", "track_id"])
+@pytest.mark.parametrize("attr", ["t", "area", "track_id"])
 def test_update_protected_attr(get_tracks, attr):
     tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
     with pytest.raises(ValueError, match="Cannot update attribute .* manually"):
