@@ -52,26 +52,28 @@ class GraphAnnotator:
             key: (feat, False) for key, feat in features.items()
         }
 
-    def enable_features(self, keys: list[str]) -> None:
-        """Enable computation of the given features in the annotation process.
+    def activate_features(self, keys: list[str]) -> None:
+        """Activate computation of the given features in the annotation process.
 
         Filters the list to only features this annotator owns, ignoring others.
 
         Args:
-            keys: List of feature keys to enable. Only keys in all_features are enabled.
+            keys: List of feature keys to activate. Only keys in all_features are
+                activated.
         """
         for key in keys:
             if key in self.all_features:
                 feat, _ = self.all_features[key]
                 self.all_features[key] = (feat, True)
 
-    def disable_features(self, keys: list[str]) -> None:
-        """Disable computation of the given features in the annotation process.
+    def deactivate_features(self, keys: list[str]) -> None:
+        """Deactivate computation of the given features in the annotation process.
 
         Filters the list to only features this annotator owns, ignoring others.
 
         Args:
-            keys: List of feature keys to disable. Only keys in all_features are disabled.
+            keys: List of feature keys to deactivate. Only keys in all_features
+                are deactivated.
         """
         for key in keys:
             if key in self.all_features:
@@ -87,14 +89,14 @@ class GraphAnnotator:
         return {k: feat for k, (feat, included) in self.all_features.items() if included}
 
     def _filter_feature_keys(self, feature_keys: list[str] | None) -> list[str]:
-        """Filter feature keys to only those that are enabled.
+        """Filter feature keys to only those that are active.
 
         Args:
             feature_keys: Optional list of feature keys to filter. If None, returns
-                all currently enabled features.
+                all currently active features.
 
         Returns:
-            List of feature keys that are enabled.
+            List of feature keys that are active.
         """
         if feature_keys is None:
             return list(self.features.keys())

@@ -17,6 +17,8 @@ if TYPE_CHECKING:
     from funtracks.actions import BasicAction
     from funtracks.data_model import Tracks
 
+DEFAULT_IOU_KEY = "iou"
+
 
 class EdgeAnnotator(GraphAnnotator):
     """Manages edge features computed from segmentations or endpoint positions.
@@ -58,12 +60,12 @@ class EdgeAnnotator(GraphAnnotator):
         """
         if not cls.can_annotate(tracks):
             return {}
-        return {"iou": IoU()}
+        return {DEFAULT_IOU_KEY: IoU()}
 
-    def __init__(self, tracks: Tracks, iou_key: str = "iou") -> None:
-        self.iou_key = iou_key
+    def __init__(self, tracks: Tracks) -> None:
+        self.iou_key = DEFAULT_IOU_KEY
         # Build features dict with custom key
-        feats = {} if tracks.segmentation is None else {iou_key: IoU()}
+        feats = {} if tracks.segmentation is None else {DEFAULT_IOU_KEY: IoU()}
         super().__init__(tracks, feats)
 
     def compute(self, feature_keys: list[str] | None = None) -> None:

@@ -7,7 +7,6 @@ from numpy.testing import assert_array_almost_equal
 from funtracks.actions import (
     UpdateNodeSeg,
 )
-from funtracks.data_model.graph_attributes import NodeAttr
 
 
 @pytest.mark.parametrize("ndim", [3, 4])
@@ -17,8 +16,8 @@ def test_update_node_segs(get_tracks, ndim):
     reference_graph = copy.deepcopy(tracks.graph)
 
     original_seg = tracks.segmentation.copy()
-    original_area = tracks.graph.nodes[1][NodeAttr.AREA.value]
-    original_pos = tracks.graph.nodes[1][NodeAttr.POS.value]
+    original_area = tracks.graph.nodes[1]["area"]
+    original_pos = tracks.graph.nodes[1]["pos"]
 
     # Add a couple pixels to the first node
     new_seg = tracks.segmentation.copy()
@@ -32,8 +31,8 @@ def test_update_node_segs(get_tracks, ndim):
     action = UpdateNodeSeg(tracks, node, pixels=pixels, added=True)
 
     assert set(tracks.graph.nodes()) == set(reference_graph.nodes())
-    assert tracks.graph.nodes[1][NodeAttr.AREA.value] == original_area + 1
-    assert tracks.graph.nodes[1][NodeAttr.POS.value] != original_pos
+    assert tracks.graph.nodes[1]["area"] == original_area + 1
+    assert tracks.graph.nodes[1]["pos"] != original_pos
     assert_array_almost_equal(tracks.segmentation, new_seg)
 
     inverse = action.inverse()
@@ -45,6 +44,6 @@ def test_update_node_segs(get_tracks, ndim):
     inverse.inverse()
 
     assert set(tracks.graph.nodes()) == set(reference_graph.nodes())
-    assert tracks.graph.nodes[1][NodeAttr.AREA.value] == original_area + 1
-    assert tracks.graph.nodes[1][NodeAttr.POS.value] != original_pos
+    assert tracks.graph.nodes[1]["area"] == original_area + 1
+    assert tracks.graph.nodes[1]["pos"] != original_pos
     assert_array_almost_equal(tracks.segmentation, new_seg)

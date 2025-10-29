@@ -16,12 +16,11 @@ from psygnal import Signal
 
 from funtracks.features import Feature, FeatureDict, Position, Time
 
-from .graph_attributes import EdgeAttr, NodeAttr
-
 if TYPE_CHECKING:
     from pathlib import Path
 
     from funtracks.actions import BasicAction
+    from funtracks.annotators import AnnotatorRegistry, GraphAnnotator
 
 AttrValue: TypeAlias = Any
 Node: TypeAlias = int
@@ -35,26 +34,20 @@ logger = logging.getLogger(__name__)
 
 class Tracks:
     """A set of tracks consisting of a graph and an optional segmentation.
+
     The graph nodes represent detections and must have a time attribute and
     position attribute. Edges in the graph represent links across time.
 
     Attributes:
         graph (nx.DiGraph): A graph with nodes representing detections and
             and edges representing links across time.
-        segmentation (Optional(np.ndarray)): An optional segmentation that
+        segmentation (np.ndarray | None): An optional segmentation that
             accompanies the tracking graph. If a segmentation is provided,
             the node ids in the graph must match the segmentation labels.
-            Defaults to None.
-        time_attr (str): The attribute in the graph that specifies the time
-            frame each node is in.
-        pos_attr (str | tuple[str] | list[str]): The attribute in the graph
-            that specifies the position of each node. Can be a single attribute
-            that holds a list, or a list of attribute keys.
+        features (FeatureDict): Dictionary of features tracked on graph nodes/edges.
+        annotators (AnnotatorRegistry): List of annotators that compute features.
         scale (list[float] | None): How much to scale each dimension by, including time.
-
-    For bulk operations on attributes, a KeyError will be raised if a node or edge
-    in the input set is not in the graph. All operations before the error node will
-    be performed, and those after will not.
+        ndim (int): Number of dimensions (3 for 2D+time, 4 for 3D+time).
     """
 
     refresh = Signal(object)
@@ -63,96 +56,141 @@ class Tracks:
         self,
         graph: nx.DiGraph,
         segmentation: np.ndarray | None = None,
-        time_attr: str | None = NodeAttr.TIME.value,
-        pos_attr: str | tuple[str, ...] | list[str] | None = NodeAttr.POS.value,
+        time_attr: str | None = None,
+        pos_attr: str | tuple[str, ...] | list[str] | None = None,
+        tracklet_attr: str | None = None,
         scale: list[float] | None = None,
         ndim: int | None = None,
         features: FeatureDict | None = None,
         existing_features: list[str] | None = None,
     ):
-        if features is not None and (time_attr is not None or pos_attr is not None):
-            warn(
-                "Provided both FeatureDict and pos_attr or time_attr: ignoring attr "
-                "arguments ({pos_attr=}, {time_attr=}).",
-                stacklevel=2,
-            )
+        """Initialize a Tracks object.
+
+        Args:
+            graph (nx.DiGraph): NetworkX directed graph with nodes as detections and
+                edges as links.
+            segmentation (np.ndarray | None): Optional segmentation array where labels
+                match node IDs. Required for computing region properties (area, etc.).
+            time_attr (str | None): Graph attribute name for time. Defaults to "time"
+                if None.
+            pos_attr (str | tuple[str, ...] | list[str] | None): Graph attribute
+                name(s) for position. Can be:
+                - Single string for one attribute containing position array
+                - List/tuple of strings for multi-axis (one attribute per axis)
+                Defaults to "pos" if None.
+            tracklet_attr (str | None): Graph attribute name for tracklet/track IDs.
+                Defaults to "track_id" if None.
+            scale (list[float] | None): Scaling factors for each dimension (including
+                time). If None, all dimensions scaled by 1.0.
+            ndim (int | None): Number of dimensions (3 for 2D+time, 4 for 3D+time).
+                If None, inferred from segmentation or scale.
+            features (FeatureDict | None): Pre-built FeatureDict with feature
+                definitions. If provided, time_attr/pos_attr/tracklet_attr are ignored.
+                Assumes that all features in the dict already exist on the graph (will
+                be activated but not recomputed)
+            existing_features (list[str] | None): List of feature keys that already
+                exist on the graph and should not be recomputed (e.g., ["area", "iou"]).
+                Only used when features is None.
+        """
         self.graph = graph
         self.segmentation = segmentation
-        self._time_attr = time_attr
-        self._pos_attr = pos_attr
         self.scale = scale
         self.ndim = self._compute_ndim(segmentation, scale, ndim)
         self.axis_names = ["z", "y", "x"] if self.ndim == 4 else ["y", "x"]
+
+        # initialization steps:
+        # 1. set up feature dict (or use provided)
+        # 2. set up anotator registry
+        # 3. activate existing features
+        # 4. enable core features (compute them)
+
+        # 1. set up feature dictionary for keeping track of features on graph
+        if features is not None and (
+            time_attr is not None or pos_attr is not None or tracklet_attr is not None
+        ):
+            warn(
+                "Provided both FeatureDict and pos, time, or tracklet attr: ignoring attr"
+                f" arguments ({pos_attr=}, {time_attr=}, {tracklet_attr=}).",
+                stacklevel=2,
+            )
         self.features = (
-            self._get_feature_set(time_attr, pos_attr) if features is None else features
+            self._get_feature_set(time_attr, pos_attr, tracklet_attr)
+            if features is None
+            else features
         )
+        # 2. Set up annotator registry for managing feature computation
+        self.annotators = self._get_annotators()
 
-        # Initialize AnnotatorRegistry for managing feature computation
-        # Import here to avoid circular dependency
-        from funtracks.annotators import (
-            AnnotatorRegistry,
-            RegionpropsAnnotator,
-            TrackAnnotator,
-        )
+        # 3. Activate existing features
+        # If features FeatureDict was provided, activate those features in annotators
+        if features is not None:
+            self._activate_features_from_dict()
+        else:
+            self._activate_default_features(existing_features)
 
-        self.annotators = AnnotatorRegistry(self)
-
-        # Register core features from annotators in the features dict
-        for annotator in self.annotators.annotators:
-            if isinstance(annotator, RegionpropsAnnotator):
-                feature = annotator.all_features[annotator.pos_key][0]
-                self.features.register_position_feature(annotator.pos_key, feature)
-            elif isinstance(annotator, TrackAnnotator):
-                feature = annotator.all_features[annotator.tracklet_key][0]
-                self.features.register_tracklet_feature(annotator.tracklet_key, feature)
-
-        if existing_features is not None:
-            for key in existing_features:
-                if key in self.annotators.all_features:
-                    feature, _ = self.annotators.all_features[key]
-                    # Add to FeatureDict if not already there
-                    if key not in self.features:
-                        self.features[key] = feature
-                    self.annotators.enable_features([key])
+        # 4. Enable core features
+        # If position was not already on graph, compute it.
+        pos_key = self.features.position_key
+        existing_features = [] if existing_features is None else existing_features
+        # don't currently support storing computed position in a list of features
+        if (
+            isinstance(pos_key, str)
+            and pos_key in self.annotators.features
+            and pos_key not in existing_features
+        ):
+            self.enable_features([pos_key])
 
     @property
     def time_attr(self):
         warn(
-            "Deprecating Tracks.time_attr in favor of tracks.features.time."
+            "Deprecating Tracks.time_attr in favor of tracks.features.time_key."
             " Will be removed in funtracks v2.0.",
             DeprecationWarning,
             stacklevel=2,
         )
-        return self._time_attr
+        return self.features.time_key
 
     @property
     def pos_attr(self):
         warn(
-            "Deprecating Tracks.pos_attr in favor of tracks.features.position."
+            "Deprecating Tracks.pos_attr in favor of tracks.features.position_key."
             " Will be removed in funtracks v2.0.",
             DeprecationWarning,
             stacklevel=2,
         )
-        return self._pos_attr
+        return self.features.position_key
 
     def _get_feature_set(
-        self, time_attr: str | None, pos_attr: str | tuple[str, ...] | list[str] | None
-    ):
-        """Create a FeatureDict with static features only.
+        self,
+        time_attr: str | None,
+        pos_attr: str | tuple[str, ...] | list[str] | None,
+        tracklet_key: str | None,
+    ) -> FeatureDict:
+        """Create a FeatureDict with static (user-provided) features only.
 
-        Static features are those provided by the user on the graph (time, position
-        when segmentation is None). Managed features (computed from segmentation or
-        graph structure) are added by annotators after initialization.
+        Static features are those already present on the graph nodes (time, position
+        when no segmentation). Managed features (computed from segmentation or graph
+        structure) are added by annotators and registered later.
 
         Args:
-            time_attr: The attribute name for time
-            pos_attr: The attribute name(s) for position
+            time_attr: Graph attribute name for time (e.g., "t", "time").
+                If None, defaults to "time"
+            pos_attr: Graph attribute name(s) for position. Can be:
+                - Single string: one attribute containing position array (e.g., "pos")
+                - List/tuple: multiple attributes, one per axis (e.g., ["y", "x"])
+                - None: defaults to "pos"
+            tracklet_key: Graph attribute name for tracklet/track IDs (e.g., "track_id").
+                If None, defaults to "track_id"
 
         Returns:
-            FeatureDict with static features
+            FeatureDict initialized with time feature and position if no segmentation
         """
-        # Determine keys
+        # Use defaults if not provided
         time_key = time_attr if time_attr is not None else "time"
+        if pos_attr is None:
+            pos_attr = "pos"
+        if tracklet_key is None:
+            tracklet_key = "track_id"
 
         # Build static features dict - always include time
         features: dict[str, Feature] = {time_key: Time()}
@@ -163,7 +201,7 @@ class Tracks:
             features=features,
             time_key=time_key,
             position_key=None,
-            tracklet_key=None,
+            tracklet_key=tracklet_key,
         )
 
         # Register position feature if no segmentation (static position)
@@ -186,11 +224,102 @@ class Tracks:
                 feature_dict.position_key = multi_position_key
             else:
                 # Single position attribute
-                single_position_key = pos_attr if pos_attr is not None else "pos"
+                single_position_key = pos_attr
                 pos_feature = Position(axes=self.axis_names)
                 feature_dict.register_position_feature(single_position_key, pos_feature)
 
         return feature_dict
+
+    def _get_annotators(self) -> AnnotatorRegistry:
+        """Instantiate and return core annotators based on available data.
+
+        Creates annotators conditionally:
+        - RegionpropsAnnotator: Only if segmentation is provided
+        - EdgeAnnotator: Only if segmentation is provided
+        - TrackAnnotator: Only if this is a SolutionTracks instance
+
+        Each annotator is configured with appropriate keys from self.features.
+
+        Returns:
+            AnnotatorRegistry containing all applicable annotators
+        """
+        # Import here to avoid circular dependency
+        from funtracks.annotators import (
+            AnnotatorRegistry,
+            EdgeAnnotator,
+            RegionpropsAnnotator,
+            TrackAnnotator,
+        )
+
+        annotator_list: list[GraphAnnotator] = []
+
+        # RegionpropsAnnotator: requires segmentation
+        if RegionpropsAnnotator.can_annotate(self):
+            # Pass position_key only if it's a single string (not multi-axis list)
+            pos_key = (
+                self.features.position_key
+                if isinstance(self.features.position_key, str)
+                else None
+            )
+            annotator_list.append(RegionpropsAnnotator(self, pos_key=pos_key))
+
+        # EdgeAnnotator: requires segmentation
+        if EdgeAnnotator.can_annotate(self):
+            annotator_list.append(EdgeAnnotator(self))
+
+        # TrackAnnotator: requires SolutionTracks (checked in can_annotate)
+        if TrackAnnotator.can_annotate(self):
+            annotator_list.append(
+                TrackAnnotator(self, tracklet_key=self.features.tracklet_key)  # type: ignore
+            )
+        return AnnotatorRegistry(annotator_list)
+
+    def _activate_features_from_dict(self) -> None:
+        """Activate features that exist in both the FeatureDict and annotators.
+
+        Used when a pre-built FeatureDict is provided to __init__. Activates features
+        in annotators (sets computation flags) but does NOT compute them, assuming
+        they already exist on the graph.
+        """
+        # Activate all features that exist in both FeatureDict and annotators
+        for key in self.features:
+            if key in self.annotators.all_features:
+                self.annotators.activate_features([key])
+
+    def _activate_default_features(
+        self, existing_features: list[str] | None = None
+    ) -> None:
+        """Register core features and optionally activate pre-existing features.
+
+        Used when no FeatureDict is provided to __init__. Performs two tasks:
+        1. Registers position/tracklet features from annotators into FeatureDict
+        2. Activates any features listed in existing_features (without computing)
+
+        Args:
+            existing_features: Optional list of feature keys that already exist on
+                the graph and should not be recomputed (e.g., ["area", "iou"])
+        """
+        # Import here to avoid circular dependency
+        from funtracks.annotators import RegionpropsAnnotator, TrackAnnotator
+
+        # Register core features from annotators in the features dict
+        for annotator in self.annotators:
+            if isinstance(annotator, RegionpropsAnnotator):
+                feature = annotator.all_features[annotator.pos_key][0]
+                self.features.register_position_feature(annotator.pos_key, feature)
+            elif isinstance(annotator, TrackAnnotator):
+                feature = annotator.all_features[annotator.tracklet_key][0]
+                self.features.register_tracklet_feature(annotator.tracklet_key, feature)
+
+        # Activate other features labeled as already present (don't compute)
+        if existing_features is not None:
+            for key in existing_features:
+                if key in self.annotators.all_features:
+                    feature, _ = self.annotators.all_features[key]
+                    # Add to FeatureDict if not already there
+                    if key not in self.features:
+                        self.features[key] = feature
+                    self.annotators.activate_features([key])
 
     def nodes(self):
         return np.array(self.graph.nodes())
@@ -332,32 +461,88 @@ class Tracks:
         is not in the graph. Returns None if the given node does not have an Area
         attribute.
 
+        .. deprecated:: 1.0
+            `get_areas` will be removed in funtracks v2.0.
+            Use `get_nodes_attr(nodes, "area")` instead.
+
         Args:
             node (Node): The node id to get the area/volume for
 
         Returns:
             int: The area/volume of the node
         """
-        return self.get_nodes_attr(nodes, NodeAttr.AREA.value)
+        warnings.warn(
+            "`get_areas` is deprecated and will be removed in funtracks v2.0. "
+            "Use `get_nodes_attr(nodes, 'area')` instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.get_nodes_attr(nodes, "area")
 
     def get_area(self, node: Node) -> int | None:
         """Get the area/volume of a given node. Raises a KeyError if the node
         is not in the graph. Returns None if the given node does not have an Area
         attribute.
 
+        .. deprecated:: 1.0
+            `get_area` will be removed in funtracks v2.0.
+            Use `get_node_attr(node, "area")` instead.
+
         Args:
             node (Node): The node id to get the area/volume for
 
         Returns:
             int: The area/volume of the node
         """
+        warnings.warn(
+            "`get_area` is deprecated and will be removed in funtracks v2.0. "
+            "Use `get_node_attr(node, 'area')` instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.get_areas([node])[0]
 
     def get_ious(self, edges: Iterable[Edge]):
-        return self.get_edges_attr(edges, EdgeAttr.IOU.value)
+        """Get the IoU values for the given edges.
+
+        .. deprecated:: 1.0
+            `get_ious` will be removed in funtracks v2.0.
+            Use `get_edges_attr(edges, "iou")` instead.
+
+        Args:
+            edges: An iterable of edges to get IoU values for.
+
+        Returns:
+            The IoU values for the edges.
+        """
+        warnings.warn(
+            "`get_ious` is deprecated and will be removed in funtracks v2.0. "
+            "Use `get_edges_attr(edges, 'iou')` instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.get_edges_attr(edges, "iou")
 
     def get_iou(self, edge: Edge):
-        return self.get_edge_attr(edge, EdgeAttr.IOU.value)
+        """Get the IoU value for the given edge.
+
+        .. deprecated:: 1.0
+            `get_iou` will be removed in funtracks v2.0.
+            Use `get_edge_attr(edge, "iou")` instead.
+
+        Args:
+            edge: An edge to get the IoU value for.
+
+        Returns:
+            The IoU value for the edge.
+        """
+        warnings.warn(
+            "`get_iou` is deprecated and will be removed in funtracks v2.0. "
+            "Use `get_edge_attr(edge, 'iou')` instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.get_edge_attr(edge, "iou")
 
     def get_pixels(self, node: Node) -> tuple[np.ndarray, ...] | None:
         """Get the pixels corresponding to each node in the nodes list.
@@ -538,8 +723,8 @@ class Tracks:
         Raises:
             KeyError: If any feature is not available (raised by annotators)
         """
-        # Registry validates and enables features (will raise if invalid)
-        self.annotators.enable_features(feature_keys)
+        # Registry validates and activates features (will raise if invalid)
+        self.annotators.activate_features(feature_keys)
 
         # Add to FeatureDict
         for key in feature_keys:
@@ -562,7 +747,7 @@ class Tracks:
             KeyError: If any feature is not available (raised by annotators)
         """
         # Registry validates and disables features (will raise if invalid)
-        self.annotators.disable_features(feature_keys)
+        self.annotators.deactivate_features(feature_keys)
 
         # Remove from FeatureDict
         for key in feature_keys:

@@ -23,6 +23,12 @@ if TYPE_CHECKING:
     from funtracks.actions import BasicAction
     from funtracks.data_model import Tracks
 
+DEFAULT_POS_KEY = "pos"
+DEFAULT_AREA_KEY = "area"
+DEFAULT_ELLIPSE_AXIS_KEY = "ellipse_axis_radii"
+DEFAULT_CIRCULARITY_KEY = "circularity"
+DEFAULT_PERIMETER_KEY = "perimeter"
+
 
 class FeatureSpec(NamedTuple):
     """Specification for a regionprops feature.
@@ -69,26 +75,28 @@ class RegionpropsAnnotator(GraphAnnotator):
     def __init__(
         self,
         tracks: Tracks,
-        pos_key: str = "pos",
-        area_key: str = "area",
-        ellipse_axis_radii_key: str = "ellipse_axis_radii",
-        circularity_key: str = "circularity",
-        perimeter_key: str = "perimeter",
+        pos_key: str | None = DEFAULT_POS_KEY,
     ):
-        self.pos_key = pos_key
-        self.area_key = area_key
-        self.ellipse_axis_radii_key = ellipse_axis_radii_key
-        self.circularity_key = circularity_key
-        self.perimeter_key = perimeter_key
+        self.pos_key: str = pos_key if pos_key is not None else DEFAULT_POS_KEY
+        self.area_key = DEFAULT_AREA_KEY
+        self.ellipse_axis_radii_key = DEFAULT_ELLIPSE_AXIS_KEY
+        self.circularity_key = DEFAULT_CIRCULARITY_KEY
+        self.perimeter_key = DEFAULT_PERIMETER_KEY
 
         specs = RegionpropsAnnotator._define_features(
             tracks,
-            pos_key,
-            area_key,
-            ellipse_axis_radii_key,
-            circularity_key,
-            perimeter_key,
         )
+        # update position key in spec
+        if self.pos_key != DEFAULT_POS_KEY:
+            for feat in specs:
+                if feat.key == DEFAULT_POS_KEY:
+                    specs.remove(feat)
+                    new_feat = FeatureSpec(
+                        self.pos_key, feat.feature, feat.regionprops_attr
+                    )
+                    specs.append(new_feat)
+                    break
+
         feats = {spec.key: spec.feature for spec in specs}
         super().__init__(tracks, feats)
         # Build regionprops name mapping from specs
@@ -98,11 +106,6 @@ class RegionpropsAnnotator(GraphAnnotator):
     def _define_features(
         cls,
         tracks: Tracks,
-        pos_key: str = "pos",
-        area_key: str = "area",
-        ellipse_axis_radii_key: str = "ellipse_axis_radii",
-        circularity_key: str = "circularity",
-        perimeter_key: str = "perimeter",
     ) -> list[FeatureSpec]:
         """Define all supported regionprops features along with keys and function names.
 
@@ -127,13 +130,17 @@ class RegionpropsAnnotator(GraphAnnotator):
         if not cls.can_annotate(tracks):
             return []
         return [
-            FeatureSpec(pos_key, Position(axes=tracks.axis_names), "centroid"),
-            FeatureSpec(area_key, Area(ndim=tracks.ndim), "area"),
+            FeatureSpec(DEFAULT_POS_KEY, Position(axes=tracks.axis_names), "centroid"),
+            FeatureSpec(DEFAULT_AREA_KEY, Area(ndim=tracks.ndim), "area"),
             # TODO: Add in intensity when image is passed
             # FeatureSpec("intensity", Intensity(ndim=tracks.ndim), "intensity"),
-            FeatureSpec(ellipse_axis_radii_key, EllipsoidAxes(ndim=tracks.ndim), "axes"),
-            FeatureSpec(circularity_key, Circularity(ndim=tracks.ndim), "circularity"),
-            FeatureSpec(perimeter_key, Perimeter(ndim=tracks.ndim), "perimeter"),
+            FeatureSpec(
+                DEFAULT_ELLIPSE_AXIS_KEY, EllipsoidAxes(ndim=tracks.ndim), "axes"
+            ),
+            FeatureSpec(
+                DEFAULT_CIRCULARITY_KEY, Circularity(ndim=tracks.ndim), "circularity"
+            ),
+            FeatureSpec(DEFAULT_PERIMETER_KEY, Perimeter(ndim=tracks.ndim), "perimeter"),
         ]
 
     @classmethod

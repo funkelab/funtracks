@@ -1,15 +1,17 @@
 import pytest
 
 from funtracks.annotators import EdgeAnnotator, RegionpropsAnnotator, TrackAnnotator
-from funtracks.data_model import NodeAttr, SolutionTracks, Tracks
+from funtracks.data_model import SolutionTracks, Tracks
+
+track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
 
 
 def test_annotator_registry_init_with_segmentation(graph_clean, segmentation_2d):
     """Test AnnotatorRegistry initializes regionprops and edge annotators with
     segmentation."""
-    tracks = Tracks(graph_clean, segmentation=segmentation_2d, ndim=3)
+    tracks = Tracks(graph_clean, segmentation=segmentation_2d, ndim=3, **track_attrs)
 
-    annotator_types = [type(ann) for ann in tracks.annotators.annotators]
+    annotator_types = [type(ann) for ann in tracks.annotators]
     assert RegionpropsAnnotator in annotator_types
     assert EdgeAnnotator in annotator_types
     assert TrackAnnotator not in annotator_types  # Not a SolutionTracks
@@ -17,9 +19,9 @@ def test_annotator_registry_init_with_segmentation(graph_clean, segmentation_2d)
 
 def test_annotator_registry_init_without_segmentation(graph_2d_with_position):
     """Test AnnotatorRegistry doesn't create annotators without segmentation."""
-    tracks = Tracks(graph_2d_with_position, segmentation=None, ndim=3)
+    tracks = Tracks(graph_2d_with_position, segmentation=None, ndim=3, **track_attrs)
 
-    annotator_types = [type(ann) for ann in tracks.annotators.annotators]
+    annotator_types = [type(ann) for ann in tracks.annotators]
     assert RegionpropsAnnotator not in annotator_types
     assert EdgeAnnotator not in annotator_types
     assert TrackAnnotator not in annotator_types
@@ -28,9 +30,11 @@ def test_annotator_registry_init_without_segmentation(graph_2d_with_position):
 def test_annotator_registry_init_solution_tracks(graph_clean, segmentation_2d):
     """Test AnnotatorRegistry creates all annotators for SolutionTracks with
     segmentation."""
-    tracks = SolutionTracks(graph_clean, segmentation=segmentation_2d, ndim=3)
+    tracks = SolutionTracks(
+        graph_clean, segmentation=segmentation_2d, ndim=3, **track_attrs
+    )
 
-    annotator_types = [type(ann) for ann in tracks.annotators.annotators]
+    annotator_types = [type(ann) for ann in tracks.annotators]
     assert RegionpropsAnnotator in annotator_types
     assert EdgeAnnotator in annotator_types
     assert TrackAnnotator in annotator_types
@@ -38,11 +42,11 @@ def test_annotator_registry_init_solution_tracks(graph_clean, segmentation_2d):
 
 def test_enable_features(graph_clean, segmentation_2d):
     """Test enable_features enables and computes multiple features efficiently."""
-    tracks = Tracks(graph_clean, segmentation=segmentation_2d, ndim=3)
+    tracks = Tracks(graph_clean, segmentation=segmentation_2d, ndim=3, **track_attrs)
 
     # Core features (time, pos) should be in tracks.features, but not enabled
     assert "pos" in tracks.features
-    assert "time" in tracks.features
+    assert "t" in tracks.features
     # Other features should NOT be in tracks.features initially
     assert "area" not in tracks.features
     assert "iou" not in tracks.features
@@ -69,7 +73,9 @@ def test_enable_features(graph_clean, segmentation_2d):
 
 def test_get_available_features(graph_clean, segmentation_2d):
     """Test get_available_features returns all features from all annotators."""
-    tracks = SolutionTracks(graph_clean, segmentation=segmentation_2d, ndim=3)
+    tracks = SolutionTracks(
+        graph_clean, segmentation=segmentation_2d, ndim=3, **track_attrs
+    )
 
     available = tracks.get_available_features()
 
@@ -77,18 +83,18 @@ def test_get_available_features(graph_clean, segmentation_2d):
     assert "pos" in available  # regionprops
     assert "area" in available  # regionprops
     assert "iou" in available  # edges
-    assert NodeAttr.TRACK_ID.value in available  # tracks
+    assert "track_id" in available  # tracks
 
 
 def test_enable_disable_features(graph_clean, segmentation_2d):
-    """Test enable_features, disable_features, and get_active_features."""
-    tracks = Tracks(graph_clean, segmentation=segmentation_2d, ndim=3)
+    """Test activate_features, disable_features, and get_active_features."""
+    tracks = Tracks(graph_clean, segmentation=segmentation_2d, ndim=3, **track_attrs)
 
     # Core features (time, pos) are in FeatureDict but not enabled by default
     active = tracks.get_active_features()
     assert len(active) == 0
     assert "pos" in tracks.features  # Core feature, always present
-    assert "time" in tracks.features  # Core feature, always present
+    assert "t" in tracks.features  # Core feature, always present
     assert "area" not in tracks.features
     assert "iou" not in tracks.features
 
@@ -139,7 +145,7 @@ def test_enable_disable_features(graph_clean, segmentation_2d):
 
 def test_enable_features_computes(graph_clean, segmentation_2d):
     """Test enable_features computes the features."""
-    tracks = Tracks(graph_clean, segmentation=segmentation_2d, ndim=3)
+    tracks = Tracks(graph_clean, segmentation=segmentation_2d, ndim=3, **track_attrs)
 
     # Enable (computes)
     tracks.enable_features(["area", "pos"])
@@ -152,7 +158,7 @@ def test_enable_features_computes(graph_clean, segmentation_2d):
 
 def test_enable_nonexistent_feature(graph_clean, segmentation_2d):
     """Test enabling a nonexistent feature raises KeyError."""
-    tracks = Tracks(graph_clean, segmentation=segmentation_2d, ndim=3)
+    tracks = Tracks(graph_clean, segmentation=segmentation_2d, ndim=3, **track_attrs)
 
     with pytest.raises(KeyError, match="Features not available"):
         tracks.enable_features(["nonexistent"])
@@ -160,7 +166,7 @@ def test_enable_nonexistent_feature(graph_clean, segmentation_2d):
 
 def test_disable_nonexistent_feature(graph_clean, segmentation_2d):
     """Test disabling a nonexistent feature raises KeyError."""
-    tracks = Tracks(graph_clean, segmentation=segmentation_2d, ndim=3)
+    tracks = Tracks(graph_clean, segmentation=segmentation_2d, ndim=3, **track_attrs)
 
     with pytest.raises(KeyError, match="Features not available"):
         tracks.disable_features(["nonexistent"])
@@ -168,13 +174,11 @@ def test_disable_nonexistent_feature(graph_clean, segmentation_2d):
 
 def test_compute_strict_validation(graph_clean, segmentation_2d):
     """Test that compute() strictly validates feature keys."""
-    tracks = Tracks(graph_clean, segmentation=segmentation_2d, ndim=3)
+    tracks = Tracks(graph_clean, segmentation=segmentation_2d, ndim=3, **track_attrs)
 
     # Get the RegionpropsAnnotator from the annotators
     rp_ann = next(
-        ann
-        for ann in tracks.annotators.annotators
-        if isinstance(ann, RegionpropsAnnotator)
+        ann for ann in tracks.annotators if isinstance(ann, RegionpropsAnnotator)
     )
 
     # Enable area first

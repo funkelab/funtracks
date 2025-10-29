@@ -9,7 +9,8 @@ from funtracks.actions import (
     AddEdge,
     DeleteEdge,
 )
-from funtracks.data_model.graph_attributes import EdgeAttr
+
+iou_key = "iou"
 
 
 @pytest.mark.parametrize("ndim", [3, 4])
@@ -31,8 +32,8 @@ def test_add_delete_edges(get_tracks, ndim, with_seg):
     assert set(tracks.graph.nodes()) == set(reference_graph.nodes())
     if with_seg:
         for edge in tracks.graph.edges():
-            assert tracks.graph.edges[edge][EdgeAttr.IOU.value] == pytest.approx(
-                reference_graph.edges[edge][EdgeAttr.IOU.value], abs=0.01
+            assert tracks.graph.edges[edge][iou_key] == pytest.approx(
+                reference_graph.edges[edge][iou_key], abs=0.01
             )
         assert_array_almost_equal(tracks.segmentation, reference_seg)
 
@@ -46,8 +47,8 @@ def test_add_delete_edges(get_tracks, ndim, with_seg):
     assert set(tracks.graph.edges()) == set(reference_graph.edges())
     if with_seg:
         for edge in tracks.graph.edges():
-            assert tracks.graph.edges[edge][EdgeAttr.IOU.value] == pytest.approx(
-                reference_graph.edges[edge][EdgeAttr.IOU.value], abs=0.01
+            assert tracks.graph.edges[edge][iou_key] == pytest.approx(
+                reference_graph.edges[edge][iou_key], abs=0.01
             )
         assert_array_almost_equal(tracks.segmentation, reference_seg)
 

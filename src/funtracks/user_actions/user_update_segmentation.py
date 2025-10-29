@@ -4,8 +4,6 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from funtracks.data_model.graph_attributes import NodeAttr
-
 from ..actions._base import ActionGroup
 from ..actions.update_segmentation import UpdateNodeSeg
 from .user_add_node import UserAddNode
@@ -69,9 +67,13 @@ class UserUpdateSegmentation(ActionGroup):
                     UpdateNodeSeg(tracks, new_value, all_pixels, added=True)
                 )
             else:
-                attrs = {
-                    NodeAttr.TIME.value: time,
-                    NodeAttr.TRACK_ID.value: current_track_id,
+                time_key = tracks.features.time_key
+                tracklet_key = tracks.features.tracklet_key
+                if tracklet_key is None:
+                    raise ValueError("Track ID key is not set in tracks features")
+                attrs: dict[str, int] = {
+                    time_key: time,
+                    tracklet_key: current_track_id,
                 }
                 self.actions.append(
                     UserAddNode(

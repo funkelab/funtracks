@@ -9,7 +9,7 @@ from funtracks.data_model import SolutionTracks
 
 def test_action_history():
     history = ActionHistory()
-    tracks = SolutionTracks(nx.DiGraph(), ndim=3)
+    tracks = SolutionTracks(nx.DiGraph(), ndim=3, tracklet_attr="track_id")
     pos = [0, 1]
     action1 = AddNode(tracks, node=0, attributes={"time": 0, "pos": pos, "track_id": 1})
 

@@ -2,7 +2,9 @@ import pytest
 
 from funtracks.actions import UpdateNodeSeg, UpdateTrackID
 from funtracks.annotators import RegionpropsAnnotator
-from funtracks.data_model import NodeAttr, SolutionTracks, Tracks
+from funtracks.data_model import SolutionTracks, Tracks
+
+track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
 
 
 @pytest.mark.parametrize("ndim", [3, 4])
@@ -10,13 +12,13 @@ class TestRegionpropsAnnotator:
     def test_init(self, get_graph, get_segmentation, ndim):
         graph = get_graph(ndim, with_features="clean")
         seg = get_segmentation(ndim)
-        tracks = Tracks(graph, segmentation=seg, ndim=ndim)
+        tracks = Tracks(graph, segmentation=seg, ndim=ndim, **track_attrs)
         rp_ann = RegionpropsAnnotator(tracks)
         # Features start disabled by default
         assert len(rp_ann.all_features) == 5
         assert len(rp_ann.features) == 0
         # Enable features
-        rp_ann.enable_features(list(rp_ann.all_features.keys()))
+        rp_ann.activate_features(list(rp_ann.all_features.keys()))
         assert (
             len(rp_ann.features) == 5
         )  # pos, area, ellipse_axis_radii, circularity, perimeter
@@ -24,10 +26,10 @@ class TestRegionpropsAnnotator:
     def test_compute_all(self, get_graph, get_segmentation, ndim):
         graph = get_graph(ndim, with_features="clean")
         seg = get_segmentation(ndim)
-        tracks = Tracks(graph, segmentation=seg, ndim=ndim)
+        tracks = Tracks(graph, segmentation=seg, ndim=ndim, **track_attrs)
         rp_ann = RegionpropsAnnotator(tracks)
         # Enable features
-        rp_ann.enable_features(list(rp_ann.all_features.keys()))
+        rp_ann.activate_features(list(rp_ann.all_features.keys()))
 
         # Compute values
         rp_ann.compute()
@@ -38,14 +40,12 @@ class TestRegionpropsAnnotator:
     def test_update_all(self, get_graph, get_segmentation, ndim):
         graph = get_graph(ndim, with_features="clean")
         seg = get_segmentation(ndim)
-        tracks = Tracks(graph, segmentation=seg, ndim=ndim)
+        tracks = Tracks(graph, segmentation=seg, ndim=ndim, **track_attrs)
         node_id = 3
 
         # Get the RegionpropsAnnotator from the registry
         rp_ann = next(
-            ann
-            for ann in tracks.annotators.annotators
-            if isinstance(ann, RegionpropsAnnotator)
+            ann for ann in tracks.annotators if isinstance(ann, RegionpropsAnnotator)
         )
         # Enable features through tracks
         tracks.enable_features(list(rp_ann.all_features.keys()))
@@ -57,7 +57,7 @@ class TestRegionpropsAnnotator:
 
         # Use UpdateNodeSeg action to modify segmentation and update features
         UpdateNodeSeg(tracks, node_id, pixels_to_remove, added=False)
-        assert tracks.get_area(node_id) == expected_area
+        assert tracks.get_node_attr(node_id, "area") == expected_area
         for key in rp_ann.features:
             assert key in tracks.graph.nodes[node_id]
 
@@ -75,16 +75,14 @@ class TestRegionpropsAnnotator:
     def test_add_remove_feature(self, get_graph, get_segmentation, ndim):
         graph = get_graph(ndim, with_features="clean")
         seg = get_segmentation(ndim)
-        tracks = Tracks(graph, segmentation=seg, ndim=ndim)
+        tracks = Tracks(graph, segmentation=seg, ndim=ndim, **track_attrs)
         # Get the RegionpropsAnnotator from the registry
         rp_ann = next(
-            ann
-            for ann in tracks.annotators.annotators
-            if isinstance(ann, RegionpropsAnnotator)
+            ann for ann in tracks.annotators if isinstance(ann, RegionpropsAnnotator)
         )
         all_feature_keys = list(rp_ann.all_features.keys())
         to_remove_key = all_feature_keys[1]  # area
-        rp_ann.disable_features([to_remove_key])
+        rp_ann.deactivate_features([to_remove_key])
 
         # Clear existing area attributes from graph (from fixture)
         for node in tracks.nodes():
@@ -96,10 +94,10 @@ class TestRegionpropsAnnotator:
             assert to_remove_key not in tracks.graph.nodes[node]
 
         # add it back in
-        rp_ann.enable_features([to_remove_key])
+        rp_ann.activate_features([to_remove_key])
         # but remove a different one
         second_remove_key = all_feature_keys[2]  # ellipse_axis_radii
-        rp_ann.disable_features([second_remove_key])
+        rp_ann.deactivate_features([second_remove_key])
 
         # remove all but one pixel
         node_id = 3
@@ -117,7 +115,7 @@ class TestRegionpropsAnnotator:
     def test_missing_seg(self, get_graph, ndim):
         """Test that RegionpropsAnnotator gracefully handles missing segmentation."""
         graph = get_graph(ndim, with_features="clean")
-        tracks = Tracks(graph, segmentation=None, ndim=ndim)
+        tracks = Tracks(graph, segmentation=None, ndim=ndim, **track_attrs)
         rp_ann = RegionpropsAnnotator(tracks)
         assert len(rp_ann.features) == 0
         # Should not raise an error, just return silently
@@ -129,11 +127,11 @@ class TestRegionpropsAnnotator:
         """
         graph = get_graph(ndim, with_features="clean")
         seg = get_segmentation(ndim)
-        tracks = SolutionTracks(graph, segmentation=seg, ndim=ndim)
-        tracks.enable_features(["area", NodeAttr.TRACK_ID.value])
+        tracks = SolutionTracks(graph, segmentation=seg, ndim=ndim, **track_attrs)
+        tracks.enable_features(["area", "track_id"])
 
         node_id = 1
-        initial_area = tracks.get_area(node_id)
+        initial_area = tracks.get_node_attr(node_id, "area")
 
         # Manually modify segmentation (without triggering an action)
         # Remove half the pixels from node 1
@@ -155,6 +153,6 @@ class TestRegionpropsAnnotator:
         UpdateTrackID(tracks, node_id, new_track_id)
 
         # Area should remain unchanged (no recomputation happened despite seg change)
-        assert tracks.get_area(node_id) == initial_area
+        assert tracks.get_node_attr(node_id, "area") == initial_area
         # But track_id should be updated
         assert tracks.get_track_id(node_id) == new_track_id

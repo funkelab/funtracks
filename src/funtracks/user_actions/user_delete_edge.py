@@ -1,10 +1,13 @@
 from __future__ import annotations
 
-from funtracks.data_model import SolutionTracks
+from typing import TYPE_CHECKING
 
 from ..actions._base import ActionGroup
 from ..actions.add_delete_edge import DeleteEdge
 from ..actions.update_track_id import UpdateTrackID
+
+if TYPE_CHECKING:
+    from funtracks.data_model import SolutionTracks
 
 
 class UserDeleteEdge(ActionGroup):

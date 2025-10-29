@@ -1,7 +1,6 @@
 import numpy as np
 import pytest
 
-from funtracks.data_model import NodeAttr
 from funtracks.exceptions import InvalidActionError
 from funtracks.user_actions import UserAddNode, UserDeleteNode
 
@@ -13,7 +12,7 @@ class TestUserAddDeleteNode:
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
         # duplicate node
         with pytest.raises(ValueError, match="Node .* already exists"):
-            attrs = {"time": 5, "track_id": 1}
+            attrs = {"t": 5, "track_id": 1}
             UserAddNode(tracks, node=1, attributes=attrs)
 
         # no time
@@ -23,7 +22,7 @@ class TestUserAddDeleteNode:
 
         # no track_id
         with pytest.raises(ValueError, match="Cannot add node without track id"):
-            attrs = {"time": 1}
+            attrs = {"t": 1}
             UserAddNode(tracks, node=7, attributes=attrs)
 
         # upstream division
@@ -31,7 +30,7 @@ class TestUserAddDeleteNode:
             InvalidActionError,
             match="Cannot add node here - upstream division event detected",
         ):
-            attrs = {"time": 2, "track_id": 1}
+            attrs = {"t": 2, "track_id": 1}
             UserAddNode(tracks, node=7, attributes=attrs)
 
     def test_user_add_node(self, get_tracks, ndim, with_seg):
@@ -42,9 +41,9 @@ class TestUserAddDeleteNode:
         time = 3
         position = [50, 50, 50] if ndim == 4 else [50, 50]
         attributes = {
-            NodeAttr.TRACK_ID.value: track_id,
-            NodeAttr.POS.value: position,
-            NodeAttr.TIME.value: time,
+            "track_id": track_id,
+            "pos": position,
+            "t": time,
         }
         if with_seg:
             seg_copy = tracks.segmentation.copy()
@@ -53,7 +52,7 @@ class TestUserAddDeleteNode:
             else:
                 seg_copy[time, position[0], position[1], position[2]] = node_id
             pixels = np.nonzero(seg_copy == node_id)
-            del attributes[NodeAttr.POS.value]
+            del attributes["pos"]
         else:
             pixels = None
         graph = tracks.graph
@@ -67,7 +66,7 @@ class TestUserAddDeleteNode:
         assert tracks.get_position(node_id) == position
         assert tracks.get_track_id(node_id) == track_id
         if with_seg:
-            assert tracks.get_area(node_id) == 1
+            assert tracks.get_node_attr(node_id, "area") == 1
 
         inverse = action.inverse()
         assert not graph.has_node(node_id)
@@ -81,7 +80,7 @@ class TestUserAddDeleteNode:
         assert tracks.get_position(node_id) == position
         assert tracks.get_track_id(node_id) == track_id
         if with_seg:
-            assert tracks.get_area(node_id) == 1
+            assert tracks.get_node_attr(node_id, "area") == 1
         # TODO: error if node already exists?
 
     def test_user_delete_node(self, get_tracks, ndim, with_seg):

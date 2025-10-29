@@ -5,9 +5,8 @@ from typing import TYPE_CHECKING
 
 import networkx as nx
 
-from funtracks.features import FeatureDict
+from funtracks.features import FeatureDict, TrackletID
 
-from .graph_attributes import NodeAttr
 from .tracks import Tracks
 
 if TYPE_CHECKING:
@@ -25,31 +24,83 @@ class SolutionTracks(Tracks):
         self,
         graph: nx.DiGraph,
         segmentation: np.ndarray | None = None,
-        time_attr: str | None = NodeAttr.TIME.value,
-        pos_attr: str | tuple[str] | list[str] | None = NodeAttr.POS.value,
+        time_attr: str | None = None,
+        pos_attr: str | tuple[str] | list[str] | None = None,
+        tracklet_attr: str | None = None,
         scale: list[float] | None = None,
         ndim: int | None = None,
         features: FeatureDict | None = None,
         existing_features: list[str] | None = None,
     ):
+        """Initialize a SolutionTracks object.
+
+        SolutionTracks extends Tracks to ensure every node has a track_id. A
+        TrackAnnotator is automatically added to manage track IDs.
+
+        Args:
+            graph (nx.DiGraph): NetworkX directed graph with nodes as detections and
+                edges as links.
+            segmentation (np.ndarray | None): Optional segmentation array where labels
+                match node IDs. Required for computing region properties (area, etc.).
+            time_attr (str | None): Graph attribute name for time. Defaults to "time"
+                if None.
+            pos_attr (str | tuple[str, ...] | list[str] | None): Graph attribute
+                name(s) for position. Can be:
+                - Single string for one attribute containing position array
+                - List/tuple of strings for multi-axis (one attribute per axis)
+                Defaults to "pos" if None.
+            tracklet_attr (str | None): Graph attribute name for tracklet/track IDs.
+                Defaults to "track_id" if None.
+            scale (list[float] | None): Scaling factors for each dimension (including
+                time). If None, all dimensions scaled by 1.0.
+            ndim (int | None): Number of dimensions (3 for 2D+time, 4 for 3D+time).
+                If None, inferred from segmentation or scale.
+            features (FeatureDict | None): Pre-built FeatureDict with feature
+                definitions. If provided, time_attr/pos_attr/tracklet_attr are ignored.
+                Assumes that all features in the dict already exist on the graph (will
+                be activated but not recomputed).
+            existing_features (list[str] | None): List of feature keys that already
+                exist on the graph and should not be recomputed (e.g., ["area", "iou"]).
+                Only used when features is None.
+        """
         super().__init__(
             graph,
             segmentation=segmentation,
             time_attr=time_attr,
             pos_attr=pos_attr,
+            tracklet_attr=tracklet_attr,
             scale=scale,
             ndim=ndim,
             features=features,
             existing_features=existing_features,
         )
-        self.track_annotator = self._get_track_annotator()
 
-        # If track_id is not in existing_features, we need to enable it
+        # initialization steps:
+        # 1. set up feature dict (or use provided) - handled in super init
+        # 2. set up anotator registry - handled in super init
+        # 3. activate existing features - handled in super init
+        # 4. enable core features (compute them) - position handled in super init,
+        #   need to handle track_id
+
+        # If track_id is not already present, we need to enable it (and compute it)
+        self.track_annotator = self._get_track_annotator()
+        recompute = True
         if (
-            existing_features is None
-            or self.track_annotator.tracklet_key not in existing_features
+            features is not None
+            and features.tracklet_key in features
+            or (
+                existing_features is not None
+                and self.track_annotator.tracklet_key in existing_features
+            )
         ):
+            recompute = False
+
+        tracklet_key = self.track_annotator.tracklet_key
+        if recompute:
             self.enable_features([self.track_annotator.tracklet_key])
+            self.features.register_tracklet_feature(
+                tracklet_key, self.track_annotator.features[tracklet_key]
+            )
 
     def _get_track_annotator(self):
         """Get the TrackAnnotator instance from the annotator registry.
@@ -62,7 +113,7 @@ class SolutionTracks(Tracks):
         """
         from funtracks.annotators import TrackAnnotator
 
-        for annotator in self.annotators.annotators:
+        for annotator in self.annotators:
             if isinstance(annotator, TrackAnnotator):
                 return annotator
         raise RuntimeError(
@@ -71,30 +122,27 @@ class SolutionTracks(Tracks):
 
     @classmethod
     def from_tracks(cls, tracks: Tracks):
-        # Get existing features from tracks
-        existing_features = list(tracks.features.keys())
-
-        # Check if all nodes have track_id before trusting existing track IDs
-        # Short circuit on first missing track_id
-        all_nodes_have_track_id = True
-        for node in tracks.graph.nodes():
-            if tracks.get_node_attr(node, NodeAttr.TRACK_ID.value) is None:
-                all_nodes_have_track_id = False
-                break
-
-        # Only add track_id to existing_features if ALL nodes have it
-        if all_nodes_have_track_id:
-            existing_features.append(NodeAttr.TRACK_ID.value)
-
+        if (tracklet_key := tracks.features.tracklet_key) is not None:
+            # Check if all nodes have track_id before trusting existing track IDs
+            # Short circuit on first missing track_id
+            all_nodes_have_track_id = True
+            for node in tracks.graph.nodes():
+                if tracks.get_node_attr(node, tracklet_key) is None:
+                    all_nodes_have_track_id = False
+                    break
+            # Only add track_id to existing_features if ALL nodes have it
+            if all_nodes_have_track_id:
+                tracks.features[tracklet_key] = TrackletID()
+            else:
+                if tracklet_key in tracks.features:
+                    del tracks.features[tracklet_key]
+                tracks.features.tracklet_key = None
         return cls(
             tracks.graph,
             segmentation=tracks.segmentation,
-            time_attr=None,
-            pos_attr=None,
             scale=tracks.scale,
             ndim=tracks.ndim,
             features=tracks.features,
-            existing_features=existing_features,
         )
 
     @property
@@ -105,7 +153,7 @@ class SolutionTracks(Tracks):
             DeprecationWarning,
             stacklevel=2,
         )
-        return nx.get_node_attributes(self.graph, NodeAttr.TRACK_ID.value)
+        return nx.get_node_attributes(self.graph, self.features.tracklet_key)
 
     def get_next_track_id(self) -> int:
         """Return the next available track_id and update max_tracklet_id in TrackAnnotator
@@ -118,7 +166,9 @@ class SolutionTracks(Tracks):
         return annotator.max_tracklet_id
 
     def get_track_id(self, node) -> int:
-        track_id = self.get_node_attr(node, NodeAttr.TRACK_ID.value, required=True)
+        if self.features.tracklet_key is None:
+            raise ValueError("Tracklet key not initialized in features")
+        track_id = self.get_node_attr(node, self.features.tracklet_key, required=True)
         return track_id
 
     def export_tracks(self, outfile: Path | str):

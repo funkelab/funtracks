@@ -12,8 +12,6 @@ import numpy as np
 import zarr
 from geff_spec import GeffMetadata
 
-from funtracks.data_model.graph_attributes import NodeAttr
-
 if TYPE_CHECKING:
     from pathlib import Path
 
@@ -86,8 +84,9 @@ def export_to_geff(tracks: Tracks, directory: Path, overwrite: bool = False):
             {
                 "path": "../segmentation",
                 "type": "labels",
-                "label_prop": NodeAttr.SEG_ID.value,
+                "label_prop": "seg_id",
             }
+            # TODO: I don't think we necessarily have a seg id in our tracks
         ]
 
     # Save the graph in a 'tracks' folder

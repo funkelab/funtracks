@@ -1,21 +1,26 @@
 import copy
+from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 import networkx as nx
 import numpy as np
 import pytest
 from skimage.draw import disk
 
-from funtracks.data_model import NodeAttr
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
+
+    from funtracks.data_model import SolutionTracks, Tracks
 
 # Feature list constants for consistent test usage
 FEATURES_WITH_SEG = ["pos", "area", "iou"]
 FEATURES_NO_SEG = ["pos"]
-SOLUTION_FEATURES_WITH_SEG = ["pos", "area", "iou", NodeAttr.TRACK_ID.value]
-SOLUTION_FEATURES_NO_SEG = ["pos", NodeAttr.TRACK_ID.value]
+SOLUTION_FEATURES_WITH_SEG = ["pos", "area", "iou", "track_id"]
+SOLUTION_FEATURES_NO_SEG = ["pos", "track_id"]
 
 
 @pytest.fixture
-def segmentation_2d():
+def segmentation_2d() -> "NDArray[np.int32]":
     frame_shape = (100, 100)
     total_shape = (5, *frame_shape)
     segmentation = np.zeros(total_shape, dtype="int32")
@@ -42,16 +47,16 @@ def segmentation_2d():
 
 
 @pytest.fixture
-def graph_clean():
+def graph_clean() -> nx.DiGraph:
     """Base graph with only time and track_id - no positions or computed features."""
     graph = nx.DiGraph()
     nodes = [
-        (1, {"time": 0, "track_id": 1}),
-        (2, {"time": 1, "track_id": 2}),
-        (3, {"time": 1, "track_id": 3}),
-        (4, {"time": 2, "track_id": 3}),
-        (5, {"time": 4, "track_id": 3}),
-        (6, {"time": 4, "track_id": 5}),
+        (1, {"t": 0, "track_id": 1}),
+        (2, {"t": 1, "track_id": 2}),
+        (3, {"t": 1, "track_id": 3}),
+        (4, {"t": 2, "track_id": 3}),
+        (5, {"t": 4, "track_id": 3}),
+        (6, {"t": 4, "track_id": 5}),
     ]
     edges = [(1, 2), (1, 3), (3, 4), (4, 5)]
     graph.add_nodes_from(nodes)
@@ -60,7 +65,7 @@ def graph_clean():
 
 
 @pytest.fixture
-def graph_2d_with_position(graph_clean):
+def graph_2d_with_position(graph_clean) -> nx.DiGraph:
     """Graph with 2D positions - for tests without segmentation."""
     graph = copy.deepcopy(graph_clean)
     positions = {
@@ -77,7 +82,7 @@ def graph_2d_with_position(graph_clean):
 
 
 @pytest.fixture
-def graph_2d_with_computed_features(graph_2d_with_position):
+def graph_2d_with_computed_features(graph_2d_with_position) -> nx.DiGraph:
     """Graph with 2D positions and computed features - for loaded data tests."""
     graph = copy.deepcopy(graph_2d_with_position)
     areas = {1: 1245, 2: 305, 3: 697, 4: 16, 5: 16, 6: 16}
@@ -91,7 +96,7 @@ def graph_2d_with_computed_features(graph_2d_with_position):
 
 
 @pytest.fixture
-def graph_3d_with_position(graph_clean):
+def graph_3d_with_position(graph_clean) -> nx.DiGraph:
     """Graph with 3D positions - for tests without segmentation."""
     graph = copy.deepcopy(graph_clean)
     positions = {
@@ -108,7 +113,7 @@ def graph_3d_with_position(graph_clean):
 
 
 @pytest.fixture
-def graph_3d_with_computed_features(graph_3d_with_position):
+def graph_3d_with_computed_features(graph_3d_with_position) -> nx.DiGraph:
     """Graph with 3D positions and computed features - for loaded data tests."""
     graph = copy.deepcopy(graph_3d_with_position)
     # Add area attributes for 3D segmentation (computed from sphere volumes and cubes)
@@ -123,7 +128,7 @@ def graph_3d_with_computed_features(graph_3d_with_position):
 
 
 @pytest.fixture
-def get_tracks(request):
+def get_tracks(request) -> Callable[..., "Tracks | SolutionTracks"]:
     """Factory fixture to create Tracks or SolutionTracks instances.
 
     Returns a factory function that can be called with:
@@ -135,57 +140,81 @@ def get_tracks(request):
         tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
 
     Note:
-        Automatically uses feature constants (FEATURES_WITH_SEG, etc.) to specify
-        existing_features based on with_seg and is_solution parameters.
+        Uses a pre-built FeatureDict to avoid recomputing features that already
+        exist in the test graph fixtures.
     """
     from funtracks.data_model import SolutionTracks, Tracks
+    from funtracks.features import Area, FeatureDict, IoU, Position, Time, TrackletID
 
     def _make_tracks(
         ndim: int,
         with_seg: bool = True,
         is_solution: bool = False,
-    ):
+    ) -> Tracks | SolutionTracks:
         # Get the appropriate graph and segmentation fixtures
         if with_seg:
             if ndim == 3:
                 graph = request.getfixturevalue("graph_2d_with_computed_features")
                 seg = request.getfixturevalue("segmentation_2d")
+                axis_names = ["y", "x"]
             else:  # ndim == 4
                 graph = request.getfixturevalue("graph_3d_with_computed_features")
                 seg = request.getfixturevalue("segmentation_3d")
+                axis_names = ["z", "y", "x"]
         else:
             if ndim == 3:
                 graph = request.getfixturevalue("graph_2d_with_position")
+                axis_names = ["y", "x"]
             else:  # ndim == 4
                 graph = request.getfixturevalue("graph_3d_with_position")
+                axis_names = ["z", "y", "x"]
             seg = None
-
-        # Use feature constants to determine existing_features
-        if is_solution:
-            existing_features = (
-                SOLUTION_FEATURES_WITH_SEG if with_seg else SOLUTION_FEATURES_NO_SEG
-            )
-        else:
-            existing_features = FEATURES_WITH_SEG if with_seg else FEATURES_NO_SEG
 
         # Make a deep copy to avoid fixture pollution across tests
         graph = copy.deepcopy(graph)
 
-        # Create the appropriate Tracks type
+        # Build FeatureDict based on what exists in the graph
+        features_dict = {
+            "t": Time(),
+            "pos": Position(axes=axis_names),
+        }
+
+        if with_seg:
+            # Graph has pre-computed features
+            features_dict["area"] = Area(ndim=ndim)
+            features_dict["iou"] = IoU()
+
+        if is_solution:
+            features_dict["track_id"] = TrackletID()
+
+        feature_dict = FeatureDict(
+            features=features_dict,
+            time_key="t",
+            position_key="pos",
+            tracklet_key="track_id" if is_solution else None,
+        )
+
+        # Create the appropriate Tracks type with pre-built FeatureDict
         if is_solution:
             return SolutionTracks(
-                graph, segmentation=seg, ndim=ndim, existing_features=existing_features
+                graph,
+                segmentation=seg,
+                ndim=ndim,
+                features=feature_dict,
             )
         else:
             return Tracks(
-                graph, segmentation=seg, ndim=ndim, existing_features=existing_features
+                graph,
+                segmentation=seg,
+                ndim=ndim,
+                features=feature_dict,
             )
 
     return _make_tracks
 
 
 @pytest.fixture
-def graph_2d_list():
+def graph_2d_list() -> nx.DiGraph:
     graph = nx.DiGraph()
     nodes = [
         (
@@ -193,9 +222,9 @@ def graph_2d_list():
             {
                 "y": 100,
                 "x": 50,
-                NodeAttr.TIME.value: 0,
-                NodeAttr.AREA.value: 1245,
-                NodeAttr.TRACK_ID.value: 1,
+                "t": 0,
+                "area": 1245,
+                "track_id": 1,
             },
         ),
         (
@@ -203,9 +232,9 @@ def graph_2d_list():
             {
                 "y": 20,
                 "x": 100,
-                NodeAttr.TIME.value: 1,
-                NodeAttr.AREA.value: 500,
-                NodeAttr.TRACK_ID.value: 2,
+                "t": 1,
+                "area": 500,
+                "track_id": 2,
             },
         ),
     ]
@@ -222,7 +251,7 @@ def sphere(center, radius, shape):
 
 
 @pytest.fixture
-def segmentation_3d():
+def segmentation_3d() -> "NDArray[np.int32]":
     frame_shape = (100, 100, 100)
     total_shape = (5, *frame_shape)
     segmentation = np.zeros(total_shape, dtype="int32")
@@ -248,7 +277,7 @@ def segmentation_3d():
 
 
 @pytest.fixture
-def get_graph(request):
+def get_graph(request) -> Callable[..., nx.DiGraph]:
     """Factory fixture to get graph by ndim and feature level.
 
     Args:
@@ -263,7 +292,7 @@ def get_graph(request):
         graph = get_graph(ndim=3, with_features="clean")
     """
 
-    def _get_graph(ndim: int, with_features: str = "clean"):
+    def _get_graph(ndim: int, with_features: str = "clean") -> nx.DiGraph:
         if with_features == "clean":
             graph = request.getfixturevalue("graph_clean")
         elif with_features == "position":
@@ -289,7 +318,7 @@ def get_graph(request):
 
 
 @pytest.fixture
-def get_segmentation(request):
+def get_segmentation(request) -> Callable[..., "NDArray[np.int32]"]:
     """Factory fixture to get segmentation by ndim.
 
     Args:
@@ -302,7 +331,7 @@ def get_segmentation(request):
         seg = get_segmentation(ndim=3)
     """
 
-    def _get_segmentation(ndim: int):
+    def _get_segmentation(ndim: int) -> "NDArray[np.int32]":
         if ndim == 3:
             return request.getfixturevalue("segmentation_2d")
         else:  # ndim == 4

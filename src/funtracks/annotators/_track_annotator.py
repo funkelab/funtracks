@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 import networkx as nx
 
 from funtracks.actions import AddNode, DeleteNode, UpdateTrackID
-from funtracks.data_model import NodeAttr, SolutionTracks
+from funtracks.data_model import SolutionTracks
 from funtracks.features import LineageID, TrackletID
 
 from ._graph_annotator import GraphAnnotator
@@ -16,6 +16,10 @@ if TYPE_CHECKING:
 
     from funtracks.actions import BasicAction
     from funtracks.features import Feature
+
+
+DEFAULT_TRACKLET_KEY = "tracklet_id"
+DEFAULT_LINEAGE_KEY = "lineage_id"
 
 
 class TrackAnnotator(GraphAnnotator):
@@ -77,24 +81,24 @@ class TrackAnnotator(GraphAnnotator):
         if not cls.can_annotate(tracks):
             return {}
         return {
-            NodeAttr.TRACK_ID.value: TrackletID(),
-            "lineage_id": LineageID(),
+            DEFAULT_TRACKLET_KEY: TrackletID(),
+            DEFAULT_LINEAGE_KEY: LineageID(),
         }
 
     def __init__(
         self,
         tracks: SolutionTracks,
-        tracklet_key: str | None = None,
-        lineage_key: str | None = None,
+        tracklet_key: str | None = DEFAULT_TRACKLET_KEY,
+        lineage_key: str | None = DEFAULT_LINEAGE_KEY,
     ):
         if not isinstance(tracks, SolutionTracks):
             raise ValueError("Currently the TrackAnnotator only works on SolutionTracks")
 
         self.tracks: SolutionTracks  # Narrow type from base class
         self.tracklet_key = (
-            tracklet_key if tracklet_key is not None else NodeAttr.TRACK_ID.value
+            tracklet_key if tracklet_key is not None else DEFAULT_TRACKLET_KEY
         )
-        self.lineage_key = lineage_key if lineage_key is not None else "lineage_id"
+        self.lineage_key = lineage_key if lineage_key is not None else DEFAULT_LINEAGE_KEY
 
         feats = {
             self.tracklet_key: TrackletID(),

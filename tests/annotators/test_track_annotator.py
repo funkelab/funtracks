@@ -2,7 +2,6 @@ import pytest
 
 from funtracks.actions import UpdateNodeSeg
 from funtracks.annotators import TrackAnnotator
-from funtracks.data_model import NodeAttr
 
 
 @pytest.mark.parametrize("ndim", [3, 4])
@@ -29,7 +28,7 @@ class TestTrackAnnotator:
 
         ann = TrackAnnotator(tracks)
         # Enable features
-        ann.enable_features(list(ann.all_features.keys()))
+        ann.activate_features(list(ann.all_features.keys()))
         all_features = ann.features
 
         # Compute values
@@ -65,7 +64,7 @@ class TestTrackAnnotator:
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
         ann = TrackAnnotator(tracks)
         # Enable features
-        ann.enable_features(list(ann.all_features.keys()))
+        ann.activate_features(list(ann.all_features.keys()))
         # compute the original tracklet and lineage ids
         ann.compute()
         # add an edge
@@ -77,14 +76,14 @@ class TestTrackAnnotator:
         orig_tra = tracks.get_node_attr(node_id, ann.tracklet_key, required=True)
 
         # remove one feature from computation (annotator level, not FeatureDict)
-        ann.disable_features([to_remove_key])
+        ann.deactivate_features([to_remove_key])
         ann.compute()  # this should update tra but not lin
         # lineage_id is still in tracks.features but not recomputed
         assert tracks.get_node_attr(node_id, ann.lineage_key, required=True) == orig_lin
         assert tracks.get_node_attr(node_id, ann.tracklet_key, required=True) != orig_tra
 
         # add it back in
-        ann.enable_features([to_remove_key])
+        ann.activate_features([to_remove_key])
         ann.compute()
         # now both are updated
         assert tracks.get_node_attr(node_id, ann.lineage_key, required=True) != orig_lin
@@ -104,7 +103,7 @@ class TestTrackAnnotator:
             pytest.skip("Test requires segmentation")
 
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
-        tracks.enable_features(["area", NodeAttr.TRACK_ID.value])
+        tracks.enable_features(["area", tracks.features.tracklet_key])
 
         node_id = 3
         initial_track_id = tracks.get_track_id(node_id)
@@ -120,4 +119,4 @@ class TestTrackAnnotator:
         # Track ID should remain unchanged (no track update happened)
         assert tracks.get_track_id(node_id) == initial_track_id
         # But area should be updated
-        assert tracks.get_area(node_id) == 1
+        assert tracks.get_node_attr(node_id, "area") == 1

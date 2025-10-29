@@ -2,7 +2,9 @@ import pytest
 
 from funtracks.actions import UpdateNodeSeg, UpdateTrackID
 from funtracks.annotators import EdgeAnnotator
-from funtracks.data_model import NodeAttr, SolutionTracks, Tracks
+from funtracks.data_model import SolutionTracks, Tracks
+
+track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
 
 
 @pytest.mark.parametrize("ndim", [3, 4])
@@ -11,22 +13,22 @@ class TestEdgeAnnotator:
         # Start with clean graph, no existing features
         graph = get_graph(ndim, with_features="clean")
         seg = get_segmentation(ndim)
-        tracks = Tracks(graph, segmentation=seg, ndim=ndim)
+        tracks = Tracks(graph, segmentation=seg, ndim=ndim, **track_attrs)
         ann = EdgeAnnotator(tracks)
         # Features start disabled by default
         assert len(ann.all_features) == 1
         assert len(ann.features) == 0
         # Enable features to test
-        ann.enable_features(list(ann.all_features.keys()))
+        ann.activate_features(list(ann.all_features.keys()))
         assert len(ann.features) == 1
 
     def test_compute_all(self, get_graph, get_segmentation, ndim):
         graph = get_graph(ndim, with_features="clean")
         seg = get_segmentation(ndim)
-        tracks = Tracks(graph, segmentation=seg, ndim=ndim)
+        tracks = Tracks(graph, segmentation=seg, ndim=ndim, **track_attrs)
         ann = EdgeAnnotator(tracks)
         # Enable features
-        ann.enable_features(list(ann.all_features.keys()))
+        ann.activate_features(list(ann.all_features.keys()))
         all_features = ann.features
 
         # Compute values
@@ -38,11 +40,9 @@ class TestEdgeAnnotator:
     def test_update_all(self, get_graph, get_segmentation, ndim) -> None:
         graph = get_graph(ndim, with_features="clean")
         seg = get_segmentation(ndim)
-        tracks = Tracks(graph, segmentation=seg, ndim=ndim)
+        tracks = Tracks(graph, segmentation=seg, ndim=ndim, **track_attrs)  # type: ignore
         # Get the EdgeAnnotator from the registry
-        ann = next(
-            ann for ann in tracks.annotators.annotators if isinstance(ann, EdgeAnnotator)
-        )
+        ann = next(ann for ann in tracks.annotators if isinstance(ann, EdgeAnnotator))
         # Enable features through tracks (which updates the registry)
         tracks.enable_features(list(ann.all_features.keys()))
 
@@ -73,11 +73,9 @@ class TestEdgeAnnotator:
     def test_add_remove_feature(self, get_graph, get_segmentation, ndim):
         graph = get_graph(ndim, with_features="clean")
         seg = get_segmentation(ndim)
-        tracks = Tracks(graph, segmentation=seg, ndim=ndim)
+        tracks = Tracks(graph, segmentation=seg, ndim=ndim, **track_attrs)
         # Get the EdgeAnnotator from the registry
-        ann = next(
-            ann for ann in tracks.annotators.annotators if isinstance(ann, EdgeAnnotator)
-        )
+        ann = next(ann for ann in tracks.annotators if isinstance(ann, EdgeAnnotator))
         # Enable features through tracks
         tracks.enable_features(list(ann.all_features.keys()))
 
@@ -95,7 +93,7 @@ class TestEdgeAnnotator:
         tracks.set_pixels(pixels_to_remove, 0)
 
         # Compute at tracks level - this should not update the removed feature
-        for a in tracks.annotators.annotators:
+        for a in tracks.annotators:
             if isinstance(a, EdgeAnnotator):
                 a.compute()
         # IoU was computed before removal, so value is still there
@@ -112,7 +110,7 @@ class TestEdgeAnnotator:
     def test_missing_seg(self, get_graph, ndim) -> None:
         """Test that EdgeAnnotator gracefully handles missing segmentation."""
         graph = get_graph(ndim, with_features="clean")
-        tracks = Tracks(graph, segmentation=None, ndim=ndim)
+        tracks = Tracks(graph, segmentation=None, ndim=ndim, **track_attrs)  # type: ignore
 
         ann = EdgeAnnotator(tracks)
         assert len(ann.features) == 0
@@ -123,8 +121,8 @@ class TestEdgeAnnotator:
         """Test that EdgeAnnotator ignores actions that don't affect edges."""
         graph = get_graph(ndim, with_features="clean")
         seg = get_segmentation(ndim)
-        tracks = SolutionTracks(graph, segmentation=seg, ndim=ndim)
-        tracks.enable_features(["iou", NodeAttr.TRACK_ID.value])
+        tracks = SolutionTracks(graph, segmentation=seg, ndim=ndim, **track_attrs)
+        tracks.enable_features(["iou", track_attrs["tracklet_attr"]])
 
         edge_id = (1, 3)
         initial_iou = tracks.graph.edges[edge_id]["iou"]

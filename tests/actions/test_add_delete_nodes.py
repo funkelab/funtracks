@@ -68,14 +68,14 @@ def test_add_node_missing_pos(get_tracks):
     tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
     # First test: missing track_id raises an error
     with pytest.raises(ValueError, match="Must provide a track_id attribute for node"):
-        AddNode(tracks, 8, {"time": 2})
+        AddNode(tracks, 8, {"t": 2})
 
     # Second test: with track_id but without segmentation, missing pos raises an error
     tracks_no_seg = get_tracks(ndim=3, with_seg=False, is_solution=True)
     with pytest.raises(
         ValueError, match="Must provide position or segmentation for node"
     ):
-        AddNode(tracks_no_seg, 8, {"time": 2, "track_id": 1})
+        AddNode(tracks_no_seg, 8, {"t": 2, "track_id": 1})
 
 
 @pytest.mark.parametrize("ndim", [3, 4])
@@ -118,7 +118,7 @@ def test_custom_attributes_preserved(get_tracks, ndim, with_seg):
 
     # Define attributes including custom ones
     custom_attrs = {
-        "time": 2,
+        "t": 2,
         "track_id": 10,
         "pos": [50.0, 50.0] if ndim == 3 else [50.0, 50.0, 50.0],
         # Custom user attributes
