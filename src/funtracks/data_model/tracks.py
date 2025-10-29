@@ -96,23 +96,32 @@ class Tracks:
 
         self.annotators = AnnotatorRegistry(self)
 
-        # Register core features from annotators in the features dict
-        for annotator in self.annotators.annotators:
-            if isinstance(annotator, RegionpropsAnnotator):
-                feature = annotator.all_features[annotator.pos_key][0]
-                self.features.register_position_feature(annotator.pos_key, feature)
-            elif isinstance(annotator, TrackAnnotator):
-                feature = annotator.all_features[annotator.tracklet_key][0]
-                self.features.register_tracklet_feature(annotator.tracklet_key, feature)
-
-        if existing_features is not None:
-            for key in existing_features:
+        # If features FeatureDict was provided, enable those features in annotators
+        if features is not None:
+            # Enable all features that exist in both FeatureDict and annotators
+            for key in self.features:
                 if key in self.annotators.all_features:
-                    feature, _ = self.annotators.all_features[key]
-                    # Add to FeatureDict if not already there
-                    if key not in self.features:
-                        self.features[key] = feature
                     self.annotators.enable_features([key])
+        else:
+            # Register core features from annotators in the features dict
+            for annotator in self.annotators.annotators:
+                if isinstance(annotator, RegionpropsAnnotator):
+                    feature = annotator.all_features[annotator.pos_key][0]
+                    self.features.register_position_feature(annotator.pos_key, feature)
+                elif isinstance(annotator, TrackAnnotator):
+                    feature = annotator.all_features[annotator.tracklet_key][0]
+                    self.features.register_tracklet_feature(
+                        annotator.tracklet_key, feature
+                    )
+
+            if existing_features is not None:
+                for key in existing_features:
+                    if key in self.annotators.all_features:
+                        feature, _ = self.annotators.all_features[key]
+                        # Add to FeatureDict if not already there
+                        if key not in self.features:
+                            self.features[key] = feature
+                        self.annotators.enable_features([key])
 
     @property
     def time_attr(self):

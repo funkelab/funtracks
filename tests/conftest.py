@@ -140,10 +140,11 @@ def get_tracks(request) -> Callable[..., "Tracks | SolutionTracks"]:
         tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
 
     Note:
-        Automatically uses feature constants (FEATURES_WITH_SEG, etc.) to specify
-        existing_features based on with_seg and is_solution parameters.
+        Uses a pre-built FeatureDict to avoid recomputing features that already
+        exist in the test graph fixtures.
     """
     from funtracks.data_model import SolutionTracks, Tracks
+    from funtracks.features import Area, FeatureDict, IoU, Position, Time, TrackletID
 
     def _make_tracks(
         ndim: int,
@@ -155,45 +156,58 @@ def get_tracks(request) -> Callable[..., "Tracks | SolutionTracks"]:
             if ndim == 3:
                 graph = request.getfixturevalue("graph_2d_with_computed_features")
                 seg = request.getfixturevalue("segmentation_2d")
+                axis_names = ["y", "x"]
             else:  # ndim == 4
                 graph = request.getfixturevalue("graph_3d_with_computed_features")
                 seg = request.getfixturevalue("segmentation_3d")
+                axis_names = ["z", "y", "x"]
         else:
             if ndim == 3:
                 graph = request.getfixturevalue("graph_2d_with_position")
+                axis_names = ["y", "x"]
             else:  # ndim == 4
                 graph = request.getfixturevalue("graph_3d_with_position")
+                axis_names = ["z", "y", "x"]
             seg = None
-
-        # Use feature constants to determine existing_features
-        if is_solution:
-            existing_features = (
-                SOLUTION_FEATURES_WITH_SEG if with_seg else SOLUTION_FEATURES_NO_SEG
-            )
-        else:
-            existing_features = FEATURES_WITH_SEG if with_seg else FEATURES_NO_SEG
 
         # Make a deep copy to avoid fixture pollution across tests
         graph = copy.deepcopy(graph)
 
-        # Create the appropriate Tracks type
+        # Build FeatureDict based on what exists in the graph
+        features_dict = {
+            "t": Time(),
+            "pos": Position(axes=axis_names),
+        }
+
+        if with_seg:
+            # Graph has pre-computed features
+            features_dict["area"] = Area(ndim=ndim)
+            features_dict["iou"] = IoU()
+
+        if is_solution:
+            features_dict["track_id"] = TrackletID()
+
+        feature_dict = FeatureDict(
+            features=features_dict,
+            time_key="t",
+            position_key="pos",
+            tracklet_key="track_id" if is_solution else None,
+        )
+
+        # Create the appropriate Tracks type with pre-built FeatureDict
         if is_solution:
             return SolutionTracks(
                 graph,
                 segmentation=seg,
                 ndim=ndim,
-                time_attr="t",
-                tracklet_attr="track_id",
-                existing_features=existing_features,
+                features=feature_dict,
             )
         else:
             return Tracks(
                 graph,
                 segmentation=seg,
                 ndim=ndim,
-                time_attr="t",
-                tracklet_attr="track_id",
-                existing_features=existing_features,
+                features=feature_dict,
             )
 
     return _make_tracks
