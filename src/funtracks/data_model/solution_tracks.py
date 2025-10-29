@@ -24,14 +24,45 @@ class SolutionTracks(Tracks):
         self,
         graph: nx.DiGraph,
         segmentation: np.ndarray | None = None,
-        time_attr: str = "time",
-        pos_attr: str | tuple[str] | list[str] = "pos",
-        tracklet_attr: str = "tracklet_id",
+        time_attr: str | None = None,
+        pos_attr: str | tuple[str] | list[str] | None = None,
+        tracklet_attr: str | None = None,
         scale: list[float] | None = None,
         ndim: int | None = None,
         features: FeatureDict | None = None,
         existing_features: list[str] | None = None,
     ):
+        """Initialize a SolutionTracks object.
+
+        SolutionTracks extends Tracks to ensure every node has a track_id. A
+        TrackAnnotator is automatically added to manage track IDs.
+
+        Args:
+            graph (nx.DiGraph): NetworkX directed graph with nodes as detections and
+                edges as links.
+            segmentation (np.ndarray | None): Optional segmentation array where labels
+                match node IDs. Required for computing region properties (area, etc.).
+            time_attr (str | None): Graph attribute name for time. Defaults to "time"
+                if None.
+            pos_attr (str | tuple[str, ...] | list[str] | None): Graph attribute
+                name(s) for position. Can be:
+                - Single string for one attribute containing position array
+                - List/tuple of strings for multi-axis (one attribute per axis)
+                Defaults to "pos" if None.
+            tracklet_attr (str | None): Graph attribute name for tracklet/track IDs.
+                Defaults to "track_id" if None.
+            scale (list[float] | None): Scaling factors for each dimension (including
+                time). If None, all dimensions scaled by 1.0.
+            ndim (int | None): Number of dimensions (3 for 2D+time, 4 for 3D+time).
+                If None, inferred from segmentation or scale.
+            features (FeatureDict | None): Pre-built FeatureDict with feature
+                definitions. If provided, time_attr/pos_attr/tracklet_attr are ignored.
+                Assumes that all features in the dict already exist on the graph (will
+                be activated but not recomputed).
+            existing_features (list[str] | None): List of feature keys that already
+                exist on the graph and should not be recomputed (e.g., ["area", "iou"]).
+                Only used when features is None.
+        """
         super().__init__(
             graph,
             segmentation=segmentation,

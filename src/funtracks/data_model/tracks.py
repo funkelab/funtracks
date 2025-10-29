@@ -34,26 +34,20 @@ logger = logging.getLogger(__name__)
 
 class Tracks:
     """A set of tracks consisting of a graph and an optional segmentation.
+
     The graph nodes represent detections and must have a time attribute and
     position attribute. Edges in the graph represent links across time.
 
     Attributes:
         graph (nx.DiGraph): A graph with nodes representing detections and
             and edges representing links across time.
-        segmentation (Optional(np.ndarray)): An optional segmentation that
+        segmentation (np.ndarray | None): An optional segmentation that
             accompanies the tracking graph. If a segmentation is provided,
             the node ids in the graph must match the segmentation labels.
-            Defaults to None.
-        time_attr (str): The attribute in the graph that specifies the time
-            frame each node is in.
-        pos_attr (str | tuple[str] | list[str]): The attribute in the graph
-            that specifies the position of each node. Can be a single attribute
-            that holds a list, or a list of attribute keys.
+        features (FeatureDict): Dictionary of features tracked on graph nodes/edges.
+        annotators (AnnotatorRegistry): List of annotators that compute features.
         scale (list[float] | None): How much to scale each dimension by, including time.
-
-    For bulk operations on attributes, a KeyError will be raised if a node or edge
-    in the input set is not in the graph. All operations before the error node will
-    be performed, and those after will not.
+        ndim (int): Number of dimensions (3 for 2D+time, 4 for 3D+time).
     """
 
     refresh = Signal(object)
@@ -62,14 +56,42 @@ class Tracks:
         self,
         graph: nx.DiGraph,
         segmentation: np.ndarray | None = None,
-        time_attr: str = "time",
-        pos_attr: str | tuple[str, ...] | list[str] = "pos",
-        tracklet_attr: str = "track_id",
+        time_attr: str | None = None,
+        pos_attr: str | tuple[str, ...] | list[str] | None = None,
+        tracklet_attr: str | None = None,
         scale: list[float] | None = None,
         ndim: int | None = None,
         features: FeatureDict | None = None,
         existing_features: list[str] | None = None,
     ):
+        """Initialize a Tracks object.
+
+        Args:
+            graph (nx.DiGraph): NetworkX directed graph with nodes as detections and
+                edges as links.
+            segmentation (np.ndarray | None): Optional segmentation array where labels
+                match node IDs. Required for computing region properties (area, etc.).
+            time_attr (str | None): Graph attribute name for time. Defaults to "time"
+                if None.
+            pos_attr (str | tuple[str, ...] | list[str] | None): Graph attribute
+                name(s) for position. Can be:
+                - Single string for one attribute containing position array
+                - List/tuple of strings for multi-axis (one attribute per axis)
+                Defaults to "pos" if None.
+            tracklet_attr (str | None): Graph attribute name for tracklet/track IDs.
+                Defaults to "track_id" if None.
+            scale (list[float] | None): Scaling factors for each dimension (including
+                time). If None, all dimensions scaled by 1.0.
+            ndim (int | None): Number of dimensions (3 for 2D+time, 4 for 3D+time).
+                If None, inferred from segmentation or scale.
+            features (FeatureDict | None): Pre-built FeatureDict with feature
+                definitions. If provided, time_attr/pos_attr/tracklet_attr are ignored.
+                Assumes that all features in the dict already exist on the graph (will
+                be activated but not recomputed)
+            existing_features (list[str] | None): List of feature keys that already
+                exist on the graph and should not be recomputed (e.g., ["area", "iou"]).
+                Only used when features is None.
+        """
         self.graph = graph
         self.segmentation = segmentation
         self.scale = scale
@@ -127,9 +149,9 @@ class Tracks:
 
     def _get_feature_set(
         self,
-        time_attr: str,
-        pos_attr: str | tuple[str, ...] | list[str],
-        tracklet_key: str,
+        time_attr: str | None,
+        pos_attr: str | tuple[str, ...] | list[str] | None,
+        tracklet_key: str | None,
     ) -> FeatureDict:
         """Create a FeatureDict with static (user-provided) features only.
 
@@ -138,17 +160,24 @@ class Tracks:
         structure) are added by annotators and registered later.
 
         Args:
-            time_attr: Graph attribute name for time (e.g., "t", "time")
+            time_attr: Graph attribute name for time (e.g., "t", "time").
+                If None, defaults to "time"
             pos_attr: Graph attribute name(s) for position. Can be:
                 - Single string: one attribute containing position array (e.g., "pos")
                 - List/tuple: multiple attributes, one per axis (e.g., ["y", "x"])
-            tracklet_key: Graph attribute name for tracklet/track IDs (e.g., "track_id")
+                - None: defaults to "pos"
+            tracklet_key: Graph attribute name for tracklet/track IDs (e.g., "track_id").
+                If None, defaults to "track_id"
 
         Returns:
             FeatureDict initialized with time feature and position if no segmentation
         """
-        # Determine keys
-        time_key = time_attr
+        # Use defaults if not provided
+        time_key = time_attr if time_attr is not None else "time"
+        if pos_attr is None:
+            pos_attr = "pos"
+        if tracklet_key is None:
+            tracklet_key = "track_id"
 
         # Build static features dict - always include time
         features: dict[str, Feature] = {time_key: Time()}
