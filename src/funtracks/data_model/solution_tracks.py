@@ -14,6 +14,8 @@ if TYPE_CHECKING:
 
     import numpy as np
 
+    from funtracks.annotators import TrackAnnotator
+
     from .tracks import Node
 
 
@@ -102,7 +104,7 @@ class SolutionTracks(Tracks):
                 tracklet_key, self.track_annotator.features[tracklet_key]
             )
 
-    def _get_track_annotator(self):
+    def _get_track_annotator(self) -> TrackAnnotator:
         """Get the TrackAnnotator instance from the annotator registry.
 
         Returns:
@@ -144,6 +146,14 @@ class SolutionTracks(Tracks):
             ndim=tracks.ndim,
             features=tracks.features,
         )
+
+    @property
+    def max_track_id(self) -> int:
+        return self.track_annotator.max_tracklet_id
+
+    @property
+    def track_id_to_node(self) -> dict[int, list[int]]:
+        return self.track_annotator.tracklet_id_to_nodes
 
     @property
     def node_id_to_track_id(self) -> dict[Node, int]:
