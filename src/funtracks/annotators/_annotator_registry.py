@@ -26,7 +26,7 @@ class AnnotatorRegistry(list[GraphAnnotator]):
         annotators.append(MyCustomAnnotator(tracks))
 
         # Coordinated operations
-        annotators.enable_features(["area", "iou"])
+        annotators.activate_features(["area", "iou"])
         annotators.compute()
     """
 
@@ -52,10 +52,10 @@ class AnnotatorRegistry(list[GraphAnnotator]):
 
     @property
     def features(self) -> dict[str, Feature]:
-        """Get all currently enabled features from all annotators.
+        """Get all currently active features from all annotators.
 
         Returns:
-            Dictionary mapping feature keys to Feature definitions (only enabled features)
+            Dictionary mapping feature keys to Feature definitions (only active features)
         """
         aggregated = {}
         for annotator in self:
@@ -81,11 +81,11 @@ class AnnotatorRegistry(list[GraphAnnotator]):
         for annotator in self:
             annotator.update(action)
 
-    def enable_features(self, keys: list[str]) -> None:
-        """Enable features across all annotators.
+    def activate_features(self, keys: list[str]) -> None:
+        """Activate features across all annotators.
 
         Args:
-            keys: List of feature keys to enable
+            keys: List of feature keys to activate
 
         Raises:
             KeyError: If any feature keys are not available
@@ -96,15 +96,15 @@ class AnnotatorRegistry(list[GraphAnnotator]):
         if not_found:
             raise KeyError(f"Features not available: {not_found}")
 
-        # All features exist - proceed with enabling
+        # All features exist - proceed with activating
         for annotator in self:
-            annotator.enable_features(keys)
+            annotator.activate_features(keys)
 
-    def disable_features(self, keys: list[str]) -> None:
-        """Disable features across all annotators.
+    def deactivate_features(self, keys: list[str]) -> None:
+        """Deactivate features across all annotators.
 
         Args:
-            keys: List of feature keys to disable
+            keys: List of feature keys to deactivate
 
         Raises:
             KeyError: If any feature keys are not available
@@ -115,6 +115,6 @@ class AnnotatorRegistry(list[GraphAnnotator]):
         if not_found:
             raise KeyError(f"Features not available: {not_found}")
 
-        # All features exist - proceed with disabling
+        # All features exist - proceed with deactivation
         for annotator in self:
-            annotator.disable_features(keys)
+            annotator.deactivate_features(keys)

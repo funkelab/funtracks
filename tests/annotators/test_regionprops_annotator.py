@@ -18,7 +18,7 @@ class TestRegionpropsAnnotator:
         assert len(rp_ann.all_features) == 5
         assert len(rp_ann.features) == 0
         # Enable features
-        rp_ann.enable_features(list(rp_ann.all_features.keys()))
+        rp_ann.activate_features(list(rp_ann.all_features.keys()))
         assert (
             len(rp_ann.features) == 5
         )  # pos, area, ellipse_axis_radii, circularity, perimeter
@@ -29,7 +29,7 @@ class TestRegionpropsAnnotator:
         tracks = Tracks(graph, segmentation=seg, ndim=ndim, **track_attrs)
         rp_ann = RegionpropsAnnotator(tracks)
         # Enable features
-        rp_ann.enable_features(list(rp_ann.all_features.keys()))
+        rp_ann.activate_features(list(rp_ann.all_features.keys()))
 
         # Compute values
         rp_ann.compute()
@@ -82,7 +82,7 @@ class TestRegionpropsAnnotator:
         )
         all_feature_keys = list(rp_ann.all_features.keys())
         to_remove_key = all_feature_keys[1]  # area
-        rp_ann.disable_features([to_remove_key])
+        rp_ann.deactivate_features([to_remove_key])
 
         # Clear existing area attributes from graph (from fixture)
         for node in tracks.nodes():
@@ -94,10 +94,10 @@ class TestRegionpropsAnnotator:
             assert to_remove_key not in tracks.graph.nodes[node]
 
         # add it back in
-        rp_ann.enable_features([to_remove_key])
+        rp_ann.activate_features([to_remove_key])
         # but remove a different one
         second_remove_key = all_feature_keys[2]  # ellipse_axis_radii
-        rp_ann.disable_features([second_remove_key])
+        rp_ann.deactivate_features([second_remove_key])
 
         # remove all but one pixel
         node_id = 3

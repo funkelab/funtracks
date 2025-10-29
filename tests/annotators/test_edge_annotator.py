@@ -19,7 +19,7 @@ class TestEdgeAnnotator:
         assert len(ann.all_features) == 1
         assert len(ann.features) == 0
         # Enable features to test
-        ann.enable_features(list(ann.all_features.keys()))
+        ann.activate_features(list(ann.all_features.keys()))
         assert len(ann.features) == 1
 
     def test_compute_all(self, get_graph, get_segmentation, ndim):
@@ -28,7 +28,7 @@ class TestEdgeAnnotator:
         tracks = Tracks(graph, segmentation=seg, ndim=ndim, **track_attrs)
         ann = EdgeAnnotator(tracks)
         # Enable features
-        ann.enable_features(list(ann.all_features.keys()))
+        ann.activate_features(list(ann.all_features.keys()))
         all_features = ann.features
 
         # Compute values

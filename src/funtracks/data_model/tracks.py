@@ -101,7 +101,8 @@ class Tracks:
         # initialization steps:
         # 1. set up feature dict (or use provided)
         # 2. set up anotator registry
-        # 3. enable core features
+        # 3. activate existing features
+        # 4. enable core features (compute them) TODO
 
         # 1. set up feature dictionary for keeping track of features on graph
         if features is not None and (
@@ -120,12 +121,19 @@ class Tracks:
         # 2. Set up annotator registry for managing feature computation
         self.annotators = self._get_annotators()
 
-        # 3. Enable core features
-        # If features FeatureDict was provided, enable those features in annotators
+        # 3. Activate existing features
+        # If features FeatureDict was provided, activate those features in annotators
         if features is not None:
             self._activate_features_from_dict()
         else:
             self._activate_default_features(existing_features)
+
+        # # 4. Enable core features TODO uncomment
+        # # If position was not already on graph, compute it.
+        # pos_key = self.features.position_key
+        # existing_features = [] if existing_features is None else existing_features
+        # if pos_key in self.annotators.features and pos_key not in existing_features:
+        #     self.enable_features(["pos_key"])
 
     @property
     def time_attr(self):
@@ -262,25 +270,25 @@ class Tracks:
         return AnnotatorRegistry(annotator_list)
 
     def _activate_features_from_dict(self) -> None:
-        """Enable features that exist in both the FeatureDict and annotators.
+        """Activate features that exist in both the FeatureDict and annotators.
 
-        Used when a pre-built FeatureDict is provided to __init__. Enables features
+        Used when a pre-built FeatureDict is provided to __init__. Activates features
         in annotators (sets computation flags) but does NOT compute them, assuming
         they already exist on the graph.
         """
-        # Enable all features that exist in both FeatureDict and annotators
+        # Activate all features that exist in both FeatureDict and annotators
         for key in self.features:
             if key in self.annotators.all_features:
-                self.annotators.enable_features([key])
+                self.annotators.activate_features([key])
 
     def _activate_default_features(
         self, existing_features: list[str] | None = None
     ) -> None:
-        """Register core features and optionally enable pre-existing features.
+        """Register core features and optionally activate pre-existing features.
 
         Used when no FeatureDict is provided to __init__. Performs two tasks:
         1. Registers position/tracklet features from annotators into FeatureDict
-        2. Enables any features listed in existing_features (without computing)
+        2. Activates any features listed in existing_features (without computing)
 
         Args:
             existing_features: Optional list of feature keys that already exist on
@@ -298,7 +306,7 @@ class Tracks:
                 feature = annotator.all_features[annotator.tracklet_key][0]
                 self.features.register_tracklet_feature(annotator.tracklet_key, feature)
 
-        # Enable other features labeled as already present (don't compute)
+        # Activate other features labeled as already present (don't compute)
         if existing_features is not None:
             for key in existing_features:
                 if key in self.annotators.all_features:
@@ -306,7 +314,7 @@ class Tracks:
                     # Add to FeatureDict if not already there
                     if key not in self.features:
                         self.features[key] = feature
-                    self.annotators.enable_features([key])
+                    self.annotators.activate_features([key])
 
     def nodes(self):
         return np.array(self.graph.nodes())
@@ -710,8 +718,8 @@ class Tracks:
         Raises:
             KeyError: If any feature is not available (raised by annotators)
         """
-        # Registry validates and enables features (will raise if invalid)
-        self.annotators.enable_features(feature_keys)
+        # Registry validates and activates features (will raise if invalid)
+        self.annotators.activate_features(feature_keys)
 
         # Add to FeatureDict
         for key in feature_keys:
@@ -734,7 +742,7 @@ class Tracks:
             KeyError: If any feature is not available (raised by annotators)
         """
         # Registry validates and disables features (will raise if invalid)
-        self.annotators.disable_features(feature_keys)
+        self.annotators.deactivate_features(feature_keys)
 
         # Remove from FeatureDict
         for key in feature_keys:

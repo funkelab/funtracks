@@ -87,7 +87,7 @@ def test_get_available_features(graph_clean, segmentation_2d):
 
 
 def test_enable_disable_features(graph_clean, segmentation_2d):
-    """Test enable_features, disable_features, and get_active_features."""
+    """Test activate_features, disable_features, and get_active_features."""
     tracks = Tracks(graph_clean, segmentation=segmentation_2d, ndim=3, **track_attrs)
 
     # Core features (time, pos) are in FeatureDict but not enabled by default

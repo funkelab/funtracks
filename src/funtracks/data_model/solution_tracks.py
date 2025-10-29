@@ -93,8 +93,8 @@ class SolutionTracks(Tracks):
                 tracklet_key, self.track_annotator.features[tracklet_key]
             )
         else:
-            # otherwise just mark it for reocmputation
-            self.annotators.enable_features([self.track_annotator.tracklet_key])
+            # otherwise just activate it so it will be updated on changes
+            self.annotators.activate_features([self.track_annotator.tracklet_key])
 
     def _get_track_annotator(self):
         """Get the TrackAnnotator instance from the annotator registry.
