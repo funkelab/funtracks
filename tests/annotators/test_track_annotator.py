@@ -119,4 +119,4 @@ class TestTrackAnnotator:
         # Track ID should remain unchanged (no track update happened)
         assert tracks.get_track_id(node_id) == initial_track_id
         # But area should be updated
-        assert tracks.get_area(node_id) == 1
+        assert tracks.get_node_attr(node_id, "area") == 1

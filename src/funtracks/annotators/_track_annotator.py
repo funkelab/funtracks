@@ -88,15 +88,17 @@ class TrackAnnotator(GraphAnnotator):
     def __init__(
         self,
         tracks: SolutionTracks,
-        tracklet_key: str = DEFAULT_TRACKLET_KEY,
-        lineage_key: str = DEFAULT_LINEAGE_KEY,
+        tracklet_key: str | None = DEFAULT_TRACKLET_KEY,
+        lineage_key: str | None = DEFAULT_LINEAGE_KEY,
     ):
         if not isinstance(tracks, SolutionTracks):
             raise ValueError("Currently the TrackAnnotator only works on SolutionTracks")
 
         self.tracks: SolutionTracks  # Narrow type from base class
-        self.tracklet_key = tracklet_key
-        self.lineage_key = lineage_key
+        self.tracklet_key = (
+            tracklet_key if tracklet_key is not None else DEFAULT_TRACKLET_KEY
+        )
+        self.lineage_key = lineage_key if lineage_key is not None else DEFAULT_LINEAGE_KEY
 
         feats = {
             self.tracklet_key: TrackletID(),

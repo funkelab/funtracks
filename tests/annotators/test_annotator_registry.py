@@ -11,7 +11,7 @@ def test_annotator_registry_init_with_segmentation(graph_clean, segmentation_2d)
     segmentation."""
     tracks = Tracks(graph_clean, segmentation=segmentation_2d, ndim=3, **track_attrs)
 
-    annotator_types = [type(ann) for ann in tracks.annotators.annotators]
+    annotator_types = [type(ann) for ann in tracks.annotators]
     assert RegionpropsAnnotator in annotator_types
     assert EdgeAnnotator in annotator_types
     assert TrackAnnotator not in annotator_types  # Not a SolutionTracks
@@ -21,7 +21,7 @@ def test_annotator_registry_init_without_segmentation(graph_2d_with_position):
     """Test AnnotatorRegistry doesn't create annotators without segmentation."""
     tracks = Tracks(graph_2d_with_position, segmentation=None, ndim=3, **track_attrs)
 
-    annotator_types = [type(ann) for ann in tracks.annotators.annotators]
+    annotator_types = [type(ann) for ann in tracks.annotators]
     assert RegionpropsAnnotator not in annotator_types
     assert EdgeAnnotator not in annotator_types
     assert TrackAnnotator not in annotator_types
@@ -34,7 +34,7 @@ def test_annotator_registry_init_solution_tracks(graph_clean, segmentation_2d):
         graph_clean, segmentation=segmentation_2d, ndim=3, **track_attrs
     )
 
-    annotator_types = [type(ann) for ann in tracks.annotators.annotators]
+    annotator_types = [type(ann) for ann in tracks.annotators]
     assert RegionpropsAnnotator in annotator_types
     assert EdgeAnnotator in annotator_types
     assert TrackAnnotator in annotator_types
@@ -178,9 +178,7 @@ def test_compute_strict_validation(graph_clean, segmentation_2d):
 
     # Get the RegionpropsAnnotator from the annotators
     rp_ann = next(
-        ann
-        for ann in tracks.annotators.annotators
-        if isinstance(ann, RegionpropsAnnotator)
+        ann for ann in tracks.annotators if isinstance(ann, RegionpropsAnnotator)
     )
 
     # Enable area first

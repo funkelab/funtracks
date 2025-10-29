@@ -2,83 +2,64 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from ._edge_annotator import EdgeAnnotator
 from ._graph_annotator import GraphAnnotator
-from ._regionprops_annotator import RegionpropsAnnotator
-from ._track_annotator import TrackAnnotator
 
 if TYPE_CHECKING:
     from funtracks.actions import BasicAction
-    from funtracks.data_model import Tracks
     from funtracks.features import Feature
 
 
-class AnnotatorRegistry(GraphAnnotator):
-    """A composite annotator that manages all available annotators.
+class AnnotatorRegistry(list[GraphAnnotator]):
+    """A list of annotators with coordinated operations.
 
-    This class acts as a registry of all annotator types and automatically
-    instantiates the appropriate ones based on the Tracks instance and the
-    annotators' requirements (segmentation, SolutionTracks, etc.). It then
-    broadcasts operations to all registered annotators.
+    Inherits from list[GraphAnnotator], so can be used directly as a list.
+    Provides coordinated compute/update/enable/disable operations across all annotators.
 
-    Attributes:
-        annotators: List of instantiated annotators
-        ANNOTATOR_CLASSES: List of all available annotator classes
+    Example:
+        annotators = AnnotatorRegistry([
+            RegionpropsAnnotator(tracks, pos_key="centroid"),
+            EdgeAnnotator(tracks),
+            TrackAnnotator(tracks, tracklet_key="track_id"),
+        ])
+
+        # Can use as a list
+        annotators.append(MyCustomAnnotator(tracks))
+
+        # Coordinated operations
+        annotators.enable_features(["area", "iou"])
+        annotators.compute()
     """
 
-    # Registry of all available annotator classes
-    ANNOTATOR_CLASSES: list[type[GraphAnnotator]] = [
-        RegionpropsAnnotator,
-        EdgeAnnotator,
-        TrackAnnotator,
-    ]
-
-    @classmethod
-    def get_managed_features(cls, tracks: Tracks) -> dict[str, Feature]:
-        """Get all features that would be managed by annotators.
-
-        This is a class method so it can be called before creating a Tracks instance,
-        allowing Tracks to build a complete FeatureDict from the start.
+    def __init__(self, annotators: list[GraphAnnotator]):
+        """Initialize with a list of annotators.
 
         Args:
-            tracks: The tracks to get managed features for
-
-        Returns:
-            Dictionary mapping feature keys to Feature definitions
+            annotators: List of instantiated annotator objects
         """
-        features: dict[str, Feature] = {}
-
-        # Get features from each annotator class
-        for annotator_class in cls.ANNOTATOR_CLASSES:
-            features.update(annotator_class.get_available_features(tracks))  # type: ignore[attr-defined]
-
-        return features
-
-    def __init__(self, tracks: Tracks):
-        """Initialize the registry and create appropriate annotators.
-
-        Args:
-            tracks: The Tracks instance to create annotators for
-        """
-        # Don't call super().__init__() yet - we need to collect features first
-        self.tracks = tracks
-        self.annotators: list[GraphAnnotator] = []
-
-        # Instantiate annotators based on their can_annotate() method
-        for annotator_class in self.ANNOTATOR_CLASSES:
-            if annotator_class.can_annotate(tracks):  # type: ignore[attr-defined]
-                self.annotators.append(annotator_class(tracks))  # type: ignore[call-arg]
+        super().__init__(annotators)
 
     @property
-    def all_features(self) -> dict[str, tuple[Feature, bool]]:  # type: ignore[override]
-        """Dynamically aggregate all_features from child annotators.
+    def all_features(self) -> dict[str, tuple[Feature, bool]]:
+        """Dynamically aggregate all_features from all annotators.
 
         Returns:
             Dictionary mapping feature keys to (Feature, is_enabled) tuples
         """
         aggregated = {}
-        for annotator in self.annotators:
+        for annotator in self:
             aggregated.update(annotator.all_features)
+        return aggregated
+
+    @property
+    def features(self) -> dict[str, Feature]:
+        """Get all currently enabled features from all annotators.
+
+        Returns:
+            Dictionary mapping feature keys to Feature definitions (only enabled features)
+        """
+        aggregated = {}
+        for annotator in self:
+            aggregated.update(annotator.features)
         return aggregated
 
     def compute(self, feature_keys: list[str] | None = None) -> None:
@@ -88,7 +69,7 @@ class AnnotatorRegistry(GraphAnnotator):
             feature_keys: Optional list of specific feature keys to compute.
                 If None, computes all currently active features.
         """
-        for annotator in self.annotators:
+        for annotator in self:
             annotator.compute(feature_keys)
 
     def update(self, action: BasicAction) -> None:
@@ -97,7 +78,7 @@ class AnnotatorRegistry(GraphAnnotator):
         Args:
             action: The action that triggered this update
         """
-        for annotator in self.annotators:
+        for annotator in self:
             annotator.update(action)
 
     def enable_features(self, keys: list[str]) -> None:
@@ -116,7 +97,7 @@ class AnnotatorRegistry(GraphAnnotator):
             raise KeyError(f"Features not available: {not_found}")
 
         # All features exist - proceed with enabling
-        for annotator in self.annotators:
+        for annotator in self:
             annotator.enable_features(keys)
 
     def disable_features(self, keys: list[str]) -> None:
@@ -135,5 +116,5 @@ class AnnotatorRegistry(GraphAnnotator):
             raise KeyError(f"Features not available: {not_found}")
 
         # All features exist - proceed with disabling
-        for annotator in self.annotators:
+        for annotator in self:
             annotator.disable_features(keys)

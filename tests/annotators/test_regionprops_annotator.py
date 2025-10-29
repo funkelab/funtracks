@@ -45,9 +45,7 @@ class TestRegionpropsAnnotator:
 
         # Get the RegionpropsAnnotator from the registry
         rp_ann = next(
-            ann
-            for ann in tracks.annotators.annotators
-            if isinstance(ann, RegionpropsAnnotator)
+            ann for ann in tracks.annotators if isinstance(ann, RegionpropsAnnotator)
         )
         # Enable features through tracks
         tracks.enable_features(list(rp_ann.all_features.keys()))
@@ -59,7 +57,7 @@ class TestRegionpropsAnnotator:
 
         # Use UpdateNodeSeg action to modify segmentation and update features
         UpdateNodeSeg(tracks, node_id, pixels_to_remove, added=False)
-        assert tracks.get_area(node_id) == expected_area
+        assert tracks.get_node_attr(node_id, "area") == expected_area
         for key in rp_ann.features:
             assert key in tracks.graph.nodes[node_id]
 
@@ -80,9 +78,7 @@ class TestRegionpropsAnnotator:
         tracks = Tracks(graph, segmentation=seg, ndim=ndim, **track_attrs)
         # Get the RegionpropsAnnotator from the registry
         rp_ann = next(
-            ann
-            for ann in tracks.annotators.annotators
-            if isinstance(ann, RegionpropsAnnotator)
+            ann for ann in tracks.annotators if isinstance(ann, RegionpropsAnnotator)
         )
         all_feature_keys = list(rp_ann.all_features.keys())
         to_remove_key = all_feature_keys[1]  # area
@@ -135,7 +131,7 @@ class TestRegionpropsAnnotator:
         tracks.enable_features(["area", "track_id"])
 
         node_id = 1
-        initial_area = tracks.get_area(node_id)
+        initial_area = tracks.get_node_attr(node_id, "area")
 
         # Manually modify segmentation (without triggering an action)
         # Remove half the pixels from node 1
@@ -157,6 +153,6 @@ class TestRegionpropsAnnotator:
         UpdateTrackID(tracks, node_id, new_track_id)
 
         # Area should remain unchanged (no recomputation happened despite seg change)
-        assert tracks.get_area(node_id) == initial_area
+        assert tracks.get_node_attr(node_id, "area") == initial_area
         # But track_id should be updated
         assert tracks.get_track_id(node_id) == new_track_id

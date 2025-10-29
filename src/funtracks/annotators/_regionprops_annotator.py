@@ -75,9 +75,9 @@ class RegionpropsAnnotator(GraphAnnotator):
     def __init__(
         self,
         tracks: Tracks,
-        pos_key: str = DEFAULT_POS_KEY,
+        pos_key: str | None = DEFAULT_POS_KEY,
     ):
-        self.pos_key = pos_key
+        self.pos_key: str = pos_key if pos_key is not None else DEFAULT_POS_KEY
         self.area_key = DEFAULT_AREA_KEY
         self.ellipse_axis_radii_key = DEFAULT_ELLIPSE_AXIS_KEY
         self.circularity_key = DEFAULT_CIRCULARITY_KEY

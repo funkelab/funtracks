@@ -40,11 +40,9 @@ class TestEdgeAnnotator:
     def test_update_all(self, get_graph, get_segmentation, ndim) -> None:
         graph = get_graph(ndim, with_features="clean")
         seg = get_segmentation(ndim)
-        tracks = Tracks(graph, segmentation=seg, ndim=ndim, **track_attrs)
+        tracks = Tracks(graph, segmentation=seg, ndim=ndim, **track_attrs)  # type: ignore
         # Get the EdgeAnnotator from the registry
-        ann = next(
-            ann for ann in tracks.annotators.annotators if isinstance(ann, EdgeAnnotator)
-        )
+        ann = next(ann for ann in tracks.annotators if isinstance(ann, EdgeAnnotator))
         # Enable features through tracks (which updates the registry)
         tracks.enable_features(list(ann.all_features.keys()))
 
@@ -77,9 +75,7 @@ class TestEdgeAnnotator:
         seg = get_segmentation(ndim)
         tracks = Tracks(graph, segmentation=seg, ndim=ndim, **track_attrs)
         # Get the EdgeAnnotator from the registry
-        ann = next(
-            ann for ann in tracks.annotators.annotators if isinstance(ann, EdgeAnnotator)
-        )
+        ann = next(ann for ann in tracks.annotators if isinstance(ann, EdgeAnnotator))
         # Enable features through tracks
         tracks.enable_features(list(ann.all_features.keys()))
 
@@ -97,7 +93,7 @@ class TestEdgeAnnotator:
         tracks.set_pixels(pixels_to_remove, 0)
 
         # Compute at tracks level - this should not update the removed feature
-        for a in tracks.annotators.annotators:
+        for a in tracks.annotators:
             if isinstance(a, EdgeAnnotator):
                 a.compute()
         # IoU was computed before removal, so value is still there
@@ -114,7 +110,7 @@ class TestEdgeAnnotator:
     def test_missing_seg(self, get_graph, ndim) -> None:
         """Test that EdgeAnnotator gracefully handles missing segmentation."""
         graph = get_graph(ndim, with_features="clean")
-        tracks = Tracks(graph, segmentation=None, ndim=ndim, **track_attrs)
+        tracks = Tracks(graph, segmentation=None, ndim=ndim, **track_attrs)  # type: ignore
 
         ann = EdgeAnnotator(tracks)
         assert len(ann.features) == 0

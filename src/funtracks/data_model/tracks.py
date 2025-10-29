@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from funtracks.actions import BasicAction
+    from funtracks.annotators import AnnotatorRegistry, GraphAnnotator
 
 AttrValue: TypeAlias = Any
 Node: TypeAlias = int
@@ -69,59 +70,40 @@ class Tracks:
         features: FeatureDict | None = None,
         existing_features: list[str] | None = None,
     ):
-        if features is not None and (time_attr is not None or pos_attr is not None):
-            warn(
-                "Provided both FeatureDict and pos_attr or time_attr: ignoring attr "
-                "arguments ({pos_attr=}, {time_attr=}).",
-                stacklevel=2,
-            )
         self.graph = graph
         self.segmentation = segmentation
         self.scale = scale
         self.ndim = self._compute_ndim(segmentation, scale, ndim)
         self.axis_names = ["z", "y", "x"] if self.ndim == 4 else ["y", "x"]
+
+        # initialization steps:
+        # 1. set up feature dict (or use provided)
+        # 2. set up anotator registry
+        # 3. enable core features
+
+        # 1. set up feature dictionary for keeping track of features on graph
+        if features is not None and (
+            time_attr is not None or pos_attr is not None or tracklet_attr is not None
+        ):
+            warn(
+                "Provided both FeatureDict and pos, time, or tracklet attr: ignoring attr"
+                f" arguments ({pos_attr=}, {time_attr=}, {tracklet_attr=}).",
+                stacklevel=2,
+            )
         self.features = (
             self._get_feature_set(time_attr, pos_attr, tracklet_attr)
             if features is None
             else features
         )
+        # 2. Set up annotator registry for managing feature computation
+        self.annotators = self._get_annotators()
 
-        # Initialize AnnotatorRegistry for managing feature computation
-        # Import here to avoid circular dependency
-        from funtracks.annotators import (
-            AnnotatorRegistry,
-            RegionpropsAnnotator,
-            TrackAnnotator,
-        )
-
-        self.annotators = AnnotatorRegistry(self)
-
+        # 3. Enable core features
         # If features FeatureDict was provided, enable those features in annotators
         if features is not None:
-            # Enable all features that exist in both FeatureDict and annotators
-            for key in self.features:
-                if key in self.annotators.all_features:
-                    self.annotators.enable_features([key])
+            self._activate_features_from_dict()
         else:
-            # Register core features from annotators in the features dict
-            for annotator in self.annotators.annotators:
-                if isinstance(annotator, RegionpropsAnnotator):
-                    feature = annotator.all_features[annotator.pos_key][0]
-                    self.features.register_position_feature(annotator.pos_key, feature)
-                elif isinstance(annotator, TrackAnnotator):
-                    feature = annotator.all_features[annotator.tracklet_key][0]
-                    self.features.register_tracklet_feature(
-                        annotator.tracklet_key, feature
-                    )
-
-            if existing_features is not None:
-                for key in existing_features:
-                    if key in self.annotators.all_features:
-                        feature, _ = self.annotators.all_features[key]
-                        # Add to FeatureDict if not already there
-                        if key not in self.features:
-                            self.features[key] = feature
-                        self.annotators.enable_features([key])
+            self._activate_default_features(existing_features)
 
     @property
     def time_attr(self):
@@ -148,19 +130,22 @@ class Tracks:
         time_attr: str,
         pos_attr: str | tuple[str, ...] | list[str],
         tracklet_key: str,
-    ):
-        """Create a FeatureDict with static features only.
+    ) -> FeatureDict:
+        """Create a FeatureDict with static (user-provided) features only.
 
-        Static features are those provided by the user on the graph (time, position
-        when segmentation is None). Managed features (computed from segmentation or
-        graph structure) are added by annotators after initialization.
+        Static features are those already present on the graph nodes (time, position
+        when no segmentation). Managed features (computed from segmentation or graph
+        structure) are added by annotators and registered later.
 
         Args:
-            time_attr: The attribute name for time
-            pos_attr: The attribute name(s) for position
+            time_attr: Graph attribute name for time (e.g., "t", "time")
+            pos_attr: Graph attribute name(s) for position. Can be:
+                - Single string: one attribute containing position array (e.g., "pos")
+                - List/tuple: multiple attributes, one per axis (e.g., ["y", "x"])
+            tracklet_key: Graph attribute name for tracklet/track IDs (e.g., "track_id")
 
         Returns:
-            FeatureDict with static features
+            FeatureDict initialized with time feature and position if no segmentation
         """
         # Determine keys
         time_key = time_attr
@@ -202,6 +187,97 @@ class Tracks:
                 feature_dict.register_position_feature(single_position_key, pos_feature)
 
         return feature_dict
+
+    def _get_annotators(self) -> AnnotatorRegistry:
+        """Instantiate and return core annotators based on available data.
+
+        Creates annotators conditionally:
+        - RegionpropsAnnotator: Only if segmentation is provided
+        - EdgeAnnotator: Only if segmentation is provided
+        - TrackAnnotator: Only if this is a SolutionTracks instance
+
+        Each annotator is configured with appropriate keys from self.features.
+
+        Returns:
+            AnnotatorRegistry containing all applicable annotators
+        """
+        # Import here to avoid circular dependency
+        from funtracks.annotators import (
+            AnnotatorRegistry,
+            EdgeAnnotator,
+            RegionpropsAnnotator,
+            TrackAnnotator,
+        )
+
+        annotator_list: list[GraphAnnotator] = []
+
+        # RegionpropsAnnotator: requires segmentation
+        if RegionpropsAnnotator.can_annotate(self):
+            # Pass position_key only if it's a single string (not multi-axis list)
+            pos_key = (
+                self.features.position_key
+                if isinstance(self.features.position_key, str)
+                else None
+            )
+            annotator_list.append(RegionpropsAnnotator(self, pos_key=pos_key))
+
+        # EdgeAnnotator: requires segmentation
+        if EdgeAnnotator.can_annotate(self):
+            annotator_list.append(EdgeAnnotator(self))
+
+        # TrackAnnotator: requires SolutionTracks (checked in can_annotate)
+        if TrackAnnotator.can_annotate(self):
+            annotator_list.append(
+                TrackAnnotator(self, tracklet_key=self.features.tracklet_key)  # type: ignore
+            )
+        return AnnotatorRegistry(annotator_list)
+
+    def _activate_features_from_dict(self) -> None:
+        """Enable features that exist in both the FeatureDict and annotators.
+
+        Used when a pre-built FeatureDict is provided to __init__. Enables features
+        in annotators (sets computation flags) but does NOT compute them, assuming
+        they already exist on the graph.
+        """
+        # Enable all features that exist in both FeatureDict and annotators
+        for key in self.features:
+            if key in self.annotators.all_features:
+                self.annotators.enable_features([key])
+
+    def _activate_default_features(
+        self, existing_features: list[str] | None = None
+    ) -> None:
+        """Register core features and optionally enable pre-existing features.
+
+        Used when no FeatureDict is provided to __init__. Performs two tasks:
+        1. Registers position/tracklet features from annotators into FeatureDict
+        2. Enables any features listed in existing_features (without computing)
+
+        Args:
+            existing_features: Optional list of feature keys that already exist on
+                the graph and should not be recomputed (e.g., ["area", "iou"])
+        """
+        # Import here to avoid circular dependency
+        from funtracks.annotators import RegionpropsAnnotator, TrackAnnotator
+
+        # Register core features from annotators in the features dict
+        for annotator in self.annotators:
+            if isinstance(annotator, RegionpropsAnnotator):
+                feature = annotator.all_features[annotator.pos_key][0]
+                self.features.register_position_feature(annotator.pos_key, feature)
+            elif isinstance(annotator, TrackAnnotator):
+                feature = annotator.all_features[annotator.tracklet_key][0]
+                self.features.register_tracklet_feature(annotator.tracklet_key, feature)
+
+        # Enable other features labeled as already present (don't compute)
+        if existing_features is not None:
+            for key in existing_features:
+                if key in self.annotators.all_features:
+                    feature, _ = self.annotators.all_features[key]
+                    # Add to FeatureDict if not already there
+                    if key not in self.features:
+                        self.features[key] = feature
+                    self.annotators.enable_features([key])
 
     def nodes(self):
         return np.array(self.graph.nodes())

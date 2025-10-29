@@ -66,7 +66,7 @@ class TestUserAddDeleteNode:
         assert tracks.get_position(node_id) == position
         assert tracks.get_track_id(node_id) == track_id
         if with_seg:
-            assert tracks.get_area(node_id) == 1
+            assert tracks.get_node_attr(node_id, "area") == 1
 
         inverse = action.inverse()
         assert not graph.has_node(node_id)
@@ -80,7 +80,7 @@ class TestUserAddDeleteNode:
         assert tracks.get_position(node_id) == position
         assert tracks.get_track_id(node_id) == track_id
         if with_seg:
-            assert tracks.get_area(node_id) == 1
+            assert tracks.get_node_attr(node_id, "area") == 1
         # TODO: error if node already exists?
 
     def test_user_delete_node(self, get_tracks, ndim, with_seg):

@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 import networkx as nx
 
-from funtracks.features import FeatureDict
+from funtracks.features import FeatureDict, TrackletID
 
 from .tracks import Tracks
 
@@ -44,13 +44,26 @@ class SolutionTracks(Tracks):
             existing_features=existing_features,
         )
         self.track_annotator = self._get_track_annotator()
-
-        # If track_id is not in existing_features, we need to enable it
-        if (
-            existing_features is None
-            or self.track_annotator.tracklet_key not in existing_features
+        recompute = True
+        if features is not None and features.tracklet_key in features:
+            assert features.tracklet_key == self.track_annotator.tracklet_key
+            recompute = False
+        elif (
+            existing_features is not None
+            and self.track_annotator.tracklet_key in existing_features
         ):
+            recompute = False
+
+        # If track_id is not already present, we need to enable it (and compute it)
+        tracklet_key = self.track_annotator.tracklet_key
+        if recompute:
             self.enable_features([self.track_annotator.tracklet_key])
+            self.features.register_tracklet_feature(
+                tracklet_key, self.track_annotator.features[tracklet_key]
+            )
+        else:
+            # otherwise just mark it for reocmputation
+            self.annotators.enable_features([self.track_annotator.tracklet_key])
 
     def _get_track_annotator(self):
         """Get the TrackAnnotator instance from the annotator registry.
@@ -63,7 +76,7 @@ class SolutionTracks(Tracks):
         """
         from funtracks.annotators import TrackAnnotator
 
-        for annotator in self.annotators.annotators:
+        for annotator in self.annotators:
             if isinstance(annotator, TrackAnnotator):
                 return annotator
         raise RuntimeError(
@@ -72,8 +85,6 @@ class SolutionTracks(Tracks):
 
     @classmethod
     def from_tracks(cls, tracks: Tracks):
-        # Get existing features from tracks
-        existing_features = list(tracks.features.keys())
         if (tracklet_key := tracks.features.tracklet_key) is not None:
             # Check if all nodes have track_id before trusting existing track IDs
             # Short circuit on first missing track_id
@@ -82,22 +93,19 @@ class SolutionTracks(Tracks):
                 if tracks.get_node_attr(node, tracklet_key) is None:
                     all_nodes_have_track_id = False
                     break
-
             # Only add track_id to existing_features if ALL nodes have it
             if all_nodes_have_track_id:
-                existing_features.append(tracklet_key)
+                tracks.features[tracklet_key] = TrackletID()
             else:
                 if tracklet_key in tracks.features:
                     del tracks.features[tracklet_key]
                 tracks.features.tracklet_key = None
-
         return cls(
             tracks.graph,
             segmentation=tracks.segmentation,
             scale=tracks.scale,
             ndim=tracks.ndim,
             features=tracks.features,
-            existing_features=existing_features,
         )
 
     @property
