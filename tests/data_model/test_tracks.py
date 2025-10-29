@@ -11,7 +11,7 @@ track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
 
 def test_create_tracks(graph_3d_with_computed_features: nx.DiGraph, segmentation_3d):
     # create empty tracks
-    tracks = Tracks(graph=nx.DiGraph(), ndim=3, **track_attrs)
+    tracks = Tracks(graph=nx.DiGraph(), ndim=3, **track_attrs)  # type: ignore[arg-type]
     assert tracks.features.position_key == "pos"
     assert isinstance(tracks.features["pos"], dict)
     with pytest.raises(KeyError):
@@ -21,7 +21,7 @@ def test_create_tracks(graph_3d_with_computed_features: nx.DiGraph, segmentation
     tracks = Tracks(
         graph=graph_3d_with_computed_features,
         ndim=4,
-        **track_attrs,
+        **track_attrs,  # type: ignore[arg-type]
         existing_features=["pos", "area", "iou"],
     )
     pos_key = tracks.features.position_key
@@ -37,7 +37,7 @@ def test_create_tracks(graph_3d_with_computed_features: nx.DiGraph, segmentation
     tracks = Tracks(
         graph=graph_3d_with_computed_features,
         segmentation=segmentation_3d,
-        **track_attrs,
+        **track_attrs,  # type: ignore[arg-type]
         existing_features=["pos", "area", "iou"],
     )
     pos_key = tracks.features.position_key
@@ -75,7 +75,10 @@ def test_create_tracks(graph_3d_with_computed_features: nx.DiGraph, segmentation
         graph_3d_with_computed_features.nodes[node]["x"] = x
 
     tracks = Tracks(
-        graph=graph_3d_with_computed_features, pos_attr=pos_attr, ndim=4, **track_attrs
+        graph=graph_3d_with_computed_features,
+        pos_attr=pos_attr,
+        ndim=4,
+        **track_attrs,  # type: ignore[arg-type]
     )
     assert tracks.get_positions([1]).tolist() == [[50, 50, 50]]
     tracks.set_position(1, [55, 56, 57])
