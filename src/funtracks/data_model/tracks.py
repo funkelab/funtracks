@@ -102,7 +102,7 @@ class Tracks:
         # 1. set up feature dict (or use provided)
         # 2. set up anotator registry
         # 3. activate existing features
-        # 4. enable core features (compute them) TODO
+        # 4. enable core features (compute them)
 
         # 1. set up feature dictionary for keeping track of features on graph
         if features is not None and (
@@ -128,12 +128,17 @@ class Tracks:
         else:
             self._activate_default_features(existing_features)
 
-        # # 4. Enable core features TODO uncomment
-        # # If position was not already on graph, compute it.
-        # pos_key = self.features.position_key
-        # existing_features = [] if existing_features is None else existing_features
-        # if pos_key in self.annotators.features and pos_key not in existing_features:
-        #     self.enable_features(["pos_key"])
+        # 4. Enable core features
+        # If position was not already on graph, compute it.
+        pos_key = self.features.position_key
+        existing_features = [] if existing_features is None else existing_features
+        # don't currently support storing computed position in a list of features
+        if (
+            isinstance(pos_key, str)
+            and pos_key in self.annotators.features
+            and pos_key not in existing_features
+        ):
+            self.enable_features([pos_key])
 
     @property
     def time_attr(self):

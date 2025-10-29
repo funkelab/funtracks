@@ -74,27 +74,33 @@ class SolutionTracks(Tracks):
             features=features,
             existing_features=existing_features,
         )
+
+        # initialization steps:
+        # 1. set up feature dict (or use provided) - handled in super init
+        # 2. set up anotator registry - handled in super init
+        # 3. activate existing features - handled in super init
+        # 4. enable core features (compute them) - position handled in super init,
+        #   need to handle track_id
+
+        # If track_id is not already present, we need to enable it (and compute it)
         self.track_annotator = self._get_track_annotator()
         recompute = True
-        if features is not None and features.tracklet_key in features:
-            assert features.tracklet_key == self.track_annotator.tracklet_key
-            recompute = False
-        elif (
-            existing_features is not None
-            and self.track_annotator.tracklet_key in existing_features
+        if (
+            features is not None
+            and features.tracklet_key in features
+            or (
+                existing_features is not None
+                and self.track_annotator.tracklet_key in existing_features
+            )
         ):
             recompute = False
 
-        # If track_id is not already present, we need to enable it (and compute it)
         tracklet_key = self.track_annotator.tracklet_key
         if recompute:
             self.enable_features([self.track_annotator.tracklet_key])
             self.features.register_tracklet_feature(
                 tracklet_key, self.track_annotator.features[tracklet_key]
             )
-        else:
-            # otherwise just activate it so it will be updated on changes
-            self.annotators.activate_features([self.track_annotator.tracklet_key])
 
     def _get_track_annotator(self):
         """Get the TrackAnnotator instance from the annotator registry.
