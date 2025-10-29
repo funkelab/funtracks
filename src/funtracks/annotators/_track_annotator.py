@@ -18,6 +18,10 @@ if TYPE_CHECKING:
     from funtracks.features import Feature
 
 
+DEFAULT_TRACKLET_KEY = "tracklet_id"
+DEFAULT_LINEAGE_KEY = "lineage_id"
+
+
 class TrackAnnotator(GraphAnnotator):
     """A graph annotator to compute tracklet and lineage IDs for SolutionTracks only.
 
@@ -77,22 +81,22 @@ class TrackAnnotator(GraphAnnotator):
         if not cls.can_annotate(tracks):
             return {}
         return {
-            "track_id": TrackletID(),
-            "lineage_id": LineageID(),
+            DEFAULT_TRACKLET_KEY: TrackletID(),
+            DEFAULT_LINEAGE_KEY: LineageID(),
         }
 
     def __init__(
         self,
         tracks: SolutionTracks,
-        tracklet_key: str | None = None,
-        lineage_key: str | None = None,
+        tracklet_key: str = DEFAULT_TRACKLET_KEY,
+        lineage_key: str = DEFAULT_LINEAGE_KEY,
     ):
         if not isinstance(tracks, SolutionTracks):
             raise ValueError("Currently the TrackAnnotator only works on SolutionTracks")
 
         self.tracks: SolutionTracks  # Narrow type from base class
-        self.tracklet_key = tracklet_key if tracklet_key is not None else "track_id"
-        self.lineage_key = lineage_key if lineage_key is not None else "lineage_id"
+        self.tracklet_key = tracklet_key
+        self.lineage_key = lineage_key
 
         feats = {
             self.tracklet_key: TrackletID(),
