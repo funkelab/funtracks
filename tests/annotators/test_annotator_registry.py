@@ -40,35 +40,52 @@ def test_annotator_registry_init_solution_tracks(graph_clean, segmentation_2d):
     assert TrackAnnotator in annotator_types
 
 
-def test_enable_features(graph_clean, segmentation_2d):
-    """Test enable_features enables and computes multiple features efficiently."""
+def test_enable_disable_features(graph_clean, segmentation_2d):
     tracks = Tracks(graph_clean, segmentation=segmentation_2d, ndim=3, **track_attrs)
-
-    # Core features (time, pos) should be in tracks.features, but not enabled
-    assert "pos" in tracks.features
-    assert "t" in tracks.features
-    # Other features should NOT be in tracks.features initially
-    assert "area" not in tracks.features
-    assert "iou" not in tracks.features
 
     nodes = list(tracks.graph.nodes())
     edges = list(tracks.graph.edges())
 
-    # Enable multiple features at once
-    tracks.enable_features(["pos", "area", "iou"])
-
-    # All features should now be in FeatureDict
+    # Core features (time, pos, area) should be in tracks.features and computed
     assert "pos" in tracks.features
-    assert "area" in tracks.features
-    assert "iou" in tracks.features
-
-    # Check that node attributes were computed
+    assert "t" in tracks.features
+    assert "area" in tracks.features  # Core feature for backward compatibility
     assert tracks.graph.nodes[nodes[0]].get("pos") is not None
     assert tracks.graph.nodes[nodes[0]].get("area") is not None
 
-    # Check that edge attributes were computed
+    # Other features should NOT be in tracks.features initially
+    assert "iou" not in tracks.features
+    assert "circularity" not in tracks.features
+
+    # Enable multiple features at once
+    tracks.enable_features(["iou", "circularity"])
+
+    # Features should now be in FeatureDict
+    assert "iou" in tracks.features
+    assert "circularity" in tracks.features
+
+    # Verify values are actually computed on the graph
+    assert tracks.graph.nodes[nodes[0]].get("circularity") is not None
     if edges:
         assert tracks.graph.edges[edges[0]].get("iou") is not None
+
+    # Disable one feature
+    tracks.disable_features(["area"])
+
+    # area should be removed from FeatureDict
+    assert "area" not in tracks.features
+    assert "pos" in tracks.features
+    assert "iou" in tracks.features
+    assert "circularity" in tracks.features
+
+    # Values still exist on the graph (disabling doesn't erase computed values)
+    assert tracks.graph.nodes[nodes[0]].get("area") is not None
+
+    # Disable the remaining enabled features
+    tracks.disable_features(["pos", "iou", "circularity"])
+    assert "pos" not in tracks.features
+    assert "iou" not in tracks.features
+    assert "circularity" not in tracks.features
 
 
 def test_get_available_features(graph_clean, segmentation_2d):
@@ -84,76 +101,6 @@ def test_get_available_features(graph_clean, segmentation_2d):
     assert "area" in available  # regionprops
     assert "iou" in available  # edges
     assert "track_id" in available  # tracks
-
-
-def test_enable_disable_features(graph_clean, segmentation_2d):
-    """Test activate_features, disable_features, and get_active_features."""
-    tracks = Tracks(graph_clean, segmentation=segmentation_2d, ndim=3, **track_attrs)
-
-    # Core features (time, pos) are in FeatureDict but not enabled by default
-    active = tracks.get_active_features()
-    assert len(active) == 0
-    assert "pos" in tracks.features  # Core feature, always present
-    assert "t" in tracks.features  # Core feature, always present
-    assert "area" not in tracks.features
-    assert "iou" not in tracks.features
-
-    # Enable multiple features at once
-    tracks.enable_features(["pos", "area", "iou"])
-
-    # All three should be active, in FeatureDict, and computed on graph
-    active = tracks.get_active_features()
-    assert len(active) == 3
-    assert "pos" in active
-    assert "area" in active
-    assert "iou" in active
-    assert "pos" in tracks.features
-    assert "area" in tracks.features
-    assert "iou" in tracks.features
-
-    # Verify values are actually computed on the graph
-    nodes = list(tracks.graph.nodes())
-    edges = list(tracks.graph.edges())
-    assert tracks.graph.nodes[nodes[0]].get("pos") is not None
-    assert tracks.graph.nodes[nodes[0]].get("area") is not None
-    if edges:
-        assert tracks.graph.edges[edges[0]].get("iou") is not None
-
-    # Disable one feature
-    tracks.disable_features(["area"])
-
-    # Only pos and IoU should remain active
-    active = tracks.get_active_features()
-    assert len(active) == 2
-    assert "pos" in active
-    assert "area" not in active  # Disabled
-    assert "iou" in active
-    assert "pos" in tracks.features
-    assert "area" not in tracks.features  # Removed from FeatureDict
-    assert "iou" in tracks.features
-
-    # Values still exist on the graph (disabling doesn't erase computed values)
-    assert tracks.graph.nodes[nodes[0]].get("area") is not None
-
-    # Disable the remaining features
-    tracks.disable_features(["pos", "iou"])
-    active = tracks.get_active_features()
-    assert len(active) == 0
-    assert "pos" not in tracks.features
-    assert "iou" not in tracks.features
-
-
-def test_enable_features_computes(graph_clean, segmentation_2d):
-    """Test enable_features computes the features."""
-    tracks = Tracks(graph_clean, segmentation=segmentation_2d, ndim=3, **track_attrs)
-
-    # Enable (computes)
-    tracks.enable_features(["area", "pos"])
-
-    # Features should be computed
-    nodes = list(tracks.graph.nodes())
-    assert tracks.graph.nodes[nodes[0]].get("area") is not None
-    assert tracks.graph.nodes[nodes[0]].get("pos") is not None
 
 
 def test_enable_nonexistent_feature(graph_clean, segmentation_2d):

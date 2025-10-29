@@ -8,9 +8,9 @@ from funtracks.data_model import SolutionTracks, Tracks
 track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
 
 
-def test_recompute_track_ids(graph_2d_with_computed_features):
+def test_recompute_track_ids(graph_2d_with_position):
     tracks = SolutionTracks(
-        graph_2d_with_computed_features,
+        graph_2d_with_position,
         ndim=3,
         **track_attrs,
     )
@@ -18,12 +18,7 @@ def test_recompute_track_ids(graph_2d_with_computed_features):
 
 
 def test_next_track_id(graph_2d_with_computed_features):
-    tracks = SolutionTracks(
-        graph_2d_with_computed_features,
-        ndim=3,
-        **track_attrs,
-        existing_features=[track_attrs["tracklet_attr"]],
-    )
+    tracks = SolutionTracks(graph_2d_with_computed_features, ndim=3, **track_attrs)
     assert tracks.get_next_track_id() == 6
     AddNode(
         tracks,

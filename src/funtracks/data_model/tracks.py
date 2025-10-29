@@ -62,7 +62,6 @@ class Tracks:
         scale: list[float] | None = None,
         ndim: int | None = None,
         features: FeatureDict | None = None,
-        existing_features: list[str] | None = None,
     ):
         """Initialize a Tracks object.
 
@@ -87,10 +86,8 @@ class Tracks:
             features (FeatureDict | None): Pre-built FeatureDict with feature
                 definitions. If provided, time_attr/pos_attr/tracklet_attr are ignored.
                 Assumes that all features in the dict already exist on the graph (will
-                be activated but not recomputed)
-            existing_features (list[str] | None): List of feature keys that already
-                exist on the graph and should not be recomputed (e.g., ["area", "iou"]).
-                Only used when features is None.
+                be activated but not recomputed). If None, core computed features (pos,
+                area, track_id) are auto-detected by checking if they exist on the graph.
         """
         self.graph = graph
         self.segmentation = segmentation
@@ -121,24 +118,12 @@ class Tracks:
         # 2. Set up annotator registry for managing feature computation
         self.annotators = self._get_annotators()
 
-        # 3. Activate existing features
+        # 3. Set up core computed features
         # If features FeatureDict was provided, activate those features in annotators
         if features is not None:
             self._activate_features_from_dict()
         else:
-            self._activate_default_features(existing_features)
-
-        # 4. Enable core features
-        # If position was not already on graph, compute it.
-        pos_key = self.features.position_key
-        existing_features = [] if existing_features is None else existing_features
-        # don't currently support storing computed position in a list of features
-        if (
-            isinstance(pos_key, str)
-            and pos_key in self.annotators.features
-            and pos_key not in existing_features
-        ):
-            self.enable_features([pos_key])
+            self._setup_core_computed_features()
 
     @property
     def time_attr(self):
@@ -286,40 +271,55 @@ class Tracks:
             if key in self.annotators.all_features:
                 self.annotators.activate_features([key])
 
-    def _activate_default_features(
-        self, existing_features: list[str] | None = None
-    ) -> None:
-        """Register core features and optionally activate pre-existing features.
+    def _check_existing_feature(self, key: str) -> bool:
+        """Detect if a key already exists on the graph by sampling the first node.
 
-        Used when no FeatureDict is provided to __init__. Performs two tasks:
-        1. Registers position/tracklet features from annotators into FeatureDict
-        2. Activates any features listed in existing_features (without computing)
+        Returns:
+            bool: True if the key is on the first sampled node or there are no nodes,
+                and False if missing from the first node.
+        """
+        if self.graph.number_of_nodes() == 0:
+            return True
 
-        Args:
-            existing_features: Optional list of feature keys that already exist on
-                the graph and should not be recomputed (e.g., ["area", "iou"])
+        # Get a sample node to check which attributes exist
+        sample_node = next(iter(self.graph.nodes()))
+        node_attrs = set(self.graph.nodes[sample_node].keys())
+        return key in node_attrs
+
+    def _setup_core_computed_features(self) -> None:
+        """Sets up the core computed features (area, position, tracklet if applicable)
+
+        Registers position/tracklet features from annotators into FeatureDict
+        For each core feature:
+        - Activates any features listed that are detected to exist (without computing)
+        - Enables any features that don't exist (compute fresh)
         """
         # Import here to avoid circular dependency
         from funtracks.annotators import RegionpropsAnnotator, TrackAnnotator
 
         # Register core features from annotators in the features dict
+        core_computed_features: list[str] = []
         for annotator in self.annotators:
             if isinstance(annotator, RegionpropsAnnotator):
-                feature = annotator.all_features[annotator.pos_key][0]
-                self.features.register_position_feature(annotator.pos_key, feature)
+                pos_key = annotator.pos_key
+                self.features.position_key = pos_key
+                core_computed_features.append(pos_key)
+                # special case for backward compatibility
+                core_computed_features.append("area")
             elif isinstance(annotator, TrackAnnotator):
-                feature = annotator.all_features[annotator.tracklet_key][0]
-                self.features.register_tracklet_feature(annotator.tracklet_key, feature)
-
-        # Activate other features labeled as already present (don't compute)
-        if existing_features is not None:
-            for key in existing_features:
-                if key in self.annotators.all_features:
+                tracklet_key = annotator.tracklet_key
+                self.features.tracklet_key = tracklet_key
+                core_computed_features.append(tracklet_key)
+        for key in core_computed_features:
+            if self._check_existing_feature(key):
+                # Add to FeatureDict if not already there
+                if key not in self.features:
                     feature, _ = self.annotators.all_features[key]
-                    # Add to FeatureDict if not already there
-                    if key not in self.features:
-                        self.features[key] = feature
-                    self.annotators.activate_features([key])
+                    self.features[key] = feature
+                self.annotators.activate_features([key])
+            else:
+                # enable it (compute it)
+                self.enable_features([key])
 
     def nodes(self):
         return np.array(self.graph.nodes())
@@ -703,14 +703,6 @@ class Tracks:
             Dictionary mapping feature keys to Feature definitions
         """
         return {k: feat for k, (feat, _) in self.annotators.all_features.items()}
-
-    def get_active_features(self) -> dict[str, Feature]:
-        """Get all currently active (included) features.
-
-        Returns:
-            Dictionary mapping feature keys to Feature definitions
-        """
-        return self.annotators.features
 
     def enable_features(self, feature_keys: list[str]) -> None:
         """Enable multiple features for computation efficiently.

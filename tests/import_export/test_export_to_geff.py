@@ -44,11 +44,8 @@ def test_export_to_geff(
             for i, key in enumerate(pos_keys):
                 graph.nodes[node][key] = pos[i]
             del graph.nodes[node]["pos"]
-        # Create Tracks with split position attributes (always use Tracks for split pos)
-        # Specify existing features if segmentation is used
-        existing_features = list(pos_keys) if with_seg else None
-        if with_seg:
-            existing_features.extend(["area", "iou"])
+        # Create Tracks with split position attributes
+        # Features like area, track_id will be auto-detected from the graph
         tracks_cls = SolutionTracks if is_solution else Tracks
         tracks = tracks_cls(
             graph,
@@ -57,7 +54,6 @@ def test_export_to_geff(
             pos_attr=pos_keys,
             tracklet_attr="track_id",
             ndim=ndim,
-            existing_features=existing_features,
         )
     else:
         # Use get_tracks fixture for the simple case

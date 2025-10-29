@@ -11,7 +11,6 @@ def test__add_nodes_no_seg(graph_2d_with_computed_features):
         ndim=3,
         time_attr="t",
         tracklet_attr="track_id",
-        existing_features=["pos", "track_id"],
     )
     controller = TracksController(tracks)
 
@@ -74,7 +73,6 @@ def test__add_nodes_with_seg(graph_2d_with_computed_features, segmentation_2d):
         segmentation=segmentation_2d,
         time_attr="t",
         tracklet_attr="track_id",
-        existing_features=["pos", "area", "iou", "track_id"],
     )
     controller = TracksController(tracks)
 
@@ -180,7 +178,6 @@ def test__delete_nodes_no_seg(graph_2d_with_computed_features):
         ndim=3,
         time_attr="t",
         tracklet_attr="track_id",
-        existing_features=["pos", "track_id"],
     )
     controller = TracksController(tracks)
     num_edges = tracks.graph.number_of_edges()
@@ -230,7 +227,6 @@ def test__delete_nodes_with_seg(graph_2d_with_computed_features, segmentation_2d
         segmentation=segmentation_2d,
         time_attr="t",
         tracklet_attr="track_id",
-        existing_features=["pos", "area", "iou", "track_id"],
     )
     controller = TracksController(tracks)
     num_edges = tracks.graph.number_of_edges()
@@ -296,7 +292,6 @@ def test__add_remove_edges_no_seg(graph_2d_with_computed_features):
         ndim=3,
         time_attr="t",
         tracklet_attr="track_id",
-        existing_features=["pos", "track_id"],
     )
     controller = TracksController(tracks)
     num_edges = tracks.graph.number_of_edges()

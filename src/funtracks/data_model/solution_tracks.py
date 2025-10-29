@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 import networkx as nx
 
-from funtracks.features import FeatureDict, TrackletID
+from funtracks.features import FeatureDict
 
 from .tracks import Tracks
 
@@ -32,7 +32,6 @@ class SolutionTracks(Tracks):
         scale: list[float] | None = None,
         ndim: int | None = None,
         features: FeatureDict | None = None,
-        existing_features: list[str] | None = None,
     ):
         """Initialize a SolutionTracks object.
 
@@ -60,10 +59,8 @@ class SolutionTracks(Tracks):
             features (FeatureDict | None): Pre-built FeatureDict with feature
                 definitions. If provided, time_attr/pos_attr/tracklet_attr are ignored.
                 Assumes that all features in the dict already exist on the graph (will
-                be activated but not recomputed).
-            existing_features (list[str] | None): List of feature keys that already
-                exist on the graph and should not be recomputed (e.g., ["area", "iou"]).
-                Only used when features is None.
+                be activated but not recomputed). If None, core computed features (pos,
+                area, track_id) are auto-detected by checking if they exist on the graph.
         """
         super().__init__(
             graph,
@@ -74,35 +71,9 @@ class SolutionTracks(Tracks):
             scale=scale,
             ndim=ndim,
             features=features,
-            existing_features=existing_features,
         )
 
-        # initialization steps:
-        # 1. set up feature dict (or use provided) - handled in super init
-        # 2. set up anotator registry - handled in super init
-        # 3. activate existing features - handled in super init
-        # 4. enable core features (compute them) - position handled in super init,
-        #   need to handle track_id
-
-        # If track_id is not already present, we need to enable it (and compute it)
         self.track_annotator = self._get_track_annotator()
-        recompute = True
-        if (
-            features is not None
-            and features.tracklet_key in features
-            or (
-                existing_features is not None
-                and self.track_annotator.tracklet_key in existing_features
-            )
-        ):
-            recompute = False
-
-        tracklet_key = self.track_annotator.tracklet_key
-        if recompute:
-            self.enable_features([self.track_annotator.tracklet_key])
-            self.features.register_tracklet_feature(
-                tracklet_key, self.track_annotator.features[tracklet_key]
-            )
 
     def _get_track_annotator(self) -> TrackAnnotator:
         """Get the TrackAnnotator instance from the annotator registry.
@@ -124,28 +95,24 @@ class SolutionTracks(Tracks):
 
     @classmethod
     def from_tracks(cls, tracks: Tracks):
+        force_recompute = False
         if (tracklet_key := tracks.features.tracklet_key) is not None:
             # Check if all nodes have track_id before trusting existing track IDs
             # Short circuit on first missing track_id
-            all_nodes_have_track_id = True
             for node in tracks.graph.nodes():
                 if tracks.get_node_attr(node, tracklet_key) is None:
-                    all_nodes_have_track_id = False
+                    force_recompute = True
                     break
-            # Only add track_id to existing_features if ALL nodes have it
-            if all_nodes_have_track_id:
-                tracks.features[tracklet_key] = TrackletID()
-            else:
-                if tracklet_key in tracks.features:
-                    del tracks.features[tracklet_key]
-                tracks.features.tracklet_key = None
-        return cls(
+        soln_tracks = cls(
             tracks.graph,
             segmentation=tracks.segmentation,
             scale=tracks.scale,
             ndim=tracks.ndim,
             features=tracks.features,
         )
+        if force_recompute:
+            soln_tracks.enable_features([soln_tracks.features.tracklet_key])  # type: ignore
+        return soln_tracks
 
     @property
     def max_track_id(self) -> int:

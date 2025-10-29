@@ -132,13 +132,10 @@ def load_tracks(
             "ignore", message="Provided both FeatureDict and pos_attr or time_attr"
         )
         tracks: Tracks
-        features = attrs.get("features", {})
         if solution:
-            tracks = SolutionTracks(
-                graph, seg, **attrs, existing_features=list(features.keys())
-            )
+            tracks = SolutionTracks(graph, seg, **attrs)
         else:
-            tracks = Tracks(graph, seg, **attrs, existing_features=list(features.keys()))
+            tracks = Tracks(graph, seg, **attrs)
     return tracks
 
 

@@ -329,9 +329,10 @@ def import_from_geff(
         time_attr=time_attr,
         ndim=ndims,
         scale=scale,
-        existing_features=node_attrs_to_load_from_geff,
     )
-    # Compute any extra features that were requested  but not already loaded from geff
+    # TODO: properly import/activate static features that were loaded from geff using
+    # geff metadata to create the Feature
+    # Compute any extra features that were requested but not already loaded from geff
     features_to_compute = [
         feature_name
         for feature_name, _ in node_features.items()

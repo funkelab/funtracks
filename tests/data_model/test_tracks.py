@@ -22,7 +22,6 @@ def test_create_tracks(graph_3d_with_computed_features: nx.DiGraph, segmentation
         graph=graph_3d_with_computed_features,
         ndim=4,
         **track_attrs,  # type: ignore[arg-type]
-        existing_features=["pos", "area", "iou"],
     )
     pos_key = tracks.features.position_key
     assert pos_key == "pos"
@@ -38,7 +37,6 @@ def test_create_tracks(graph_3d_with_computed_features: nx.DiGraph, segmentation
         graph=graph_3d_with_computed_features,
         segmentation=segmentation_3d,
         **track_attrs,  # type: ignore[arg-type]
-        existing_features=["pos", "area", "iou"],
     )
     pos_key = tracks.features.position_key
     assert pos_key == "pos"
