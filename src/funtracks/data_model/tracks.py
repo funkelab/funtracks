@@ -13,6 +13,7 @@ from warnings import warn
 import networkx as nx
 import numpy as np
 from psygnal import Signal
+from skimage import measure
 
 from funtracks.features import Feature, FeatureDict, Position, Time
 
@@ -803,3 +804,53 @@ class Tracks:
         from ..import_export.internal_format import delete_tracks
 
         delete_tracks(directory)
+
+    def _compute_node_attrs(self, node: Node, time: int) -> dict[str, Any]:
+        """Get the segmentation controlled node attributes (area and position)
+        from the segmentation with label based on the node id in the given time point.
+
+        Args:
+            node (int): The node id to query the current segmentation for
+            time (int): The time frame of the current segmentation to query
+
+        Returns:
+            dict[str, int]: A dictionary containing the attributes that could be
+                determined from the segmentation. It will be empty if self.segmentation
+                is None. If self.segmentation exists but node id is not present in time,
+                area will be 0 and position will be None. If self.segmentation
+                exists and node id is present in time, area and position will be included.
+
+        Deprecated:
+            This method is deprecated and will be removed in funtracks v2.0.
+            Use the annotator system (enable_features) to compute node attributes instead.
+        """
+        warn(
+            "`_compute_node_attrs` is deprecated and will be removed in funtracks v2.0. "
+            "Use the annotator system (enable_features) to compute node attributes "
+            "instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        if self.segmentation is None:
+            return {}
+
+        attrs: dict[str, Any] = {}
+        seg = self.segmentation[time] == node
+        pos_scale = self.scale[1:] if self.scale is not None else None
+        area = np.sum(seg)
+        if pos_scale is not None:
+            area *= np.prod(pos_scale)
+        # only include the position if the segmentation was actually there
+        pos = (
+            measure.centroid(seg, spacing=pos_scale)  # type: ignore
+            if area > 0
+            else np.array(
+                [
+                    None,
+                ]
+                * (self.ndim - 1)
+            )
+        )
+        attrs["area"] = area
+        attrs["pos"] = pos
+        return attrs
