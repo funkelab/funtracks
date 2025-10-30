@@ -10,11 +10,28 @@ theme:
     accent: purple
   features:
     - navigation.indexes
+    - content.code.copy
+
+extra_javascript:
+  - https://unpkg.com/mermaid@10/dist/mermaid.min.js
 
 extra:
   version:
     provider: mike
     default: latest
+
+nav:
+  - Home: index.md
+  - Architecture: architecture.md
+  - API Reference: reference/
+
+markdown_extensions:
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
 
 plugins:
 - search
