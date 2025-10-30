@@ -75,6 +75,21 @@ class SolutionTracks(Tracks):
 
         self.track_annotator = self._get_track_annotator()
 
+    def _initialize_track_ids(self) -> None:
+        """Initialize track IDs for all nodes.
+
+        Deprecated:
+            This method is deprecated and will be removed in funtracks v2.0.
+            Track IDs are now auto-computed during SolutionTracks initialization.
+        """
+        warnings.warn(
+            "`_initialize_track_ids` is deprecated and will be removed in funtracks v2.0."
+            " Track IDs are now auto-computed during SolutionTracks initialization.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.enable_features([self.features.tracklet_key])  # type: ignore
+
     def _get_track_annotator(self) -> TrackAnnotator:
         """Get the TrackAnnotator instance from the annotator registry.
 
