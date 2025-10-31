@@ -3,11 +3,11 @@ import pytest
 from funtracks.actions import (
     UpdateNodeAttrs,
 )
-from funtracks.data_model import SolutionTracks
 
 
-def test_update_node_attrs(graph_2d):
-    tracks = SolutionTracks(graph_2d, ndim=3)
+@pytest.mark.parametrize("ndim", [3, 4])
+def test_update_node_attrs(get_tracks, ndim):
+    tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
     node = 1
     new_attr = {"score": 1.0}
 
@@ -21,8 +21,8 @@ def test_update_node_attrs(graph_2d):
     assert tracks.get_node_attr(node, "score") == 1.0
 
 
-@pytest.mark.parametrize("attr", ["time", "area", "track_id"])
-def test_update_protected_attr(attr, graph_2d):
-    tracks = SolutionTracks(graph_2d, ndim=3)
+@pytest.mark.parametrize("attr", ["t", "area", "track_id"])
+def test_update_protected_attr(get_tracks, attr):
+    tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
     with pytest.raises(ValueError, match="Cannot update attribute .* manually"):
         UpdateNodeAttrs(tracks, 1, {attr: 2})

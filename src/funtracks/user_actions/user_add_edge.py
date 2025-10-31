@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 import warnings
+from typing import TYPE_CHECKING
 
-from funtracks.data_model import SolutionTracks
 from funtracks.exceptions import InvalidActionError
 
 from ..actions._base import ActionGroup
 from ..actions.add_delete_edge import AddEdge
 from ..actions.update_track_id import UpdateTrackID
 from .user_delete_edge import UserDeleteEdge
+
+if TYPE_CHECKING:
+    from funtracks.data_model import SolutionTracks
 
 
 class UserAddEdge(ActionGroup):
@@ -28,6 +31,7 @@ class UserAddEdge(ActionGroup):
         force: bool = False,
     ):
         super().__init__(tracks, actions=[])
+        self.tracks: SolutionTracks  # Narrow type from base class
         source, target = edge
         if not tracks.graph.has_node(source):
             raise ValueError(

@@ -8,11 +8,30 @@ theme:
     scheme: slate
     primary: purple
     accent: purple
+  features:
+    - navigation.indexes
+    - content.code.copy
+
+extra_javascript:
+  - https://unpkg.com/mermaid@10/dist/mermaid.min.js
 
 extra:
   version:
     provider: mike
     default: latest
+
+nav:
+  - Home: index.md
+  - Architecture: architecture.md
+  - API Reference: reference/
+
+markdown_extensions:
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
 
 plugins:
 - search
@@ -24,14 +43,18 @@ plugins:
         options:
           docstring_section_style: table # list # or "table"
           docstring_style: "google"
-          heading_level: 1
+          heading_level: 3
           merge_init_into_class: true
-          parameter_headings: true
+          # parameter_headings: true
           separate_signature: true
           show_root_heading: true
+          show_source: false
           show_signature_annotations: true
           show_symbol_type_heading: true
           show_symbol_type_toc: true
-          summary: true
+          # summary: true
+          show_docstring_attributes: true
+          show_attribute_values: true
+          show_labels: false
 - api-autonav:
     modules: ['src/funtracks/']
