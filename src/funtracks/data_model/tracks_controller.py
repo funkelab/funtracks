@@ -7,8 +7,8 @@ from warnings import warn
 from funtracks.exceptions import InvalidActionError
 
 from ..actions import (
+    Action,
     ActionGroup,
-    TracksAction,
     UpdateNodeAttrs,
 )
 from ..actions.action_history import ActionHistory
@@ -19,7 +19,6 @@ from ..user_actions import (
     UserDeleteNode,
     UserUpdateSegmentation,
 )
-from .graph_attributes import NodeAttr
 from .solution_tracks import SolutionTracks
 from .tracks import Attrs, Edge, Node, SegMask
 
@@ -68,7 +67,7 @@ class TracksController:
         self,
         attributes: Attrs,
         pixels: list[SegMask] | None = None,
-    ) -> tuple[TracksAction, list[Node]] | None:
+    ) -> tuple[Action, list[Node]] | None:
         """Add nodes to the graph. Includes all attributes and the segmentation.
         Will return the actions needed to add the nodes, and the node ids generated for
         the new nodes.
@@ -95,13 +94,13 @@ class TracksController:
                 or None if there is no segmentation. These pixels will be updated
                 in the tracks.segmentation, set to the new node id
         """
-        times = attributes[NodeAttr.TIME.value]
+        times = attributes[self.tracks.features.time_key]
         nodes: list[Node]
         if pixels is not None:
             nodes = attributes["node_id"]
         else:
             nodes = self._get_new_node_ids(len(times))
-        actions: list[TracksAction] = []
+        actions: list[ActionGroup | Action] = []
         nodes_added = []
         for i in range(len(nodes)):
             try:
@@ -132,7 +131,7 @@ class TracksController:
 
     def _delete_nodes(
         self, nodes: Iterable[Node], pixels: Iterable[SegMask] | None = None
-    ) -> TracksAction:
+    ) -> Action:
         """Delete the nodes provided by the array from the graph but maintain successor
         track_ids. Reconnect to the nearest predecessor and/or nearest successor
         on the same track, if any.
@@ -145,10 +144,10 @@ class TracksController:
 
         Args:
             nodes (Iterable[Node]): array of node_ids to be deleted
-            pixels (Iterable[SegMask] | None): pixels of the ndoes to be deleted, if
+            pixels (Iterable[SegMask] | None): pixels of the nodes to be deleted, if
                 known already. Will be computed if not provided.
         """
-        actions: list[TracksAction] = []
+        actions: list[ActionGroup | Action] = []
         pixels = list(pixels) if pixels is not None else None
         for i, node in enumerate(nodes):
             try:
@@ -180,7 +179,7 @@ class TracksController:
             if valid_action is not None:
                 make_valid_actions.append(valid_action)
         main_action = self._add_edges(edges)
-        action: TracksAction
+        action: Action
         if len(make_valid_actions) > 0:
             make_valid_actions.append(main_action)
             action = ActionGroup(self.tracks, make_valid_actions)
@@ -202,9 +201,7 @@ class TracksController:
         self.action_history.add_new_action(action)
         self.tracks.refresh.emit()
 
-    def _update_node_attrs(
-        self, nodes: Iterable[Node], attributes: Attrs
-    ) -> TracksAction:
+    def _update_node_attrs(self, nodes: Iterable[Node], attributes: Attrs) -> Action:
         """Update the user provided node attributes (not the managed attributes).
 
         Args:
@@ -212,9 +209,9 @@ class TracksController:
             attributes (Attrs): A mapping from user-provided attributes to values for
                 each node.
 
-        Returns: A TracksAction object that performed the update
+        Returns: An Action object that performed the update
         """
-        actions: list[TracksAction] = []
+        actions: list[ActionGroup | Action] = []
         for i, node in enumerate(nodes):
             actions.append(
                 UpdateNodeAttrs(
@@ -223,7 +220,7 @@ class TracksController:
             )
         return ActionGroup(self.tracks, actions)
 
-    def _add_edges(self, edges: Iterable[Edge]) -> TracksAction:
+    def _add_edges(self, edges: Iterable[Edge]) -> ActionGroup:
         """Add edges and attributes to the graph. Also update the track ids of the
         target node tracks and potentially sibling tracks.
 
@@ -232,14 +229,14 @@ class TracksController:
                 node ids
 
         Returns:
-            A TracksAction containing all edits performed in this call
+            An Action containing all edits performed in this call
         """
-        actions: list[TracksAction] = []
+        actions: list[ActionGroup | Action] = []
         for edge in edges:
             actions.append(UserAddEdge(self.tracks, edge))
         return ActionGroup(self.tracks, actions)
 
-    def is_valid(self, edge: Edge) -> tuple[bool, TracksAction | None]:
+    def is_valid(self, edge: Edge) -> tuple[bool, Action | None]:
         """Check if this edge is valid.
         Criteria:
         - not horizontal
@@ -291,15 +288,15 @@ class TracksController:
             return False, action
 
         elif time2 - time1 > 1:
-            track_id2 = self.tracks.graph.nodes[edge[1]][NodeAttr.TRACK_ID.value]
+            track_id2 = self.tracks.get_track_id(edge[1])
             # check whether there are already any nodes with the same track id between
             # source and target (shortest path between equal track_ids rule)
             for t in range(time1 + 1, time2):
                 nodes = [
                     n
-                    for n, attr in self.tracks.graph.nodes(data=True)
-                    if attr.get(self.tracks.time_attr) == t
-                    and attr.get(NodeAttr.TRACK_ID.value) == track_id2
+                    for n in self.tracks.nodes()
+                    if self.tracks.get_time(n) == t
+                    and self.tracks.get_track_id(n) == track_id2
                 ]
                 if len(nodes) > 0:
                     warn("Please connect to the closest node", stacklevel=2)
@@ -325,7 +322,7 @@ class TracksController:
         self.tracks.refresh.emit()
 
     def _delete_edges(self, edges: Iterable[Edge]) -> ActionGroup:
-        actions: list[TracksAction] = []
+        actions: list[ActionGroup | Action] = []
         for edge in edges:
             actions.append(UserDeleteEdge(self.tracks, edge))
         return ActionGroup(self.tracks, actions)

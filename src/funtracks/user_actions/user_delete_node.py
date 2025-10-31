@@ -1,13 +1,16 @@
 from __future__ import annotations
 
-import numpy as np
+from typing import TYPE_CHECKING
 
-from funtracks.data_model import SolutionTracks
+import numpy as np
 
 from ..actions._base import ActionGroup
 from ..actions.add_delete_edge import AddEdge, DeleteEdge
 from ..actions.add_delete_node import DeleteNode
 from ..actions.update_track_id import UpdateTrackID
+
+if TYPE_CHECKING:
+    from funtracks.data_model import SolutionTracks
 
 
 class UserDeleteNode(ActionGroup):
@@ -18,6 +21,7 @@ class UserDeleteNode(ActionGroup):
         pixels: None | tuple[np.ndarray, ...] = None,
     ):
         super().__init__(tracks, actions=[])
+        self.tracks: SolutionTracks  # Narrow type from base class
         # delete adjacent edges
         for pred in self.tracks.predecessors(node):
             siblings = self.tracks.successors(pred)
@@ -36,9 +40,9 @@ class UserDeleteNode(ActionGroup):
         track_id = self.tracks.get_track_id(node)
         if track_id is not None:
             time = self.tracks.get_time(node)
-            predecessor, succcessor = self.tracks.get_track_neighbors(track_id, time)
-            if predecessor is not None and succcessor is not None:
-                self.actions.append(AddEdge(tracks, (predecessor, succcessor)))
+            predecessor, successor = self.tracks.get_track_neighbors(track_id, time)
+            if predecessor is not None and successor is not None:
+                self.actions.append(AddEdge(tracks, (predecessor, successor)))
 
         # delete node
         self.actions.append(DeleteNode(tracks, node, pixels=pixels))

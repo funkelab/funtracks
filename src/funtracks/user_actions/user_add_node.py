@@ -1,16 +1,17 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from funtracks.data_model.graph_attributes import NodeAttr
-from funtracks.data_model.solution_tracks import SolutionTracks
 from funtracks.exceptions import InvalidActionError
 
 from ..actions._base import ActionGroup
 from ..actions.add_delete_edge import AddEdge, DeleteEdge
 from ..actions.add_delete_node import AddNode
+
+if TYPE_CHECKING:
+    from funtracks.data_model.solution_tracks import SolutionTracks
 
 
 class UserAddNode(ActionGroup):
@@ -47,21 +48,25 @@ class UserAddNode(ActionGroup):
                 divided in a previous time point.
         """
         super().__init__(tracks, actions=[])
-        if NodeAttr.TIME.value not in attributes:
+        self.tracks: SolutionTracks  # Narrow type from base class
+
+        # Get keys from tracks features
+        time_key = tracks.features.time_key
+        track_id_key = tracks.features.tracklet_key
+
+        if time_key not in attributes:
             raise ValueError(
-                f"Cannot add node without time. Please add "
-                f"{NodeAttr.TIME.value} attribute"
+                f"Cannot add node without time. Please add {time_key} attribute"
             )
-        if NodeAttr.TRACK_ID.value not in attributes:
+        if track_id_key not in attributes:
             raise ValueError(
-                "Cannot add node without track id. Please add "
-                f"{NodeAttr.TRACK_ID.value} attribute"
+                f"Cannot add node without track id. Please add {track_id_key} attribute"
             )
         if self.tracks.graph.has_node(node):
             raise ValueError(f"Node {node} already exists in the tracks, cannot add.")
 
-        track_id = attributes[NodeAttr.TRACK_ID.value]
-        time = attributes[NodeAttr.TIME.value]
+        track_id = attributes[track_id_key]
+        time = attributes[time_key]
         pred, succ = self.tracks.get_track_neighbors(track_id, time)
         # check if you are adding a node to a track that divided previously
         if pred is not None and self.tracks.graph.out_degree(pred) == 2:
