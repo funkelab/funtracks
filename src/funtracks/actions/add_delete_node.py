@@ -74,6 +74,7 @@ class AddNode(BasicAction):
         # Get position key(s) if present
         if pos_key is None:
             raise ValueError("Position key is not set in tracks features")
+        self.position: list[Any | None] | None
         if isinstance(pos_key, list):
             self.position = [attributes.get(key) for key in pos_key]
         else:
@@ -97,7 +98,7 @@ class AddNode(BasicAction):
         # If no segmentation, manually set position from attributes
         if self.tracks.segmentation is None:
             # can't be None because we validated it in the init
-            self.tracks.set_position(self.node, self.position)
+            self.tracks.set_position(self.node, self.position)  # type: ignore
 
         for attr, values in attrs.items():
             self.tracks._set_node_attr(self.node, attr, values)
