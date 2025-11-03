@@ -101,23 +101,23 @@ class TestUserAddDeleteEdge:
 
 def test_add_edge_missing_node(get_tracks):
     tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
-    with pytest.raises(ValueError, match="Source node .* not in solution yet"):
+    with pytest.raises(InvalidActionError, match="Source node .* not in solution yet"):
         UserAddEdge(tracks, (10, 11))
-    with pytest.raises(ValueError, match="Target node .* not in solution yet"):
+    with pytest.raises(InvalidActionError, match="Target node .* not in solution yet"):
         UserAddEdge(tracks, (1, 11))
 
 
 def test_add_edge_triple_div(get_tracks):
     tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
     with pytest.raises(
-        RuntimeError, match="Expected degree of 0 or 1 before adding edge"
+        InvalidActionError, match="Expected degree of 0 or 1 before adding edge"
     ):
         UserAddEdge(tracks, (1, 6))
 
 
 def test_delete_missing_edge(get_tracks):
     tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
-    with pytest.raises(ValueError, match="Edge .* not in solution"):
+    with pytest.raises(InvalidActionError, match="Edge .* not in solution"):
         UserDeleteEdge(tracks, (10, 11))
 
 
@@ -125,6 +125,6 @@ def test_delete_edge_triple_div(get_tracks):
     tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
     tracks.graph.add_edge(1, 6)
     with pytest.raises(
-        RuntimeError, match="Expected degree of 0 or 1 after removing edge"
+        InvalidActionError, match="Expected degree of 0 or 1 after removing edge"
     ):
         UserDeleteEdge(tracks, (1, 6))

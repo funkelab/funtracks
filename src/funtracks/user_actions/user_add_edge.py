@@ -34,11 +34,11 @@ class UserAddEdge(ActionGroup):
         self.tracks: SolutionTracks  # Narrow type from base class
         source, target = edge
         if not tracks.graph.has_node(source):
-            raise ValueError(
+            raise InvalidActionError(
                 f"Source node {source} not in solution yet - must be added before edge"
             )
         if not tracks.graph.has_node(target):
-            raise ValueError(
+            raise InvalidActionError(
                 f"Target node {target} not in solution yet - must be added before edge"
             )
 
@@ -49,7 +49,8 @@ class UserAddEdge(ActionGroup):
             if not force:
                 raise InvalidActionError(
                     f"Cannot make a merge edge in a tracking solution: node {target} "
-                    "already has an in edge"
+                    "already has an in edge",
+                    forceable=True,
                 )
             else:
                 merge_edge = list(self.tracks.graph.in_edges(target))[0]
@@ -73,7 +74,7 @@ class UserAddEdge(ActionGroup):
                 UpdateTrackID(self.tracks, successor, self.tracks.get_next_track_id())
             )
         else:
-            raise RuntimeError(
+            raise InvalidActionError(
                 f"Expected degree of 0 or 1 before adding edge, got {out_degree_source}"
             )
 

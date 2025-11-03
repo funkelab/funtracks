@@ -46,12 +46,14 @@ class UserAddNode(ActionGroup):
                 conflicting edges. Defaults to False.
 
         Raises:
-            ValueError: If the attributes dictionary does not contain either `time` or
-                `track_id`.
-            ValueError: If a node with the given ID already exists in the tracks.
-            InvalidActionError: If the node is trying to be added to a track that
-                divided in a previous time point, or if the parent track of the node will
-                divide downstream of the current time point.
+            InvalidActionError: If the action cannot be completed because of one of
+            following reasons:
+                    - attributes dictionary does not contain `time` or `track_id`.
+                    - a node with given ID already exists in the tracks.
+                    - a node is trying to be added to a track that divided in a previous
+                    time point (forceable).
+                    - the parent track of the node will divide downstream of the current
+                    time point (forceable).
         """
         super().__init__(tracks, actions=[])
         self.tracks: SolutionTracks  # Narrow type from base class
@@ -61,15 +63,17 @@ class UserAddNode(ActionGroup):
         track_id_key = tracks.features.tracklet_key
 
         if time_key not in attributes:
-            raise ValueError(
+            raise InvalidActionError(
                 f"Cannot add node without time. Please add {time_key} attribute"
             )
         if track_id_key not in attributes:
-            raise ValueError(
+            raise InvalidActionError(
                 f"Cannot add node without track id. Please add {track_id_key} attribute"
             )
         if self.tracks.graph.has_node(node):
-            raise ValueError(f"Node {node} already exists in the tracks, cannot add.")
+            raise InvalidActionError(
+                f"Node {node} already exists in the tracks, cannot add."
+            )
 
         track_id = attributes[track_id_key]
         time = attributes[time_key]
@@ -90,7 +94,8 @@ class UserAddNode(ActionGroup):
         if pred is not None and self.tracks.graph.out_degree(pred) == 2:
             if not force:
                 raise InvalidActionError(
-                    "Cannot add node here - upstream division event detected."
+                    "Cannot add node here - upstream division event detected.",
+                    forceable=True,
                 )
             else:
                 # Delete both conflicting edges in the upstream division.
@@ -109,7 +114,8 @@ class UserAddNode(ActionGroup):
             ):
                 if not force:
                     raise InvalidActionError(
-                        "Cannot add node here - downstream division of parent detected."
+                        "Cannot add node here - downstream division of parent detected.",
+                        forceable=True,
                     )
                 else:
                     # Delete the conflicting edge
