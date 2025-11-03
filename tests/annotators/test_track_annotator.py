@@ -120,3 +120,81 @@ class TestTrackAnnotator:
         assert tracks.get_track_id(node_id) == initial_track_id
         # But area should be updated
         assert tracks.get_node_attr(node_id, "area") == 1
+
+
+def test_tracklet_and_lineage_assignment_with_merges(graph_with_merges):
+    """Test that both tracklet and lineage IDs work correctly with merge events.
+
+    The graph has:
+    - One merge at node 3 (from nodes 1 and 2)
+    - One division at node 4 (to nodes 5 and 6)
+    - One merge at node 8 (from nodes 6 and 9)
+
+    Expected tracklets (after removing division and merge edges):
+    - [1], [2], [3, 4], [5, 7], [6], [9], [8] = 7 tracklets
+
+    Expected lineages (weakly connected components):
+    - All 9 nodes in one lineage = 1 lineage
+    """
+    from funtracks.data_model import SolutionTracks
+
+    # Create SolutionTracks from the graph with merges
+    tracks = SolutionTracks(graph_with_merges, segmentation=None, ndim=3)
+
+    # Create annotator and activate both features
+    ann = TrackAnnotator(tracks)
+    ann.activate_features([ann.tracklet_key, ann.lineage_key])
+
+    # Compute both features at once
+    ann.compute()
+
+    # Define expected tracklets based on merge/division structure
+    expected_tracklets = [
+        [1],  # ends at merge into node 3
+        [2],  # ends at merge into node 3
+        [3, 4],  # starts from merge, ends at division
+        [5, 7],  # starts from division from node 4
+        [6],  # starts from division, ends at merge into node 8
+        [9],  # ends at merge into node 8
+        [8],  # starts from merge
+    ]
+
+    # Verify we have the expected number of tracklets
+    assert len(ann.tracklet_id_to_nodes) == len(expected_tracklets), (
+        f"Expected {len(expected_tracklets)} tracklets, "
+        f"got {len(ann.tracklet_id_to_nodes)}"
+    )
+
+    # For each expected tracklet, verify nodes have same tracklet_id
+    for expected_nodes in expected_tracklets:
+        tracklet_ids = [tracks.get_track_id(node) for node in expected_nodes]
+        assert len(set(tracklet_ids)) == 1, (
+            f"Nodes {expected_nodes} should all have the same tracklet_id, "
+            f"got {tracklet_ids}"
+        )
+        tracklet_id = tracklet_ids[0]
+        actual_nodes = sorted(ann.tracklet_id_to_nodes[tracklet_id])
+        assert actual_nodes == sorted(expected_nodes), (
+            f"For tracklet_id {tracklet_id}, expected nodes {sorted(expected_nodes)}, "
+            f"got {actual_nodes}"
+        )
+
+    # Verify lineages: should be 1 lineage containing all nodes
+    assert len(ann.lineage_id_to_nodes) == 1, (
+        f"Expected 1 lineage (all nodes connected), got {len(ann.lineage_id_to_nodes)}"
+    )
+
+    # Verify all nodes have both tracklet_id and lineage_id
+    all_nodes = list(graph_with_merges.nodes())
+    for node in all_nodes:
+        tracklet_id = tracks.get_node_attr(node, ann.tracklet_key)
+        lineage_id = tracks.get_node_attr(node, ann.lineage_key)
+        assert tracklet_id is not None, f"Node {node} missing tracklet_id"
+        assert lineage_id is not None, f"Node {node} missing lineage_id"
+
+    # Verify the single lineage contains all 9 nodes
+    lineage_id = list(ann.lineage_id_to_nodes.keys())[0]
+    assert sorted(ann.lineage_id_to_nodes[lineage_id]) == sorted(all_nodes), (
+        f"Lineage should contain all nodes {sorted(all_nodes)}, "
+        f"got {sorted(ann.lineage_id_to_nodes[lineage_id])}"
+    )

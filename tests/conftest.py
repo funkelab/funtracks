@@ -395,3 +395,61 @@ def get_segmentation(request) -> Callable[..., "NDArray[np.int32]"]:
             return request.getfixturevalue("segmentation_3d")
 
     return _get_segmentation
+
+
+@pytest.fixture
+def graph_with_merges() -> nx.DiGraph:
+    """Graph with merge events (nodes with in-degree > 1) for testing tracklet assignment.
+
+    Graph structure:
+        t=0: nodes 1, 2
+        t=1: node 3 (merges from 1 and 2)
+        t=2: node 4 (continues from 3)
+        t=3: nodes 5, 6 (division from 4)
+        t=4: node 7 (continues from 5), node 8 (merges from 6 and standalone)
+        t=4: node 9 (separate track, predecessor of merge at node 8)
+
+    This creates:
+    - One merge at node 3 (from nodes 1 and 2)
+    - One division at node 4 (to nodes 5 and 6)
+    - One merge at node 8 (from nodes 6 and 9)
+
+    Expected tracklets (after removing division and merge edges):
+    - [1] (ends at division)
+    - [2] (ends at merge)
+    - [3, 4] (starts from merge, ends at division)
+    - [5, 7] (starts from division)
+    - [6] (starts from division, ends at merge)
+    - [9] (ends at merge)
+    - [8] (starts from merge)
+    """
+    graph = nx.DiGraph()
+
+    nodes = [
+        (1, {"t": 0, "pos": [10, 10], "track_id": 1}),
+        (2, {"t": 0, "pos": [20, 20], "track_id": 2}),
+        (3, {"t": 1, "pos": [15, 15], "track_id": 3}),  # merge point
+        (4, {"t": 2, "pos": [15, 15], "track_id": 3}),
+        (5, {"t": 3, "pos": [10, 15], "track_id": 4}),  # division child 1
+        (6, {"t": 3, "pos": [20, 15], "track_id": 5}),  # division child 2
+        (7, {"t": 4, "pos": [10, 15], "track_id": 4}),  # continues from 5
+        (8, {"t": 4, "pos": [25, 20], "track_id": 6}),  # merge point
+        (9, {"t": 3, "pos": [30, 25], "track_id": 7}),  # separate track
+    ]
+
+    # Edges creating merges and divisions
+    edges = [
+        (1, 3),  # merge edge 1
+        (2, 3),  # merge edge 2
+        (3, 4),  # regular edge
+        (4, 5),  # division edge 1
+        (4, 6),  # division edge 2
+        (5, 7),  # regular edge
+        (6, 8),  # merge edge 1
+        (9, 8),  # merge edge 2
+    ]
+
+    graph.add_nodes_from(nodes)
+    graph.add_edges_from(edges)
+
+    return graph
