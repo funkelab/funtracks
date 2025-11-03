@@ -204,6 +204,7 @@ class Tracks:
                         "display_name": None,
                         "required": True,
                         "default_value": None,
+                        "is_group": False,
                     }
                 # For multi-axis, set position_key directly
                 # (not a single feature to register)
