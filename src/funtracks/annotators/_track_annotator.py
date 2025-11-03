@@ -210,12 +210,20 @@ class TrackAnnotator(GraphAnnotator):
         """
         graph_copy = self.tracks.graph.copy()
         parents = [node for node, degree in self.tracks.graph.out_degree() if degree >= 2]
+        merge_nodes = [
+            node for node, degree in self.tracks.graph.in_degree() if degree >= 2
+        ]
 
         # Remove all intertrack edges from a copy of the original graph
         for parent in parents:
             daughters = self.tracks.successors(parent)
             for daughter in daughters:
                 graph_copy.remove_edge(parent, daughter)
+        for merge in merge_nodes:
+            parents = self.tracks.predecessors(merge)
+            for parent in parents:
+                if graph_copy.has_edge(parent, merge):
+                    graph_copy.remove_edge(parent, merge)
 
         tracklets = nx.weakly_connected_components(graph_copy)
         max_id, ids_to_nodes = self._assign_ids(tracklets, self.tracklet_key)
@@ -227,6 +235,8 @@ class TrackAnnotator(GraphAnnotator):
 
         Handles incremental updates for UpdateTrackID, AddNode, and DeleteNode actions.
         Other actions are ignored.
+
+        TODO: handle merges in the update functions
 
         Args:
             action: The action that triggered this update
