@@ -98,7 +98,7 @@ class Tracks:
 
         # initialization steps:
         # 1. set up feature dict (or use provided)
-        # 2. set up anotator registry
+        # 2. set up annotator registry
         # 3. activate existing features
         # 4. enable core features (compute them)
 
