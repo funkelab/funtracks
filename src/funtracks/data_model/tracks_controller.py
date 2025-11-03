@@ -4,8 +4,6 @@ import warnings
 from typing import TYPE_CHECKING
 from warnings import warn
 
-from funtracks.exceptions import InvalidActionError
-
 from ..actions import (
     Action,
     ActionGroup,
@@ -179,9 +177,6 @@ class TracksController:
             if not is_valid:
                 # warning was printed with details in is_valid call
                 return
-            # check if this edge would create a merge (two incoming edges in same node)
-            if self.tracks.graph.in_degree(edge[1]) > 0 and not force:
-                raise InvalidActionError("Error: merges are not allowed.")
 
         action: Action
         action = self._add_edges(edges, force)
