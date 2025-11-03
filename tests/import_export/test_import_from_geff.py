@@ -116,13 +116,13 @@ def test_tracks_with_segmentation(valid_geff, invalid_geff, valid_segmentation, 
 
     # Test that a tracks object is produced and that the seg_id has been relabeled.
     scale = [1, 1, (1 / 100)]
-    node_features = {"area": True, "random_feature": False}
+    extra_features = {"area": True, "random_feature": False}
     tracks = import_from_geff(
         store,
         name_map,
         segmentation_path=valid_segmentation_path,
         scale=scale,
-        node_features=node_features,
+        extra_features=extra_features,
     )
     assert hasattr(tracks, "segmentation")
     assert tracks.segmentation.shape == valid_segmentation.shape
@@ -150,13 +150,13 @@ def test_tracks_with_segmentation(valid_geff, invalid_geff, valid_segmentation, 
     )  # recomputed area values should be 1 pixel, so 0.01 after applying the scaling.
 
     # Check that area is not recomputed but taken directly from the graph
-    node_features = {"area": False, "random_feature": False}  # set Recompute to False
+    extra_features = {"area": False, "random_feature": False}  # set Recompute to False
     tracks = import_from_geff(
         store,
         name_map,
         segmentation_path=valid_segmentation_path,
         scale=scale,
-        node_features=node_features,
+        extra_features=extra_features,
     )
     _, data = list(tracks.graph.nodes(data=True))[-1]
     assert "area" in data
@@ -209,17 +209,17 @@ def test_segmentation_loading_formats(
         name_map,
         segmentation_path=path,
         scale=scale,
-        node_features={"area": False, "random_feature": False},
+        extra_features={"area": False, "random_feature": False},
     )
 
     assert hasattr(tracks, "segmentation")
     assert np.array(tracks.segmentation).shape == seg.shape
 
 
-def test_node_features_compute_vs_load(valid_geff, valid_segmentation, tmp_path):
-    """Test that node_features controls whether features are computed or loaded.
+def test_extra_features_compute_vs_load(valid_geff, valid_segmentation, tmp_path):
+    """Test that extra_features controls whether features are computed or loaded.
 
-    Features marked True in node_features are computed using annotators.
+    Features marked True in extra_features are computed using annotators.
     Features marked False are loaded directly from the geff file.
     Features not in the geff can still be computed if marked True.
     """
@@ -230,7 +230,7 @@ def test_node_features_compute_vs_load(valid_geff, valid_segmentation, tmp_path)
     tifffile.imwrite(valid_segmentation_path, valid_segmentation)
 
     # Test 1: Mix of computed (True) and loaded (False) features
-    node_features = {
+    extra_features = {
         "area": True,  # In geff, but should be recomputed
         "random_feature": False,  # Should be loaded from geff
         "ellipse_axis_radii": True,  # Not in geff, should be computed
@@ -241,7 +241,7 @@ def test_node_features_compute_vs_load(valid_geff, valid_segmentation, tmp_path)
         name_map,
         segmentation_path=valid_segmentation_path,
         scale=scale,
-        node_features=node_features,
+        extra_features=extra_features,
     )
 
     _, data = list(tracks.graph.nodes(data=True))[-1]
