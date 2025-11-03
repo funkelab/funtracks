@@ -16,6 +16,7 @@ def TrackletID() -> Feature:
         "display_name": "Tracklet ID",
         "required": True,
         "default_value": None,
+        "is_group": False,
     }
 
 
@@ -32,4 +33,5 @@ def LineageID() -> Feature:
         "display_name": "Lineage ID",
         "required": True,
         "default_value": None,
+        "is_group": False,
     }

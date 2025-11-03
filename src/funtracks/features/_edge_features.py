@@ -16,4 +16,5 @@ def IoU() -> Feature:
         "display_name": "IoU",
         "required": True,
         "default_value": None,
+        "is_group": False,
     }

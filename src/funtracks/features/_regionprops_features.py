@@ -25,6 +25,7 @@ def Area(ndim: int = 3) -> Feature:
         "display_name": "Area" if ndim == 3 else "Volume",
         "required": True,
         "default_value": None,
+        "is_group": False,
     }
 
 
@@ -41,6 +42,7 @@ def Intensity() -> Feature:
         "display_name": "Intensity",
         "required": True,
         "default_value": None,
+        "is_group": False,
     }
 
 
@@ -61,6 +63,7 @@ def EllipsoidAxes(ndim: int = 3) -> Feature:
         "display_name": "Ellipse axis radii" if ndim == 3 else "Ellipsoid axis radii",
         "required": True,
         "default_value": None,
+        "is_group": False,
     }
 
 
@@ -81,6 +84,7 @@ def Circularity(ndim: int = 3) -> Feature:
         "display_name": "Circularity" if ndim == 3 else "Sphericity",
         "required": True,
         "default_value": None,
+        "is_group": False,
     }
 
 
@@ -101,4 +105,5 @@ def Perimeter(ndim: int = 3) -> Feature:
         "display_name": "Perimeter" if ndim == 3 else "Surface Area",
         "required": True,
         "default_value": None,
+        "is_group": False,
     }

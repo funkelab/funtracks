@@ -24,6 +24,7 @@ class Feature(TypedDict):
             to have this feature.
         default_value (Any): If required is False, this value is returned
             whenever the feature value is missing on the graph.
+        is_group (bool): whether this is a 'group' feature.
     """
 
     feature_type: Literal["node", "edge"]
@@ -32,3 +33,4 @@ class Feature(TypedDict):
     display_name: str | Sequence[str] | None
     required: bool
     default_value: Any
+    is_group: bool
