@@ -140,7 +140,7 @@ def import_from_geff(
     name_map: dict[str, str],
     segmentation_path: Path | None = None,
     scale: list[float] | None = None,
-    node_features: dict[str, bool] | None = None,
+    extra_features: dict[str, bool] | None = None,
     edge_prop_filter: list[str] | None = None,
 ):
     """Load Tracks from a geff directory. Takes a name_map to map graph attributes
@@ -168,7 +168,7 @@ def import_from_geff(
                 (lineage_id), optional, if it is a solution
         segmentation_path (Path | None = None): path to segmentation data.
         scale (list[float]): scaling information (pixel to world coordinates).
-        node_features (dict[str: bool] | None=None): optional features to include in the
+        extra_features (dict[str: bool] | None=None): optional features to include in the
             Tracks object. The keys are the feature names, and the boolean value indicates
             whether to recompute the feature (area) or load it as a static node attribute.
         edge_prop_filter (list[str]): List of edge properties to include. If None all
@@ -181,13 +181,13 @@ def import_from_geff(
     node_prop_filter = [
         prop for key, prop in name_map.items() if name_map[key] is not None
     ]
-    if node_features is not None:
+    if extra_features is not None:
         # Only load features from geff that should NOT be computed (value=False)
         # Features with value=True will be computed by annotators after loading
         node_prop_filter.extend(
             [
                 feature_name
-                for feature_name, should_compute in node_features.items()
+                for feature_name, should_compute in extra_features.items()
                 if not should_compute
             ]
         )
@@ -286,13 +286,13 @@ def import_from_geff(
             segmentation = relabel_seg_id_to_node_id(times, ids, seg_ids, segmentation)
 
     # Add optional extra features that were loaded from geff (not computed).
-    if node_features is None:
-        node_features = {}
+    if extra_features is None:
+        extra_features = {}
     # Only include features that should be loaded from geff (value=False)
     node_attrs_to_load_from_geff.extend(
         [
             feature_name
-            for feature_name, should_compute in node_features.items()
+            for feature_name, should_compute in extra_features.items()
             if not should_compute
         ]
     )
@@ -335,7 +335,7 @@ def import_from_geff(
     # Compute any extra features that were requested but not already loaded from geff
     features_to_compute = [
         feature_name
-        for feature_name, _ in node_features.items()
+        for feature_name, _ in extra_features.items()
         if feature_name not in node_attrs_to_load_from_geff
     ]
 
