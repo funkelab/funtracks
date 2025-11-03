@@ -241,5 +241,4 @@ class SolutionTracks(Tracks):
         if not nodes:
             return False
 
-        # Direct access to limit overhead?
-        return any(self.graph.nodes[node][self.time_attr] == time for node in nodes)
+        return time in self.get_times(nodes)
