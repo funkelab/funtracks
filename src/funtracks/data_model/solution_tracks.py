@@ -162,7 +162,7 @@ class SolutionTracks(Tracks):
         track_id = self.get_node_attr(node, self.features.tracklet_key, required=True)
         return track_id
 
-    def export_tracks(self, outfile: Path | str):
+    def export_tracks(self, outfile: Path | str, node_ids: list[int] | None = None):
         """Export the tracks from this run to a csv with the following columns:
         t,[z],y,x,id,parent_id,track_id
         Cells without a parent_id will have an empty string for the parent_id.
@@ -187,9 +187,12 @@ class SolutionTracks(Tracks):
             else:
                 header.append(cast(str, col_name))
 
+        if node_ids is None:
+            node_ids = self.graph.nodes()
+
         with open(outfile, "w") as f:
             f.write(",".join(header))
-            for node_id in self.graph.nodes():
+            for node_id in node_ids:
                 parents = list(self.graph.predecessors(node_id))
                 parent_id = "" if len(parents) == 0 else parents[0]
                 features: list[Any] = []
