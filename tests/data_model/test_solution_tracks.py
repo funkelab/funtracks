@@ -94,7 +94,7 @@ def test_export_to_csv(
 
     assert len(lines) == tracks.graph.number_of_nodes() + 1  # add header
 
-    header = ["t", "y", "x", "id", "parent_id", "track_id"]
+    header = ["ID", "Parent ID", "Time", "y", "x", "Tracklet ID"]
     assert lines[0].strip().split(",") == header
 
     tracks = SolutionTracks(graph_3d_with_computed_features, **track_attrs, ndim=4)
@@ -105,5 +105,5 @@ def test_export_to_csv(
 
     assert len(lines) == tracks.graph.number_of_nodes() + 1  # add header
 
-    header = ["t", "z", "y", "x", "id", "parent_id", "track_id"]
+    header = ["ID", "Parent ID", "Time", "z", "y", "x", "Tracklet ID"]
     assert lines[0].strip().split(",") == header
