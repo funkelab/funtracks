@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 from typing import (
     TYPE_CHECKING,
 )
@@ -16,6 +17,13 @@ from geff.validate.segmentation import (
 from geff.validate.tracks import validate_lineages, validate_tracklets
 from numpy.typing import ArrayLike
 
+from funtracks.annotators._regionprops_annotator import (
+    DEFAULT_AREA_KEY,
+    DEFAULT_CIRCULARITY_KEY,
+    DEFAULT_ELLIPSE_AXIS_KEY,
+    DEFAULT_PERIMETER_KEY,
+)
+from funtracks.features import _regionprops_features
 from funtracks.import_export.magic_imread import magic_imread
 
 if TYPE_CHECKING:
@@ -140,7 +148,7 @@ def import_from_geff(
     name_map: dict[str, str],
     segmentation_path: Path | None = None,
     scale: list[float] | None = None,
-    node_features: dict[str, bool] | None = None,
+    node_features: list[dict[str, str | bool]] | None = None,
     edge_prop_filter: list[str] | None = None,
 ):
     """Load Tracks from a geff directory. Takes a name_map to map graph attributes
@@ -168,9 +176,13 @@ def import_from_geff(
                 (lineage_id), optional, if it is a solution
         segmentation_path (Path | None = None): path to segmentation data.
         scale (list[float]): scaling information (pixel to world coordinates).
-        node_features (dict[str: bool] | None=None): optional features to include in the
-            Tracks object. The keys are the feature names, and the boolean value indicates
-            whether to recompute the feature (area) or load it as a static node attribute.
+        node_features list[(dict[str, str | bool]] | None=None): optional features to include in
+            the Tracks object. Each to be included feature should be a dictionary with the
+            following keys: "prop_name", "feature", "recompute", "dtype". The prop_name is the name
+            of the property in the geff, feature is the name of the feature, this can
+            either be the class name of a regionprops Feature, or it can be 'Group' (will
+            be imported as group) or 'Custom' (static feature). Recompute is a boolean
+            that indicates whether to recompute the regionprops feature or load it as is.
         edge_prop_filter (list[str]): List of edge properties to include. If None all
         properties will be included.
     Returns:
@@ -186,9 +198,9 @@ def import_from_geff(
         # Features with value=True will be computed by annotators after loading
         node_prop_filter.extend(
             [
-                feature_name
-                for feature_name, should_compute in node_features.items()
-                if not should_compute
+                feature["prop_name"]
+                for feature in node_features
+                if not feature["recompute"]
             ]
         )
 
@@ -287,20 +299,19 @@ def import_from_geff(
 
     # Add optional extra features that were loaded from geff (not computed).
     if node_features is None:
-        node_features = {}
-    # Only include features that should be loaded from geff (value=False)
+        node_features = []
+
+    # Add the extra features. If they are regionprops features, they should be mapped to
+    # the default name for now. Otherwise, they can keep the original prop_name.
     node_attrs_to_load_from_geff.extend(
-        [
-            feature_name
-            for feature_name, should_compute in node_features.items()
-            if not should_compute
-        ]
+        [feature["prop_name"] for feature in node_features if not feature["recompute"]]
     )
 
     # All pre-checks have passed, load the graph now.
     filtered_node_props = {
         k: v for k, v in node_props.items() if k in node_attrs_to_load_from_geff
     }
+
     graph = geff.construct(
         metadata=in_memory_geff["metadata"],
         node_ids=in_memory_geff["node_ids"],
@@ -318,6 +329,48 @@ def import_from_geff(
                 recompute_track_ids = True
                 break
 
+    # relabel regionprop features to the correct key (unless we should recompute)
+    regionprop_features = [
+        name
+        for name, func in inspect.getmembers(_regionprops_features, inspect.isfunction)
+        if func.__module__ == "funtracks.features._regionprops_features"
+    ]
+
+    default_name_map = {}
+    for rf in regionprop_features:
+        if str(rf) == "Area":
+            default_name_map["Area"] = DEFAULT_AREA_KEY
+        elif str(rf) == "Circularity":
+            default_name_map["Circularity"] = DEFAULT_CIRCULARITY_KEY
+        elif str(rf) == "Perimeter":
+            default_name_map["Perimeter"] = DEFAULT_PERIMETER_KEY
+        elif str(rf) == "EllipsoidAxes":
+            default_name_map["EllipsoidAxes"] = DEFAULT_ELLIPSE_AXIS_KEY
+
+    regionprop_feature_list = []
+    for feature in node_features:
+        prop_name = feature["prop_name"]
+        if feature["feature"] in regionprop_features and not feature["recompute"]:
+            # Create a Regionprops feature
+            regionprop_func = getattr(_regionprops_features, feature["feature"], None)
+            if regionprop_func is None:
+                raise ValueError(f"Regionprop feature '{feature['feature']}' not found.")
+
+            # Check if the function accepts an `ndim` argument
+            sig = inspect.signature(regionprop_func)
+            if "ndim" in sig.parameters:
+                regionprop_feature = regionprop_func(ndim=ndims)  # Call with ndim
+                prop_name = default_name_map[feature["feature"]]
+                regionprop_feature_list.append({prop_name: regionprop_feature})
+            else:
+                regionprop_feature = regionprop_func()  # Call without ndim
+                prop_name = default_name_map[feature["feature"]]
+                regionprop_feature_list.append({prop_name: regionprop_feature})
+
+            # Add the feature to the tracks
+            for _, data in graph.nodes(data=True):
+                data[prop_name] = data.pop(feature["prop_name"])
+
     # Put segmentation data in memory now.
     if segmentation is not None and isinstance(segmentation, da.Array):
         segmentation = segmentation.compute()
@@ -333,13 +386,47 @@ def import_from_geff(
     # TODO: properly import/activate static features that were loaded from geff using
     # geff metadata to create the Feature
     # Compute any extra features that were requested but not already loaded from geff
-    features_to_compute = [
-        feature_name
-        for feature_name, _ in node_features.items()
-        if feature_name not in node_attrs_to_load_from_geff
-    ]
+
+    # Register the regionprops features with the RegionpropsAnnotator
+    for feature in regionprop_feature_list:
+        key = list(feature.keys())[0]
+        value = list(feature.values())[0]
+        tracks.features[key] = value
+        tracks.annotators.activate_features([key])
+
+    # Register other features (Groups or static Custom features)
+    for feature in node_features:
+        if feature["feature"] == "Group":
+            new_feature: Feature = {
+                "feature_type": "node",
+                "value_type": "bool",
+                "num_values": 1,
+                "display_name": feature["prop_name"],
+                "required": False,
+                "default_value": False,
+                "is_group": True,
+            }
+            tracks.features[feature["prop_name"]] = new_feature
+        elif feature["feature"] == "Custom":
+            new_feature: Feature = {
+                "feature_type": "node",
+                "value_type": feature["dtype"],
+                "num_values": 1,
+                "display_name": feature["prop_name"],
+                "required": False,
+                "default_value": None,
+                "is_group": False,
+            }
+            tracks.features[feature["prop_name"]] = new_feature
+
+    # Recompute requested regionprops features
+    features_to_compute = [feature for feature in node_features if feature["recompute"]]
+    features_to_compute_names = []
+    for feature in features_to_compute:
+        prop_name = default_name_map[feature["feature"]]
+        features_to_compute_names.append(prop_name)
 
     if features_to_compute:
-        tracks.enable_features(features_to_compute)
+        tracks.enable_features(features_to_compute_names)
 
     return tracks
