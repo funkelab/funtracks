@@ -21,7 +21,6 @@ def Time() -> Feature:
         "display_name": "Time",
         "required": True,
         "default_value": None,
-        "is_group": False,
     }
 
 
@@ -42,5 +41,4 @@ def Position(axes: Sequence[str]) -> Feature:
         "display_name": axes,
         "required": True,
         "default_value": None,
-        "is_group": False,
     }
