@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import inspect
-from typing import (
-    TYPE_CHECKING,
-)
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, cast
 
 import dask.array as da
 import geff
@@ -56,7 +55,7 @@ def get_regionprops_features(
     node_features,
     node_props,
     ndims,
-) -> (dict[str, int | float], list[dict]):
+) -> tuple[dict[str, int | float], list[Mapping[str, object]]]:
     """
     Search for features that should be registered as Regionprop feature, but not
     recomputed. They have to be registered under the correct name for the annotators to
@@ -65,20 +64,20 @@ def get_regionprops_features(
     Returns:
         regionprop_node_props: dict[str, float | int]: dictionary with default Regionprop
         Feature names as keys and the corresponding values from the geff
-        regionprop_feature_list: list[dict]
+        regionprop_feature_list: list[Mapping[str, object]]
             List of {prop_name: feature_dict} entries for downstream processing.
     """
 
     # for each to be checked feature, check if it is 1) a RegionProp Feature and 2) it
     # does not have to be recomputed
-    regionprop_node_props = {}
-    regionprop_feature_list = []
+    regionprop_node_props: dict[str, int | float] = {}
+    regionprop_feature_list: list[Mapping[str, object]] = []
 
     for feature in node_features:
-        feat_name = feature["feature"]
-        prop_name = feature["prop_name"]
+        feat_name = str(feature["feature"])
+        prop_name = str(feature["prop_name"])
 
-        if feat_name in regionprop_class_names and not feature["recompute"]:
+        if feat_name in regionprop_class_names and not bool(feature["recompute"]):
             regionprop_func = getattr(_regionprops_features, feat_name, None)
             if regionprop_func is None:
                 raise ValueError(f"Regionprop feature '{feat_name}' not found.")
@@ -97,7 +96,7 @@ def get_regionprops_features(
             regionprop_feature_list.append({new_prop_name: regionprop_feature})
 
             # rename regionprop_node_props directly here
-            regionprop_node_props[new_prop_name] = node_props[feature["prop_name"]]
+            regionprop_node_props[new_prop_name] = node_props[prop_name]
 
     return regionprop_node_props, regionprop_feature_list
 
@@ -240,14 +239,14 @@ def import_from_geff(
                 (lineage_id), optional, if it is a solution
         segmentation_path (Path | None = None): path to segmentation data.
         scale (list[float]): scaling information (pixel to world coordinates).
-        node_features list[(dict[str, str | bool]] | None=None): optional features to
+        node_features (list[(dict[str, str | bool]] | None=None): optional features to
             include in the Tracks object. Each to be included feature should be a
             dictionary with the following keys: "prop_name", "feature", "recompute",
             "dtype". The prop_name is the name of the property in the geff, feature is the
             name of the feature, this can either be the class name of a regionprops
-            Feature, or it can be 'Group' (will be imported as group) or 'Custom'
-            (static feature). Recompute is a boolean that indicates whether to recompute
-            the regionprops feature or load it as is.
+            Feature, or it can be 'Group' (will be imported as a boolean type to reflect
+             a group group), or 'Custom'(static feature). Recompute is a boolean that
+             indicates whether to recompute the regionprops feature or load it as is.
         edge_prop_filter (list[str]): List of edge properties to include. If None all
         properties will be included.
     Returns:
@@ -255,17 +254,18 @@ def import_from_geff(
     """
 
     # Read the GEFF file into memory
-    node_prop_filter = [
-        prop for key, prop in name_map.items() if name_map[key] is not None
+    node_prop_filter: list[str] = [
+        prop for _, prop in name_map.items() if prop is not None
     ]
+
     if node_features is not None:
         # Only load features from geff that should NOT be computed (value=False)
         # Features with value=True will be computed by annotators after loading
         node_prop_filter.extend(
             [
-                feature["prop_name"]
+                str(feature["prop_name"])
                 for feature in node_features
-                if not feature["recompute"]
+                if not bool(feature.get("recompute", False))
             ]
         )
 
@@ -277,7 +277,7 @@ def import_from_geff(
     node_props = in_memory_geff["node_props"]
     edge_ids = in_memory_geff["edge_ids"]
     edge_props = in_memory_geff["edge_props"]
-    node_attrs_to_load_from_geff = []
+    node_attrs_to_load_from_geff: list[str] = []
     segmentation = None
 
     # Check that the spatiotemporal key mapping does not contain None or duplicate values.
@@ -368,6 +368,7 @@ def import_from_geff(
     }
 
     # Add optional extra features that were loaded from geff (not computed).
+    regionprop_feature_list: list[Mapping[str, object]] = []
     if node_features is not None:
         regionprop_node_props, regionprop_feature_list = get_regionprops_features(
             node_features=node_features,
@@ -405,48 +406,46 @@ def import_from_geff(
         ndim=ndims,
         scale=scale,
     )
-    # TODO: properly import/activate static features that were loaded from geff using
-    # geff metadata to create the Feature
-    # Compute any extra features that were requested but not already loaded from geff
 
     # Register the regionprops features with the RegionpropsAnnotator
     for feature in regionprop_feature_list:
-        key = list(feature.keys())[0]
-        value = list(feature.values())[0]
+        key: str = list(feature.keys())[0]
+        value = cast(Feature, list(feature.values())[0])
         tracks.features[key] = value
         tracks.annotators.activate_features([key])
 
     # Register other features (Groups or static Custom features)
-    for feature in node_features:
-        if feature["feature"] == "Group":
-            new_group_feature: Feature = {
-                "feature_type": "node",
-                "value_type": "bool",
-                "num_values": 1,
-                "display_name": feature["prop_name"],
-                "required": False,
-                "default_value": False,
-                "is_group": True,
-            }
-            tracks.features[feature["prop_name"]] = new_group_feature
-        elif feature["feature"] == "Custom":
-            new_custom_feature: Feature = {
-                "feature_type": "node",
-                "value_type": feature["dtype"],
-                "num_values": 1,
-                "display_name": feature["prop_name"],
-                "required": False,
-                "default_value": None,
-                "is_group": False,
-            }
-            tracks.features[feature["prop_name"]] = new_custom_feature
+    if node_features is not None:
+        for feature in node_features:
+            ftype = str(feature["feature"])
+            if ftype in ("Custom", "Group"):
+                # ensure dtype and prop_name are strings for the Feature TypedDict
+                dtype_str = str(feature.get("dtype", "str"))
+                display_name = str(feature.get("prop_name"))
+                new_feature = {
+                    "feature_type": "node",
+                    "value_type": dtype_str,
+                    "num_values": 1,
+                    "display_name": display_name,
+                    "required": False,
+                    "default_value": None,
+                }
+                # cast to Feature TypedDict
+                tracks.features[str(feature["prop_name"])] = cast(Feature, new_feature)
 
     # Recompute requested regionprops features
-    features_to_compute = [feature for feature in node_features if feature["recompute"]]
-    features_to_compute_names = []
+    features_to_compute: list[dict[str, str | bool]] = (
+        [feature for feature in node_features if bool(feature.get("recompute", False))]
+        if node_features is not None
+        else []
+    )
+    features_to_compute_names: list[str] = []
     for feature in features_to_compute:
-        prop_name = default_name_map[feature["feature"]]
-        features_to_compute_names.append(prop_name)
+        # Only attempt to map regionprops features using default_name_map; otherwise skip
+        feat = str(feature["feature"])
+        if feat in default_name_map:
+            prop_name = default_name_map[feat]
+            features_to_compute_names.append(prop_name)
 
     if features_to_compute:
         tracks.enable_features(features_to_compute_names)
