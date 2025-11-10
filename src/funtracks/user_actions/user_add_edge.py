@@ -6,8 +6,9 @@ from typing import TYPE_CHECKING
 from funtracks.exceptions import InvalidActionError
 
 from ..actions._base import ActionGroup
-from ..actions.add_delete_edge import AddEdge, DeleteEdge
+from ..actions.add_delete_edge import AddEdge
 from ..actions.update_track_id import UpdateTrackID
+from .user_delete_edge import UserDeleteEdge
 
 if TYPE_CHECKING:
     from funtracks.data_model import SolutionTracks
@@ -33,29 +34,31 @@ class UserAddEdge(ActionGroup):
         self.tracks: SolutionTracks  # Narrow type from base class
         source, target = edge
         if not tracks.graph.has_node(source):
-            raise ValueError(
+            raise InvalidActionError(
                 f"Source node {source} not in solution yet - must be added before edge"
             )
         if not tracks.graph.has_node(target):
-            raise ValueError(
+            raise InvalidActionError(
                 f"Target node {target} not in solution yet - must be added before edge"
             )
 
-        # Check if making a merge. If yes and force, remove the other edge
+        # Check if making a merge. If yes and force, remove the other edge and update
+        # track ids.
         in_degree_target = self.tracks.graph.in_degree(target)
         if in_degree_target > 0:
             if not force:
                 raise InvalidActionError(
                     f"Cannot make a merge edge in a tracking solution: node {target} "
-                    "already has an in edge"
+                    "already has an in edge",
+                    forceable=True,
                 )
             else:
                 merge_edge = list(self.tracks.graph.in_edges(target))[0]
                 warnings.warn(
-                    "Removing edge {merge_edge} to add new edge without merging.",
+                    f"Removing edge {merge_edge} to add new edge without merging.",
                     stacklevel=2,
                 )
-                self.actions.append(DeleteEdge(self.tracks, merge_edge))
+                self.actions.append(UserDeleteEdge(self.tracks, merge_edge))
 
         # update track ids if needed
         out_degree_source = self.tracks.graph.out_degree(source)
@@ -71,7 +74,7 @@ class UserAddEdge(ActionGroup):
                 UpdateTrackID(self.tracks, successor, self.tracks.get_next_track_id())
             )
         else:
-            raise RuntimeError(
+            raise InvalidActionError(
                 f"Expected degree of 0 or 1 before adding edge, got {out_degree_source}"
             )
 
