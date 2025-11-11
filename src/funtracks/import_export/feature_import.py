@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
 from typing import TypedDict, cast
 
 from funtracks.data_model.tracks import Tracks
@@ -64,10 +63,10 @@ def register_features(tracks: Tracks, node_features: list[ImportedNodeFeature]) 
     for key, val in tracks.annotators.all_features.items():
         feature = val[0]
         display_name = feature["display_name"]
-        if isinstance(display_name, Sequence):
+        if isinstance(display_name, list):
             display_name = tuple(display_name)
         default_name = key if display_name is None else display_name
-        default_name_map[default_name] = key
+        default_name_map[default_name] = key  # type: ignore
 
     features_to_compute_names = []
     for imported_feature in features_to_compute:
@@ -100,11 +99,15 @@ def register_features(tracks: Tracks, node_features: list[ImportedNodeFeature]) 
     for imported_feature in features_to_enable:
         new_key = imported_feature["prop_name"]
         feature_name = imported_feature["feature"]
-        if (
-            feature_name not in default_name_map
-            or (feature_default_key := default_name_map[feature_name])
-            not in tracks.annotators.all_features
-        ):
+        if feature_name not in default_name_map:
+            raise ValueError(
+                f"Requested activation of feature {feature_name} "
+                "but no such feature found in computed features. "
+                "Perhaps you need to provide a segmentation?"
+            )
+
+        feature_default_key = default_name_map[feature_name]
+        if feature_default_key not in tracks.annotators.all_features:
             raise ValueError(
                 f"Requested activation of feature {feature_default_key} "
                 "but no such feature found in computed features. "
