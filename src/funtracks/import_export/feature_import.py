@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import inspect
-import warnings
 from typing import TypedDict, cast
 
 from funtracks.annotators._regionprops_annotator import (
@@ -74,11 +73,14 @@ def register_features(tracks: Tracks, node_features: list[ImportedNodeFeature]) 
     features_to_compute = [
         feature for feature in node_features if bool(feature.get("recompute", False))
     ]
-    features_to_compute_names = [
-        default_name_map[f["feature"]]
-        for f in features_to_compute
-        if f["feature"] in default_name_map
-    ]
+
+    features_to_compute_names = []
+    for feature in features_to_compute:
+        if feature["feature"] not in default_name_map:
+            raise ValueError(f"Cannot compute unknown feature {feature['feature']}")
+        else:
+            features_to_compute_names.append(default_name_map[feature["feature"]])
+
     if len(features_to_compute_names) > 0:
         if tracks.segmentation is None:
             raise ValueError(
@@ -108,8 +110,7 @@ def register_features(tracks: Tracks, node_features: list[ImportedNodeFeature]) 
         regionprop_name = feature["feature"]
         regionprop_key = default_name_map[regionprop_name]
         if regionprop_key is None:
-            warnings.warn(f"Unknown regionprop feature: {regionprop_name}", stacklevel=2)
-            continue
+            raise ValueError(f"Cannot compute unknown feature {regionprop_name}")
 
         # Call the regionprop function (check if it needs ndim)
         regionprop_func = get_regionprop_dict(regionprop_name)
