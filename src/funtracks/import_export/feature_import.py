@@ -1,18 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import TypedDict, cast
 
 from funtracks.data_model.tracks import Tracks
 from funtracks.features import _regionprops_features
 from funtracks.features._feature import Feature
-
-# TODO: compute this from the actual AnnotatorRegistry of the Tracks?
-default_name_map: dict[str, str] = {
-    "Area": "area",
-    "Circularity": "circularity",
-    "Perimeter": "perimeter",
-    "EllipsoidAxes": "ellipse_axis_radii",
-}
 
 
 class ImportedNodeFeature(TypedDict):
@@ -21,8 +14,9 @@ class ImportedNodeFeature(TypedDict):
     # TODO: Don't have the special custom and group strings without any type checking
     Args:
         prop_name (str): the name of the property in the source CSV or Geff file
-        feature (str): the name of the feature, this can either be the DISPLAY? name of a
-            computed Feature, or it can be 'Group' (will be imported as a boolean type
+        feature (str): the name of the feature, this can either be the DISPLAY name of a
+            computed Feature (or key if the display name is missing),
+            or it can be 'Group' (will be imported as a boolean type
             to reflect a group), or 'Custom' (static feature).
         recompute (bool): indicates whether to recompute the computed feature or load it
             as is.
@@ -66,20 +60,29 @@ def register_features(tracks: Tracks, node_features: list[ImportedNodeFeature]) 
     features_to_compute = [
         feature for feature in node_features if bool(feature.get("recompute", False))
     ]
+    default_name_map: dict[str | tuple, str] = {}
+    for key, val in tracks.annotators.all_features.items():
+        feature = val[0]
+        display_name = feature["display_name"]
+        if isinstance(display_name, Sequence):
+            display_name = tuple(display_name)
+        default_name = key if display_name is None else display_name
+        default_name_map[default_name] = key
 
     features_to_compute_names = []
-    for feature in features_to_compute:
-        if feature["feature"] not in default_name_map:
-            raise ValueError(f"Cannot compute unknown feature {feature['feature']}")
-        else:
-            feature_default_key: str | None = default_name_map[feature["feature"]]
-            if feature_default_key not in tracks.annotators.all_features:
-                raise ValueError(
-                    f"Requested computation of feature {feature_default_key} "
-                    "but no such feature found in computed features. "
-                    "Perhaps you need to provide a segmentation?"
-                )
-            features_to_compute_names.append(feature_default_key)
+    for imported_feature in features_to_compute:
+        feature_name = imported_feature["feature"]
+        if (
+            feature_name not in default_name_map
+            or (feature_default_key := default_name_map[feature_name])
+            not in tracks.annotators.all_features
+        ):
+            raise ValueError(
+                f"Requested computation of feature {feature_name} "
+                "but no such feature found in computed features. "
+                "Perhaps you need to provide a segmentation?"
+            )
+        features_to_compute_names.append(feature_default_key)
 
     tracks.enable_features(features_to_compute_names)
 
@@ -94,13 +97,14 @@ def register_features(tracks: Tracks, node_features: list[ImportedNodeFeature]) 
         )
     ]
 
-    for feature in features_to_enable:
-        new_key = feature["prop_name"]
-        feature_name = feature["feature"]
-        feature_default_key = default_name_map.get(feature_name)
-        if feature_default_key is None:
-            raise ValueError(f"Cannot compute unknown feature {feature_name}")
-        if feature_default_key not in tracks.annotators.all_features:
+    for imported_feature in features_to_enable:
+        new_key = imported_feature["prop_name"]
+        feature_name = imported_feature["feature"]
+        if (
+            feature_name not in default_name_map
+            or (feature_default_key := default_name_map[feature_name])
+            not in tracks.annotators.all_features
+        ):
             raise ValueError(
                 f"Requested activation of feature {feature_default_key} "
                 "but no such feature found in computed features. "
@@ -127,10 +131,10 @@ def register_features(tracks: Tracks, node_features: list[ImportedNodeFeature]) 
 
     # 3) Add other (custom, group) features that will be static
     other_features = [f for f in node_features if f["feature"] in ("Custom", "Group")]
-    for feature in other_features:
+    for imported_feature in other_features:
         # ensure dtype and prop_name are strings for the Feature TypedDict
-        dtype_str = str(feature.get("dtype", "str"))
-        display_name = str(feature.get("prop_name"))
+        dtype_str = str(imported_feature.get("dtype", "str"))
+        display_name = str(imported_feature.get("prop_name"))
         new_feature = {
             "feature_type": "node",
             "value_type": dtype_str,
@@ -140,4 +144,4 @@ def register_features(tracks: Tracks, node_features: list[ImportedNodeFeature]) 
             "default_value": None,
         }
         # cast to Feature TypedDict
-        tracks.features[str(feature["prop_name"])] = cast(Feature, new_feature)
+        tracks.features[str(imported_feature["prop_name"])] = cast(Feature, new_feature)

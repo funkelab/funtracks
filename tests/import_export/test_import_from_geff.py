@@ -285,7 +285,7 @@ def test_node_features_compute_vs_load(valid_geff, valid_segmentation, tmp_path)
         },
         {
             "prop_name": "ellipse",
-            "feature": "EllipsoidAxes",
+            "feature": "Ellipse axis radii",
             "recompute": True,  # Not in geff, should be computed
             "dtype": "float",
         },
@@ -318,7 +318,7 @@ def test_node_features_compute_vs_load(valid_geff, valid_segmentation, tmp_path)
 
 
 def test_node_features_unknown(valid_geff, valid_segmentation, tmp_path):
-    """Test that providing an unknown Regionprops feature raises a ValueError."""
+    """Test that providing an unknown feature raises a ValueError."""
     store, _ = valid_geff
     name_map = {"time": "t", "y": "y", "x": "x", "seg_id": "seg_id"}
     scale = [1, 1, 1 / 100]
@@ -335,7 +335,11 @@ def test_node_features_unknown(valid_geff, valid_segmentation, tmp_path):
         }
     ]
 
-    with pytest.raises(ValueError, match="Cannot compute unknown feature AREA"):
+    with pytest.raises(
+        ValueError,
+        match="Requested computation of feature .* but no such feature found "
+        "in computed features. Perhaps you need to provide a segmentation?",
+    ):
         import_from_geff(
             store,
             name_map,
