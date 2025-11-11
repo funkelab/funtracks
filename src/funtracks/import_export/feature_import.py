@@ -66,6 +66,8 @@ def register_features(tracks: Tracks, node_features: list[ImportedNodeFeature]) 
     Args:
         tracks (Tracks): the to be modified Tracks instance.
         node_features (list[ImportedNodeFeature]): list of to be imported Features.
+    Raises:
+        ValueError when attempting to register Regionprop features without a segmentation.
     """
 
     # 1) Recompute requested Regionprops features
@@ -77,48 +79,57 @@ def register_features(tracks: Tracks, node_features: list[ImportedNodeFeature]) 
         for f in features_to_compute
         if f["feature"] in default_name_map
     ]
-    if len(features_to_compute_names) > 0 and tracks.segmentation is not None:
+    if len(features_to_compute_names) > 0:
+        if tracks.segmentation is None:
+            raise ValueError(
+                f"Please provide a segmentation to compute Regionprops features: "
+                f"{features_to_compute_names}"
+            )
         tracks.enable_features(features_to_compute_names)
 
     # 2) Add Regionprops features that were loaded from source but should not be
     # recomputed now.
-    if tracks.segmentation is not None:
-        regionprop_features = [
-            feature
-            for feature in node_features
-            if not bool(feature.get("recompute", False))
-            and feature["feature"] not in ("Group", "Custom")
-        ]
 
-        for feature in regionprop_features:
-            given_name = feature["prop_name"]
-            regionprop_name = feature["feature"]
-            regionprop_key = default_name_map[regionprop_name]
-            if regionprop_key is None:
-                warnings.warn(
-                    f"Unknown regionprop feature: {regionprop_name}", stacklevel=2
-                )
-                continue
+    regionprop_features = [
+        feature
+        for feature in node_features
+        if not bool(feature.get("recompute", False))
+        and feature["feature"] not in ("Group", "Custom")
+    ]
 
-            # Call the regionprop function (check if it needs ndim)
-            regionprop_func = get_regionprop_dict(regionprop_name)
-            sig = inspect.signature(regionprop_func)
-            if "ndim" in sig.parameters:
-                regionprop_feature = regionprop_func(ndim=tracks.ndim)
-            else:
-                regionprop_feature = regionprop_func()
+    if len(regionprop_features) > 0 and tracks.segmentation is None:
+        raise ValueError(
+            "Please provide a segmentation to compute Regionprops features: "
+            f"{[feature['feature'] for feature in regionprop_features]}"
+        )
 
-            # Register it to the annotator, first under the default name and then update
-            # it to its given name.
-            tracks.features[regionprop_key] = regionprop_feature
-            tracks.annotators.activate_features([regionprop_key])
-            regionprops_annotator = next(
-                annotator
-                for annotator in tracks.annotators
-                if isinstance(annotator, RegionpropsAnnotator)
-            )
-            regionprops_annotator.change_key(regionprop_key, given_name)
-            tracks.features[given_name] = tracks.features.pop(regionprop_key)
+    for feature in regionprop_features:
+        given_name = feature["prop_name"]
+        regionprop_name = feature["feature"]
+        regionprop_key = default_name_map[regionprop_name]
+        if regionprop_key is None:
+            warnings.warn(f"Unknown regionprop feature: {regionprop_name}", stacklevel=2)
+            continue
+
+        # Call the regionprop function (check if it needs ndim)
+        regionprop_func = get_regionprop_dict(regionprop_name)
+        sig = inspect.signature(regionprop_func)
+        if "ndim" in sig.parameters:
+            regionprop_feature = regionprop_func(ndim=tracks.ndim)
+        else:
+            regionprop_feature = regionprop_func()
+
+        # Register it to the annotator, first under the default name and then update
+        # it to its given name.
+        tracks.features[regionprop_key] = regionprop_feature
+        tracks.annotators.activate_features([regionprop_key])
+        regionprops_annotator = next(
+            annotator
+            for annotator in tracks.annotators
+            if isinstance(annotator, RegionpropsAnnotator)
+        )
+        regionprops_annotator.change_key(regionprop_key, given_name)
+        tracks.features[given_name] = tracks.features.pop(regionprop_key)
 
     # 3) Add other (custom, group) features that will be static
     other_features = [f for f in node_features if f["feature"] in ("Custom", "Group")]
