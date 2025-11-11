@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-from typing import (
-    TYPE_CHECKING,
-)
+from typing import TYPE_CHECKING
 
 import dask.array as da
 import geff
@@ -16,6 +14,8 @@ from geff.validate.segmentation import (
 from geff.validate.tracks import validate_lineages, validate_tracklets
 from numpy.typing import ArrayLike
 
+from funtracks.data_model.solution_tracks import SolutionTracks
+from funtracks.import_export.feature_import import ImportedNodeFeature, register_features
 from funtracks.import_export.magic_imread import magic_imread
 
 if TYPE_CHECKING:
@@ -23,7 +23,6 @@ if TYPE_CHECKING:
 
     from geff._typing import InMemoryGeff
 
-from funtracks.data_model.solution_tracks import SolutionTracks
 
 # defining constants here because they are only used in the context of import
 TRACK_KEY = "track_id"
@@ -140,9 +139,9 @@ def import_from_geff(
     name_map: dict[str, str],
     segmentation_path: Path | None = None,
     scale: list[float] | None = None,
-    node_features: dict[str, bool] | None = None,
+    node_features: list[ImportedNodeFeature] | None = None,
     edge_prop_filter: list[str] | None = None,
-):
+) -> SolutionTracks:
     """Load Tracks from a geff directory. Takes a name_map to map graph attributes
     (spatial dimensions and optional track and lineage ids) to tracks attributes.
     Optionally takes a path to segmentation data, and verifies if the segmentation data
@@ -168,9 +167,8 @@ def import_from_geff(
                 (lineage_id), optional, if it is a solution
         segmentation_path (Path | None = None): path to segmentation data.
         scale (list[float]): scaling information (pixel to world coordinates).
-        node_features (dict[str: bool] | None=None): optional features to include in the
-            Tracks object. The keys are the feature names, and the boolean value indicates
-            whether to recompute the feature (area) or load it as a static node attribute.
+        node_features (list[ImportedNodeFeature] | None=None): optional features to
+            include in the Tracks object.
         edge_prop_filter (list[str]): List of edge properties to include. If None all
         properties will be included.
     Returns:
@@ -178,17 +176,18 @@ def import_from_geff(
     """
 
     # Read the GEFF file into memory
-    node_prop_filter = [
-        prop for key, prop in name_map.items() if name_map[key] is not None
+    node_prop_filter: list[str] = [
+        prop for _, prop in name_map.items() if prop is not None
     ]
+
     if node_features is not None:
         # Only load features from geff that should NOT be computed (value=False)
         # Features with value=True will be computed by annotators after loading
         node_prop_filter.extend(
             [
-                feature_name
-                for feature_name, should_compute in node_features.items()
-                if not should_compute
+                str(feature["prop_name"])
+                for feature in node_features
+                if not bool(feature.get("recompute", False))
             ]
         )
 
@@ -200,7 +199,7 @@ def import_from_geff(
     node_props = in_memory_geff["node_props"]
     edge_ids = in_memory_geff["edge_ids"]
     edge_props = in_memory_geff["edge_props"]
-    node_attrs_to_load_from_geff = []
+    node_attrs_to_load_from_geff: list[str] = []
     segmentation = None
 
     # Check that the spatiotemporal key mapping does not contain None or duplicate values.
@@ -285,22 +284,17 @@ def import_from_geff(
                 )
             segmentation = relabel_seg_id_to_node_id(times, ids, seg_ids, segmentation)
 
-    # Add optional extra features that were loaded from geff (not computed).
-    if node_features is None:
-        node_features = {}
     # Only include features that should be loaded from geff (value=False)
-    node_attrs_to_load_from_geff.extend(
-        [
-            feature_name
-            for feature_name, should_compute in node_features.items()
-            if not should_compute
-        ]
-    )
+    if node_features is not None:
+        node_attrs_to_load_from_geff.extend(
+            [f["prop_name"] for f in node_features if not f["recompute"]]
+        )
 
     # All pre-checks have passed, load the graph now.
     filtered_node_props = {
         k: v for k, v in node_props.items() if k in node_attrs_to_load_from_geff
     }
+
     graph = geff.construct(
         metadata=in_memory_geff["metadata"],
         node_ids=in_memory_geff["node_ids"],
@@ -330,16 +324,8 @@ def import_from_geff(
         ndim=ndims,
         scale=scale,
     )
-    # TODO: properly import/activate static features that were loaded from geff using
-    # geff metadata to create the Feature
-    # Compute any extra features that were requested but not already loaded from geff
-    features_to_compute = [
-        feature_name
-        for feature_name, _ in node_features.items()
-        if feature_name not in node_attrs_to_load_from_geff
-    ]
 
-    if features_to_compute:
-        tracks.enable_features(features_to_compute)
+    if node_features is not None:
+        register_features(tracks, node_features)
 
     return tracks

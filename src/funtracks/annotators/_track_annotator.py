@@ -317,3 +317,27 @@ class TrackAnnotator(GraphAnnotator):
             # Clean up empty list
             if not self.tracklet_id_to_nodes[track_id]:
                 del self.tracklet_id_to_nodes[track_id]
+
+    def change_key(self, old_key: str, new_key: str) -> None:
+        """Rename a feature key in this annotator.
+
+        Overrides base implementation to also update the tracklet_key and
+        lineage_key instance variables.
+
+        Args:
+            old_key: Existing key to rename.
+            new_key: New key to replace it with.
+
+        Raises:
+            KeyError: If old_key does not exist.
+        """
+        # Call base implementation to update all_features
+        super().change_key(old_key, new_key)
+
+        # Update tracklet_key if it matches
+        if self.tracklet_key == old_key:
+            self.tracklet_key = new_key
+
+        # Update lineage_key if it matches
+        if self.lineage_key == old_key:
+            self.lineage_key = new_key

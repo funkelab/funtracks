@@ -238,3 +238,23 @@ class RegionpropsAnnotator(GraphAnnotator):
                 self.tracks._set_node_attr(node, key, value)
         else:
             self._regionprops_update(masked_frame, keys_to_compute)
+
+    def change_key(self, old_key: str, new_key: str) -> None:
+        """Rename a feature key in this annotator, and related mappings.
+
+        Overrides base implementation to also update the regionprops name mapping.
+
+        Args:
+            old_key: Existing key to rename.
+            new_key: New key to replace it with.
+
+        Raises:
+            KeyError: If old_key does not exist.
+        """
+        # Call base implementation to update all_features
+        super().change_key(old_key, new_key)
+
+        # Update regionprops-specific name mapping
+        if old_key in self.regionprops_names:
+            rp_name = self.regionprops_names.pop(old_key)
+            self.regionprops_names[new_key] = rp_name
