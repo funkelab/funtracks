@@ -3,20 +3,11 @@ from __future__ import annotations
 import inspect
 from typing import TypedDict, cast
 
-from funtracks.annotators._regionprops_annotator import (
-    RegionpropsAnnotator,
-)
 from funtracks.data_model.tracks import Tracks
 from funtracks.features import _regionprops_features
 from funtracks.features._feature import Feature
 
-regionprop_class_names = [
-    name
-    for name, func in inspect.getmembers(_regionprops_features, inspect.isfunction)
-    if func.__module__ == "funtracks.features._regionprops_features"
-]
-
-
+# TODO: compute this from the actual AnnotatorRegistry of the Tracks?
 default_name_map: dict[str, str] = {
     "Area": "area",
     "Circularity": "circularity",
@@ -26,13 +17,15 @@ default_name_map: dict[str, str] = {
 
 
 class ImportedNodeFeature(TypedDict):
-    """a dictionary mapping for an imported property, with the following keys:
-    "prop_name", "feature", "recompute", "dtype". The prop_name is the name of the
-    property in the source CSV or Geff file, feature is the name of the feature, this can
-    either be the class name of a Regionprops Feature, or it can be 'Group'
-    (will be imported as a boolean type to reflect a group), or 'Custom' (static feature).
-     Recompute is a boolean that indicates whether to recompute the regionprops feature
-    or load it as is.
+    """Metadata options for an imported property
+
+    Args:
+        prop_name (str): the name of the property in the source CSV or Geff file
+        feature (str): the name of the feature, this can either be the DISPLAY? name of a
+            computed Feature, or it can be 'Group' (will be imported as a boolean type
+            to reflect a group), or 'Custom' (static feature).
+        recompute (bool): indicates whether to recompute the computed feature or load it
+            as is.
     """
 
     prop_name: str
@@ -53,20 +46,20 @@ def get_regionprop_dict(name: str):
 def register_features(tracks: Tracks, node_features: list[ImportedNodeFeature]) -> None:
     """Function to register imported properties as Features on Tracks.
 
-    1) Create a list of all to be recomputed regionprops features, and enable them on
+    1) Create a list of all to be recomputed features, and enable them on
         Tracks.
-    2) Create a list of all features that should be interpreted as Regionprops features,
+    2) Create a list of all features that should be interpreted as computed features,
         without immediate recomputation. Since they are imported from a node property that
-         can have any custom name in the source CSV or Geff file, we update the default
-         key for this Regionprops Feature in the Features dictionary to the given name.
+        can have any custom name in the source CSV or Geff file, we update the
+        key for this Feature in the FeatureDict to the given name.
     3) Create a list of all remaining, static features (Custom/Group features) and add
-     them to the Features dictionary with their respective data types.
+        them to the Features dictionary with their respective data types.
 
     Args:
         tracks (Tracks): the to be modified Tracks instance.
         node_features (list[ImportedNodeFeature]): list of to be imported Features.
     Raises:
-        ValueError when attempting to register Regionprop features without a segmentation.
+        ValueError when attempting to register computed features without a segmentation.
     """
 
     # 1) Recompute requested Regionprops features
@@ -121,16 +114,17 @@ def register_features(tracks: Tracks, node_features: list[ImportedNodeFeature]) 
             regionprop_feature = regionprop_func()
 
         # Register it to the annotator, first under the default name and then update
-        # it to its given name.
+        # it to its given name using the registry's change_key method.
         tracks.features[regionprop_key] = regionprop_feature
         tracks.annotators.activate_features([regionprop_key])
-        regionprops_annotator = next(
-            annotator
-            for annotator in tracks.annotators
-            if isinstance(annotator, RegionpropsAnnotator)
-        )
-        regionprops_annotator.change_key(regionprop_key, given_name)
+        tracks.annotators.change_key(regionprop_key, given_name)
         tracks.features[given_name] = tracks.features.pop(regionprop_key)
+
+        # Update FeatureDict special key attributes if we renamed position or tracklet
+        if tracks.features.position_key == regionprop_key:
+            tracks.features.position_key = given_name
+        if tracks.features.tracklet_key == regionprop_key:
+            tracks.features.tracklet_key = given_name
 
     # 3) Add other (custom, group) features that will be static
     other_features = [f for f in node_features if f["feature"] in ("Custom", "Group")]

@@ -138,3 +138,23 @@ class GraphAnnotator:
             NotImplementedError: If not implemented in subclass.
         """
         raise NotImplementedError("Must implement update in the annotator subclass")
+
+    def change_key(self, old_key: str, new_key: str) -> None:
+        """Rename a feature key in this annotator.
+
+        Base implementation updates the all_features dictionary. Subclasses should
+        override this method to update any additional internal mappings they maintain.
+
+        Args:
+            old_key: Existing key to rename.
+            new_key: New key to replace it with.
+
+        Raises:
+            KeyError: If old_key does not exist in all_features.
+        """
+        if old_key not in self.all_features:
+            raise KeyError(f"Cannot rename missing feature key: {old_key!r}")
+
+        # Update all_features dictionary
+        value = self.all_features.pop(old_key)
+        self.all_features[new_key] = value
