@@ -24,6 +24,7 @@ def valid_geff():
             "seg_id": np.array([10, 20, 30, 40, 50]),
             "lineage_id": np.arange(5),
             "area": np.array([20, 41, 42, 776, 21]),
+            "circ": np.array([0.2, 0.1, 0.5, 0.3, 0.45]),
             "random_feature": np.array(["a", "b", "c", "d", "e"]),
             "random_feature2": np.array(["a", "b", "c", "d", "e"]),
         },
@@ -116,7 +117,21 @@ def test_tracks_with_segmentation(valid_geff, invalid_geff, valid_segmentation, 
 
     # Test that a tracks object is produced and that the seg_id has been relabeled.
     scale = [1, 1, (1 / 100)]
-    node_features = {"area": True, "random_feature": False}
+    node_features = [
+        {
+            "prop_name": "area",
+            "feature": "Area",
+            "recompute": True,  # In geff, but should be recomputed
+            "dtype": "float",
+        },
+        {
+            "prop_name": "random_feature",
+            "feature": "Custom",  # load as static feature
+            "recompute": False,
+            "dtype": "float",
+        },
+    ]
+
     tracks = import_from_geff(
         store,
         name_map,
@@ -150,7 +165,16 @@ def test_tracks_with_segmentation(valid_geff, invalid_geff, valid_segmentation, 
     )  # recomputed area values should be 1 pixel, so 0.01 after applying the scaling.
 
     # Check that area is not recomputed but taken directly from the graph
-    node_features = {"area": False, "random_feature": False}  # set Recompute to False
+    node_features = [
+        {"prop_name": "area", "feature": "Area", "recompute": False, "dtype": "float"},
+        {
+            "prop_name": "random_feature",
+            "feature": "Custom",  # load as static feature
+            "recompute": False,
+            "dtype": "float",
+        },
+    ]
+
     tracks = import_from_geff(
         store,
         name_map,
@@ -204,12 +228,22 @@ def test_segmentation_loading_formats(
     else:
         raise ValueError(f"Unknown format: {segmentation_format}")
 
+    node_features = [
+        {"prop_name": "area", "feature": "Area", "recompute": False, "dtype": "float"},
+        {
+            "prop_name": "random_feature",
+            "feature": "Custom",  # load as static feature
+            "recompute": False,
+            "dtype": "float",
+        },
+    ]
+
     tracks = import_from_geff(
         store,
         name_map,
         segmentation_path=path,
         scale=scale,
-        node_features={"area": False, "random_feature": False},
+        node_features=node_features,
     )
 
     assert hasattr(tracks, "segmentation")
@@ -230,11 +264,32 @@ def test_node_features_compute_vs_load(valid_geff, valid_segmentation, tmp_path)
     tifffile.imwrite(valid_segmentation_path, valid_segmentation)
 
     # Test 1: Mix of computed (True) and loaded (False) features
-    node_features = {
-        "area": True,  # In geff, but should be recomputed
-        "random_feature": False,  # Should be loaded from geff
-        "ellipse_axis_radii": True,  # Not in geff, should be computed
-    }
+    node_features = [
+        {
+            "prop_name": "area",
+            "feature": "Area",
+            "recompute": True,  # In geff, but should be recomputed
+            "dtype": "float",
+        },
+        {
+            "prop_name": "random_feature",
+            "feature": "Custom",  # load as static feature
+            "recompute": False,
+            "dtype": "float",
+        },
+        {
+            "prop_name": "circ",
+            "feature": "Circularity",
+            "recompute": False,  # In geff, load without recomputing
+            "dtype": "float",
+        },
+        {
+            "prop_name": "ellipse",
+            "feature": "EllipsoidAxes",
+            "recompute": True,  # Not in geff, should be computed
+            "dtype": "float",
+        },
+    ]
 
     tracks = import_from_geff(
         store,
@@ -250,11 +305,41 @@ def test_node_features_compute_vs_load(valid_geff, valid_segmentation, tmp_path)
     assert "area" in data
     assert "random_feature" in data
     assert "ellipse_axis_radii" in data
+    assert "circ" in data
 
     # Verify computed values (1 pixel = 0.01 after scaling)
     # Original geff had area=21 for last node
     assert data["area"] == 0.01
     assert data["ellipse_axis_radii"] is not None
+    assert data["circ"] == 0.45  # the value should not be recomputed
 
     # Verify loaded value from geff
     assert data["random_feature"] == "e"
+
+
+def test_node_features_unknown(valid_geff, valid_segmentation, tmp_path):
+    """Test that providing an unknown Regionprops feature raises a ValueError."""
+    store, _ = valid_geff
+    name_map = {"time": "t", "y": "y", "x": "x", "seg_id": "seg_id"}
+    scale = [1, 1, 1 / 100]
+    valid_segmentation_path = tmp_path / "segmentation.tif"
+    tifffile.imwrite(valid_segmentation_path, valid_segmentation)
+
+    # Test unknown regionprops feature
+    node_features = [
+        {
+            "prop_name": "area",
+            "feature": "AREA",  # Unknown feature
+            "recompute": True,
+            "dtype": "float",
+        }
+    ]
+
+    with pytest.raises(ValueError, match="Cannot compute unknown feature AREA"):
+        import_from_geff(
+            store,
+            name_map,
+            segmentation_path=valid_segmentation_path,
+            scale=scale,
+            node_features=node_features,
+        )
