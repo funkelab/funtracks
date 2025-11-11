@@ -343,3 +343,67 @@ def test_node_features_unknown(valid_geff, valid_segmentation, tmp_path):
             scale=scale,
             node_features=node_features,
         )
+
+
+def test_compute_features_without_segmentation(valid_geff):
+    """Test that computing regionprops features without segmentation raises an error."""
+    store, _ = valid_geff
+    name_map = {"time": "t", "y": "y", "x": "x"}
+    scale = [1, 1, 1 / 100]
+
+    # Try to compute area feature without providing segmentation
+    node_features = [
+        {
+            "prop_name": "area",
+            "feature": "Area",
+            "recompute": True,  # Request computation
+            "dtype": "float",
+        }
+    ]
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "Requested computation of feature .* but no such feature found "
+            "in computed features. Perhaps you need to provide a segmentation?"
+        ),
+    ):
+        import_from_geff(
+            store,
+            name_map,
+            segmentation_path=None,  # No segmentation
+            scale=scale,
+            node_features=node_features,
+        )
+
+
+def test_load_features_without_segmentation_not_computed(valid_geff):
+    """Test that loading regionprops features without segmentation raises error."""
+    store, _ = valid_geff
+    name_map = {"time": "t", "y": "y", "x": "x"}
+    scale = [1, 1, 1 / 100]
+
+    # Try to load circularity feature without providing segmentation
+    node_features = [
+        {
+            "prop_name": "circ",
+            "feature": "Circularity",
+            "recompute": False,  # Just load, don't compute
+            "dtype": "float",
+        }
+    ]
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "Requested activation of feature .* but no such feature found "
+            "in computed features. Perhaps you need to provide a segmentation?"
+        ),
+    ):
+        import_from_geff(
+            store,
+            name_map,
+            segmentation_path=None,  # No segmentation
+            scale=scale,
+            node_features=node_features,
+        )

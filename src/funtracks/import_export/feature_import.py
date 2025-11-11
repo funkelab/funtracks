@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import inspect
 from typing import TypedDict, cast
 
 from funtracks.data_model.tracks import Tracks
@@ -19,6 +18,7 @@ default_name_map: dict[str, str] = {
 class ImportedNodeFeature(TypedDict):
     """Metadata options for an imported property
 
+    # TODO: Don't have the special custom and group strings without any type checking
     Args:
         prop_name (str): the name of the property in the source CSV or Geff file
         feature (str): the name of the feature, this can either be the DISPLAY? name of a
@@ -53,7 +53,7 @@ def register_features(tracks: Tracks, node_features: list[ImportedNodeFeature]) 
         can have any custom name in the source CSV or Geff file, we update the
         key for this Feature in the FeatureDict to the given name.
     3) Create a list of all remaining, static features (Custom/Group features) and add
-        them to the Features dictionary with their respective data types.
+        them to the FeatureDict with their respective data types.
 
     Args:
         tracks (Tracks): the to be modified Tracks instance.
@@ -62,7 +62,7 @@ def register_features(tracks: Tracks, node_features: list[ImportedNodeFeature]) 
         ValueError when attempting to register computed features without a segmentation.
     """
 
-    # 1) Recompute requested Regionprops features
+    # 1) Recompute requested features
     features_to_compute = [
         feature for feature in node_features if bool(feature.get("recompute", False))
     ]
@@ -72,59 +72,58 @@ def register_features(tracks: Tracks, node_features: list[ImportedNodeFeature]) 
         if feature["feature"] not in default_name_map:
             raise ValueError(f"Cannot compute unknown feature {feature['feature']}")
         else:
-            features_to_compute_names.append(default_name_map[feature["feature"]])
+            feature_default_key: str | None = default_name_map[feature["feature"]]
+            if feature_default_key not in tracks.annotators.all_features:
+                raise ValueError(
+                    f"Requested computation of feature {feature_default_key} "
+                    "but no such feature found in computed features. "
+                    "Perhaps you need to provide a segmentation?"
+                )
+            features_to_compute_names.append(feature_default_key)
 
-    if len(features_to_compute_names) > 0:
-        if tracks.segmentation is None:
-            raise ValueError(
-                f"Please provide a segmentation to compute Regionprops features: "
-                f"{features_to_compute_names}"
-            )
-        tracks.enable_features(features_to_compute_names)
+    tracks.enable_features(features_to_compute_names)
 
     # 2) Add Regionprops features that were loaded from source but should not be
     # recomputed now.
-
-    regionprop_features = [
+    features_to_enable = [
         feature
         for feature in node_features
-        if not bool(feature.get("recompute", False))
-        and feature["feature"] not in ("Group", "Custom")
+        if (
+            not bool(feature.get("recompute", False))
+            and feature["feature"] not in ["Custom", "Group"]
+        )
     ]
 
-    if len(regionprop_features) > 0 and tracks.segmentation is None:
-        raise ValueError(
-            "Please provide a segmentation to compute Regionprops features: "
-            f"{[feature['feature'] for feature in regionprop_features]}"
-        )
+    for feature in features_to_enable:
+        new_key = feature["prop_name"]
+        feature_name = feature["feature"]
+        feature_default_key = default_name_map.get(feature_name)
+        if feature_default_key is None:
+            raise ValueError(f"Cannot compute unknown feature {feature_name}")
+        if feature_default_key not in tracks.annotators.all_features:
+            raise ValueError(
+                f"Requested activation of feature {feature_default_key} "
+                "but no such feature found in computed features. "
+                "Perhaps you need to provide a segmentation?"
+            )
 
-    for feature in regionprop_features:
-        given_name = feature["prop_name"]
-        regionprop_name = feature["feature"]
-        regionprop_key = default_name_map[regionprop_name]
-        if regionprop_key is None:
-            raise ValueError(f"Cannot compute unknown feature {regionprop_name}")
+        # Get the feature from the annotator
+        feature_dict = tracks.annotators.all_features[feature_default_key][0]
 
-        # Call the regionprop function (check if it needs ndim)
-        regionprop_func = get_regionprop_dict(regionprop_name)
-        sig = inspect.signature(regionprop_func)
-        if "ndim" in sig.parameters:
-            regionprop_feature = regionprop_func(ndim=tracks.ndim)
-        else:
-            regionprop_feature = regionprop_func()
+        # change the annotator key and activate it to ensure recomputation on update
+        tracks.annotators.change_key(feature_default_key, new_key)
+        tracks.annotators.activate_features([new_key])
 
-        # Register it to the annotator, first under the default name and then update
-        # it to its given name using the registry's change_key method.
-        tracks.features[regionprop_key] = regionprop_feature
-        tracks.annotators.activate_features([regionprop_key])
-        tracks.annotators.change_key(regionprop_key, given_name)
-        tracks.features[given_name] = tracks.features.pop(regionprop_key)
+        # Register it to the feature dictionary, removing old key if necessary
+        if feature_default_key in tracks.features:
+            tracks.features.pop(feature_default_key)
+        tracks.features[new_key] = feature_dict
 
         # Update FeatureDict special key attributes if we renamed position or tracklet
-        if tracks.features.position_key == regionprop_key:
-            tracks.features.position_key = given_name
-        if tracks.features.tracklet_key == regionprop_key:
-            tracks.features.tracklet_key = given_name
+        if tracks.features.position_key == feature_default_key:
+            tracks.features.position_key = new_key
+        if tracks.features.tracklet_key == feature_default_key:
+            tracks.features.tracklet_key = new_key
 
     # 3) Add other (custom, group) features that will be static
     other_features = [f for f in node_features if f["feature"] in ("Custom", "Group")]
