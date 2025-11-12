@@ -18,12 +18,14 @@ if TYPE_CHECKING:
 
     from funtracks.data_model.tracks import Tracks
 
+from funtracks.import_export.export_utils import filter_graph_with_ancestors
+
 
 def export_to_geff(
     tracks: Tracks,
     directory: Path,
     overwrite: bool = False,
-    node_ids: list[int] | None = None,
+    node_ids: set[int] | None = None,
 ):
     """Export the Tracks nxgraph to geff.
 
@@ -31,14 +33,21 @@ def export_to_geff(
         tracks (Tracks): Tracks object containing a graph to save.
         directory (Path): Destination directory for saving the Zarr.
         overwrite (bool): If True, allows writing into a non-empty directory.
-        node_ids (list[int], optional): A selection of nodes, constructing a valid graph,
-            that should be saved. If provided, all other nodes will NOT be saved.
+        node_ids (set[int], optional): A set of nodes that should be saved. If
+            provided, a valid graph will be constructed that also includes the ancestors
+            of the given nodes. All other nodes will NOT be saved.
 
     Raises:
         ValueError: If the path is invalid, parent doesn't exist, is not a directory,
                     or if the directory is not empty and overwrite is False.
     """
     directory = directory.resolve(strict=False)
+
+    if node_ids is not None:
+        nodes_to_keep = filter_graph_with_ancestors(
+            tracks.graph, node_ids
+        )  # include the ancestors to make sure the graph is valid and has no missing
+        # parent nodes.
 
     # Ensure parent directory exists
     parent = directory.parent
@@ -105,7 +114,7 @@ def export_to_geff(
         )
 
         if node_ids is not None:
-            node_ids = np.asarray(node_ids)
+            nodes_to_keep = np.asarray(nodes_to_keep)
 
             # to avoid having to copy the segmentation array entirely, loop over chunks,
             # and mask out the nodes that should be kept.
@@ -120,7 +129,7 @@ def export_to_geff(
                 )
 
                 block = seg_data[slices]
-                mask = np.isin(block, node_ids)
+                mask = np.isin(block, nodes_to_keep)
                 filtered = np.where(mask, block, 0)
                 z[slices] = filtered
 
@@ -137,7 +146,7 @@ def export_to_geff(
 
     # Filter the graph if node_ids is provided
     if node_ids is not None:
-        graph = graph.subgraph(node_ids).copy()
+        graph = graph.subgraph(nodes_to_keep).copy()
 
     # Save the graph in a 'tracks' folder
     tracks_path = directory / "tracks"

@@ -7,6 +7,7 @@ import networkx as nx
 import numpy as np
 
 from funtracks.features import FeatureDict
+from funtracks.import_export.export_utils import filter_graph_with_ancestors
 
 from .tracks import Tracks
 
@@ -162,11 +163,18 @@ class SolutionTracks(Tracks):
         track_id = self.get_node_attr(node, self.features.tracklet_key, required=True)
         return track_id
 
-    def export_tracks(self, outfile: Path | str, node_ids: list[int] | None = None):
+    def export_tracks(
+        self, outfile: Path | str, node_ids: set[int] | None = None
+    ) -> None:
         """Export the tracks from this run to a csv with the following columns:
         t,[z],y,x,id,parent_id,track_id
         Cells without a parent_id will have an empty string for the parent_id.
         Whether or not to include z is inferred from self.ndim
+
+        Args:
+            outfile (Path): path to output csv file
+            node_ids (set[int], optional): nodes to be included. If provided, only these
+            nodes and their ancestors will be included in the output.
         """
 
         def convert_numpy_to_python(value):
@@ -188,11 +196,13 @@ class SolutionTracks(Tracks):
                 header.append(cast(str, col_name))
 
         if node_ids is None:
-            node_ids = self.graph.nodes()
+            node_to_keep = self.graph.nodes()
+        else:
+            node_to_keep = filter_graph_with_ancestors(self.graph, node_ids)
 
         with open(outfile, "w") as f:
             f.write(",".join(header))
-            for node_id in node_ids:
+            for node_id in node_to_keep:
                 parents = list(self.graph.predecessors(node_id))
                 parent_id = "" if len(parents) == 0 else parents[0]
                 features: list[Any] = []
