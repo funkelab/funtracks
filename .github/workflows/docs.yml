@@ -18,26 +18,25 @@ jobs:
   push-docs:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+    - uses: actions/checkout@v5
 
-      - name: Set up Python
-        uses: actions/setup-python@v3
-        with:
-          python-version: "3.10"
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: astral-sh/setup-uv@v6
+      with:
+        python-version: ${{ matrix.python-version }}
+        enable-cache: true
 
-      - name: Install dependencies
-        run: |
-          pip install -e ".[docs]"
+    - name: Install dependencies
+      run: uv sync
 
-      - id: get_version
-        uses: battila7/get-version-action@v2
+    - id: get_version
+      uses: battila7/get-version-action@v2
 
-      - name: configure git
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git fetch origin gh-pages --depth=1
+    - name: configure git
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git fetch origin gh-pages --depth=1
 
-      - name: Push changes to gh-pages branch
-        run: uv run mike deploy ${{ steps.get_version.outputs.version }} $TAG -u -p
+    - name: Push changes to gh-pages branch
+      run: uv run mike deploy ${{ steps.get_version.outputs.version }} $TAG -u -p
