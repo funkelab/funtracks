@@ -42,7 +42,6 @@ class AddNode(BasicAction):
         super().__init__(tracks)
         self.tracks: SolutionTracks  # Narrow type from base class
         self.node = node
-        user_attrs = attributes.copy()
 
         # Get keys from tracks features
         time_key = tracks.features.time_key
@@ -69,17 +68,8 @@ class AddNode(BasicAction):
                     raise ValueError(
                         f"Must provide position or segmentation for node {node}"
                     )
-
-        self.time = attributes.pop(time_key)
-        # Pop position key(s) if present
-        if pos_key is None:
-            raise ValueError("Position key is not set in tracks features")
-        if isinstance(pos_key, list):
-            self.position = [attributes.pop(key, None) for key in pos_key]
-        else:
-            self.position = attributes.pop(pos_key, None)
         self.pixels = pixels
-        self.attributes = user_attrs
+        self.attributes = attributes
         self._apply()
 
     def inverse(self) -> BasicAction:
@@ -92,15 +82,10 @@ class AddNode(BasicAction):
             self.tracks.set_pixels(self.pixels, self.node)
         attrs = self.attributes
         self.tracks.graph.add_node(self.node)
-        self.tracks.set_time(self.node, self.time)
 
-        # If no segmentation, manually set position from attributes
-        if self.tracks.segmentation is None:
-            # can't be None because we validated it in the init
-            self.tracks.set_position(self.node, self.position)
-
-        for attr, values in attrs.items():
-            self.tracks._set_node_attr(self.node, attr, values)
+        # set all user provided attributes including time and position
+        for attr, value in attrs.items():
+            self.tracks._set_node_attr(self.node, attr, value)
 
         # Always notify annotators - they will check their own preconditions
         self.tracks.notify_annotators(self)
