@@ -107,3 +107,21 @@ def test_export_to_csv(
 
     header = ["ID", "Parent ID", "Time", "z", "y", "x", "Tracklet ID"]
     assert lines[0].strip().split(",") == header
+
+    # Test exporting a selection of nodes. We have 6 nodes in total and we ask to save
+    # node 4 and 6. Because node 1 and 3 are ancestors of node 4, we expect them to be
+    # included as well to maintain a valid graph without missing parents.
+    tracks.export_tracks(temp_file, node_ids=[4, 6])
+    with open(temp_file) as f:
+        lines = f.readlines()
+
+    assert len(lines) == 5  # (4 nodes + 1 header)
+
+    node_ids_in_csv = [int(line.split(",")[0]) for line in lines[1:]]
+    expected_node_ids = [1, 3, 4, 6]
+    assert sorted(node_ids_in_csv) == sorted(expected_node_ids), (
+        f"Unexpected nodes in CSV: {node_ids_in_csv}"
+    )
+
+    header = ["ID", "Parent ID", "Time", "z", "y", "x", "Tracklet ID"]
+    assert lines[0].strip().split(",") == header
