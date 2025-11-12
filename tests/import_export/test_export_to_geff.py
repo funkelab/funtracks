@@ -110,3 +110,31 @@ def test_export_to_geff(
         seg_zarr = zarr.open(str(seg_path), mode="r")
         assert isinstance(seg_zarr, zarr.Array)
         np.testing.assert_array_equal(seg_zarr[:], tracks.segmentation)
+
+    # Test exporting a subset of nodes
+    export_dir = tmp_path / "export3"
+    export_dir.mkdir()
+
+    # We expect that nodes 1 and 3 are also included because they are ancestors of node 4
+    node_ids = [4, 6]
+    export_to_geff(tracks, export_dir, node_ids=node_ids)
+    z = zarr.open((export_dir / "tracks").as_posix(), mode="r")
+    assert isinstance(z, zarr.Group)
+
+    # Navigate to the dataset containing node IDs and check that we only have the
+    # expected nodes
+    node_ids_array = z["nodes/ids"][:]
+    assert np.array_equal(np.sort(node_ids_array), np.array([1, 3, 4, 6])), (
+        f"Unexpected node IDs: found {node_ids_array}, expected {[1, 3, 4, 6]}"
+    )
+
+    # Check segmentation only when it was used
+    if with_seg:
+        seg_path = export_dir / "segmentation"
+        seg_zarr = zarr.open(str(seg_path), mode="r")
+        assert isinstance(seg_zarr, zarr.Array)
+
+        filtered_seg = tracks.segmentation.copy()
+        mask = np.isin(filtered_seg, [1, 3, 4, 6])
+        filtered_seg[~mask] = 0
+        np.testing.assert_array_equal(seg_zarr[:], filtered_seg)

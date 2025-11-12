@@ -1,18 +1,18 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 import networkx as nx
+import numpy as np
 
 from funtracks.features import FeatureDict
+from funtracks.import_export.export_utils import filter_graph_with_ancestors
 
 from .tracks import Tracks
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-    import numpy as np
 
     from funtracks.annotators import TrackAnnotator
 
@@ -163,30 +163,57 @@ class SolutionTracks(Tracks):
         track_id = self.get_node_attr(node, self.features.tracklet_key, required=True)
         return track_id
 
-    def export_tracks(self, outfile: Path | str):
+    def export_tracks(
+        self, outfile: Path | str, node_ids: set[int] | None = None
+    ) -> None:
         """Export the tracks from this run to a csv with the following columns:
         t,[z],y,x,id,parent_id,track_id
         Cells without a parent_id will have an empty string for the parent_id.
         Whether or not to include z is inferred from self.ndim
+
+        Args:
+            outfile (Path): path to output csv file
+            node_ids (set[int], optional): nodes to be included. If provided, only these
+            nodes and their ancestors will be included in the output.
         """
-        header = ["t", "z", "y", "x", "id", "parent_id", "track_id"]
-        if self.ndim == 3:
-            header = [header[0]] + header[2:]  # remove z
+
+        def convert_numpy_to_python(value):
+            """Convert numpy types to native Python types."""
+            if isinstance(value, (np.float64, np.float32, np.float16)):
+                return float(value)
+            elif isinstance(value, (np.int64, np.int32, np.int16)):
+                return int(value)
+            return value
+
+        header = ["ID", "Parent ID"]
+        feature_names = []
+        for feature_name, feature_dict in self.features.items():
+            col_name = feature_dict["display_name"]
+            feature_names.append(feature_name)
+            if isinstance(col_name, (list, tuple)):
+                header.extend(col_name)
+            else:
+                header.append(cast(str, col_name))
+
+        if node_ids is None:
+            node_to_keep = self.graph.nodes()
+        else:
+            node_to_keep = filter_graph_with_ancestors(self.graph, node_ids)
+
         with open(outfile, "w") as f:
             f.write(",".join(header))
-            for node_id in self.graph.nodes():
+            for node_id in node_to_keep:
                 parents = list(self.graph.predecessors(node_id))
                 parent_id = "" if len(parents) == 0 else parents[0]
-                track_id = self.get_track_id(node_id)
-                time = self.get_time(node_id)
-                position = self.get_position(node_id)
-                row = [
-                    time,
-                    *position,
-                    node_id,
-                    parent_id,
-                    track_id,
-                ]
+                features: list[Any] = []
+                for feature_name in feature_names:
+                    feature_value = self.get_node_attr(node_id, feature_name)
+                    if isinstance(feature_value, list | tuple):
+                        features.extend(feature_value)
+                    else:
+                        features.append(feature_value)
+                row = [node_id, parent_id, *features]
+                row = [convert_numpy_to_python(value) for value in row]
                 f.write("\n")
                 f.write(",".join(map(str, row)))
 

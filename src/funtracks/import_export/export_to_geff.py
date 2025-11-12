@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import itertools
 import shutil
 from typing import (
     TYPE_CHECKING,
@@ -17,20 +18,36 @@ if TYPE_CHECKING:
 
     from funtracks.data_model.tracks import Tracks
 
+from funtracks.import_export.export_utils import filter_graph_with_ancestors
 
-def export_to_geff(tracks: Tracks, directory: Path, overwrite: bool = False):
+
+def export_to_geff(
+    tracks: Tracks,
+    directory: Path,
+    overwrite: bool = False,
+    node_ids: set[int] | None = None,
+):
     """Export the Tracks nxgraph to geff.
 
     Args:
         tracks (Tracks): Tracks object containing a graph to save.
         directory (Path): Destination directory for saving the Zarr.
         overwrite (bool): If True, allows writing into a non-empty directory.
+        node_ids (set[int], optional): A set of nodes that should be saved. If
+            provided, a valid graph will be constructed that also includes the ancestors
+            of the given nodes. All other nodes will NOT be saved.
 
     Raises:
         ValueError: If the path is invalid, parent doesn't exist, is not a directory,
                     or if the directory is not empty and overwrite is False.
     """
     directory = directory.resolve(strict=False)
+
+    if node_ids is not None:
+        nodes_to_keep = filter_graph_with_ancestors(
+            tracks.graph, node_ids
+        )  # include the ancestors to make sure the graph is valid and has no missing
+        # parent nodes.
 
     # Ensure parent directory exists
     parent = directory.parent
@@ -79,15 +96,57 @@ def export_to_geff(tracks: Tracks, directory: Path, overwrite: bool = False):
     if tracks.segmentation is not None:
         seg_path = directory / "segmentation"
         seg_path.mkdir(exist_ok=True)
-        zarr.save_array(str(seg_path), np.asarray(tracks.segmentation))
+
+        seg_data = tracks.segmentation
+        shape = seg_data.shape
+        dtype = seg_data.dtype
+
+        chunk_size: tuple[int, ...] = (64, 64, 64)
+        chunk_size = tuple(list(chunk_size) + [1] * (len(shape) - len(chunk_size)))
+        chunk_size = chunk_size[: len(shape)]
+
+        z = zarr.open_array(
+            str(seg_path),
+            mode="w",
+            shape=shape,
+            dtype=dtype,
+            chunks=chunk_size,
+        )
+
+        if node_ids is not None:
+            nodes_to_keep = np.asarray(nodes_to_keep)
+
+            # to avoid having to copy the segmentation array entirely, loop over chunks,
+            # and mask out the nodes that should be kept.
+            chunk_ranges = [
+                range(0, dim, chunk) for dim, chunk in zip(shape, chunk_size, strict=True)
+            ]
+
+            for starts in itertools.product(*chunk_ranges):
+                slices = tuple(
+                    slice(start, min(start + chunk, dim))
+                    for start, chunk, dim in zip(starts, chunk_size, shape, strict=True)
+                )
+
+                block = seg_data[slices]
+                mask = np.isin(block, nodes_to_keep)
+                filtered = np.where(mask, block, 0)
+                z[slices] = filtered
+
+        else:
+            z[:] = seg_data
+
         metadata.related_objects = [
             {
                 "path": "../segmentation",
                 "type": "labels",
                 "label_prop": "seg_id",
             }
-            # TODO: I don't think we necessarily have a seg id in our tracks
         ]
+
+    # Filter the graph if node_ids is provided
+    if node_ids is not None:
+        graph = graph.subgraph(nodes_to_keep).copy()
 
     # Save the graph in a 'tracks' folder
     tracks_path = directory / "tracks"
