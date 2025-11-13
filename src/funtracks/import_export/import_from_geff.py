@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import (
     TYPE_CHECKING,
 )
+from warnings import warn
 
 import dask.array as da
 import geff
@@ -85,12 +86,15 @@ def validate_graph_seg_match(
 
     # check if the axes information in the metadata matches the segmentation
     # dimensions
-    axes_match, errors = axes_match_seg_dims(in_memory_geff, segmentation)
-    if not axes_match:
-        error_msg = "Axes in the geff do not match segmentation:\n" + "\n".join(
-            f"- {e}" for e in errors
-        )
-        raise ValueError(error_msg)
+    if in_memory_geff["metadata"].axes is not None:
+        axes_match, errors = axes_match_seg_dims(in_memory_geff, segmentation)
+        if not axes_match:
+            error_msg = "Axes in the geff do not match segmentation:\n" + "\n".join(
+                f"- {e}" for e in errors
+            )
+            raise ValueError(error_msg)
+    else:
+        warn("Reading Geff without axes metadata.", stacklevel=2)
 
     node_ids = in_memory_geff["node_ids"]
     node_props = in_memory_geff["node_props"]
@@ -203,13 +207,25 @@ def import_from_geff(
     node_attrs_to_load_from_geff = []
     segmentation = None
 
-    # Check that the spatiotemporal key mapping does not contain None or duplicate values.
-    # It is allowed to not include z, but it is not allowed to include z with a None or
-    # duplicate value.
+    # Create map for spatiotemporal dimensions
     spatio_temporal_keys = ["time", "z", "y", "x"]
     spatio_temporal_map = {
         key: name_map[key] for key in spatio_temporal_keys if key in name_map
     }
+
+    # If the axes metadata is missing, check whether we need to keep the z key.
+    if in_memory_geff["metadata"].axes is None:
+        if segmentation_path is None:
+            # keep the mapping to z if it is not None, otherwise discard it.
+            if "z" in spatio_temporal_map and spatio_temporal_map["z"] is None:
+                del spatio_temporal_map["z"]
+        elif scale is not None and len(scale) == 3 and "z" in spatio_temporal_map:
+            # z not needed because len(scale) == 3
+            del spatio_temporal_map["z"]
+
+    # Check that the spatiotemporal key mapping does not contain None or duplicate values.
+    # It is allowed to not include z, but it is only allowed to include z with a None or
+    # duplicate value in case the geff axes metadata is missing.
     if any(v is None for v in spatio_temporal_map.values()):
         raise ValueError(
             "The name_map cannot contain None values. Please provide a valid mapping "
@@ -225,7 +241,7 @@ def import_from_geff(
     # z coordinate.
     time_attr = name_map["time"]
     node_attrs_to_load_from_geff.append(name_map["time"])
-    position_attr = [name_map[k] for k in ("z", "y", "x") if k in name_map]
+    position_attr = [name_map[k] for k in ("z", "y", "x") if k in spatio_temporal_map]
     node_attrs_to_load_from_geff.extend(position_attr)
     ndims = len(position_attr) + 1
 
