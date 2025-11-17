@@ -99,7 +99,6 @@ def export_to_geff(tracks: Tracks, directory: Path, overwrite: bool = False):
         axis_names=axis_names,
         axis_types=axis_types,
         axis_scales=tracks.scale,
-        overwrite=overwrite,
     )
 
 

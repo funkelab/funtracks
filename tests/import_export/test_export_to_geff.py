@@ -58,7 +58,7 @@ def test_export_to_geff(
     else:
         # Use get_tracks fixture for the simple case
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=is_solution)
-    export_to_geff(tracks, tmp_path, overwrite=True)
+    export_to_geff(tracks, tmp_path)
     z = zarr.open((tmp_path / "tracks").as_posix(), mode="r")
     assert isinstance(z, zarr.Group)
 
@@ -79,21 +79,21 @@ def test_export_to_geff(
     # test that providing a non existing parent dir raises error
     file_path = tmp_path / "nonexisting" / "target.zarr"
     with pytest.raises(ValueError, match="does not exist"):
-        export_to_geff(tracks, file_path, overwrite=True)
+        export_to_geff(tracks, file_path)
 
     # test that providing a nondirectory path raises error
     file_path = tmp_path / "not_a_dir"
     file_path.write_text("test")
 
     with pytest.raises(ValueError, match="not a directory"):
-        export_to_geff(tracks, file_path, overwrite=True)
+        export_to_geff(tracks, file_path)
 
     # test that saving to a non empty dir with overwrite=False raises error
     export_dir = tmp_path / "export"
     export_dir.mkdir()
     (export_dir / "existing_file.txt").write_text("already here")
     with pytest.raises(ValueError, match="not empty"):
-        export_to_geff(tracks, export_dir, overwrite=False)
+        export_to_geff(tracks, export_dir)
 
     # Test that saving to a non empty dir with overwrite=True works fine
     export_dir = tmp_path / "export2"
