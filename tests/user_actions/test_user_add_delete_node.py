@@ -11,17 +11,17 @@ class TestUserAddDeleteNode:
     def test_user_add_invalid_node(self, get_tracks, ndim, with_seg):
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
         # duplicate node
-        with pytest.raises(ValueError, match="Node .* already exists"):
+        with pytest.raises(InvalidActionError, match="Node .* already exists"):
             attrs = {"t": 5, "track_id": 1}
             UserAddNode(tracks, node=1, attributes=attrs)
 
         # no time
-        with pytest.raises(ValueError, match="Cannot add node without time"):
+        with pytest.raises(InvalidActionError, match="Cannot add node without time"):
             attrs = {"track_id": 1}
             UserAddNode(tracks, node=7, attributes=attrs)
 
         # no track_id
-        with pytest.raises(ValueError, match="Cannot add node without track id"):
+        with pytest.raises(InvalidActionError, match="Cannot add node without track id"):
             attrs = {"t": 1}
             UserAddNode(tracks, node=7, attributes=attrs)
 

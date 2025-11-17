@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from funtracks.exceptions import InvalidActionError
+
 from ..actions._base import ActionGroup
 from ..actions.add_delete_edge import DeleteEdge
 from ..actions.update_track_id import UpdateTrackID
@@ -19,7 +21,7 @@ class UserDeleteEdge(ActionGroup):
         super().__init__(tracks, actions=[])
         self.tracks: SolutionTracks  # Narrow type from base class
         if not self.tracks.graph.has_edge(*edge):
-            raise ValueError(f"Edge {edge} not in solution, can't remove")
+            raise InvalidActionError(f"Edge {edge} not in solution, can't remove")
 
         self.actions.append(DeleteEdge(tracks, edge))
         out_degree = self.tracks.graph.out_degree(edge[0])
@@ -31,6 +33,6 @@ class UserDeleteEdge(ActionGroup):
             new_track_id = self.tracks.get_track_id(edge[0])
             self.actions.append(UpdateTrackID(self.tracks, sibling, new_track_id))
         else:
-            raise RuntimeError(
+            raise InvalidActionError(
                 f"Expected degree of 0 or 1 after removing edge, got {out_degree}"
             )

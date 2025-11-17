@@ -4,8 +4,6 @@ import warnings
 from typing import TYPE_CHECKING
 from warnings import warn
 
-from funtracks.exceptions import InvalidActionError
-
 from ..actions import (
     Action,
     ActionGroup,
@@ -47,6 +45,7 @@ class TracksController:
         self,
         attributes: Attrs,
         pixels: list[SegMask] | None = None,
+        force: bool = False,
     ) -> None:
         """Calls the _add_nodes function to add nodes. Calls the refresh signal when
         finished.
@@ -56,8 +55,11 @@ class TracksController:
                 attributes
             pixels (list[SegMask] | None, optional): The pixels associated with each
                 node, if a segmentation is present. Defaults to None.
+            force (bool): Whether to force the operation by removing conflicting edges.
+                Defaults to False.
+
         """
-        result = self._add_nodes(attributes, pixels)
+        result = self._add_nodes(attributes, pixels, force)
         if result is not None:
             action, nodes = result
             self.action_history.add_new_action(action)
@@ -67,6 +69,7 @@ class TracksController:
         self,
         attributes: Attrs,
         pixels: list[SegMask] | None = None,
+        force: bool = False,
     ) -> tuple[Action, list[Node]] | None:
         """Add nodes to the graph. Includes all attributes and the segmentation.
         Will return the actions needed to add the nodes, and the node ids generated for
@@ -92,7 +95,9 @@ class TracksController:
                 and either node_id (if pixels are provided) or position (if not)
             pixels (list[SegMask] | None): A list of pixels associated with the node,
                 or None if there is no segmentation. These pixels will be updated
-                in the tracks.segmentation, set to the new node id
+                in the tracks.segmentation, set to the new node id.
+            force (bool): Whether to force the operation by removing conflicting edges.
+                Defaults to False.
         """
         times = attributes[self.tracks.features.time_key]
         nodes: list[Node]
@@ -103,18 +108,16 @@ class TracksController:
         actions: list[ActionGroup | Action] = []
         nodes_added = []
         for i in range(len(nodes)):
-            try:
-                actions.append(
-                    UserAddNode(
-                        self.tracks,
-                        node=nodes[i],
-                        attributes={key: val[i] for key, val in attributes.items()},
-                        pixels=pixels[i] if pixels is not None else None,
-                    )
+            actions.append(
+                UserAddNode(
+                    self.tracks,
+                    node=nodes[i],
+                    attributes={key: val[i] for key, val in attributes.items()},
+                    pixels=pixels[i] if pixels is not None else None,
+                    force=force,
                 )
-                nodes_added.append(nodes[i])
-            except InvalidActionError as e:
-                warnings.warn(f"Failed to add node: {e}", stacklevel=2)
+            )
+            nodes_added.append(nodes[i])
 
         return ActionGroup(self.tracks, actions), nodes_added
 
@@ -150,41 +153,33 @@ class TracksController:
         actions: list[ActionGroup | Action] = []
         pixels = list(pixels) if pixels is not None else None
         for i, node in enumerate(nodes):
-            try:
-                actions.append(
-                    UserDeleteNode(
-                        self.tracks,
-                        node,
-                        pixels=pixels[i] if pixels is not None else None,
-                    )
+            actions.append(
+                UserDeleteNode(
+                    self.tracks,
+                    node,
+                    pixels=pixels[i] if pixels is not None else None,
                 )
-            except InvalidActionError as e:
-                warnings.warn(f"Failed to delete node: {e}", stacklevel=2)
+            )
         return ActionGroup(self.tracks, actions)
 
-    def add_edges(self, edges: Iterable[Edge]) -> None:
+    def add_edges(self, edges: Iterable[Edge], force: bool = False) -> None:
         """Add edges to the graph. Also update the track ids and
         corresponding segmentations if applicable
 
         Args:
             edges (Iterable[Edge]): An iterable of edges, each with source and target
                 node ids
+            force (bool): Whether to force this operation by removing conflicting edges.
+                Defaults to False.
         """
-        make_valid_actions = []
         for edge in edges:
-            is_valid, valid_action = self.is_valid(edge)
+            is_valid = self.is_valid(edge)
             if not is_valid:
                 # warning was printed with details in is_valid call
                 return
-            if valid_action is not None:
-                make_valid_actions.append(valid_action)
-        main_action = self._add_edges(edges)
+
         action: Action
-        if len(make_valid_actions) > 0:
-            make_valid_actions.append(main_action)
-            action = ActionGroup(self.tracks, make_valid_actions)
-        else:
-            action = main_action
+        action = self._add_edges(edges, force)
         self.action_history.add_new_action(action)
         self.tracks.refresh.emit()
 
@@ -220,28 +215,28 @@ class TracksController:
             )
         return ActionGroup(self.tracks, actions)
 
-    def _add_edges(self, edges: Iterable[Edge]) -> ActionGroup:
+    def _add_edges(self, edges: Iterable[Edge], force: bool = False) -> ActionGroup:
         """Add edges and attributes to the graph. Also update the track ids of the
         target node tracks and potentially sibling tracks.
 
         Args:
             edges (Iterable[edge]): An iterable of edges, each with source and target
                 node ids
+            force (bool): Whether to force this action by removing conflicting edges.
 
         Returns:
             An Action containing all edits performed in this call
         """
         actions: list[ActionGroup | Action] = []
         for edge in edges:
-            actions.append(UserAddEdge(self.tracks, edge))
+            actions.append(UserAddEdge(self.tracks, edge, force))
         return ActionGroup(self.tracks, actions)
 
-    def is_valid(self, edge: Edge) -> tuple[bool, Action | None]:
+    def is_valid(self, edge: Edge) -> bool:
         """Check if this edge is valid.
         Criteria:
         - not horizontal
         - not existing yet
-        - no merges
         - no triple divisions
         - new edge should be the shortest possible connection between two nodes, given
             their track_ids (no skipping/bypassing any nodes of the same track_id).
@@ -261,31 +256,23 @@ class TracksController:
         if time1 > time2:
             edge = (edge[1], edge[0])
             time1, time2 = time2, time1
-        action = None
         # do all checks
         # reject if edge already exists
         if self.tracks.graph.has_edge(edge[0], edge[1]):
             warn("Edge is rejected because it exists already.", stacklevel=2)
-            return False, action
+            return False
 
         # reject if edge is horizontal
         elif self.tracks.get_time(edge[0]) == self.tracks.get_time(edge[1]):
             warn("Edge is rejected because it is horizontal.", stacklevel=2)
-            return False, action
-
-        # reject if target node already has an incoming edge
-        elif self.tracks.graph.in_degree(edge[1]) > 0:
-            warn(
-                "Edge is rejected because merges are currently not allowed.", stacklevel=2
-            )
-            return False, action
+            return False
 
         elif self.tracks.graph.out_degree(edge[0]) > 1:
             warn(
                 "Edge is rejected because triple divisions are currently not allowed.",
                 stacklevel=2,
             )
-            return False, action
+            return False
 
         elif time2 - time1 > 1:
             track_id2 = self.tracks.get_track_id(edge[1])
@@ -300,10 +287,10 @@ class TracksController:
                 ]
                 if len(nodes) > 0:
                     warn("Please connect to the closest node", stacklevel=2)
-                    return False, action
+                    return False
 
         # all checks passed!
-        return True, action
+        return True
 
     def delete_edges(self, edges: Iterable[Edge]):
         """Delete edges from the graph.
@@ -333,6 +320,7 @@ class TracksController:
         updated_pixels: list[tuple[SegMask, int]],
         current_timepoint: int,
         current_track_id: int,
+        force: bool = False,
     ):
         """Handle a change in the segmentation mask, checking for node addition,
         deletion, and attribute updates.
@@ -349,10 +337,12 @@ class TracksController:
                 the selected node.
             current_track_id (int): the track_id to use when adding a new node, usually
                 the currently selected track id in the viewer
+            force (bool): Whether to force the operation by removing conflicting edges.
+                Defaults to False.
         """
 
         action = UserUpdateSegmentation(
-            self.tracks, new_value, updated_pixels, current_track_id
+            self.tracks, new_value, updated_pixels, current_track_id, force
         )
         self.action_history.add_new_action(action)
         nodes_added = action.nodes_added
