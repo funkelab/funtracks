@@ -2,118 +2,118 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://funkelab.github.io/funtracks/main/</loc>
-         <lastmod>2025-11-17</lastmod>
+         <lastmod>2025-11-18</lastmod>
     </url>
     <url>
          <loc>https://funkelab.github.io/funtracks/main/architecture/</loc>
-         <lastmod>2025-11-17</lastmod>
+         <lastmod>2025-11-18</lastmod>
     </url>
     <url>
          <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/</loc>
-         <lastmod>2025-11-17</lastmod>
+         <lastmod>2025-11-18</lastmod>
     </url>
     <url>
          <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/actions/</loc>
-         <lastmod>2025-11-17</lastmod>
+         <lastmod>2025-11-18</lastmod>
     </url>
     <url>
          <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/actions/action_history/</loc>
-         <lastmod>2025-11-17</lastmod>
+         <lastmod>2025-11-18</lastmod>
     </url>
     <url>
          <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/actions/add_delete_edge/</loc>
-         <lastmod>2025-11-17</lastmod>
+         <lastmod>2025-11-18</lastmod>
     </url>
     <url>
          <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/actions/add_delete_node/</loc>
-         <lastmod>2025-11-17</lastmod>
+         <lastmod>2025-11-18</lastmod>
     </url>
     <url>
          <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/actions/update_node_attrs/</loc>
-         <lastmod>2025-11-17</lastmod>
+         <lastmod>2025-11-18</lastmod>
     </url>
     <url>
          <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/actions/update_segmentation/</loc>
-         <lastmod>2025-11-17</lastmod>
+         <lastmod>2025-11-18</lastmod>
     </url>
     <url>
          <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/actions/update_track_id/</loc>
-         <lastmod>2025-11-17</lastmod>
+         <lastmod>2025-11-18</lastmod>
     </url>
     <url>
          <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/annotators/</loc>
-         <lastmod>2025-11-17</lastmod>
+         <lastmod>2025-11-18</lastmod>
     </url>
     <url>
          <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/data_model/</loc>
-         <lastmod>2025-11-17</lastmod>
+         <lastmod>2025-11-18</lastmod>
     </url>
     <url>
          <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/data_model/graph_attributes/</loc>
-         <lastmod>2025-11-17</lastmod>
+         <lastmod>2025-11-18</lastmod>
     </url>
     <url>
          <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/data_model/solution_tracks/</loc>
-         <lastmod>2025-11-17</lastmod>
+         <lastmod>2025-11-18</lastmod>
     </url>
     <url>
          <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/data_model/tracks/</loc>
-         <lastmod>2025-11-17</lastmod>
+         <lastmod>2025-11-18</lastmod>
     </url>
     <url>
          <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/data_model/tracks_controller/</loc>
-         <lastmod>2025-11-17</lastmod>
+         <lastmod>2025-11-18</lastmod>
     </url>
     <url>
          <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/exceptions/</loc>
-         <lastmod>2025-11-17</lastmod>
+         <lastmod>2025-11-18</lastmod>
     </url>
     <url>
          <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/features/</loc>
-         <lastmod>2025-11-17</lastmod>
+         <lastmod>2025-11-18</lastmod>
     </url>
     <url>
          <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/import_export/</loc>
-         <lastmod>2025-11-17</lastmod>
+         <lastmod>2025-11-18</lastmod>
     </url>
     <url>
          <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/import_export/export_to_geff/</loc>
-         <lastmod>2025-11-17</lastmod>
+         <lastmod>2025-11-18</lastmod>
     </url>
     <url>
          <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/import_export/import_from_geff/</loc>
-         <lastmod>2025-11-17</lastmod>
+         <lastmod>2025-11-18</lastmod>
     </url>
     <url>
          <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/import_export/internal_format/</loc>
-         <lastmod>2025-11-17</lastmod>
+         <lastmod>2025-11-18</lastmod>
     </url>
     <url>
          <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/import_export/magic_imread/</loc>
-         <lastmod>2025-11-17</lastmod>
+         <lastmod>2025-11-18</lastmod>
     </url>
     <url>
          <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/user_actions/</loc>
-         <lastmod>2025-11-17</lastmod>
+         <lastmod>2025-11-18</lastmod>
     </url>
     <url>
          <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/user_actions/user_add_edge/</loc>
-         <lastmod>2025-11-17</lastmod>
+         <lastmod>2025-11-18</lastmod>
     </url>
     <url>
          <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/user_actions/user_add_node/</loc>
-         <lastmod>2025-11-17</lastmod>
+         <lastmod>2025-11-18</lastmod>
     </url>
     <url>
          <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/user_actions/user_delete_edge/</loc>
-         <lastmod>2025-11-17</lastmod>
+         <lastmod>2025-11-18</lastmod>
     </url>
     <url>
          <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/user_actions/user_delete_node/</loc>
-         <lastmod>2025-11-17</lastmod>
+         <lastmod>2025-11-18</lastmod>
     </url>
     <url>
          <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/user_actions/user_update_segmentation/</loc>
-         <lastmod>2025-11-17</lastmod>
+         <lastmod>2025-11-18</lastmod>
     </url>
 </urlset>
