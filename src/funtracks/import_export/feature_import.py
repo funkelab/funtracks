@@ -1,64 +1,58 @@
 from __future__ import annotations
 
-from typing import Literal, TypedDict, cast
+from typing import TypedDict
 
 from funtracks.data_model.tracks import Tracks
-from funtracks.features._feature import Feature
-
-DType = Literal["int", "float", "str", "bool"]
 
 
-class ImportedNodeFeature(TypedDict):
+def _rename_feature(tracks: Tracks, old_key: str, new_key: str) -> None:
+    """Rename a feature from old_key to new_key in annotators and features dict.
+
+    Args:
+        tracks: Tracks instance to modify
+        old_key: Current feature key
+        new_key: New feature key
+    """
+    # Get the feature from the annotator
+    feature_dict = tracks.annotators.all_features[old_key][0]
+
+    # Change the annotator key and activate it to ensure recomputation on update
+    tracks.annotators.change_key(old_key, new_key)
+    tracks.annotators.activate_features([new_key])
+
+    # Register it to the feature dictionary, removing old key if necessary
+    if old_key in tracks.features:
+        tracks.features.pop(old_key)
+    tracks.features[new_key] = feature_dict
+
+    # Update FeatureDict special key attributes if we renamed position or tracklet
+    if tracks.features.position_key == old_key:
+        tracks.features.position_key = new_key
+    if tracks.features.tracklet_key == old_key:
+        tracks.features.tracklet_key = new_key
+
+
+class ImportedComputedFeature(TypedDict):
     """Metadata options for an imported property
 
     Args:
         prop_name (str): the name of the property/attribute on the graph
-        feature (str | None): the display name of a computed feature, or None if the
-            feature is static.
+        feature (str): the display name of a computed feature.
         recompute (bool): indicates whether to recompute the computed feature or load it
-            as is. Only used for computed features with a provided `feature`.
-        dtype (DType): the dtype of the feature. Must be one of "int", "float", "str",
-            or "bool". Bool features will be interpreted as groups.
+            as is
     """
 
     prop_name: str
-    feature: str | None
+    feature: str
     recompute: bool
-    dtype: DType
-
-
-def register_features(tracks: Tracks, node_features: list[ImportedNodeFeature]) -> None:
-    """Function to set up imported properties as Features on Tracks.
-
-    1) Create a list of all to be recomputed features, and enable them on
-        Tracks.
-    2) Create a list of all features that should be interpreted as computed features,
-        without immediate recomputation. Since they are imported from a node property that
-        can have any custom name in the source CSV or Geff file, we update the
-        key for this Feature in the FeatureDict to the given name.
-    3) Create a list of all remaining, static features and add
-        them to the FeatureDict with their respective data types.
-
-    Args:
-        tracks (Tracks): the Tracks instance to be modified.
-        node_features (list[ImportedNodeFeature]): list of to be imported Features.
-    Raises:
-        ValueError when attempting to register computed features without a segmentation.
-    """
-    computed_features = [
-        feature for feature in node_features if feature["feature"] is not None
-    ]
-    static_features = [feature for feature in node_features if feature["feature"] is None]
-    register_computed_features(tracks, computed_features)
-    register_static_features(tracks, static_features)
 
 
 def register_computed_features(
-    tracks: Tracks, computed_features: list[ImportedNodeFeature]
+    tracks: Tracks, computed_features: list[ImportedComputedFeature]
 ) -> None:
     """Register computed features on Tracks, either by recomputing or loading.
 
-    Handles features where `feature` is not None. These can be:
+    Features can be:
     1. Recomputed from scratch (recompute=True): Enables the feature in annotators
        to compute values for all nodes in the graph.
     2. Loaded without recomputing (recompute=False): Takes existing values from
@@ -68,109 +62,41 @@ def register_computed_features(
 
     Args:
         tracks: Tracks instance to modify
-        computed_features: List of features to register (feature != None)
+        computed_features: List of features to register
 
     Raises:
         ValueError: If a requested feature doesn't exist in annotators or if
                    segmentation is required but not provided.
     """
-    # 1) Recompute requested features
-    features_to_compute = [
-        feature for feature in computed_features if bool(feature.get("recompute", False))
-    ]
-    default_name_map: dict[str | tuple, str] = {}
+    # 0) Get a mapping from display name to default key
+    default_key_map: dict[str | tuple, str] = {}
     for key, val in tracks.annotators.all_features.items():
         feature = val[0]
         display_name = feature["display_name"]
         if isinstance(display_name, list):
             display_name = tuple(display_name)
-        default_name = key if display_name is None else display_name
-        default_name_map[default_name] = key  # type: ignore
+        default_key_map[display_name] = key  # type: ignore
 
-    features_to_compute_names = []
-    for imported_feature in features_to_compute:
+    # validate that all features exist, and rename them if they do
+    features_to_compute = []
+    for imported_feature in computed_features:
         feature_name = imported_feature["feature"]
+        new_key = imported_feature["prop_name"]
+        recompute = imported_feature["recompute"]
+
         if (
-            feature_name not in default_name_map
-            or (feature_default_key := default_name_map[feature_name])
+            feature_name not in default_key_map
+            or (feature_default_key := default_key_map[feature_name])
             not in tracks.annotators.all_features
         ):
-            raise ValueError(
-                f"Requested computation of feature {feature_name} "
-                "but no such feature found in computed features. "
-                "Perhaps you need to provide a segmentation?"
-            )
-        features_to_compute_names.append(feature_default_key)
-
-    tracks.enable_features(features_to_compute_names)
-
-    # 2) Add Regionprops features that were loaded from source but should not be
-    # recomputed now.
-    features_to_enable = [
-        feature
-        for feature in computed_features
-        if (not bool(feature.get("recompute", False)) and feature["feature"] is not None)
-    ]
-
-    for imported_feature in features_to_enable:
-        new_key = imported_feature["prop_name"]
-        feature_name = imported_feature["feature"]
-        if feature_name not in default_name_map:
             raise ValueError(
                 f"Requested activation of feature {feature_name} "
                 "but no such feature found in computed features. "
                 "Perhaps you need to provide a segmentation?"
             )
+        _rename_feature(tracks, feature_default_key, new_key)
+        if recompute:
+            features_to_compute.append(new_key)
 
-        feature_default_key = default_name_map[feature_name]
-        if feature_default_key not in tracks.annotators.all_features:
-            raise ValueError(
-                f"Requested activation of feature {feature_default_key} "
-                "but no such feature found in computed features. "
-                "Perhaps you need to provide a segmentation?"
-            )
-
-        # Get the feature from the annotator
-        feature_dict = tracks.annotators.all_features[feature_default_key][0]
-
-        # change the annotator key and activate it to ensure recomputation on update
-        tracks.annotators.change_key(feature_default_key, new_key)
-        tracks.annotators.activate_features([new_key])
-
-        # Register it to the feature dictionary, removing old key if necessary
-        if feature_default_key in tracks.features:
-            tracks.features.pop(feature_default_key)
-        tracks.features[new_key] = feature_dict
-
-        # Update FeatureDict special key attributes if we renamed position or tracklet
-        if tracks.features.position_key == feature_default_key:
-            tracks.features.position_key = new_key
-        if tracks.features.tracklet_key == feature_default_key:
-            tracks.features.tracklet_key = new_key
-
-
-def register_static_features(tracks: Tracks, static_features: list[ImportedNodeFeature]):
-    """Register static (non-computed) features on Tracks.
-
-    Static features are those where `feature` is None - they represent raw node
-    properties that are not computed by annotators. Each feature is added to the
-    Tracks.features dictionary with metadata describing its type and display name.
-
-    Args:
-        tracks: Tracks instance to modify
-        static_features: List of features to register (feature == None)
-    """
-    for imported_feature in static_features:
-        # ensure dtype and prop_name are strings for the Feature TypedDict
-        dtype_str = str(imported_feature.get("dtype", "str"))
-        display_name = str(imported_feature.get("prop_name"))
-        new_feature = {
-            "feature_type": "node",
-            "value_type": dtype_str,
-            "num_values": 1,
-            "display_name": display_name,
-            "required": False,
-            "default_value": None,
-        }
-        # cast to Feature TypedDict
-        tracks.features[str(imported_feature["prop_name"])] = cast(Feature, new_feature)
+    # compute the features that should be recomputed
+    tracks.enable_features(features_to_compute)
