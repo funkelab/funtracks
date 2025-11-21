@@ -415,28 +415,68 @@ def test_load_features_without_segmentation_not_computed(valid_geff):
         )
 
 
-@pytest.mark.parametrize("magic_string", ["Group", "Custom"])
-def test_deprecated_magic_strings(valid_geff, magic_string):
-    """Test deprecated magic strings 'Group' and 'Custom' with warnings."""
+def test_deprecated_dict_format(valid_geff, valid_segmentation, tmp_path):
+    """Test backward compatibility with dict[str, bool] node_features format."""
     store, _ = valid_geff
-    name_map = {"time": "t", "y": "y", "x": "x"}
+    name_map = {"time": "t", "y": "y", "x": "x", "seg_id": "seg_id"}
+    scale = [1, 1, 1 / 100]
+    valid_segmentation_path = tmp_path / "segmentation.tif"
+    tifffile.imwrite(valid_segmentation_path, valid_segmentation)
 
-    # Use deprecated magic string for a static feature
-    node_features = [
-        {
-            "prop_name": "random_feature",
-            "feature": magic_string,  # Deprecated magic string
-            "recompute": False,
-            "dtype": "str",
-        }
-    ]
+    # Use deprecated dict[str, bool] format
+    node_features_dict = {
+        "area": True,  # Computed feature - should recompute
+        "circ": False,  # Computed feature - should load from geff
+        "random_feature": False,  # Static feature - should load from geff
+    }
 
     # Should issue DeprecationWarning but still work
     with pytest.warns(
-        DeprecationWarning, match=f"The magic string '{magic_string}' is deprecated"
+        DeprecationWarning,
+        match="Passing node_features as dict\\[str, bool\\] is deprecated",
     ):
-        tracks = import_from_geff(store, name_map, node_features=node_features)
+        tracks = import_from_geff(
+            store,
+            name_map,
+            segmentation_path=valid_segmentation_path,
+            scale=scale,
+            node_features=node_features_dict,
+        )
 
-    # Feature should be loaded as static feature
+    # All requested features should be present
+    assert "area" in tracks.features
+    assert "circ" in tracks.features
     assert "random_feature" in tracks.features
-    assert "random_feature" in tracks.graph.nodes[0]
+
+    # Check values in graph
+    _, data = list(tracks.graph.nodes(data=True))[-1]
+
+    # Area should be recomputed (1 pixel = 0.01 after scaling)
+    assert data["area"] == 0.01
+
+    # Circularity should be loaded from geff (not recomputed)
+    assert data["circ"] == 0.45  # Original value from geff
+
+    # Random feature should be loaded from geff
+    assert data["random_feature"] == "e"
+
+
+def test_deprecated_dict_format_unknown_feature(valid_geff):
+    """Test that dict format with unknown feature raises clear error."""
+    store, _ = valid_geff
+    name_map = {"time": "t", "y": "y", "x": "x"}
+
+    # Use deprecated dict format with unknown feature
+    node_features_dict = {"unknown_feature": True}
+
+    with (
+        pytest.warns(
+            DeprecationWarning,
+            match="Passing node_features as dict\\[str, bool\\] is deprecated",
+        ),
+        pytest.raises(
+            ValueError,
+            match="Unknown feature 'unknown_feature' - not found in geff data",
+        ),
+    ):
+        import_from_geff(store, name_map, node_features=node_features_dict)

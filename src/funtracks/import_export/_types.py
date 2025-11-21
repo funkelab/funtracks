@@ -15,15 +15,13 @@ class ImportedNodeFeature(TypedDict):
 
     Args:
         prop_name: The property name/key on the graph node
-        feature: Display name of a computed feature, or None for static features.
-            For backward compatibility, passing "Group" or "Custom" to this feature
-            will be treated as equivalent to None until v2.0 is released.
+        feature: Display name of a computed feature, or None for static features
         recompute: Whether to recompute the feature (only used when feature is not None)
         dtype: The data type of the feature values
     """
 
     prop_name: str
-    feature: str | None
+    feature: str | tuple[str, ...] | None
     recompute: bool
     dtype: ValueType
 
@@ -41,5 +39,5 @@ class ImportedComputedFeature(TypedDict):
     """
 
     prop_name: str
-    feature: str
+    feature: str | tuple[str, ...]
     recompute: bool
