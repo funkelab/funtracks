@@ -12,21 +12,24 @@ from geff.validate.segmentation import (
     has_valid_seg_id,
 )
 from geff.validate.tracks import validate_lineages, validate_tracklets
-from numpy.typing import ArrayLike
 
 from funtracks.features import Feature, ValueType
 from funtracks.import_export._register_computed_features import (
     register_computed_features,
 )
-from funtracks.import_export._types import ImportedComputedFeature, ImportedNodeFeature
 from funtracks.import_export.magic_imread import magic_imread
 
 if TYPE_CHECKING:
     from pathlib import Path
 
     from geff._typing import InMemoryGeff
+    from numpy.typing import ArrayLike
 
     from funtracks.data_model.solution_tracks import SolutionTracks
+    from funtracks.import_export._types import (
+        ImportedComputedFeature,
+        ImportedNodeFeature,
+    )
 
 
 # defining constants here because they are only used in the context of import
@@ -335,12 +338,12 @@ def import_from_geff(
                 )
 
             converted_features.append(
-                ImportedNodeFeature(
-                    prop_name=key,
-                    feature=display_name,
-                    recompute=should_recompute,
-                    dtype=dtype,
-                )
+                {
+                    "prop_name": key,
+                    "feature": display_name,
+                    "recompute": should_recompute,
+                    "dtype": dtype,
+                }
             )
         node_features = converted_features
 
@@ -459,12 +462,13 @@ def import_from_geff(
                     default_value=None,
                 )
             else:
-                computed_feature = ImportedComputedFeature(
-                    prop_name=prop_name,
-                    feature=feat_name,
-                    recompute=import_feat["recompute"],
+                computed_features.append(
+                    {
+                        "prop_name": prop_name,
+                        "feature": feat_name,
+                        "recompute": import_feat["recompute"],
+                    }
                 )
-                computed_features.append(computed_feature)
 
     if len(computed_features) > 0:
         register_computed_features(tracks, computed_features)

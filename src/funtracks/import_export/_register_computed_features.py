@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from funtracks.data_model.tracks import Tracks
-from funtracks.import_export._types import ImportedComputedFeature
+
+if TYPE_CHECKING:
+    from funtracks.import_export._types import ImportedComputedFeature
 
 
 def _rename_feature(tracks: Tracks, old_key: str, new_key: str) -> None:
