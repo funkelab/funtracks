@@ -37,13 +37,13 @@ class ImportedComputedFeature(TypedDict):
 
     Args:
         prop_name (str): the name of the property/attribute on the graph
-        feature (str): the display name of a computed feature.
+        feature_display_name (str): the display name of a computed feature.
         recompute (bool): indicates whether to recompute the computed feature or load it
             as is
     """
 
     prop_name: str
-    feature: str
+    feature_display_name: str
     recompute: bool
 
 
@@ -80,7 +80,7 @@ def register_computed_features(
     # validate that all features exist, and rename them if they do
     features_to_compute = []
     for imported_feature in computed_features:
-        feature_name = imported_feature["feature"]
+        feature_name = imported_feature["feature_display_name"]
         new_key = imported_feature["prop_name"]
         recompute = imported_feature["recompute"]
 
