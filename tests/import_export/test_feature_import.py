@@ -1,6 +1,6 @@
 import pytest
 
-from funtracks.import_export.feature_import import register_computed_features
+from funtracks.import_export import register_computed_features
 
 
 def test_register_computed_features_recompute(get_tracks):
