@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from typing import TypedDict, cast
+from typing import Literal, TypedDict, cast
 
 from funtracks.data_model.tracks import Tracks
 from funtracks.features import _regionprops_features
 from funtracks.features._feature import Feature
+
+DType = Literal["int", "float", "str", "bool"]
 
 
 class ImportedNodeFeature(TypedDict):
@@ -12,18 +14,18 @@ class ImportedNodeFeature(TypedDict):
 
     Args:
         prop_name (str): the name of the property/attribute on the graph
-        feature_name (str | None): the display name of a computed feature, or None if the
+        feature (str | None): the display name of a computed feature, or None if the
             feature is static.
         recompute (bool): indicates whether to recompute the computed feature or load it
-            as is. Only used for computed features with a provided `feature_name`.
-        dtype (str): the dtype of the feature. `bool` features will be interpreted
-            as groups.
+            as is. Only used for computed features with a provided `feature`.
+        dtype (DType): the dtype of the feature. Must be one of "int", "float", "str",
+            or "bool". Bool features will be interpreted as groups.
     """
 
     prop_name: str
     feature: str | None
     recompute: bool
-    dtype: str
+    dtype: DType
 
 
 def get_regionprop_dict(name: str):
