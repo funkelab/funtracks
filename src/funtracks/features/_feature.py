@@ -3,6 +3,9 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any, Literal, TypedDict
 
+# Type alias for feature value types
+ValueType = Literal["int", "float", "str", "bool"]
+
 
 class Feature(TypedDict):
     """TypedDict for storing metadata associated with a graph feature.
@@ -15,8 +18,7 @@ class Feature(TypedDict):
     Attributes:
         feature_type (Literal["node", "edge"]): Specifies which graph elements
             the feature applies to.
-        value_type (Literal["int", "float", "str", "bool"]): The data type of the feature
-            values.
+        value_type (ValueType): The data type of the feature values.
         num_values (int): The number of values expected for this feature.
         display_name (str | Sequence[str] | None): The name to use to display the
             feature.
@@ -27,7 +29,7 @@ class Feature(TypedDict):
     """
 
     feature_type: Literal["node", "edge"]
-    value_type: Literal["int", "float", "str", "bool"]
+    value_type: ValueType
     num_values: int
     display_name: str | Sequence[str] | None
     required: bool

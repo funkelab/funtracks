@@ -299,13 +299,15 @@ def test_node_features_compute_vs_load(valid_geff, valid_segmentation, tmp_path)
         node_features=node_features,
     )
 
+    feature_keys = ["area", "random_feature", "ellipse", "circ"]
+    for key in feature_keys:
+        assert key in tracks.features
+
     _, data = list(tracks.graph.nodes(data=True))[-1]
 
     # All requested features should be present
-    assert "area" in data
-    assert "random_feature" in data
-    assert "ellipse" in data
-    assert "circ" in data
+    for key in feature_keys:
+        assert key in data
 
     # Verify computed values (1 pixel = 0.01 after scaling)
     # Original geff had area=21 for last node
@@ -337,7 +339,7 @@ def test_node_features_unknown(valid_geff, valid_segmentation, tmp_path):
 
     with pytest.raises(
         ValueError,
-        match="Requested computation of feature .* but no such feature found "
+        match="Requested activation of feature .* but no such feature found "
         "in computed features. Perhaps you need to provide a segmentation?",
     ):
         import_from_geff(
@@ -368,7 +370,7 @@ def test_compute_features_without_segmentation(valid_geff):
     with pytest.raises(
         ValueError,
         match=(
-            "Requested computation of feature .* but no such feature found "
+            "Requested activation of feature .* but no such feature found "
             "in computed features. Perhaps you need to provide a segmentation?"
         ),
     ):
@@ -411,3 +413,30 @@ def test_load_features_without_segmentation_not_computed(valid_geff):
             scale=scale,
             node_features=node_features,
         )
+
+
+@pytest.mark.parametrize("magic_string", ["Group", "Custom"])
+def test_deprecated_magic_strings(valid_geff, magic_string):
+    """Test deprecated magic strings 'Group' and 'Custom' with warnings."""
+    store, _ = valid_geff
+    name_map = {"time": "t", "y": "y", "x": "x"}
+
+    # Use deprecated magic string for a static feature
+    node_features = [
+        {
+            "prop_name": "random_feature",
+            "feature": magic_string,  # Deprecated magic string
+            "recompute": False,
+            "dtype": "str",
+        }
+    ]
+
+    # Should issue DeprecationWarning but still work
+    with pytest.warns(
+        DeprecationWarning, match=f"The magic string '{magic_string}' is deprecated"
+    ):
+        tracks = import_from_geff(store, name_map, node_features=node_features)
+
+    # Feature should be loaded as static feature
+    assert "random_feature" in tracks.features
+    assert "random_feature" in tracks.graph.nodes[0]
