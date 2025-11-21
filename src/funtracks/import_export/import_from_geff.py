@@ -37,38 +37,36 @@ TRACK_KEY = "track_id"
 SEG_KEY = "seg_id"
 
 
-def _get_default_key_to_display_name_mapping() -> dict[str, str | tuple[str, ...] | None]:
+def _get_default_key_to_display_name_mapping(
+    ndim: int,
+) -> dict[str, str | tuple[str, ...]]:
     """Get mapping from default feature keys to their display names.
 
-    This function uses lazy imports to avoid circular dependencies.
+    Uses annotator classmethods to build the mapping automatically.
+
+    Args:
+        ndim: Total number of dimensions including time (3 or 4)
 
     Returns:
         Dictionary mapping default feature keys to their display names.
-        DEFAULT_POS_KEY maps to None and is set later based on ndim.
     """
-    from funtracks.annotators._edge_annotator import DEFAULT_IOU_KEY
-    from funtracks.annotators._regionprops_annotator import (
-        DEFAULT_AREA_KEY,
-        DEFAULT_CIRCULARITY_KEY,
-        DEFAULT_ELLIPSE_AXIS_KEY,
-        DEFAULT_PERIMETER_KEY,
-        DEFAULT_POS_KEY,
-    )
-    from funtracks.annotators._track_annotator import (
-        DEFAULT_LINEAGE_KEY,
-        DEFAULT_TRACKLET_KEY,
-    )
+    from funtracks.annotators._edge_annotator import EdgeAnnotator
+    from funtracks.annotators._regionprops_annotator import RegionpropsAnnotator
+    from funtracks.annotators._track_annotator import TrackAnnotator
 
-    return {
-        DEFAULT_TRACKLET_KEY: "Tracklet ID",
-        DEFAULT_LINEAGE_KEY: "Lineage ID",
-        DEFAULT_AREA_KEY: "Area",
-        DEFAULT_CIRCULARITY_KEY: "Circularity",
-        DEFAULT_ELLIPSE_AXIS_KEY: "Ellipse axis radii",
-        DEFAULT_PERIMETER_KEY: "Perimeter",
-        DEFAULT_IOU_KEY: "IOU",
-        DEFAULT_POS_KEY: None,  # Special handling based on ndim, set in conversion
-    }
+    mapping = {}
+
+    # Collect features from all annotators
+    for annotator_cls in [RegionpropsAnnotator, EdgeAnnotator, TrackAnnotator]:
+        features = annotator_cls.get_available_features(ndim=ndim)  # type: ignore[attr-defined]
+        for key, feature in features.items():
+            display_name = feature["display_name"]
+            # Convert list to tuple for hashability
+            if isinstance(display_name, list):
+                display_name = tuple(display_name)
+            mapping[key] = display_name
+
+    return mapping
 
 
 def _infer_dtype_from_array(arr: ArrayLike) -> ValueType:
@@ -314,7 +312,7 @@ def import_from_geff(
         from funtracks.annotators._regionprops_annotator import DEFAULT_POS_KEY
 
         # Get the mapping and add position key based on ndim
-        key_to_display = _get_default_key_to_display_name_mapping()
+        key_to_display = _get_default_key_to_display_name_mapping(ndim=ndims)
         position_display_name = (
             tuple(position_attr) if len(position_attr) > 1 else (position_attr[0],)
         )

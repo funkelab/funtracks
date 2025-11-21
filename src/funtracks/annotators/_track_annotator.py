@@ -65,21 +65,19 @@ class TrackAnnotator(GraphAnnotator):
         return isinstance(tracks, SolutionTracks)
 
     @classmethod
-    def get_available_features(cls, tracks) -> dict[str, Feature]:
+    def get_available_features(cls, ndim: int = 3) -> dict[str, Feature]:
         """Get all features that can be computed by this annotator.
 
         Returns features with default keys. Custom keys can be specified at
         initialization time.
 
         Args:
-            tracks: The tracks to get available features for
+            ndim: Total number of dimensions including time (unused for this annotator,
+                kept for API consistency). Defaults to 3.
 
         Returns:
-            Dictionary mapping feature keys to Feature definitions. Empty if not
-            SolutionTracks.
+            Dictionary mapping feature keys to Feature definitions.
         """
-        if not cls.can_annotate(tracks):
-            return {}
         return {
             DEFAULT_TRACKLET_KEY: TrackletID(),
             DEFAULT_LINEAGE_KEY: LineageID(),
