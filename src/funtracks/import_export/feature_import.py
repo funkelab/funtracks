@@ -45,10 +45,38 @@ def register_features(tracks: Tracks, node_features: list[ImportedNodeFeature]) 
     Raises:
         ValueError when attempting to register computed features without a segmentation.
     """
+    computed_features = [
+        feature for feature in node_features if feature["feature"] is not None
+    ]
+    static_features = [feature for feature in node_features if feature["feature"] is None]
+    register_computed_features(tracks, computed_features)
+    register_static_features(tracks, static_features)
 
+
+def register_computed_features(
+    tracks: Tracks, computed_features: list[ImportedNodeFeature]
+) -> None:
+    """Register computed features on Tracks, either by recomputing or loading.
+
+    Handles features where `feature` is not None. These can be:
+    1. Recomputed from scratch (recompute=True): Enables the feature in annotators
+       to compute values for all nodes in the graph.
+    2. Loaded without recomputing (recompute=False): Takes existing values from
+       graph nodes and registers them as features, renaming if necessary.
+
+    Both types support renaming from the default feature key to a custom prop_name.
+
+    Args:
+        tracks: Tracks instance to modify
+        computed_features: List of features to register (feature != None)
+
+    Raises:
+        ValueError: If a requested feature doesn't exist in annotators or if
+                   segmentation is required but not provided.
+    """
     # 1) Recompute requested features
     features_to_compute = [
-        feature for feature in node_features if bool(feature.get("recompute", False))
+        feature for feature in computed_features if bool(feature.get("recompute", False))
     ]
     default_name_map: dict[str | tuple, str] = {}
     for key, val in tracks.annotators.all_features.items():
@@ -80,7 +108,7 @@ def register_features(tracks: Tracks, node_features: list[ImportedNodeFeature]) 
     # recomputed now.
     features_to_enable = [
         feature
-        for feature in node_features
+        for feature in computed_features
         if (not bool(feature.get("recompute", False)) and feature["feature"] is not None)
     ]
 
@@ -120,9 +148,19 @@ def register_features(tracks: Tracks, node_features: list[ImportedNodeFeature]) 
         if tracks.features.tracklet_key == feature_default_key:
             tracks.features.tracklet_key = new_key
 
-    # 3) Add other (custom, group) features that will be static
-    other_features = [f for f in node_features if f["feature"] is None]
-    for imported_feature in other_features:
+
+def register_static_features(tracks: Tracks, static_features: list[ImportedNodeFeature]):
+    """Register static (non-computed) features on Tracks.
+
+    Static features are those where `feature` is None - they represent raw node
+    properties that are not computed by annotators. Each feature is added to the
+    Tracks.features dictionary with metadata describing its type and display name.
+
+    Args:
+        tracks: Tracks instance to modify
+        static_features: List of features to register (feature == None)
+    """
+    for imported_feature in static_features:
         # ensure dtype and prop_name are strings for the Feature TypedDict
         dtype_str = str(imported_feature.get("dtype", "str"))
         display_name = str(imported_feature.get("prop_name"))
