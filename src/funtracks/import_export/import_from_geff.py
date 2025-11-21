@@ -19,8 +19,8 @@ from funtracks.features import Feature
 from funtracks.import_export._register_computed_features import (
     register_computed_features,
 )
+from funtracks.import_export._types import ImportedComputedFeature, ImportedNodeFeature
 from funtracks.import_export.magic_imread import magic_imread
-from funtracks.import_export.types import ImportedComputedFeature, ImportedNodeFeature
 
 if TYPE_CHECKING:
     from pathlib import Path
