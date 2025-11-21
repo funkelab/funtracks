@@ -126,7 +126,7 @@ def test_tracks_with_segmentation(valid_geff, invalid_geff, valid_segmentation, 
         },
         {
             "prop_name": "random_feature",
-            "feature": "Custom",  # load as static feature
+            "feature": None,
             "recompute": False,
             "dtype": "float",
         },
@@ -169,7 +169,7 @@ def test_tracks_with_segmentation(valid_geff, invalid_geff, valid_segmentation, 
         {"prop_name": "area", "feature": "Area", "recompute": False, "dtype": "float"},
         {
             "prop_name": "random_feature",
-            "feature": "Custom",  # load as static feature
+            "feature": None,
             "recompute": False,
             "dtype": "float",
         },
@@ -232,7 +232,7 @@ def test_segmentation_loading_formats(
         {"prop_name": "area", "feature": "Area", "recompute": False, "dtype": "float"},
         {
             "prop_name": "random_feature",
-            "feature": "Custom",  # load as static feature
+            "feature": None,
             "recompute": False,
             "dtype": "float",
         },
@@ -273,7 +273,7 @@ def test_node_features_compute_vs_load(valid_geff, valid_segmentation, tmp_path)
         },
         {
             "prop_name": "random_feature",
-            "feature": "Custom",  # load as static feature
+            "feature": None,
             "recompute": False,
             "dtype": "float",
         },

@@ -15,13 +15,15 @@ from geff.validate.tracks import validate_lineages, validate_tracklets
 from numpy.typing import ArrayLike
 
 from funtracks.data_model.solution_tracks import SolutionTracks
-from funtracks.import_export.feature_import import ImportedNodeFeature, register_features
+from funtracks.import_export.feature_import import register_features
 from funtracks.import_export.magic_imread import magic_imread
 
 if TYPE_CHECKING:
     from pathlib import Path
 
     from geff._typing import InMemoryGeff
+
+    from funtracks.import_export.feature_import import ImportedNodeFeature
 
 
 # defining constants here because they are only used in the context of import

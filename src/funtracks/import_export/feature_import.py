@@ -10,19 +10,18 @@ from funtracks.features._feature import Feature
 class ImportedNodeFeature(TypedDict):
     """Metadata options for an imported property
 
-    # TODO: Don't have the special custom and group strings without any type checking
     Args:
-        prop_name (str): the name of the property in the source CSV or Geff file
-        feature (str): the name of the feature, this can either be the DISPLAY name of a
-            computed Feature (or key if the display name is missing),
-            or it can be 'Group' (will be imported as a boolean type
-            to reflect a group), or 'Custom' (static feature).
+        prop_name (str): the name of the property/attribute on the graph
+        feature_name (str | None): the display name of a computed feature, or None if the
+            feature is static.
         recompute (bool): indicates whether to recompute the computed feature or load it
-            as is.
+            as is. Only used for computed features with a provided `feature_name`.
+        dtype (str): the dtype of the feature. `bool` features will be interpreted
+            as groups.
     """
 
     prop_name: str
-    feature: str
+    feature: str | None
     recompute: bool
     dtype: str
 
@@ -37,7 +36,7 @@ def get_regionprop_dict(name: str):
 
 
 def register_features(tracks: Tracks, node_features: list[ImportedNodeFeature]) -> None:
-    """Function to register imported properties as Features on Tracks.
+    """Function to set up imported properties as Features on Tracks.
 
     1) Create a list of all to be recomputed features, and enable them on
         Tracks.
@@ -45,11 +44,11 @@ def register_features(tracks: Tracks, node_features: list[ImportedNodeFeature]) 
         without immediate recomputation. Since they are imported from a node property that
         can have any custom name in the source CSV or Geff file, we update the
         key for this Feature in the FeatureDict to the given name.
-    3) Create a list of all remaining, static features (Custom/Group features) and add
+    3) Create a list of all remaining, static features and add
         them to the FeatureDict with their respective data types.
 
     Args:
-        tracks (Tracks): the to be modified Tracks instance.
+        tracks (Tracks): the Tracks instance to be modified.
         node_features (list[ImportedNodeFeature]): list of to be imported Features.
     Raises:
         ValueError when attempting to register computed features without a segmentation.
@@ -90,10 +89,7 @@ def register_features(tracks: Tracks, node_features: list[ImportedNodeFeature]) 
     features_to_enable = [
         feature
         for feature in node_features
-        if (
-            not bool(feature.get("recompute", False))
-            and feature["feature"] not in ["Custom", "Group"]
-        )
+        if (not bool(feature.get("recompute", False)) and feature["feature"] is not None)
     ]
 
     for imported_feature in features_to_enable:
@@ -133,7 +129,7 @@ def register_features(tracks: Tracks, node_features: list[ImportedNodeFeature]) 
             tracks.features.tracklet_key = new_key
 
     # 3) Add other (custom, group) features that will be static
-    other_features = [f for f in node_features if f["feature"] in ("Custom", "Group")]
+    other_features = [f for f in node_features if f["feature"] is None]
     for imported_feature in other_features:
         # ensure dtype and prop_name are strings for the Feature TypedDict
         dtype_str = str(imported_feature.get("dtype", "str"))
