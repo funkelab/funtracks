@@ -118,3 +118,26 @@ class AnnotatorRegistry(list[GraphAnnotator]):
         # All features exist - proceed with deactivation
         for annotator in self:
             annotator.deactivate_features(keys)
+
+    def change_key(self, old_key: str, new_key: str) -> None:
+        """Rename a feature key across all annotators.
+
+        Finds the annotator that owns the feature and calls its change_key method.
+        This allows the Tracks user to rename features without needing to find
+        the specific annotator that manages it.
+
+        Args:
+            old_key: Existing key to rename.
+            new_key: New key to replace it with.
+
+        Raises:
+            KeyError: If old_key does not exist in any annotator.
+        """
+        # Find which annotator owns this feature
+        for annotator in self:
+            if old_key in annotator.all_features:
+                annotator.change_key(old_key, new_key)
+                return
+
+        # Key not found in any annotator
+        raise KeyError(f"Cannot rename missing feature key: {old_key!r}")
