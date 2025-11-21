@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Literal, TypedDict, cast
 
 from funtracks.data_model.tracks import Tracks
-from funtracks.features import _regionprops_features
 from funtracks.features._feature import Feature
 
 DType = Literal["int", "float", "str", "bool"]
@@ -26,15 +25,6 @@ class ImportedNodeFeature(TypedDict):
     feature: str | None
     recompute: bool
     dtype: DType
-
-
-def get_regionprop_dict(name: str):
-    """Get the TypedDict for the requested RegionpropFeature"""
-
-    func = getattr(_regionprops_features, name, None)
-    if func is None:
-        raise ValueError(f"Regionprop feature {name} not found")
-    return func
 
 
 def register_features(tracks: Tracks, node_features: list[ImportedNodeFeature]) -> None:
