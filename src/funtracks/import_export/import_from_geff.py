@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING
 
 import dask.array as da
 import geff
@@ -15,12 +15,10 @@ from geff.validate.tracks import validate_lineages, validate_tracklets
 from numpy.typing import ArrayLike
 
 from funtracks.data_model.solution_tracks import SolutionTracks
-from funtracks.features import Feature, ValueType
-from funtracks.import_export.feature_import import (
-    ImportedComputedFeature,
-    register_computed_features,
-)
+from funtracks.features import Feature
+from funtracks.import_export.feature_import import register_computed_features
 from funtracks.import_export.magic_imread import magic_imread
+from funtracks.import_export.types import ImportedComputedFeature, ImportedNodeFeature
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -31,25 +29,6 @@ if TYPE_CHECKING:
 # defining constants here because they are only used in the context of import
 TRACK_KEY = "track_id"
 SEG_KEY = "seg_id"
-
-
-class ImportedNodeFeature(TypedDict):
-    """Metadata options for an imported property
-
-    Args:
-        prop_name (str): the name of the property/attribute on the graph
-        feature_name (str | None): the display name of a computed feature, or None if the
-            feature is static.
-        recompute (bool): indicates whether to recompute the computed feature or load it
-            as is. Only used for computed features with a provided `feature_name`.
-        dtype (ValueType): the dtype of the feature. `bool` features will be interpreted
-            as groups.
-    """
-
-    prop_name: str
-    feature: str | None
-    recompute: bool
-    dtype: ValueType
 
 
 def relabel_seg_id_to_node_id(

@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from typing import TypedDict
-
 from funtracks.data_model.tracks import Tracks
+from funtracks.import_export.types import ImportedComputedFeature
 
 
 def _rename_feature(tracks: Tracks, old_key: str, new_key: str) -> None:
@@ -30,21 +29,6 @@ def _rename_feature(tracks: Tracks, old_key: str, new_key: str) -> None:
         tracks.features.position_key = new_key
     if tracks.features.tracklet_key == old_key:
         tracks.features.tracklet_key = new_key
-
-
-class ImportedComputedFeature(TypedDict):
-    """Metadata options for an imported property
-
-    Args:
-        prop_name (str): the name of the property/attribute on the graph
-        feature_display_name (str): the display name of a computed feature.
-        recompute (bool): indicates whether to recompute the computed feature or load it
-            as is
-    """
-
-    prop_name: str
-    feature_display_name: str
-    recompute: bool
 
 
 def register_computed_features(
@@ -80,7 +64,7 @@ def register_computed_features(
     # validate that all features exist, and rename them if they do
     features_to_compute = []
     for imported_feature in computed_features:
-        feature_name = imported_feature["feature_display_name"]
+        feature_name = imported_feature["feature"]
         new_key = imported_feature["prop_name"]
         recompute = imported_feature["recompute"]
 
