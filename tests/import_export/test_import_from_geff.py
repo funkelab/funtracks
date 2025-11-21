@@ -304,13 +304,13 @@ def test_node_features_compute_vs_load(valid_geff, valid_segmentation, tmp_path)
     # All requested features should be present
     assert "area" in data
     assert "random_feature" in data
-    assert "ellipse_axis_radii" in data
+    assert "ellipse" in data
     assert "circ" in data
 
     # Verify computed values (1 pixel = 0.01 after scaling)
     # Original geff had area=21 for last node
     assert data["area"] == 0.01
-    assert data["ellipse_axis_radii"] is not None
+    assert data["ellipse"] is not None
     assert data["circ"] == 0.45  # the value should not be recomputed
 
     # Verify loaded value from geff
