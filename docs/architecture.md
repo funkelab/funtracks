@@ -83,6 +83,10 @@ The main class representing a set of tracks: a graph + optional segmentation + f
 
 ## Architecture Diagrams
 
+### Import/Export Process Flow
+
+See [GEFF Import Process Flow](import-flow.md) for a detailed diagram of the data import pipeline and dependencies between steps.
+
 ### Class Diagram
 
 ```mermaid

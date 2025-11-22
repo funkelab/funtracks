@@ -4,7 +4,10 @@ import pytest
 import tifffile
 from geff.testing.data import create_mock_geff
 
-from funtracks.import_export.import_from_geff import import_from_geff
+from funtracks.import_export.import_from_geff import (
+    import_from_geff,
+    import_graph_from_geff,
+)
 
 
 @pytest.fixture
@@ -71,6 +74,172 @@ def valid_segmentation():
     return seg
 
 
+def test_import_graph_from_geff_renames_keys_to_standard(valid_geff):
+    """Test that import_graph_from_geff renames custom GEFF keys to standard keys.
+
+    This is a key architectural requirement: import_graph_from_geff should return
+    an InMemoryGeff where all node_props keys have been renamed from custom GEFF
+    property names to standard funtracks keys, using the provided node_name_map.
+    """
+    store, original_geff = valid_geff
+
+    # Define node_name_map: standard_key -> custom_geff_key
+    node_name_map = {
+        "time": "t",  # standard key "time" maps to GEFF key "t"
+        "y": "y",  # standard key "y" maps to GEFF key "y"
+        "x": "x",  # standard key "x" maps to GEFF key "x"
+        "track_id": "track_id",  # standard key "track_id" maps to GEFF key "track_id"
+        "seg_id": "seg_id",  # standard key "seg_id" maps to GEFF key "seg_id"
+        "circularity": "circ",  # standard key "circularity" maps to GEFF key "circ"
+    }
+
+    # Call import_graph_from_geff
+    in_memory_geff, position_attr, ndims = import_graph_from_geff(store, node_name_map)
+
+    # Assert the InMemoryGeff has standard keys, NOT custom GEFF keys
+    node_props = in_memory_geff["node_props"]
+
+    # Standard keys should be present
+    assert "time" in node_props, "Standard key 'time' should be present"
+    assert "y" in node_props, "Standard key 'y' should be present"
+    assert "x" in node_props, "Standard key 'x' should be present"
+    assert "track_id" in node_props, "Standard key 'track_id' should be present"
+    assert "seg_id" in node_props, "Standard key 'seg_id' should be present"
+    assert "circularity" in node_props, "Standard key 'circularity' should be present"
+
+    # Custom GEFF keys should NOT be present
+    assert "t" not in node_props, "Custom GEFF key 't' should have been renamed to 'time'"
+    assert "circ" not in node_props, (
+        "Custom GEFF key 'circ' should have been renamed to 'circularity'"
+    )
+
+    # Verify data integrity - values should be preserved
+    assert len(node_props["time"]["values"]) == 5, "Should have 5 time values"
+    assert len(node_props["track_id"]["values"]) == 5, "Should have 5 track_id values"
+    np.testing.assert_array_equal(
+        node_props["track_id"]["values"][:],
+        np.arange(5),
+        err_msg="track_id values should be preserved after renaming",
+    )
+    np.testing.assert_array_almost_equal(
+        node_props["circularity"]["values"][:],
+        np.array([0.2, 0.1, 0.5, 0.3, 0.45]),
+        err_msg="circularity values should be preserved after renaming from 'circ'",
+    )
+
+    # Verify return values
+    assert position_attr == ["y", "x"], "Should return standard position keys"
+    assert ndims == 3, "Should be 3D (time + 2 spatial dims)"
+
+
+def test_import_graph_from_geff_loads_custom_features(valid_geff):
+    """Test that custom features can be loaded by including them in node_name_map.
+
+    Custom features (not in the standard set) should be loaded when included
+    in the node_name_map. The key should remain as the standard key (which equals
+    the GEFF key in this case).
+    """
+    store, original_geff = valid_geff
+
+    # Include custom features in node_name_map
+    node_name_map = {
+        "time": "t",
+        "y": "y",
+        "x": "x",
+        "random_feature": "random_feature",  # Custom feature: maps to itself
+        "random_feature2": "random_feature2",  # Another custom feature
+    }
+
+    # Call import_graph_from_geff
+    in_memory_geff, position_attr, ndims = import_graph_from_geff(store, node_name_map)
+
+    node_props = in_memory_geff["node_props"]
+
+    # Custom features should be present with standard keys
+    assert "random_feature" in node_props, (
+        "Custom feature 'random_feature' should be loaded"
+    )
+    assert "random_feature2" in node_props, (
+        "Custom feature 'random_feature2' should be loaded"
+    )
+
+    # Verify data integrity
+    np.testing.assert_array_equal(
+        node_props["random_feature"]["values"][:],
+        np.array(["a", "b", "c", "d", "e"]),
+        err_msg="random_feature values should be preserved",
+    )
+    np.testing.assert_array_equal(
+        node_props["random_feature2"]["values"][:],
+        np.array(["a", "b", "c", "d", "e"]),
+        err_msg="random_feature2 values should be preserved",
+    )
+
+
+def test_import_graph_from_geff_custom_feature_with_different_name(valid_geff):
+    """Test that custom features can be renamed using node_name_map.
+
+    A custom feature with a GEFF name can be renamed to a different standard key
+    using the node_name_map.
+    """
+    store, original_geff = valid_geff
+
+    # Rename "circ" to "my_custom_circularity"
+    node_name_map = {
+        "time": "t",
+        "y": "y",
+        "x": "x",
+        "my_custom_circularity": "circ",  # Rename circ to custom name
+    }
+
+    # Call import_graph_from_geff
+    in_memory_geff, position_attr, ndims = import_graph_from_geff(store, node_name_map)
+
+    node_props = in_memory_geff["node_props"]
+
+    # The custom key should be present
+    assert "my_custom_circularity" in node_props, (
+        "Custom renamed feature should be present"
+    )
+
+    # The original GEFF key should NOT be present
+    assert "circ" not in node_props, "Original GEFF key should be renamed"
+
+    # Verify data integrity
+    np.testing.assert_array_almost_equal(
+        node_props["my_custom_circularity"]["values"][:],
+        np.array([0.2, 0.1, 0.5, 0.3, 0.45]),
+        err_msg="Values should be preserved after custom renaming",
+    )
+
+
+def test_import_graph_from_geff_edge_name_map_none(valid_geff):
+    """Test that edge_name_map=None loads all edge properties.
+
+    When edge_name_map is None, all edge properties should be loaded with their
+    original GEFF names (no renaming).
+    """
+    store, original_geff = valid_geff
+
+    # Define node name map
+    node_name_map = {
+        "time": "t",
+        "y": "y",
+        "x": "x",
+    }
+
+    # Call import_graph_from_geff without edge_name_map (defaults to None)
+    in_memory_geff, position_attr, ndims = import_graph_from_geff(
+        store, node_name_map, edge_name_map=None
+    )
+
+    # Should load successfully
+    assert "node_props" in in_memory_geff
+    assert "edge_props" in in_memory_geff
+    # The fixture has no edge properties, so edge_props should be empty
+    assert in_memory_geff["edge_props"] == {}
+
+
 def test_duplicate_or_none_in_name_map(valid_geff):
     """Test that duplicate values or missing t/y/x attributes are caught"""
 
@@ -117,20 +286,10 @@ def test_tracks_with_segmentation(valid_geff, invalid_geff, valid_segmentation, 
 
     # Test that a tracks object is produced and that the seg_id has been relabeled.
     scale = [1, 1, (1 / 100)]
-    node_features = [
-        {
-            "prop_name": "area",
-            "feature": "Area",
-            "recompute": True,  # In geff, but should be recomputed
-            "dtype": "float",
-        },
-        {
-            "prop_name": "random_feature",
-            "feature": None,
-            "recompute": False,
-            "dtype": "float",
-        },
-    ]
+    node_features = {
+        "area": True,  # In geff, but should be recomputed
+        "random_feature": False,  # Static feature - load from geff
+    }
 
     tracks = import_from_geff(
         store,
@@ -143,7 +302,7 @@ def test_tracks_with_segmentation(valid_geff, invalid_geff, valid_segmentation, 
     assert tracks.segmentation.shape == valid_segmentation.shape
     last_node = list(tracks.graph.nodes)[-1]
     coords = [
-        tracks.graph.nodes[last_node]["t"],
+        tracks.graph.nodes[last_node]["time"],
         tracks.graph.nodes[last_node]["y"],
         tracks.graph.nodes[last_node]["x"],
     ]
@@ -165,15 +324,10 @@ def test_tracks_with_segmentation(valid_geff, invalid_geff, valid_segmentation, 
     )  # recomputed area values should be 1 pixel, so 0.01 after applying the scaling.
 
     # Check that area is not recomputed but taken directly from the graph
-    node_features = [
-        {"prop_name": "area", "feature": "Area", "recompute": False, "dtype": "float"},
-        {
-            "prop_name": "random_feature",
-            "feature": None,
-            "recompute": False,
-            "dtype": "float",
-        },
-    ]
+    node_features = {
+        "area": False,  # Load from geff, don't recompute
+        "random_feature": False,  # Static feature - load from geff
+    }
 
     tracks = import_from_geff(
         store,
@@ -228,15 +382,10 @@ def test_segmentation_loading_formats(
     else:
         raise ValueError(f"Unknown format: {segmentation_format}")
 
-    node_features = [
-        {"prop_name": "area", "feature": "Area", "recompute": False, "dtype": "float"},
-        {
-            "prop_name": "random_feature",
-            "feature": None,
-            "recompute": False,
-            "dtype": "float",
-        },
-    ]
+    node_features = {
+        "area": False,  # Load from geff, don't recompute
+        "random_feature": False,  # Static feature - load from geff
+    }
 
     tracks = import_from_geff(
         store,
@@ -258,38 +407,24 @@ def test_node_features_compute_vs_load(valid_geff, valid_segmentation, tmp_path)
     Features not in the geff can still be computed if marked True.
     """
     store, _ = valid_geff
-    name_map = {"time": "t", "y": "y", "x": "x", "seg_id": "seg_id"}
+    name_map = {
+        "time": "t",
+        "y": "y",
+        "x": "x",
+        "seg_id": "seg_id",
+        "circularity": "circ",  # Map standard key to GEFF property name
+    }
     scale = [1, 1, 1 / 100]
     valid_segmentation_path = tmp_path / "segmentation.tif"
     tifffile.imwrite(valid_segmentation_path, valid_segmentation)
 
     # Test 1: Mix of computed (True) and loaded (False) features
-    node_features = [
-        {
-            "prop_name": "area",
-            "feature": "Area",
-            "recompute": True,  # In geff, but should be recomputed
-            "dtype": "float",
-        },
-        {
-            "prop_name": "random_feature",
-            "feature": None,
-            "recompute": False,
-            "dtype": "float",
-        },
-        {
-            "prop_name": "circ",
-            "feature": "Circularity",
-            "recompute": False,  # In geff, load without recomputing
-            "dtype": "float",
-        },
-        {
-            "prop_name": "ellipse",
-            "feature": "Ellipse axis radii",
-            "recompute": True,  # Not in geff, should be computed
-            "dtype": "float",
-        },
-    ]
+    node_features = {
+        "area": True,  # In geff, but should be recomputed
+        "random_feature": False,  # Static feature - load from geff
+        "circularity": False,  # In geff, load without recomputing
+        "ellipse_axis_radii": True,  # Not in geff, should be computed
+    }
 
     tracks = import_from_geff(
         store,
@@ -299,7 +434,7 @@ def test_node_features_compute_vs_load(valid_geff, valid_segmentation, tmp_path)
         node_features=node_features,
     )
 
-    feature_keys = ["area", "random_feature", "ellipse", "circ"]
+    feature_keys = ["area", "random_feature", "ellipse_axis_radii", "circularity"]
     for key in feature_keys:
         assert key in tracks.features
 
@@ -312,35 +447,29 @@ def test_node_features_compute_vs_load(valid_geff, valid_segmentation, tmp_path)
     # Verify computed values (1 pixel = 0.01 after scaling)
     # Original geff had area=21 for last node
     assert data["area"] == 0.01
-    assert data["ellipse"] is not None
-    assert data["circ"] == 0.45  # the value should not be recomputed
+    assert data["ellipse_axis_radii"] is not None
+    assert data["circularity"] == 0.45  # the value should not be recomputed
 
     # Verify loaded value from geff
     assert data["random_feature"] == "e"
 
 
 def test_node_features_unknown(valid_geff, valid_segmentation, tmp_path):
-    """Test that providing an unknown feature raises a ValueError."""
+    """Test that providing an unknown feature raises a KeyError."""
     store, _ = valid_geff
     name_map = {"time": "t", "y": "y", "x": "x", "seg_id": "seg_id"}
     scale = [1, 1, 1 / 100]
     valid_segmentation_path = tmp_path / "segmentation.tif"
     tifffile.imwrite(valid_segmentation_path, valid_segmentation)
 
-    # Test unknown regionprops feature
-    node_features = [
-        {
-            "prop_name": "area",
-            "feature": "AREA",  # Unknown feature
-            "recompute": True,
-            "dtype": "float",
-        }
-    ]
+    # Test unknown feature that doesn't exist in annotators or GEFF
+    node_features = {
+        "unknown_computed_feature": True,  # Unknown feature, request computation
+    }
 
     with pytest.raises(
-        ValueError,
-        match="Requested activation of feature .* but no such feature found "
-        "in computed features. Perhaps you need to provide a segmentation?",
+        KeyError,
+        match="Features not available",
     ):
         import_from_geff(
             store,
@@ -358,125 +487,18 @@ def test_compute_features_without_segmentation(valid_geff):
     scale = [1, 1, 1 / 100]
 
     # Try to compute area feature without providing segmentation
-    node_features = [
-        {
-            "prop_name": "area",
-            "feature": "Area",
-            "recompute": True,  # Request computation
-            "dtype": "float",
-        }
-    ]
-
-    with pytest.raises(
-        ValueError,
-        match=(
-            "Requested activation of feature .* but no such feature found "
-            "in computed features. Perhaps you need to provide a segmentation?"
-        ),
-    ):
-        import_from_geff(
-            store,
-            name_map,
-            segmentation_path=None,  # No segmentation
-            scale=scale,
-            node_features=node_features,
-        )
-
-
-def test_load_features_without_segmentation_not_computed(valid_geff):
-    """Test that loading regionprops features without segmentation raises error."""
-    store, _ = valid_geff
-    name_map = {"time": "t", "y": "y", "x": "x"}
-    scale = [1, 1, 1 / 100]
-
-    # Try to load circularity feature without providing segmentation
-    node_features = [
-        {
-            "prop_name": "circ",
-            "feature": "Circularity",
-            "recompute": False,  # Just load, don't compute
-            "dtype": "float",
-        }
-    ]
-
-    with pytest.raises(
-        ValueError,
-        match=(
-            "Requested activation of feature .* but no such feature found "
-            "in computed features. Perhaps you need to provide a segmentation?"
-        ),
-    ):
-        import_from_geff(
-            store,
-            name_map,
-            segmentation_path=None,  # No segmentation
-            scale=scale,
-            node_features=node_features,
-        )
-
-
-def test_deprecated_dict_format(valid_geff, valid_segmentation, tmp_path):
-    """Test backward compatibility with dict[str, bool] node_features format."""
-    store, _ = valid_geff
-    name_map = {"time": "t", "y": "y", "x": "x", "seg_id": "seg_id"}
-    scale = [1, 1, 1 / 100]
-    valid_segmentation_path = tmp_path / "segmentation.tif"
-    tifffile.imwrite(valid_segmentation_path, valid_segmentation)
-
-    # Use deprecated dict[str, bool] format
-    node_features_dict = {
-        "area": True,  # Computed feature - should recompute
-        "circ": False,  # Computed feature - should load from geff
-        "random_feature": False,  # Static feature - should load from geff
+    node_features = {
+        "area": True,  # Request computation without segmentation
     }
 
-    # Should issue DeprecationWarning but still work
-    with pytest.warns(
-        DeprecationWarning,
-        match="Passing node_features as dict\\[str, bool\\] is deprecated",
+    with pytest.raises(
+        KeyError,
+        match="Features not available",
     ):
-        tracks = import_from_geff(
+        import_from_geff(
             store,
             name_map,
-            segmentation_path=valid_segmentation_path,
+            segmentation_path=None,  # No segmentation
             scale=scale,
-            node_features=node_features_dict,
+            node_features=node_features,
         )
-
-    # All requested features should be present
-    assert "area" in tracks.features
-    assert "circ" in tracks.features
-    assert "random_feature" in tracks.features
-
-    # Check values in graph
-    _, data = list(tracks.graph.nodes(data=True))[-1]
-
-    # Area should be recomputed (1 pixel = 0.01 after scaling)
-    assert data["area"] == 0.01
-
-    # Circularity should be loaded from geff (not recomputed)
-    assert data["circ"] == 0.45  # Original value from geff
-
-    # Random feature should be loaded from geff
-    assert data["random_feature"] == "e"
-
-
-def test_deprecated_dict_format_unknown_feature(valid_geff):
-    """Test that dict format with unknown feature raises clear error."""
-    store, _ = valid_geff
-    name_map = {"time": "t", "y": "y", "x": "x"}
-
-    # Use deprecated dict format with unknown feature
-    node_features_dict = {"unknown_feature": True}
-
-    with (
-        pytest.warns(
-            DeprecationWarning,
-            match="Passing node_features as dict\\[str, bool\\] is deprecated",
-        ),
-        pytest.raises(
-            ValueError,
-            match="Unknown feature 'unknown_feature' - not found in geff data",
-        ),
-    ):
-        import_from_geff(store, name_map, node_features=node_features_dict)
