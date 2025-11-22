@@ -1,24 +1,19 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 import dask.array as da
 import geff
 from geff.core_io._base_read import read_to_memory
+from geff.validate.segmentation import axes_match_seg_dims, has_valid_seg_id
 from geff.validate.tracks import validate_lineages, validate_tracklets
 
-from funtracks.features import Feature, ValueType
+from funtracks.features import Feature
 from funtracks.import_export._import_segmentation import (
     import_segmentation,
     lazy_load_segmentation,
 )
-from funtracks.import_export._register_computed_features import (
-    register_computed_features,
-)
-from funtracks.import_export._utils import (
-    _get_default_key_to_display_name_mapping,
-    _infer_dtype_from_array,
-)
+from funtracks.import_export._utils import _infer_dtype_from_array
 from funtracks.import_export._validation import validate_graph_seg_match
 
 if TYPE_CHECKING:
@@ -27,11 +22,6 @@ if TYPE_CHECKING:
     from geff._typing import InMemoryGeff
 
     from funtracks.data_model.solution_tracks import SolutionTracks
-    from funtracks.import_export._types import (
-        ImportedComputedFeature,
-        ImportedNodeFeature,
-    )
-
 
 # defining constants here because they are only used in the context of import
 TRACK_KEY = "track_id"
@@ -52,7 +42,8 @@ def import_graph_from_geff(
         node_name_map: Maps standard keys to GEFF node property names.
             Required: "time", "y", "x" (and "z" for 3D)
             Optional: "track_id", "seg_id", "lineage_id", custom features
-            Example: {"time": "t", "circularity": "circ"}
+            Example: {"time": "t", "circularity": "circ"}.
+            Only properties included here will be loaded.
         edge_name_map: Maps standard keys to GEFF edge property names.
             If None, all edge properties loaded with original names.
             If provided, only specified properties loaded and renamed.
@@ -74,7 +65,9 @@ def import_graph_from_geff(
     edge_prop_filter = None if edge_name_map is None else list(edge_name_map.values())
 
     in_memory_geff = read_to_memory(
-        directory, node_props=list(node_prop_filter), edge_props=edge_prop_filter
+        directory,
+        node_props=list(node_prop_filter),
+        edge_props=edge_prop_filter,
     )
 
     # Validate spatiotemporal keys (before renaming, checking GEFF keys)
@@ -127,7 +120,7 @@ def import_from_geff(
     name_map: dict[str, str],
     segmentation_path: Path | None = None,
     scale: list[float] | None = None,
-    node_features: list[ImportedNodeFeature] | dict[str, bool] | None = None,
+    node_features: dict[str, bool] | None = None,
     edge_name_map: dict[str, str] | None = None,
 ) -> SolutionTracks:
     """Load Tracks from a geff directory. Takes a name_map to map graph attributes
@@ -159,10 +152,11 @@ def import_from_geff(
                 - Maps standard feature keys to their names in the GEFF file
         segmentation_path (Path | None = None): path to segmentation data.
         scale (list[float]): scaling information (pixel to world coordinates).
-        node_features (list[ImportedNodeFeature] | dict[str, bool] | None=None):
-            optional features to include in the Tracks object. Can be either:
-            - list[ImportedNodeFeature]: Recommended format with full feature metadata
-            - dict[str, bool]: DEPRECATED - maps feature name to recompute flag
+        node_features (dict[str, bool] | None=None):
+            Optional dict mapping feature names to recompute flags.
+            Keys are standard feature names, values indicate whether to recompute (True)
+            or use existing values from GEFF (False).
+            Features not in name_map will be auto-added assuming they map to themselves.
         edge_name_map (dict[str, str] | None): Maps standard keys to GEFF edge
             property names. If None, all edge properties loaded with original names.
             If provided, only specified properties loaded and renamed.
@@ -170,22 +164,18 @@ def import_from_geff(
     Returns:
         Tracks based on the geff graph and segmentation, if provided.
     """
-
-    # Issue deprecation warning for dict[str, bool] format (conversion happens later)
-    if node_features is not None and isinstance(node_features, dict):
-        import warnings
-
-        warnings.warn(
-            "Passing node_features as dict[str, bool] is deprecated. "
-            "Use list[ImportedNodeFeature] instead. "
-            "See ImportedNodeFeature documentation for the new format.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
+    # For backward compatibility, add node_features keys to name_map if not present
+    # Only add features that should be loaded from GEFF (recompute=False)
+    # Assumes feature name in GEFF matches the standard key
+    extended_name_map = dict(name_map)
+    if node_features is not None:
+        for feature_key, recompute in node_features.items():
+            if feature_key not in extended_name_map and not recompute:
+                extended_name_map[feature_key] = feature_key
 
     # Load and validate GEFF data (returns InMemoryGeff with standard keys)
     in_memory_geff, position_attr, ndims = import_graph_from_geff(
-        directory, name_map, edge_name_map=edge_name_map
+        directory, extended_name_map, edge_name_map=edge_name_map
     )
 
     metadata = dict(in_memory_geff["metadata"])
@@ -195,63 +185,6 @@ def import_from_geff(
     edge_props = in_memory_geff["edge_props"]
     segmentation = None
     time_attr = "time"  # Using standard key directly
-
-    # Rebuild node_prop_filter for later use (now using standard keys)
-    node_prop_filter: set[str] = {
-        standard_key for standard_key in name_map if standard_key is not None
-    }
-    if node_features is not None:
-        if isinstance(node_features, dict):
-            node_prop_filter.update(
-                key
-                for key, should_recompute in node_features.items()
-                if not should_recompute
-            )
-        else:
-            node_prop_filter.update(
-                str(feature["prop_name"])
-                for feature in node_features
-                if feature["feature"] is None or not bool(feature["recompute"])
-            )
-
-    # Convert dict[str, bool] format to list[ImportedNodeFeature] now that we have
-    # geff data
-    if node_features is not None and isinstance(node_features, dict):
-        from funtracks.annotators._regionprops_annotator import DEFAULT_POS_KEY
-
-        # Get the mapping and add position key based on ndim
-        key_to_display = _get_default_key_to_display_name_mapping(ndim=ndims)
-        position_display_name = (
-            tuple(position_attr) if len(position_attr) > 1 else (position_attr[0],)
-        )
-        key_to_display[DEFAULT_POS_KEY] = position_display_name
-
-        converted_features: list[ImportedNodeFeature] = []
-        for key, should_recompute in node_features.items():
-            # Check if it's a known computed feature
-            if key in key_to_display:
-                display_name = key_to_display[key]
-                dtype = cast(ValueType, "float")  # Placeholder for computed features
-            # Check if it exists in geff data (static feature)
-            elif key in node_props:
-                display_name = None
-                dtype = _infer_dtype_from_array(node_props[key]["values"])
-            else:
-                raise ValueError(
-                    f"Unknown feature '{key}' - not found in geff data or known "
-                    "computed features. Available features in geff: "
-                    f"{list(node_props.keys())}"
-                )
-
-            converted_features.append(
-                {
-                    "prop_name": key,
-                    "feature": display_name,
-                    "recompute": should_recompute,
-                    "dtype": dtype,
-                }
-            )
-        node_features = converted_features
 
     # if no scale is provided, load from metadata if available.
     if scale is None:
@@ -263,8 +196,8 @@ def import_from_geff(
             if "z" in lookup:
                 scale[-3] = lookup.get("z", 1)
 
-    # Check if a track_id was provided, and if it is valid keep it in the
-    # node_prop_filter. If it is not provided or invalid, it will be computed again.
+    # Check if a track_id was provided, and if it is valid keep it.
+    # If it is not provided or invalid, it will be computed again.
     if TRACK_KEY in node_props:
         # if track id is present, it is a solution graph
         valid_track_ids, errors = validate_tracklets(
@@ -273,11 +206,11 @@ def import_from_geff(
             tracklet_ids=node_props[TRACK_KEY]["values"],
         )
         if not valid_track_ids:
-            # Remove invalid track_id from properties to load
-            node_prop_filter.discard(TRACK_KEY)
+            # Remove invalid track_id from node properties
+            node_props.pop(TRACK_KEY)
 
-    # Check if a lineage_id was provided, and if it is valid keep it in the
-    # node_prop_filter. If invalid, remove it from properties to load.
+    # Check if a lineage_id was provided, and if it is valid keep it.
+    # If invalid, remove it from node properties.
     if "lineage_id" in node_props:
         valid_lineages, errors = validate_lineages(
             node_ids=node_ids,
@@ -285,26 +218,37 @@ def import_from_geff(
             lineage_ids=node_props["lineage_id"]["values"],
         )
         if not valid_lineages:
-            # Remove invalid lineage_id from properties to load
-            node_prop_filter.discard("lineage_id")
+            # Remove invalid lineage_id from node properties
+            node_props.pop("lineage_id")
 
     # All pre-checks have passed, load the graph now.
-    filtered_node_props = {k: v for k, v in node_props.items() if k in node_prop_filter}
-
     graph = geff.construct(
         metadata=in_memory_geff["metadata"],
         node_ids=in_memory_geff["node_ids"],
         edge_ids=in_memory_geff["edge_ids"],
-        node_props=filtered_node_props,
+        node_props=node_props,
         edge_props=edge_props,
     )
-
-    # Note: No need to relabel track_id anymore since InMemoryGeff
-    # already has standard keys
 
     # Try to load the segmentation data, if it was provided.
     if segmentation_path is not None:
         seg_reference = lazy_load_segmentation(segmentation_path)
+
+        # GEFF-specific validation: Check axes metadata matches segmentation dimensions
+        axes_valid, errors = axes_match_seg_dims(in_memory_geff, seg_reference)
+        if not axes_valid:
+            error_msg = "Axes in the geff do not match segmentation:\n"
+            error_msg += "\n".join(f"- {e}" for e in errors)
+            raise ValueError(error_msg)
+
+        # GEFF-specific validation: Check seg_ids are valid integers
+        seg_id_valid, errors = has_valid_seg_id(in_memory_geff, seg_id=SEG_KEY)
+        if not seg_id_valid:
+            error_msg = "Invalid seg_id values in geff:\n"
+            error_msg += "\n".join(f"- {e}" for e in errors)
+            raise ValueError(error_msg)
+
+        # Generic validation: check graph matches segmentation and if relabeling needed
         relabel = validate_graph_seg_match(graph, seg_reference, scale, position_attr)
         segmentation = import_segmentation(segmentation_path, graph, relabel=relabel)
     # Put segmentation data in memory now.
@@ -324,34 +268,69 @@ def import_from_geff(
         scale=scale,
     )
 
-    static_features: dict[str, Feature] = {}
-    computed_features: list[ImportedComputedFeature] = []
-
+    # Enable features from node_features (both computed and loaded)
     if node_features is not None:
-        for import_feat in node_features:
-            prop_name = import_feat["prop_name"]
-            feat_name = import_feat["feature"]
-            if feat_name is None:
-                static_features[prop_name] = Feature(
-                    display_name=prop_name,
-                    feature_type="node",
-                    value_type=import_feat["dtype"],
+        # Validate requested features before enabling
+        invalid_features = []
+        for key, recompute in node_features.items():
+            if recompute:
+                # Features to compute must exist in annotators
+                if key not in tracks.annotators.all_features:
+                    invalid_features.append(key)
+            else:
+                # Features to load must exist in node_props
+                if key not in node_props:
+                    invalid_features.append(key)
+
+        if invalid_features:
+            available_computed = list(tracks.annotators.all_features.keys())
+            available_geff = list(node_props.keys())
+            raise KeyError(
+                f"Features not available: {invalid_features}. "
+                f"Available computed features: {available_computed}. "
+                f"Available GEFF properties: {available_geff}"
+            )
+
+        # Separate into features that exist in annotators vs static features
+        annotator_features = {
+            key: recompute
+            for key, recompute in node_features.items()
+            if key in tracks.annotators.all_features
+        }
+
+        # Enable annotator features with appropriate recompute flag
+        for key, recompute in annotator_features.items():
+            tracks.enable_features([key], recompute=recompute)
+
+    # Register static features (features not in annotator registry)
+    static_keys = [
+        key for key in extended_name_map if key not in tracks.annotators.all_features
+    ]
+    static_features: dict[str, Feature] = {}
+    for key in static_keys:
+        static_features[key] = Feature(
+            display_name=key,
+            feature_type="node",
+            value_type=_infer_dtype_from_array(node_props[key]["values"]),
+            num_values=1,
+            required=False,
+            default_value=None,
+        )
+    tracks.features.update(static_features)
+
+    # Handle edge features similarly if edge_name_map was provided
+    if edge_name_map is not None:
+        edge_static_features: dict[str, Feature] = {}
+        for key in edge_name_map:
+            if key in edge_props:
+                edge_static_features[key] = Feature(
+                    display_name=key,
+                    feature_type="edge",
+                    value_type=_infer_dtype_from_array(edge_props[key]["values"]),
                     num_values=1,
                     required=False,
                     default_value=None,
                 )
-            else:
-                computed_features.append(
-                    {
-                        "prop_name": prop_name,
-                        "feature": feat_name,
-                        "recompute": import_feat["recompute"],
-                    }
-                )
+        tracks.features.update(edge_static_features)
 
-    if len(computed_features) > 0:
-        register_computed_features(tracks, computed_features)
-
-    # Add static features to tracks.features
-    tracks.features.update(static_features)
     return tracks

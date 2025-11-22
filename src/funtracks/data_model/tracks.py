@@ -705,13 +705,15 @@ class Tracks:
         """
         return {k: feat for k, (feat, _) in self.annotators.all_features.items()}
 
-    def enable_features(self, feature_keys: list[str]) -> None:
+    def enable_features(self, feature_keys: list[str], recompute: bool = True) -> None:
         """Enable multiple features for computation efficiently.
 
-        Adds features to annotators and FeatureDict, then computes their values.
+        Adds features to annotators and FeatureDict, optionally computes their values.
 
         Args:
             feature_keys: List of feature keys to enable
+            recompute: If True, compute feature values. If False, assume values
+                already exist in graph and just register the feature.
 
         Raises:
             KeyError: If any feature is not available (raised by annotators)
@@ -725,8 +727,9 @@ class Tracks:
                 feature, _ = self.annotators.all_features[key]
                 self.features[key] = feature
 
-        # Compute the features
-        self.annotators.compute(feature_keys)
+        # Compute the features if requested
+        if recompute:
+            self.annotators.compute(feature_keys)
 
     def disable_features(self, feature_keys: list[str]) -> None:
         """Disable multiple features from computation.
