@@ -4,26 +4,27 @@ from typing import TYPE_CHECKING, cast
 
 import dask.array as da
 import geff
-import numpy as np
 from geff.core_io._base_read import read_to_memory
-from geff.validate.segmentation import (
-    axes_match_seg_dims,
-    has_seg_ids_at_coords,
-    has_valid_seg_id,
-)
 from geff.validate.tracks import validate_lineages, validate_tracklets
 
 from funtracks.features import Feature, ValueType
+from funtracks.import_export._import_segmentation import (
+    import_segmentation,
+    lazy_load_segmentation,
+)
 from funtracks.import_export._register_computed_features import (
     register_computed_features,
 )
-from funtracks.import_export.magic_imread import magic_imread
+from funtracks.import_export._utils import (
+    _get_default_key_to_display_name_mapping,
+    _infer_dtype_from_array,
+)
+from funtracks.import_export._validation import validate_graph_seg_match
 
 if TYPE_CHECKING:
     from pathlib import Path
 
     from geff._typing import InMemoryGeff
-    from numpy.typing import ArrayLike
 
     from funtracks.data_model.solution_tracks import SolutionTracks
     from funtracks.import_export._types import (
@@ -37,161 +38,88 @@ TRACK_KEY = "track_id"
 SEG_KEY = "seg_id"
 
 
-def _get_default_key_to_display_name_mapping(
-    ndim: int,
-) -> dict[str, str | tuple[str, ...]]:
-    """Get mapping from default feature keys to their display names.
+def import_graph_from_geff(
+    directory: Path,
+    node_name_map: dict[str, str],
+    edge_name_map: dict[str, str] | None = None,
+) -> tuple[InMemoryGeff, list[str], int]:
+    """Load GEFF data and rename property keys to standard names.
 
-    Uses annotator classmethods to build the mapping automatically.
-
-    Args:
-        ndim: Total number of dimensions including time (3 or 4)
-
-    Returns:
-        Dictionary mapping default feature keys to their display names.
-    """
-    from funtracks.annotators._edge_annotator import EdgeAnnotator
-    from funtracks.annotators._regionprops_annotator import RegionpropsAnnotator
-    from funtracks.annotators._track_annotator import TrackAnnotator
-
-    mapping = {}
-
-    # Collect features from all annotators
-    for annotator_cls in [RegionpropsAnnotator, EdgeAnnotator, TrackAnnotator]:
-        features = annotator_cls.get_available_features(ndim=ndim)  # type: ignore[attr-defined]
-        for key, feature in features.items():
-            display_name = feature["display_name"]
-            # Convert list to tuple for hashability
-            if isinstance(display_name, list):
-                display_name = tuple(display_name)
-            mapping[key] = display_name
-
-    return mapping
-
-
-def _infer_dtype_from_array(arr: ArrayLike) -> ValueType:
-    """Infer ValueType from numpy array dtype.
+    All property keys are renamed before NetworkX graph construction.
 
     Args:
-        arr: Array-like object with a dtype attribute
+        directory: Path to GEFF data directory or zarr store
+        node_name_map: Maps standard keys to GEFF node property names.
+            Required: "time", "y", "x" (and "z" for 3D)
+            Optional: "track_id", "seg_id", "lineage_id", custom features
+            Example: {"time": "t", "circularity": "circ"}
+        edge_name_map: Maps standard keys to GEFF edge property names.
+            If None, all edge properties loaded with original names.
+            If provided, only specified properties loaded and renamed.
+            Example: {"iou": "overlap"}
 
     Returns:
-        String representation of the inferred type ("int", "float", "bool", or "str")
+        (in_memory_geff, position_attr, ndims) where in_memory_geff has
+        all properties renamed to standard keys
+
+    Raises:
+        ValueError: If node_name_map contains None or duplicate values
     """
-    arr_np = np.asarray(arr)
-    if np.issubdtype(arr_np.dtype, np.integer):
-        return "int"
-    elif np.issubdtype(arr_np.dtype, np.floating):
-        return "float"
-    elif np.issubdtype(arr_np.dtype, np.bool_):
-        return "bool"
-    else:
-        return "str"
+    # Build filter of which node properties to load from GEFF
+    node_prop_filter: set[str] = {
+        prop for _, prop in node_name_map.items() if prop is not None
+    }
 
+    # Build filter of which edge properties to load from GEFF
+    edge_prop_filter = None if edge_name_map is None else list(edge_name_map.values())
 
-def relabel_seg_id_to_node_id(
-    times: ArrayLike, ids: ArrayLike, seg_ids: ArrayLike, segmentation: da.Array
-) -> np.ndarray:
-    """Create a new segmentation where masks are relabeled to match node ids.
-
-    TODO: How does this relate to motile_toolbox.ensure_unique_labels? Just lazy/dask?
-
-    Args:
-        times (ArrayLike): array of time points, one per node
-        ids (ArrayLike): array of node ids
-        seg_ids (ArrayLike): array of segmentation ids, one per node
-        segmentation (da.array): A dask array where segmentation label values match the
-          "seg_id" values.
-
-    Returns:
-        np.ndarray: A numpy array of dtype uint64, similar to the input segmentation
-            where each segmentation now has a unique label across time that corresponds
-            to the ID of each node.
-    """
-
-    new_segmentation = np.zeros(segmentation.shape, dtype=np.uint64)
-    for i, node in enumerate(ids):
-        mask = segmentation[times[i]].compute() == seg_ids[i]
-        new_segmentation[times[i], mask] = node
-
-    return new_segmentation
-
-
-def validate_graph_seg_match(
-    in_memory_geff: InMemoryGeff,
-    segmentation: ArrayLike,
-    name_map: dict[str, str],
-    scale: list[float],
-    position_attr: list[str],
-) -> bool:
-    """Validate if the given geff matches the provided segmentation data.
-
-    Raises an error if no valid seg ids are provided, if the metadata axes do not match
-    segmentation shape, or if the seg_id value of the last node does not match the pixel
-    value at the (scaled) node coordinates. Returns a boolean indicating whether
-    relabeling of the segmentation to match it to node id values is required.
-
-    Args:
-        in_memory_geff (InMemoryGeff): geff data read into memory
-        name_map (dict[str,str]): dictionary mapping required fields to node properties.
-        segmentation (ArrayLike): segmentation data.
-        scale (list[float]): scaling information (pixel to world coordinates).
-        position_attr (list[str]): position keys in the geff tracks data
-
-    Returns:
-        bool: True if relabeling from seg_id to node_id is required.
-    """
-
-    # check if the axes information in the metadata matches the segmentation
-    # dimensions
-    axes_match, errors = axes_match_seg_dims(in_memory_geff, segmentation)
-    if not axes_match:
-        error_msg = "Axes in the geff do not match segmentation:\n" + "\n".join(
-            f"- {e}" for e in errors
-        )
-        raise ValueError(error_msg)
-
-    node_ids = in_memory_geff["node_ids"]
-    node_props = in_memory_geff["node_props"]
-
-    # Check if valid seg_ids are provided
-    if name_map.get(SEG_KEY) is not None:
-        seg_ids_valid, errors = has_valid_seg_id(in_memory_geff, name_map[SEG_KEY])
-        if not seg_ids_valid:
-            error_msg = "Error in validating the segmentation ids:\n" + "\n".join(
-                f"- {e}" for e in errors
-            )
-            raise ValueError(error_msg)
-        seg_id = int(node_props[name_map[SEG_KEY]]["values"][-1])
-    else:
-        # assign the node id as seg_id instead and check in the next step if this is valid
-        seg_id = int(node_ids[-1])
-
-    # Get the coordinates for the last node.
-    t = node_props[name_map["time"]]["values"][-1]
-    z = node_props[name_map["z"]]["values"][-1] if len(position_attr) == 3 else None
-    y = node_props[name_map["y"]]["values"][-1]
-    x = node_props[name_map["x"]]["values"][-1]
-
-    coord = []
-    coord.append(t)
-    if z is not None:
-        coord.append(z)
-    coord.append(y)
-    coord.append(x)
-
-    # Check if the segmentation pixel value at the coordinates of the last node
-    # matches the seg id. Since the scale factor was used to convert from pixels to
-    # world coordinates, we need to invert this scale factor to get the pixel
-    # coordinates.
-    seg_id_at_coord, errors = has_seg_ids_at_coords(
-        segmentation, [coord], [seg_id], tuple(1 / s for s in scale)
+    in_memory_geff = read_to_memory(
+        directory, node_props=list(node_prop_filter), edge_props=edge_prop_filter
     )
-    if not seg_id_at_coord:
-        error_msg = "Error testing seg id:\n" + "\n".join(f"- {e}" for e in errors)
-        raise ValueError(error_msg)
 
-    return node_ids[-1] != seg_id
+    # Validate spatiotemporal keys (before renaming, checking GEFF keys)
+    spatio_temporal_keys = ["time", "z", "y", "x"]
+    spatio_temporal_map = {
+        key: node_name_map[key] for key in spatio_temporal_keys if key in node_name_map
+    }
+    if any(v is None for v in spatio_temporal_map.values()):
+        raise ValueError(
+            "The node_name_map cannot contain None values. Please provide a valid "
+            "mapping for all required fields."
+        )
+    if len(set(spatio_temporal_map.values())) != len(spatio_temporal_map.values()):
+        raise ValueError(
+            "The node_name_map cannot contain duplicate values. Please provide a unique "
+            "mapping for each required field."
+        )
+
+    # Rename node property keys from custom (GEFF) to standard using node_name_map
+    # Build reverse mapping: GEFF key -> standard key
+    node_geff_to_standard = {v: k for k, v in node_name_map.items() if v is not None}
+
+    node_props = in_memory_geff["node_props"]
+    renamed_node_props = {}
+    for geff_key, prop_data in node_props.items():
+        standard_key = node_geff_to_standard.get(geff_key, geff_key)
+        renamed_node_props[standard_key] = prop_data
+    in_memory_geff["node_props"] = renamed_node_props
+
+    # Rename edge property keys from custom (GEFF) to standard using edge_name_map
+    if edge_name_map is not None:
+        edge_geff_to_standard = {v: k for k, v in edge_name_map.items() if v is not None}
+
+        edge_props = in_memory_geff["edge_props"]
+        renamed_edge_props = {}
+        for geff_key, prop_data in edge_props.items():
+            standard_key = edge_geff_to_standard.get(geff_key, geff_key)
+            renamed_edge_props[standard_key] = prop_data
+        in_memory_geff["edge_props"] = renamed_edge_props
+
+    # Extract time and position attributes (now using standard keys)
+    position_attr = [k for k in ("z", "y", "x") if k in node_name_map]
+    ndims = len(position_attr) + 1
+
+    return in_memory_geff, position_attr, ndims
 
 
 def import_from_geff(
@@ -200,7 +128,7 @@ def import_from_geff(
     segmentation_path: Path | None = None,
     scale: list[float] | None = None,
     node_features: list[ImportedNodeFeature] | dict[str, bool] | None = None,
-    edge_prop_filter: list[str] | None = None,
+    edge_name_map: dict[str, str] | None = None,
 ) -> SolutionTracks:
     """Load Tracks from a geff directory. Takes a name_map to map graph attributes
     (spatial dimensions and optional track and lineage ids) to tracks attributes.
@@ -216,23 +144,29 @@ def import_from_geff(
 
     Args:
         directory (Path): path to the geff tracks data or its parent folder.
-        name_map (dict[str,str]): dictionary mapping required fields to node properties.
-            Should include:
-                time,
-                (z),
-                y,
-                x,
-                (seg_id), if a segmentation is provided
-                (tracklet_id), optional, if it is a solution
-                (lineage_id), optional, if it is a solution
+        name_map (dict[str,str]): dictionary mapping standard keys to GEFF property names.
+            Required fields:
+                - time: temporal coordinate
+                - y, x: spatial coordinates (required)
+                - z: spatial coordinate (required for 4D data)
+            Optional fields:
+                - seg_id: segmentation ID (if segmentation is provided)
+                - tracklet_id: tracklet identifier (for solutions)
+                - lineage_id: lineage identifier (for solutions)
+            Any additional properties:
+                - Can include any other properties from the GEFF file
+                - Both computed features (area, circularity, etc.) and static features
+                - Maps standard feature keys to their names in the GEFF file
         segmentation_path (Path | None = None): path to segmentation data.
         scale (list[float]): scaling information (pixel to world coordinates).
         node_features (list[ImportedNodeFeature] | dict[str, bool] | None=None):
             optional features to include in the Tracks object. Can be either:
             - list[ImportedNodeFeature]: Recommended format with full feature metadata
             - dict[str, bool]: DEPRECATED - maps feature name to recompute flag
-        edge_prop_filter (list[str]): List of edge properties to include. If None all
-        properties will be included.
+        edge_name_map (dict[str, str] | None): Maps standard keys to GEFF edge
+            property names. If None, all edge properties loaded with original names.
+            If provided, only specified properties loaded and renamed.
+            Example: {"iou": "overlap"}
     Returns:
         Tracks based on the geff graph and segmentation, if provided.
     """
@@ -249,62 +183,36 @@ def import_from_geff(
             stacklevel=2,
         )
 
-    # Read the GEFF file into memory
-    node_prop_filter: set[str] = {
-        prop for _, prop in name_map.items() if prop is not None
-    }
+    # Load and validate GEFF data (returns InMemoryGeff with standard keys)
+    in_memory_geff, position_attr, ndims = import_graph_from_geff(
+        directory, name_map, edge_name_map=edge_name_map
+    )
 
+    metadata = dict(in_memory_geff["metadata"])
+    node_ids = in_memory_geff["node_ids"]
+    node_props = in_memory_geff["node_props"]  # Now has standard keys!
+    edge_ids = in_memory_geff["edge_ids"]
+    edge_props = in_memory_geff["edge_props"]
+    segmentation = None
+    time_attr = "time"  # Using standard key directly
+
+    # Rebuild node_prop_filter for later use (now using standard keys)
+    node_prop_filter: set[str] = {
+        standard_key for standard_key in name_map if standard_key is not None
+    }
     if node_features is not None:
-        # Only load features from geff that should NOT be computed
         if isinstance(node_features, dict):
-            # Old dict[str, bool] format: load features where recompute=False
             node_prop_filter.update(
                 key
                 for key, should_recompute in node_features.items()
                 if not should_recompute
             )
         else:
-            # New list[ImportedNodeFeature] format: load features where recompute=False
-            # or feature is static (feature=None)
             node_prop_filter.update(
                 str(feature["prop_name"])
                 for feature in node_features
                 if feature["feature"] is None or not bool(feature["recompute"])
             )
-
-    in_memory_geff = read_to_memory(
-        directory, node_props=list(node_prop_filter), edge_props=edge_prop_filter
-    )
-    metadata = dict(in_memory_geff["metadata"])
-    node_ids = in_memory_geff["node_ids"]
-    node_props = in_memory_geff["node_props"]
-    edge_ids = in_memory_geff["edge_ids"]
-    edge_props = in_memory_geff["edge_props"]
-    segmentation = None
-
-    # Check that the spatiotemporal key mapping does not contain None or duplicate values.
-    # It is allowed to not include z, but it is not allowed to include z with a None or
-    # duplicate value.
-    spatio_temporal_keys = ["time", "z", "y", "x"]
-    spatio_temporal_map = {
-        key: name_map[key] for key in spatio_temporal_keys if key in name_map
-    }
-    if any(v is None for v in spatio_temporal_map.values()):
-        raise ValueError(
-            "The name_map cannot contain None values. Please provide a valid mapping "
-            "for all required fields."
-        )
-    if len(set(spatio_temporal_map.values())) != len(spatio_temporal_map.values()):
-        raise ValueError(
-            "The name_map cannot contain duplicate values. Please provide a unique "
-            "mapping for each required field."
-        )
-
-    # Extract the time and position attributes from the name_map, containing and optional
-    # z coordinate.
-    time_attr = name_map["time"]
-    position_attr = [name_map[k] for k in ("z", "y", "x") if k in name_map]
-    ndims = len(position_attr) + 1
 
     # Convert dict[str, bool] format to list[ImportedNodeFeature] now that we have
     # geff data
@@ -357,54 +265,28 @@ def import_from_geff(
 
     # Check if a track_id was provided, and if it is valid keep it in the
     # node_prop_filter. If it is not provided or invalid, it will be computed again.
-    recompute_track_ids = True
-    if name_map.get(TRACK_KEY) is not None:
+    if TRACK_KEY in node_props:
         # if track id is present, it is a solution graph
         valid_track_ids, errors = validate_tracklets(
             node_ids=node_ids,
             edge_ids=edge_ids,
-            tracklet_ids=node_props[name_map[TRACK_KEY]]["values"],
+            tracklet_ids=node_props[TRACK_KEY]["values"],
         )
-        if valid_track_ids:
-            recompute_track_ids = False
-        else:
+        if not valid_track_ids:
             # Remove invalid track_id from properties to load
-            node_prop_filter.discard(name_map[TRACK_KEY])
+            node_prop_filter.discard(TRACK_KEY)
 
     # Check if a lineage_id was provided, and if it is valid keep it in the
     # node_prop_filter. If invalid, remove it from properties to load.
-    if name_map.get("lineage_id") is not None:
+    if "lineage_id" in node_props:
         valid_lineages, errors = validate_lineages(
             node_ids=node_ids,
             edge_ids=edge_ids,
-            lineage_ids=node_props[name_map["lineage_id"]]["values"],
+            lineage_ids=node_props["lineage_id"]["values"],
         )
         if not valid_lineages:
             # Remove invalid lineage_id from properties to load
-            node_prop_filter.discard(name_map["lineage_id"])
-
-    # Try to load the segmentation data, if it was provided.
-    if segmentation_path is not None:
-        segmentation = magic_imread(
-            segmentation_path, use_dask=True
-        )  # change to in memory later
-
-        relabel = validate_graph_seg_match(
-            in_memory_geff, segmentation, name_map, scale, position_attr
-        )
-
-        # If the provided segmentation has seg ids that are not identical to node ids,
-        # relabel it now.
-        if relabel:
-            times = node_props[name_map["time"]]["values"][:]
-            ids = node_ids[:]
-            seg_ids = node_props[name_map[SEG_KEY]]["values"][:]
-
-            if not len(times) == len(ids) == len(seg_ids):
-                raise ValueError(
-                    "Encountered missing values in the seg_id to node id conversion."
-                )
-            segmentation = relabel_seg_id_to_node_id(times, ids, seg_ids, segmentation)
+            node_prop_filter.discard("lineage_id")
 
     # All pre-checks have passed, load the graph now.
     filtered_node_props = {k: v for k, v in node_props.items() if k in node_prop_filter}
@@ -417,15 +299,14 @@ def import_from_geff(
         edge_props=edge_props,
     )
 
-    # Relabel track_id attr to TRACK_KEY (unless we should recompute)
-    if name_map.get(TRACK_KEY) is not None and not recompute_track_ids:
-        for _, data in graph.nodes(data=True):
-            try:
-                data[TRACK_KEY] = data.pop(name_map[TRACK_KEY])
-            except KeyError:
-                recompute_track_ids = True
-                break
+    # Note: No need to relabel track_id anymore since InMemoryGeff
+    # already has standard keys
 
+    # Try to load the segmentation data, if it was provided.
+    if segmentation_path is not None:
+        seg_reference = lazy_load_segmentation(segmentation_path)
+        relabel = validate_graph_seg_match(graph, seg_reference, scale, position_attr)
+        segmentation = import_segmentation(segmentation_path, graph, relabel=relabel)
     # Put segmentation data in memory now.
     if segmentation is not None and isinstance(segmentation, da.Array):
         segmentation = segmentation.compute()

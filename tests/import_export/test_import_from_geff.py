@@ -4,7 +4,10 @@ import pytest
 import tifffile
 from geff.testing.data import create_mock_geff
 
-from funtracks.import_export.import_from_geff import import_from_geff
+from funtracks.import_export.import_from_geff import (
+    import_from_geff,
+    import_graph_from_geff,
+)
 
 
 @pytest.fixture
@@ -69,6 +72,172 @@ def valid_segmentation():
         x = int(x_f * scale[2])
         seg[t, y_val, x] = seg_id
     return seg
+
+
+def test_import_graph_from_geff_renames_keys_to_standard(valid_geff):
+    """Test that import_graph_from_geff renames custom GEFF keys to standard keys.
+
+    This is a key architectural requirement: import_graph_from_geff should return
+    an InMemoryGeff where all node_props keys have been renamed from custom GEFF
+    property names to standard funtracks keys, using the provided node_name_map.
+    """
+    store, original_geff = valid_geff
+
+    # Define node_name_map: standard_key -> custom_geff_key
+    node_name_map = {
+        "time": "t",  # standard key "time" maps to GEFF key "t"
+        "y": "y",  # standard key "y" maps to GEFF key "y"
+        "x": "x",  # standard key "x" maps to GEFF key "x"
+        "track_id": "track_id",  # standard key "track_id" maps to GEFF key "track_id"
+        "seg_id": "seg_id",  # standard key "seg_id" maps to GEFF key "seg_id"
+        "circularity": "circ",  # standard key "circularity" maps to GEFF key "circ"
+    }
+
+    # Call import_graph_from_geff
+    in_memory_geff, position_attr, ndims = import_graph_from_geff(store, node_name_map)
+
+    # Assert the InMemoryGeff has standard keys, NOT custom GEFF keys
+    node_props = in_memory_geff["node_props"]
+
+    # Standard keys should be present
+    assert "time" in node_props, "Standard key 'time' should be present"
+    assert "y" in node_props, "Standard key 'y' should be present"
+    assert "x" in node_props, "Standard key 'x' should be present"
+    assert "track_id" in node_props, "Standard key 'track_id' should be present"
+    assert "seg_id" in node_props, "Standard key 'seg_id' should be present"
+    assert "circularity" in node_props, "Standard key 'circularity' should be present"
+
+    # Custom GEFF keys should NOT be present
+    assert "t" not in node_props, "Custom GEFF key 't' should have been renamed to 'time'"
+    assert "circ" not in node_props, (
+        "Custom GEFF key 'circ' should have been renamed to 'circularity'"
+    )
+
+    # Verify data integrity - values should be preserved
+    assert len(node_props["time"]["values"]) == 5, "Should have 5 time values"
+    assert len(node_props["track_id"]["values"]) == 5, "Should have 5 track_id values"
+    np.testing.assert_array_equal(
+        node_props["track_id"]["values"][:],
+        np.arange(5),
+        err_msg="track_id values should be preserved after renaming",
+    )
+    np.testing.assert_array_almost_equal(
+        node_props["circularity"]["values"][:],
+        np.array([0.2, 0.1, 0.5, 0.3, 0.45]),
+        err_msg="circularity values should be preserved after renaming from 'circ'",
+    )
+
+    # Verify return values
+    assert position_attr == ["y", "x"], "Should return standard position keys"
+    assert ndims == 3, "Should be 3D (time + 2 spatial dims)"
+
+
+def test_import_graph_from_geff_loads_custom_features(valid_geff):
+    """Test that custom features can be loaded by including them in node_name_map.
+
+    Custom features (not in the standard set) should be loaded when included
+    in the node_name_map. The key should remain as the standard key (which equals
+    the GEFF key in this case).
+    """
+    store, original_geff = valid_geff
+
+    # Include custom features in node_name_map
+    node_name_map = {
+        "time": "t",
+        "y": "y",
+        "x": "x",
+        "random_feature": "random_feature",  # Custom feature: maps to itself
+        "random_feature2": "random_feature2",  # Another custom feature
+    }
+
+    # Call import_graph_from_geff
+    in_memory_geff, position_attr, ndims = import_graph_from_geff(store, node_name_map)
+
+    node_props = in_memory_geff["node_props"]
+
+    # Custom features should be present with standard keys
+    assert "random_feature" in node_props, (
+        "Custom feature 'random_feature' should be loaded"
+    )
+    assert "random_feature2" in node_props, (
+        "Custom feature 'random_feature2' should be loaded"
+    )
+
+    # Verify data integrity
+    np.testing.assert_array_equal(
+        node_props["random_feature"]["values"][:],
+        np.array(["a", "b", "c", "d", "e"]),
+        err_msg="random_feature values should be preserved",
+    )
+    np.testing.assert_array_equal(
+        node_props["random_feature2"]["values"][:],
+        np.array(["a", "b", "c", "d", "e"]),
+        err_msg="random_feature2 values should be preserved",
+    )
+
+
+def test_import_graph_from_geff_custom_feature_with_different_name(valid_geff):
+    """Test that custom features can be renamed using node_name_map.
+
+    A custom feature with a GEFF name can be renamed to a different standard key
+    using the node_name_map.
+    """
+    store, original_geff = valid_geff
+
+    # Rename "circ" to "my_custom_circularity"
+    node_name_map = {
+        "time": "t",
+        "y": "y",
+        "x": "x",
+        "my_custom_circularity": "circ",  # Rename circ to custom name
+    }
+
+    # Call import_graph_from_geff
+    in_memory_geff, position_attr, ndims = import_graph_from_geff(store, node_name_map)
+
+    node_props = in_memory_geff["node_props"]
+
+    # The custom key should be present
+    assert "my_custom_circularity" in node_props, (
+        "Custom renamed feature should be present"
+    )
+
+    # The original GEFF key should NOT be present
+    assert "circ" not in node_props, "Original GEFF key should be renamed"
+
+    # Verify data integrity
+    np.testing.assert_array_almost_equal(
+        node_props["my_custom_circularity"]["values"][:],
+        np.array([0.2, 0.1, 0.5, 0.3, 0.45]),
+        err_msg="Values should be preserved after custom renaming",
+    )
+
+
+def test_import_graph_from_geff_edge_name_map_none(valid_geff):
+    """Test that edge_name_map=None loads all edge properties.
+
+    When edge_name_map is None, all edge properties should be loaded with their
+    original GEFF names (no renaming).
+    """
+    store, original_geff = valid_geff
+
+    # Define node name map
+    node_name_map = {
+        "time": "t",
+        "y": "y",
+        "x": "x",
+    }
+
+    # Call import_graph_from_geff without edge_name_map (defaults to None)
+    in_memory_geff, position_attr, ndims = import_graph_from_geff(
+        store, node_name_map, edge_name_map=None
+    )
+
+    # Should load successfully
+    assert "node_props" in in_memory_geff
+    assert "edge_props" in in_memory_geff
+    # The fixture has no edge properties, so edge_props should be empty
+    assert in_memory_geff["edge_props"] == {}
 
 
 def test_duplicate_or_none_in_name_map(valid_geff):
@@ -143,7 +312,7 @@ def test_tracks_with_segmentation(valid_geff, invalid_geff, valid_segmentation, 
     assert tracks.segmentation.shape == valid_segmentation.shape
     last_node = list(tracks.graph.nodes)[-1]
     coords = [
-        tracks.graph.nodes[last_node]["t"],
+        tracks.graph.nodes[last_node]["time"],
         tracks.graph.nodes[last_node]["y"],
         tracks.graph.nodes[last_node]["x"],
     ]
