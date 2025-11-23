@@ -1,3 +1,4 @@
+from ._export_to_csv import export_to_csv
 from ._register_computed_features import register_computed_features
 from ._types import ImportedComputedFeature, ImportedNodeFeature
 from .export_to_geff import export_to_geff
@@ -10,6 +11,7 @@ __all__ = [
     "ImportedComputedFeature",
     "register_computed_features",
     "import_from_geff",
+    "export_to_csv",
     "export_to_geff",
     "save_tracks",
     "load_tracks",
