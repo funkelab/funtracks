@@ -9,12 +9,15 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 import geff
 import networkx as nx
 import numpy as np
 from geff._typing import InMemoryGeff
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 from funtracks.data_model.graph_attributes import NodeAttr
 from funtracks.data_model.solution_tracks import SolutionTracks
@@ -61,14 +64,14 @@ class TracksBuilder(ABC):
         )
 
     @abstractmethod
-    def read_header(self, source_path: Path) -> None:
+    def read_header(self, source: Path | pd.DataFrame) -> None:
         """Read metadata/headers from source without loading data.
 
         Should populate self.importable_node_props and
         self.importable_edge_props with property/column names.
 
         Args:
-            source_path: Path to data source (zarr store, CSV file, etc.)
+            source: Path to data source (zarr store, CSV file, etc.) or DataFrame
         """
 
     def infer_name_map(self) -> dict[str, str]:
@@ -116,7 +119,7 @@ class TracksBuilder(ABC):
             self.ndim,
         )
 
-    def prepare(self, source_path: Path) -> None:
+    def prepare(self, source: Path | pd.DataFrame) -> None:
         """Prepare for building by reading headers and inferring name_map.
 
         This method reads the data source headers/metadata and automatically
@@ -124,7 +127,7 @@ class TracksBuilder(ABC):
         self.name_map before calling build().
 
         Args:
-            source_path: Path to data source
+            source: Path to data source or DataFrame
 
         Example:
             >>> builder = CSVTracksBuilder()
@@ -133,13 +136,13 @@ class TracksBuilder(ABC):
             >>> builder.name_map["circularity"] = "circ"
             >>> tracks = builder.build("data.csv", segmentation_path="seg.tif")
         """
-        self.read_header(source_path)
+        self.read_header(source)
         self.name_map = self.infer_name_map()
 
     @abstractmethod
     def load_source(
         self,
-        source_path: Path,
+        source: Path | pd.DataFrame,
         name_map: dict[str, str],
         node_features: dict[str, bool] | None = None,
     ) -> None:
@@ -148,7 +151,7 @@ class TracksBuilder(ABC):
         Should populate self.in_memory_geff with all properties using standard keys.
 
         Args:
-            source_path: Path to data source (zarr store, CSV file, etc.)
+            source: Path to data source (zarr store, CSV file, etc.) or DataFrame
             name_map: Maps standard keys to source property names
             node_features: Optional features dict for backward compatibility
         """
@@ -186,7 +189,7 @@ class TracksBuilder(ABC):
     def handle_segmentation(
         self,
         graph: nx.DiGraph,
-        segmentation_path: Path | None,
+        segmentation: Path | np.ndarray | None,
         scale: list[float] | None,
     ) -> tuple[np.ndarray | None, list[float] | None]:
         """Load, validate, and optionally relabel segmentation.
@@ -195,7 +198,7 @@ class TracksBuilder(ABC):
 
         Args:
             graph: Constructed NetworkX graph for validation
-            segmentation_path: Path to segmentation data
+            segmentation: Path to segmentation data or pre-loaded segmentation array
             scale: Spatial scale for coordinate transformation
 
         Returns:
@@ -204,19 +207,25 @@ class TracksBuilder(ABC):
         Raises:
             ValueError: If segmentation validation fails
         """
-        if segmentation_path is None:
+        if segmentation is None:
             return None, scale
 
         if self.in_memory_geff is None:
             raise ValueError("No data loaded. Call load_source() first.")
 
-        # Lazy load segmentation
-        segmentation = cast(np.ndarray, magic_imread(segmentation_path, use_dask=True))
+        # Load segmentation if it's a Path, otherwise use the provided array
+        if isinstance(segmentation, Path):
+            seg_array = cast(np.ndarray, magic_imread(segmentation, use_dask=True))
+        else:
+            # Wrap in dask array for consistency
+            import dask.array as da
+
+            seg_array = da.from_array(segmentation, chunks=segmentation.shape)
 
         # Validate dimensions match graph
-        if segmentation.ndim != self.ndim:
+        if seg_array.ndim != self.ndim:
             raise ValueError(
-                f"Segmentation has {segmentation.ndim} dimensions but graph has "
+                f"Segmentation has {seg_array.ndim} dimensions but graph has "
                 f"{self.ndim} dimensions"
             )
 
@@ -227,13 +236,13 @@ class TracksBuilder(ABC):
         # Validate segmentation matches graph
         from funtracks.import_export._validation import validate_graph_seg_match
 
-        validate_graph_seg_match(graph, segmentation, scale, self.position_attr)
+        validate_graph_seg_match(graph, seg_array, scale, self.position_attr)
 
         # Check if relabeling is needed (seg_id != node_id)
         node_props = self.in_memory_geff["node_props"]
         if "seg_id" not in node_props:
             # No seg_id property, assume segmentation labels match node IDs
-            return segmentation.compute(), scale
+            return seg_array.compute(), scale
 
         node_ids = self.in_memory_geff["node_ids"]
         seg_ids = node_props["seg_id"]["values"]
@@ -241,13 +250,13 @@ class TracksBuilder(ABC):
         # Check if any seg_id differs from node_id
         if np.array_equal(seg_ids, node_ids):
             # No relabeling needed
-            return segmentation.compute(), scale
+            return seg_array.compute(), scale
 
         # Compute segmentation before relabeling
-        segmentation = segmentation.compute()
+        computed_seg = seg_array.compute()
 
         # Relabel segmentation: seg_id → node_id
-        new_segmentation = np.zeros_like(segmentation).astype(np.uint64)
+        new_segmentation = np.zeros_like(computed_seg).astype(np.uint64)
         time_values = node_props[NodeAttr.TIME.value]["values"]
 
         for t in np.unique(time_values):
@@ -261,7 +270,7 @@ class TracksBuilder(ABC):
 
             # Apply mapping to segmentation at this time point
             for seg_id, node_id in seg_to_node.items():
-                new_segmentation[t][segmentation[t] == seg_id] = node_id
+                new_segmentation[t][computed_seg[t] == seg_id] = node_id
 
         return new_segmentation, scale
 
@@ -334,16 +343,16 @@ class TracksBuilder(ABC):
 
     def build(
         self,
-        source_path: Path,
-        segmentation_path: Path | None = None,
+        source: Path | pd.DataFrame,
+        segmentation: Path | np.ndarray | None = None,
         scale: list[float] | None = None,
         node_features: dict[str, bool] | None = None,
     ) -> SolutionTracks:
         """Orchestrate the full construction process.
 
         Args:
-            source_path: Path to data source
-            segmentation_path: Optional path to segmentation
+            source: Path to data source or DataFrame
+            segmentation: Optional path to segmentation or pre-loaded segmentation array
             scale: Optional spatial scale
             node_features: Optional features to enable/load
 
@@ -376,7 +385,7 @@ class TracksBuilder(ABC):
         self.validate_name_map()
 
         # 1. Load source data to InMemoryGeff
-        self.load_source(source_path, self.name_map, node_features)
+        self.load_source(source, self.name_map, node_features)
 
         # 2. Validate InMemoryGeff
         self.validate()
@@ -385,12 +394,12 @@ class TracksBuilder(ABC):
         graph = self.construct_graph()
 
         # 4. Handle segmentation
-        segmentation, scale = self.handle_segmentation(graph, segmentation_path, scale)
+        segmentation_array, scale = self.handle_segmentation(graph, segmentation, scale)
 
         # 5. Create SolutionTracks
         tracks = SolutionTracks(
             graph=graph,
-            segmentation=segmentation,
+            segmentation=segmentation_array,
             pos_attr=self.position_attr,
             time_attr=self.TIME_ATTR,
             ndim=self.ndim,

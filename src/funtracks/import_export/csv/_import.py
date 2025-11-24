@@ -13,12 +13,31 @@ from geff_spec.utils import (
     create_props_metadata,
 )
 
-from funtracks.data_model.graph_attributes import NodeAttr
-
 from .._tracks_builder import TracksBuilder
 
 if TYPE_CHECKING:
     from funtracks.data_model.solution_tracks import SolutionTracks
+
+
+def _ensure_integer_ids(df: pd.DataFrame) -> pd.DataFrame:
+    """Ensure that the 'id' column in the dataframe contains integer values.
+
+    Args:
+        df: A pandas dataframe with columns named "id" and "parent_id"
+
+    Returns:
+        pd.DataFrame: The same dataframe with the ids remapped to be unique integers.
+            Parent id column is also remapped.
+    """
+    if not pd.api.types.is_integer_dtype(df["id"]):
+        unique_ids = df["id"].unique()
+        id_mapping = {
+            original_id: new_id for new_id, original_id in enumerate(unique_ids, start=1)
+        }
+        df["id"] = df["id"].map(id_mapping)
+        df["parent_id"] = df["parent_id"].map(id_mapping).astype(pd.Int64Dtype())
+
+    return df
 
 
 class CSVTracksBuilder(TracksBuilder):
@@ -29,31 +48,43 @@ class CSVTracksBuilder(TracksBuilder):
         super().__init__()
         self.required_features.extend(["id", "parent_id"])
 
-    def read_header(self, source_path: Path) -> None:
+    def read_header(self, source: Path | pd.DataFrame) -> None:
         """Read CSV column names.
 
         Args:
-            source_path: Path to CSV file
+            source: Path to CSV file or DataFrame
         """
-        df = pd.read_csv(source_path, nrows=0)
+        df = pd.read_csv(source, nrows=0) if isinstance(source, Path) else source
         self.importable_node_props = df.columns.tolist()
         self.importable_edge_props = []  # CSV has no edge properties
 
     def load_source(
         self,
-        source_path: Path,
+        source: Path | pd.DataFrame,
         name_map: dict[str, str],
         node_features: dict[str, bool] | None = None,
     ) -> None:
         """Load CSV and convert to InMemoryGeff format.
 
         Args:
-            source_path: Path to CSV file
+            source: Path to CSV file or DataFrame
             name_map: Maps standard keys to CSV column names
             node_features: Optional features dict for backward compatibility
         """
-        # Read CSV
-        df = pd.read_csv(source_path)
+        # Read CSV or use provided DataFrame
+        df = (
+            pd.read_csv(source)
+            if isinstance(source, Path)
+            else source.copy()  # Make a copy to avoid modifying original
+        )
+
+        # Validate that 'id' column contains unique values
+        if "id" in df.columns and not df["id"].is_unique:
+            raise ValueError("The 'id' column must contain unique values")
+
+        # Ensure integer IDs (convert string IDs to integers if needed)
+        if "id" in df.columns and "parent_id" in df.columns:
+            df = _ensure_integer_ids(df)
 
         # For backward compatibility, extend name_map with node_features
         # Only add features that should be loaded (recompute=False)
@@ -101,28 +132,9 @@ class CSVTracksBuilder(TracksBuilder):
         node_ids = np.array(df_dict.pop("id"))
         parent_ids = df_dict.pop("parent_id")
 
-        # Build position property from individual coordinate columns
-        if "z" in df_dict:
-            pos_values = np.array(
-                [
-                    list(p)
-                    for p in zip(
-                        df_dict.pop("z"),
-                        df_dict.pop("y"),
-                        df_dict.pop("x"),
-                        strict=True,
-                    )
-                ]
-            )
-        else:
-            pos_values = np.array(
-                [list(p) for p in zip(df_dict.pop("y"), df_dict.pop("x"), strict=True)]
-            )
-
         # Build node_props with GEFF-compatible structure
-        node_props: dict[str, dict[str, np.ndarray | None]] = {
-            NodeAttr.POS.value: {"values": pos_values, "missing": None}
-        }
+        # Store position coordinates as individual attributes (z, y, x)
+        node_props: dict[str, dict[str, np.ndarray | None]] = {}
         for prop_name, values in df_dict.items():
             node_props[prop_name] = {"values": np.array(values), "missing": None}
 
@@ -132,7 +144,11 @@ class CSVTracksBuilder(TracksBuilder):
             for parent_id, child_id in zip(parent_ids, node_ids, strict=True)
             if not pd.isna(parent_id) and parent_id != -1
         ]
-        edge_ids = np.array(edge_tuples)
+        # Ensure edge_ids has shape (n, 2) even when empty
+        if edge_tuples:
+            edge_ids = np.array(edge_tuples)
+        else:
+            edge_ids = np.empty((0, 2), dtype=np.int64)
 
         # CSV format doesn't support edge attributes
         edge_props: dict[str, dict[str, np.ndarray | None]] = {}
@@ -171,54 +187,67 @@ class CSVTracksBuilder(TracksBuilder):
         )
 
 
-def import_from_csv(
-    csv_path: Path,
-    name_map: dict[str, str] | None = None,
-    segmentation_path: Path | None = None,
+def tracks_from_df(
+    df: pd.DataFrame,
+    segmentation: np.ndarray | None = None,
     scale: list[float] | None = None,
-    node_features: dict[str, bool] | None = None,
+    features: dict[str, str] | None = None,
 ) -> SolutionTracks:
-    """Import tracks from CSV file.
+    """Import tracks from pandas DataFrame (motile_tracker-compatible API).
 
-    Loads tracking data from CSV format with columns:
-    time, [z], y, x, id, parent_id, [seg_id], ...
+    Turns a pandas DataFrame with columns:
+        time, [z], y, x, id, parent_id, [seg_id], [optional custom attr 1], ...
+    into a SolutionTracks object.
+
+    Cells without a parent_id will have an empty string or a -1 for the parent_id.
 
     Args:
-        csv_path: Path to CSV file
-        name_map: Optional mapping from standard keys to CSV column names.
-                  If None, will auto-infer column mappings using fuzzy matching.
-                  Example: {"time": "t", "x": "x_coord", "y": "y_coord"}
-        segmentation_path: Optional path to segmentation array
-                           (numpy, tiff, or zarr)
-        scale: Optional spatial scale including time dimension
-               (e.g., [1.0, 1.0, 0.5, 0.5])
-        node_features: Optional dict mapping feature names to recompute flag.
-                      False = load from CSV, True = recompute from segmentation
-                      Example: {"area": False, "circularity": True}
+        df: A pandas DataFrame containing columns
+            time, [z], y, x, id, parent_id, [seg_id], [optional custom attr 1], ...
+        segmentation: An optional accompanying segmentation.
+            If provided, assumes that the seg_id column in the dataframe exists and
+            corresponds to the label ids in the segmentation array. Defaults to None.
+        scale: The scale of the segmentation (including the time dimension).
+            Defaults to None.
+        features: Dict mapping measurement attributes (area, volume) to value that
+            specifies a column from which to import. If value equals "Recompute",
+            recompute these values instead of importing them from a column.
+            Example: {"Area": "area"} loads from column "area"
+                     {"Area": "Recompute"} recomputes from segmentation
+            Defaults to None.
 
     Returns:
-        SolutionTracks object with graph and optional segmentation
+        SolutionTracks: a solution tracks object
+
+    Raises:
+        ValueError: if the segmentation IDs in the dataframe do not match the provided
+            segmentation
 
     Example:
-        >>> tracks = import_from_csv(
-        ...     "tracks.csv",
-        ...     name_map={"time": "frame", "x": "x_pos", "y": "y_pos"},
-        ...     segmentation_path="seg.tif"
-        ... )
+        >>> tracks = tracks_from_df(df, segmentation=seg, scale=[1.0, 1.0, 0.5, 0.5])
     """
+    # Convert features dict from motile_tracker format to funtracks format
+    node_features = None
+    if features is not None:
+        node_features = {}
+        # Convert feature keys to lowercase for consistency
+        features = {key.lower(): val for key, val in features.items()}
+        for feature_key, feature_value in features.items():
+            if feature_value == "Recompute":
+                # Recompute from segmentation
+                node_features[feature_key] = True
+            else:
+                # Load from column specified by feature_value
+                node_features[feature_value] = False
+
     builder = CSVTracksBuilder()
 
-    if name_map is None:
-        # Auto-infer name mapping from CSV headers
-        builder.prepare(csv_path)
-    else:
-        # Use provided name mapping
-        builder.read_header(csv_path)
-        builder.name_map = name_map
+    # Auto-infer name mapping from DataFrame columns
+    builder.prepare(df)
 
     return builder.build(
-        csv_path,
-        segmentation_path,
+        df,
+        segmentation,
         scale=scale,
         node_features=node_features,
     )

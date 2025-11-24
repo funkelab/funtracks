@@ -272,7 +272,7 @@ funtracks/import_export/
 ├── _name_mapping.py         # Name inference helpers
 ├── _validation.py           # Validation functions
 ├── csv/
-│   ├── _import.py          # CSVTracksBuilder + import_from_csv()
+│   ├── _import.py          # CSVTracksBuilder + tracks_from_df()
 │   └── _export.py          # export_to_csv()
 ├── geff/
 │   ├── _import.py          # GeffTracksBuilder + import_from_geff()
@@ -282,7 +282,7 @@ funtracks/import_export/
 ```
 
 **Public API** (exported from `funtracks.import_export`):
-- `import_from_csv()` - Wrapper around `CSVTracksBuilder`
+- `tracks_from_df()` - Import tracks from pandas DataFrame
 - `import_from_geff()` - Wrapper around `GeffTracksBuilder`
 - `export_to_csv()` - Export tracks to CSV format
 - `export_to_geff()` - Export tracks to GEFF format
@@ -306,25 +306,23 @@ tracks = import_from_geff(
 )
 ```
 
-**CSV Import** (auto-infers name_map):
+**CSV/DataFrame Import**:
 ```python
-from funtracks.import_export import import_from_csv
+import pandas as pd
+from funtracks.import_export import tracks_from_df
 
-tracks = import_from_csv(
-    csv_path=Path("tracks.csv"),
-    name_map=None,  # Auto-infer column mappings
-    segmentation_path=Path("seg.tif"),
+# Read CSV into DataFrame
+df = pd.read_csv("tracks.csv")
+
+# Load segmentation array
+seg = ... # Load your segmentation array (e.g., from tiff, zarr)
+
+# Import tracks
+tracks = tracks_from_df(
+    df=df,
+    segmentation=seg,  # Pre-loaded segmentation array
     scale=[1.0, 1.0, 1.0],
-    node_features={"area": False}
-)
-```
-
-**CSV Import** (manual name_map):
-```python
-tracks = import_from_csv(
-    csv_path=Path("tracks.csv"),
-    name_map={"time": "frame", "x": "x_pos", "y": "y_pos", "id": "cell_id"},
-    segmentation_path=Path("seg.tif")
+    features={"Area": "area"}  # Load area from 'area' column
 )
 ```
 
