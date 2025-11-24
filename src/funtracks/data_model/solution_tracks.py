@@ -187,7 +187,7 @@ class SolutionTracks(Tracks):
         )
 
         # Import here to avoid circular imports
-        from funtracks.import_export._export_to_csv import export_to_csv
+        from funtracks.import_export.csv._export import export_to_csv
 
         export_to_csv(self, outfile, node_ids)
 

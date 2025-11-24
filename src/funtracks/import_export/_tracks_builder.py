@@ -1,0 +1,403 @@
+"""Builder pattern for importing tracks from various formats.
+
+This module provides a unified interface for constructing SolutionTracks objects
+from different data sources (GEFF, CSV, etc.) while sharing common validation
+and construction logic.
+"""
+
+from __future__ import annotations
+
+from abc import ABC, abstractmethod
+from pathlib import Path
+from typing import cast
+
+import geff
+import networkx as nx
+import numpy as np
+from geff._typing import InMemoryGeff
+
+from funtracks.data_model.graph_attributes import NodeAttr
+from funtracks.data_model.solution_tracks import SolutionTracks
+from funtracks.features import Feature
+from funtracks.import_export._name_mapping import infer_name_map
+from funtracks.import_export._utils import (
+    _infer_dtype_from_array,
+    get_default_key_to_feature_mapping,
+)
+from funtracks.import_export._validation import (
+    validate_in_memory_geff,
+    validate_name_map,
+)
+from funtracks.import_export.magic_imread import magic_imread
+
+# defining constants here because they are only used in the context of import
+TRACK_KEY = "track_id"
+SEG_KEY = "seg_id"
+
+
+class TracksBuilder(ABC):
+    """Abstract builder for importing tracks from various formats.
+
+    Defines the construction steps that all format-specific builders must implement,
+    along with common logic shared across formats.
+    """
+
+    TIME_ATTR = "time"
+
+    def __init__(self):
+        """Initialize builder state."""
+        # State transferred between steps
+        self.in_memory_geff: InMemoryGeff | None = None
+        self.position_attr: list[str] = ["z", "y", "x"]
+        self.ndim: int = 3
+        self.name_map: dict[str, str] = {}
+        self.importable_node_props: list[str] = []
+        self.importable_edge_props: list[str] = []
+
+        # Builder configuration
+        self.required_features = ["time"]
+        self.available_computed_features = get_default_key_to_feature_mapping(
+            self.ndim, display_name=False
+        )
+
+    @abstractmethod
+    def read_header(self, source_path: Path) -> None:
+        """Read metadata/headers from source without loading data.
+
+        Should populate self.importable_node_props and
+        self.importable_edge_props with property/column names.
+
+        Args:
+            source_path: Path to data source (zarr store, CSV file, etc.)
+        """
+
+    def infer_name_map(self) -> dict[str, str]:
+        """Infer name_map by matching importable node properties to standard keys.
+
+        Uses difflib fuzzy matching with the following priority:
+        1. Exact matches to standard keys
+        2. Fuzzy matches to standard keys (case-insensitive, 40% similarity cutoff)
+        3. Exact matches to feature display names
+        4. Fuzzy matches to feature display names (case-insensitive, 40% cutoff)
+        5. Remaining properties map to themselves (custom properties)
+
+        Returns:
+            Inferred name_map (standard_key -> source_property)
+
+        Raises:
+            ValueError: If required features cannot be inferred
+        """
+        return infer_name_map(
+            self.importable_node_props,
+            self.required_features,
+            self.position_attr,
+            self.ndim,
+            self.available_computed_features,
+        )
+
+    def validate_name_map(self) -> None:
+        """Validate that name_map contains all required mappings.
+
+        Checks:
+        - No None values in required mappings
+        - No duplicate values in required mappings
+        - All required_features are mapped
+        - All position_attr are mapped (based on ndim)
+        - All mapped properties exist in importable_node_props
+
+        Raises:
+            ValueError: If validation fails
+        """
+        validate_name_map(
+            self.name_map,
+            self.importable_node_props,
+            self.required_features,
+            self.position_attr,
+            self.ndim,
+        )
+
+    def prepare(self, source_path: Path) -> None:
+        """Prepare for building by reading headers and inferring name_map.
+
+        This method reads the data source headers/metadata and automatically
+        infers a name_map. After calling this, you can inspect and modify
+        self.name_map before calling build().
+
+        Args:
+            source_path: Path to data source
+
+        Example:
+            >>> builder = CSVTracksBuilder()
+            >>> builder.prepare("data.csv")
+            >>> # Optionally modify the inferred mapping
+            >>> builder.name_map["circularity"] = "circ"
+            >>> tracks = builder.build("data.csv", segmentation_path="seg.tif")
+        """
+        self.read_header(source_path)
+        self.name_map = self.infer_name_map()
+
+    @abstractmethod
+    def load_source(
+        self,
+        source_path: Path,
+        name_map: dict[str, str],
+        node_features: dict[str, bool] | None = None,
+    ) -> None:
+        """Load data from source file and convert to InMemoryGeff format.
+
+        Should populate self.in_memory_geff with all properties using standard keys.
+
+        Args:
+            source_path: Path to data source (zarr store, CSV file, etc.)
+            name_map: Maps standard keys to source property names
+            node_features: Optional features dict for backward compatibility
+        """
+
+    def validate(self) -> None:
+        """Validate the loaded InMemoryGeff data.
+
+        Common validation logic shared across all formats.
+        If optional properties (lineage_id, track_id) fail validation,
+        they are removed with a warning.
+
+        Raises:
+            ValueError: If required validation (graph structure) fails
+        """
+        if self.in_memory_geff is None:
+            raise ValueError("No data loaded. Call load_source() first.")
+
+        validate_in_memory_geff(self.in_memory_geff)
+
+    def construct_graph(self) -> nx.DiGraph:
+        """Construct NetworkX graph from validated InMemoryGeff data.
+
+        Common logic shared across all formats.
+
+        Returns:
+            NetworkX DiGraph with standard keys
+
+        Raises:
+            ValueError: If data not loaded or validated
+        """
+        if self.in_memory_geff is None:
+            raise ValueError("No data loaded. Call load_source() first.")
+        return geff.construct(**self.in_memory_geff)
+
+    def handle_segmentation(
+        self,
+        graph: nx.DiGraph,
+        segmentation_path: Path | None,
+        scale: list[float] | None,
+    ) -> tuple[np.ndarray | None, list[float] | None]:
+        """Load, validate, and optionally relabel segmentation.
+
+        Common logic shared across all formats.
+
+        Args:
+            graph: Constructed NetworkX graph for validation
+            segmentation_path: Path to segmentation data
+            scale: Spatial scale for coordinate transformation
+
+        Returns:
+            Tuple of (segmentation array, scale) or (None, scale)
+
+        Raises:
+            ValueError: If segmentation validation fails
+        """
+        if segmentation_path is None:
+            return None, scale
+
+        if self.in_memory_geff is None:
+            raise ValueError("No data loaded. Call load_source() first.")
+
+        # Lazy load segmentation
+        segmentation = cast(np.ndarray, magic_imread(segmentation_path, use_dask=True))
+
+        # Validate dimensions match graph
+        if segmentation.ndim != self.ndim:
+            raise ValueError(
+                f"Segmentation has {segmentation.ndim} dimensions but graph has "
+                f"{self.ndim} dimensions"
+            )
+
+        # Default scale to 1.0 for each axis if not provided
+        if scale is None:
+            scale = [1.0] * self.ndim
+
+        # Validate segmentation matches graph
+        from funtracks.import_export._validation import validate_graph_seg_match
+
+        validate_graph_seg_match(graph, segmentation, scale, self.position_attr)
+
+        # Check if relabeling is needed (seg_id != node_id)
+        node_props = self.in_memory_geff["node_props"]
+        if "seg_id" not in node_props:
+            # No seg_id property, assume segmentation labels match node IDs
+            return segmentation.compute(), scale
+
+        node_ids = self.in_memory_geff["node_ids"]
+        seg_ids = node_props["seg_id"]["values"]
+
+        # Check if any seg_id differs from node_id
+        if np.array_equal(seg_ids, node_ids):
+            # No relabeling needed
+            return segmentation.compute(), scale
+
+        # Compute segmentation before relabeling
+        segmentation = segmentation.compute()
+
+        # Relabel segmentation: seg_id → node_id
+        new_segmentation = np.zeros_like(segmentation).astype(np.uint64)
+        time_values = node_props[NodeAttr.TIME.value]["values"]
+
+        for t in np.unique(time_values):
+            # Get nodes at this time point
+            mask = time_values == t
+            seg_ids_t = seg_ids[mask]
+            node_ids_t = node_ids[mask]
+
+            # Create mapping: seg_id → node_id
+            seg_to_node = dict(zip(seg_ids_t, node_ids_t, strict=True))
+
+            # Apply mapping to segmentation at this time point
+            for seg_id, node_id in seg_to_node.items():
+                new_segmentation[t][segmentation[t] == seg_id] = node_id
+
+        return new_segmentation, scale
+
+    def enable_features(
+        self,
+        tracks: SolutionTracks,
+        node_features: dict[str, bool] | None,
+    ) -> None:
+        """Enable and register features on tracks object.
+
+        Common logic shared across all formats.
+
+        Args:
+            tracks: SolutionTracks object to add features to
+            node_features: Dict mapping feature names to recompute flags
+        """
+        if node_features is None:
+            return
+
+        if self.in_memory_geff is None:
+            raise ValueError("No data loaded. Call load_source() first.")
+
+        node_props = self.in_memory_geff["node_props"]
+
+        # Validate requested features before enabling
+        invalid_features = []
+        for key, recompute in node_features.items():
+            if recompute:
+                # Features to compute must exist in annotators
+                if key not in tracks.annotators.all_features:
+                    invalid_features.append(key)
+            else:
+                # Features to load must exist in node_props
+                if key not in node_props:
+                    invalid_features.append(key)
+
+        if invalid_features:
+            available_computed = list(tracks.annotators.all_features.keys())
+            available_geff = list(node_props.keys())
+            raise KeyError(
+                f"Features not available: {invalid_features}. "
+                f"Available computed features: {available_computed}. "
+                f"Available properties: {available_geff}"
+            )
+
+        # Separate into features that exist in annotators vs static features
+        annotator_features = {
+            key: recompute
+            for key, recompute in node_features.items()
+            if key in tracks.annotators.all_features
+        }
+
+        # Enable annotator features with appropriate recompute flag
+        for key, recompute in annotator_features.items():
+            tracks.enable_features([key], recompute=recompute)
+
+        # Register static features (features not in annotator registry)
+        static_keys = [key for key in node_features if key not in annotator_features]
+        static_features: dict[str, Feature] = {}
+        for key in static_keys:
+            static_features[key] = Feature(
+                display_name=key,
+                feature_type="node",
+                value_type=_infer_dtype_from_array(node_props[key]["values"]),
+                num_values=1,
+                required=False,
+                default_value=None,
+            )
+        tracks.features.update(static_features)
+
+    def build(
+        self,
+        source_path: Path,
+        segmentation_path: Path | None = None,
+        scale: list[float] | None = None,
+        node_features: dict[str, bool] | None = None,
+    ) -> SolutionTracks:
+        """Orchestrate the full construction process.
+
+        Args:
+            source_path: Path to data source
+            segmentation_path: Optional path to segmentation
+            scale: Optional spatial scale
+            node_features: Optional features to enable/load
+
+        Returns:
+            Fully constructed SolutionTracks object
+
+        Raises:
+            ValueError: If self.name_map is not set or validation fails
+
+        Example:
+            >>> # Using prepare() to auto-infer name_map
+            >>> builder = CSVTracksBuilder()
+            >>> builder.prepare("data.csv")
+            >>> tracks = builder.build("data.csv")
+            >>>
+            >>> # Or set name_map manually
+            >>> builder = CSVTracksBuilder()
+            >>> builder.read_header("data.csv")
+            >>> builder.name_map = {"time": "t", "x": "x", "y": "y", "id": "id"}
+            >>> tracks = builder.build("data.csv")
+        """
+        # Validate we have a name_map
+        if not self.name_map:
+            raise ValueError(
+                "self.name_map must be set before calling build(). "
+                "Call prepare() to auto-infer or set manually."
+            )
+
+        # Validate name_map is complete and valid
+        self.validate_name_map()
+
+        # 1. Load source data to InMemoryGeff
+        self.load_source(source_path, self.name_map, node_features)
+
+        # 2. Validate InMemoryGeff
+        self.validate()
+
+        # 3. Construct graph
+        graph = self.construct_graph()
+
+        # 4. Handle segmentation
+        segmentation, scale = self.handle_segmentation(graph, segmentation_path, scale)
+
+        # 5. Create SolutionTracks
+        tracks = SolutionTracks(
+            graph=graph,
+            segmentation=segmentation,
+            pos_attr=self.position_attr,
+            time_attr=self.TIME_ATTR,
+            ndim=self.ndim,
+            scale=scale,
+        )
+
+        # 6. Enable and register features
+        self.enable_features(tracks, node_features)
+
+        return tracks

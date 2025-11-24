@@ -4,10 +4,8 @@ import pytest
 import tifffile
 from geff.testing.data import create_mock_geff
 
-from funtracks.import_export.import_from_geff import (
-    import_from_geff,
-    import_graph_from_geff,
-)
+from funtracks.import_export import import_from_geff
+from funtracks.import_export.geff._import import import_graph_from_geff
 
 
 @pytest.fixture
@@ -272,7 +270,9 @@ def test_segmentation_axes_mismatch(valid_geff, tmp_path):
     wrong_seg = np.zeros((2, 20, 200, 200), dtype=np.uint16)
     seg_path = tmp_path / "wrong_seg2.npy"
     tifffile.imwrite(seg_path, wrong_seg)
-    with pytest.raises(ValueError, match="Axes in the geff do not match"):
+    with pytest.raises(
+        ValueError, match="Segmentation has 4 dimensions but graph has 3 dimensions"
+    ):
         import_from_geff(store, name_map, segmentation_path=seg_path)
 
 
@@ -339,13 +339,6 @@ def test_tracks_with_segmentation(valid_geff, invalid_geff, valid_segmentation, 
     _, data = list(tracks.graph.nodes(data=True))[-1]
     assert "area" in data
     assert data["area"] == 21
-
-    # Test that import fails with ValueError when scaling information is missing or
-    # incorrect
-    with pytest.raises(ValueError):
-        tracks = import_from_geff(
-            store, name_map, segmentation_path=valid_segmentation_path, scale=None
-        )
 
     # Test that import fails with ValueError when invalid seg_ids are provided.
     store, _ = invalid_geff

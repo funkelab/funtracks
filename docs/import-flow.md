@@ -1,127 +1,296 @@
-# GEFF Import Process Flow
+# Tracks Import Process Flow
 
-This diagram shows the steps involved in importing tracking data from GEFF format and the dependencies between them.
+This document describes the process of importing tracking data from various formats (GEFF, CSV) into funtracks using the Builder Pattern.
+
+## Builder Pattern Overview
+
+The new builder pattern provides a unified interface for importing tracks from different formats while sharing common validation and construction logic.
 
 ```mermaid
 graph TD
-    Start([Start Import]) --> ImportGraph[import_graph_from_geff<br/>→ InMemoryGeff with standard keys]
-    Start --> LoadSeg[Lazily load segmentation<br/>→ dask seg array]
+    Start([Start: Create Builder]) --> ReadHeader[1. read_header<br/>→ populate available_properties]
 
-    ImportGraph --> ValidateIDs[Validate track_ids & lineage_ids<br/>→ remove if invalid]
+    ReadHeader --> InferMap[2. infer_name_map<br/>→ auto-infer standard mappings]
 
-    ValidateIDs --> ConstructGraph[Construct NetworkX graph<br/>from InMemoryGeff]
-    ImportGraph --> ConstructGraph
+    InferMap --> UserEdit{User edits<br/>name_map?}
+    UserEdit -->|Optional| EditMap[User modifies builder.name_map]
+    UserEdit -->|No| ValidateMap
+    EditMap --> ValidateMap
 
-    ConstructGraph --> ValidateGEFF{Segmentation<br/>provided?}
-    LoadSeg --> ValidateGEFF
+    ValidateMap[3. validate_name_map<br/>→ check required mappings exist]
 
-    ValidateGEFF -->|Yes| GEFFChecks[GEFF validation:<br/>axes_match_seg_dims<br/>has_valid_seg_id]
-    ValidateGEFF -->|No| CreateTracks
+    ValidateMap --> LoadSource[4. load_source<br/>→ InMemoryGeff with standard keys]
 
-    GEFFChecks --> CheckRelabel{validate_graph_seg_match<br/>Check if segmentation<br/>needs relabeling?}
+    LoadSource --> ValidateData[5. validate<br/>→ validate graph structure & IDs]
 
-    CheckRelabel -->|needs relabeling| RelabelSeg[Relabel segmentation<br/>seg_id → node_id]
-    CheckRelabel -->|already labeled| SkipRelabel[Use segmentation as-is]
+    ValidateData --> ConstructGraph[6. construct_graph<br/>→ NetworkX graph]
 
-    RelabelSeg --> SegReady[Segmentation ready]
-    SkipRelabel --> SegReady
+    ConstructGraph --> HandleSeg{Segmentation<br/>provided?}
 
-    SegReady --> CreateTracks[Create SolutionTracks<br/>with graph & segmentation]
+    HandleSeg -->|Yes| LoadSeg[7. handle_segmentation<br/>→ load, validate, relabel if needed]
+    HandleSeg -->|No| CreateTracks
 
-    CreateTracks --> ValidateFeatures{node_features<br/>requested?}
+    LoadSeg --> CreateTracks[8. Create SolutionTracks<br/>with graph & segmentation]
 
-    ValidateFeatures -->|Yes| CheckFeatures[Validate features exist<br/>in annotators or GEFF]
-    ValidateFeatures -->|No| End
+    CreateTracks --> EnableFeatures[9. enable_features<br/>→ register & compute features]
 
-    CheckFeatures --> EnableFeatures[enable_features with<br/>recompute flag for each]
+    EnableFeatures --> End([Return SolutionTracks])
 
-    EnableFeatures --> RegisterStatic[Register static features<br/>not in annotators]
-
-    RegisterStatic --> End([Return SolutionTracks])
-
-    style ImportGraph fill:#4A90E2,stroke:#2E5C8A,stroke-width:3px,color:#fff
-    style LoadSeg fill:#4A90E2,stroke:#2E5C8A,stroke-width:3px,color:#fff
-    style ValidateGEFF fill:#F5A623,stroke:#C77D1A,stroke-width:3px,color:#fff
-    style GEFFChecks fill:#F5A623,stroke:#C77D1A,stroke-width:3px,color:#fff
-    style CheckRelabel fill:#E94B8B,stroke:#B83A6D,stroke-width:3px,color:#fff
-    style RelabelSeg fill:#E94B8B,stroke:#B83A6D,stroke-width:3px,color:#fff
-    style ValidateIDs fill:#F5A623,stroke:#C77D1A,stroke-width:3px,color:#fff
+    style ReadHeader fill:#4A90E2,stroke:#2E5C8A,stroke-width:3px,color:#fff
+    style InferMap fill:#4A90E2,stroke:#2E5C8A,stroke-width:3px,color:#fff
+    style ValidateMap fill:#F5A623,stroke:#C77D1A,stroke-width:3px,color:#fff
+    style LoadSource fill:#4A90E2,stroke:#2E5C8A,stroke-width:3px,color:#fff
+    style ValidateData fill:#F5A623,stroke:#C77D1A,stroke-width:3px,color:#fff
     style ConstructGraph fill:#50C878,stroke:#3A9B5C,stroke-width:3px,color:#fff
+    style HandleSeg fill:#E94B8B,stroke:#B83A6D,stroke-width:3px,color:#fff
+    style LoadSeg fill:#E94B8B,stroke:#B83A6D,stroke-width:3px,color:#fff
     style CreateTracks fill:#E85D75,stroke:#B84A5F,stroke-width:3px,color:#fff
-    style ValidateFeatures fill:#F5A623,stroke:#C77D1A,stroke-width:3px,color:#fff
-    style CheckFeatures fill:#F5A623,stroke:#C77D1A,stroke-width:3px,color:#fff
     style EnableFeatures fill:#50C878,stroke:#3A9B5C,stroke-width:3px,color:#fff
-    style RegisterStatic fill:#50C878,stroke:#3A9B5C,stroke-width:3px,color:#fff
 ```
 
 ## Process Steps
 
-### 1. Loading Phase (Blue)
-**Parallel operations** - can happen independently:
-- **`import_graph_from_geff()`**: Loads GEFF data and renames all property keys from custom to standard
-  - Reads GEFF data into `InMemoryGeff` format
-  - Transforms custom property names to standard keys (e.g., `"t"` → `"time"`, `"circ"` → `"circularity"`)
-  - Returns InMemoryGeff with standard keys
-- **Load segmentation from disk**: Lazily reads segmentation array from file (tif, zarr, etc.) into dask array
+### 1. Preparation Phase (Blue)
+**Read metadata and infer mappings**:
+
+#### `read_header(source_path)`
+- **Format-specific implementation** (abstract method)
+- Reads only column names/property names without loading data
+- **CSV**: Uses `pd.read_csv(source_path, nrows=0)` to read column names
+- **GEFF**: Reads property names from zarr metadata (TODO)
+- Populates `self.available_properties`
+
+#### `infer_name_map()`
+- **Common implementation** for all formats
+- Automatically maps available properties to standard keys using fuzzy matching
+- **Matching priority**:
+  1. Exact matches to standard keys (e.g., "time" → "time")
+  2. Fuzzy matches to standard keys (40% similarity, e.g., "t" → "time")
+  3. Exact matches to feature display names (e.g., "Area" → "area")
+  4. Fuzzy matches to feature display names (e.g., "Circ" → "circularity")
+  5. Remaining properties map to themselves (custom properties)
+- Returns complete `name_map` dict
+- Raises `ValueError` if required features cannot be inferred
+
+#### `prepare(source_path)`
+- **Convenience method** that combines:
+  1. `read_header(source_path)`
+  2. `self.name_map = infer_name_map()`
+- Allows user to inspect/modify `self.name_map` before building
 
 ### 2. Validation Phase (Yellow)
-**Sequential operations** on the loaded data:
-- **Validate track_ids & lineage_ids**: Check if provided IDs are valid according to GEFF spec, remove if invalid
-- **GEFF-specific validation** (if segmentation provided):
-  - **`axes_match_seg_dims`**: Check axes metadata matches segmentation dimensions
-  - **`has_valid_seg_id`**: Validate seg_ids are integers
-- **Feature validation** (if features requested):
-  - Features with `recompute=True` must exist in annotators
-  - Features with `recompute=False` must exist in GEFF node_props
+**Validate name_map before loading data**:
 
-### 3. Construction Phase (Green)
-**Build the graph and tracks**:
-- **Construct NetworkX graph**: Create graph from InMemoryGeff (now with standard keys)
-- **Validate & relabel segmentation** (if provided):
-  - Check if relabeling needed using generic `validate_graph_seg_match`
-  - Relabel if seg_id ≠ node_id
-- **Create SolutionTracks**: Assemble graph and segmentation into Tracks object
+#### `validate_name_map()`
+- **Common implementation** for all formats
+- Validates that `self.name_map` contains:
+  - All `required_features` (e.g., ["time"] for base, ["time", "id", "parent_id"] for CSV)
+  - All `position_attr` based on `ndim` (["y", "x"] for 3D, ["z", "y", "x"] for 4D)
+- Validates all mapped properties exist in `available_properties`
+- Raises `ValueError` with helpful message if validation fails
 
-### 4. Segmentation Validation Phase (Pink)
-**Conditional operations** on segmentation (happens after graph construction):
-- **Check if relabeling needed**: Uses NetworkX graph to compare segmentation IDs with node IDs
-- **Relabel segmentation** (if needed): Maps seg_id values to node_id values
-- **Use as-is** (if not needed): Segmentation already uses node IDs
+### 3. Loading Phase (Blue)
+**Convert source data to InMemoryGeff**:
 
-### 5. Feature Registration Phase (Green)
-**Happens AFTER SolutionTracks creation** - if `node_features` provided:
-- **Enable features**: Call `tracks.enable_features(key, recompute=flag)` for each feature
-  - If `recompute=True`: Activates annotator and computes values
-  - If `recompute=False`: Activates annotator but uses existing values from graph
-- **Register static features**: Add non-annotator features to FeatureDict
+#### `load_source(source_path, name_map, node_features)`
+- **Format-specific implementation** (abstract method)
+- Reads data from source using the validated `name_map`
+- **CSV**:
+  - Reads DataFrame
+  - Renames columns using `name_map`
+  - Converts to InMemoryGeff structure
+  - Creates proper GeffMetadata with property metadata
+- **GEFF**:
+  - Uses `import_graph_from_geff()` with `name_map`
+  - Returns InMemoryGeff directly
+- All properties now use **standard keys**
 
-### 6. Final Return (Red)
-- **Return SolutionTracks**: Return fully configured Tracks object with features enabled
+### 4. Data Validation Phase (Yellow)
+**Validate loaded InMemoryGeff**:
 
-## Key Dependencies
+#### `validate()`
+- **Common implementation** for all formats
+- Validates graph structure (required - raises on failure):
+  - `validate_unique_node_ids`: No duplicate node IDs
+  - `validate_nodes_for_edges`: All edges reference existing nodes
+  - `validate_no_self_edges`: No self-loops
+  - `validate_no_repeated_edges`: No duplicate edges
+- Validates optional properties (warns and removes if invalid):
+  - `validate_tracklets`: track_id must form valid tracklets
+  - `validate_lineages`: lineage_id must form valid lineages
 
-### Critical Path
-The longest dependency chain:
+### 5. Construction Phase (Green)
+**Build NetworkX graph**:
+
+#### `construct_graph()`
+- **Common implementation** for all formats
+- Constructs NetworkX DiGraph from validated InMemoryGeff
+- Uses `geff.construct()` which creates graph with standard keys
+- Graph nodes have all properties with standard names
+
+### 6. Segmentation Phase (Pink)
+**Handle segmentation if provided**:
+
+#### `handle_segmentation(segmentation_path, scale)`
+- **Common implementation** for all formats
+- Lazy loads segmentation using `magic_imread(use_dask=True)`
+- Validates segmentation dimensions match graph `ndim`
+- **Relabeling logic**:
+  - If no `seg_id` property: use segmentation as-is (assumes seg labels = node IDs)
+  - If `seg_id == node_id` for all nodes: use segmentation as-is
+  - Otherwise: relabel segmentation from seg_id → node_id per time point
+- Returns processed segmentation array (or None)
+
+### 7. Tracks Creation Phase (Red)
+**Assemble SolutionTracks object**:
+
+#### `build()` creates SolutionTracks
+- Validates `self.name_map` is set (raises if empty)
+- Calls `validate_name_map()` to ensure completeness
+- Orchestrates all steps above
+- Creates `SolutionTracks` with:
+  - Constructed graph
+  - Processed segmentation
+  - Position and time attributes
+  - Dimensionality and scale
+
+### 8. Feature Registration Phase (Green)
+**Enable and register features**:
+
+#### `enable_features(tracks, node_features)`
+- **Common implementation** for all formats
+- Validates requested features exist (in annotators or node_props)
+- Enables annotator features with appropriate `recompute` flag:
+  - `recompute=True`: Compute using annotator
+  - `recompute=False`: Use existing values from graph
+- Registers static features (not in annotators) with inferred dtypes
+
+## Usage Examples
+
+### Using prepare() for automatic inference
+
+```python
+# Create builder
+builder = CSVTracksBuilder()
+
+# Read headers and auto-infer mappings
+builder.prepare("data.csv")
+
+# Optionally inspect/modify inferred mappings
+print(builder.name_map)
+builder.name_map["circularity"] = "circ"  # Custom override
+
+# Build tracks
+tracks = builder.build(
+    source_path="data.csv",
+    segmentation_path="seg.tif",
+    scale=[1.0, 1.0, 1.0],
+    node_features={"area": True, "custom_feature": False}
+)
 ```
-import_graph_from_geff → Validate IDs → Construct graph →
-[if segmentation] GEFF validation → Validate match → Relabel (if needed) →
-Create SolutionTracks → [if features] Validate & enable features
+
+### Manual name_map specification
+
+```python
+# Create builder
+builder = CSVTracksBuilder()
+
+# Manually set name_map
+builder.name_map = {
+    "time": "t",
+    "x": "x",
+    "y": "y",
+    "id": "id",
+    "parent_id": "parent_id",
+    "area": "Area"
+}
+
+# Read headers for validation
+builder.read_header("data.csv")
+
+# Build tracks (validates name_map automatically)
+tracks = builder.build("data.csv")
 ```
 
-### Parallel Opportunities
-- `import_graph_from_geff()` and segmentation loading are independent and can happen in parallel
+## Key Design Decisions
 
-### Design Insights
+### Why separate prepare() from build()?
+1. **Allows user inspection**: Users can see inferred mappings before loading data
+2. **Enables corrections**: Users can edit `name_map` if inference is incorrect
+3. **Fail fast**: Validation happens before expensive data loading
+4. **Clear separation**: Metadata reading vs. data loading
 
-**Why `import_graph_from_geff()` returns standard keys:**
-By renaming property keys in the InMemoryGeff *before* constructing the NetworkX graph:
-1. Graph is created with standard keys from the start
-2. No need for post-construction key renaming
-3. All downstream code (validation, feature computation) works with standard keys
-4. Single transformation point - simpler and more maintainable
+### Why validate before loading?
+1. **Early error detection**: Catch mapping issues before loading large datasets
+2. **Better error messages**: Can show available properties when mapping fails
+3. **No wasted work**: Don't load data if mappings are invalid
 
-**Why features are enabled AFTER SolutionTracks creation:**
-1. Tracks object must exist before features can be computed or registered
-2. Feature computation may require the tracks object (e.g., for segmentation access)
-3. Separation of concerns: graph/segmentation construction vs. feature management
-4. Allows validation of feature requests against available annotators
+### Why common validation?
+1. **Consistency**: Same validation rules regardless of format
+2. **GEFF standard**: InMemoryGeff format has well-defined validation
+3. **Code reuse**: No format-specific validation duplication
+4. **Graceful degradation**: Optional properties removed with warning, not error
+
+### Why fuzzy matching with 40% cutoff?
+1. **Handles variations**: "Time" vs "time", "t" vs "time", "Circ" vs "circularity"
+2. **Balances precision**: 40% catches common abbreviations without false positives
+3. **User override**: Still allows manual correction after auto-inference
+4. **Follows precedent**: Matches existing motile_tracker behavior
+
+### Why map remaining properties to themselves?
+1. **Automatic custom features**: No need to specify every custom column
+2. **Preserve all data**: Nothing is silently dropped
+3. **User flexibility**: Custom properties work without explicit configuration
+
+## Format-Specific Differences
+
+### CSV Builder
+- **Required features**: `["time", "id", "parent_id"]`
+  - Graph structure stored in columns
+- **read_header()**: Simple CSV column reading
+- **load_source()**: DataFrame → InMemoryGeff conversion
+  - Builds position from separate x, y, z columns
+  - Extracts edges from parent_id column
+  - Creates GeffMetadata with property metadata
+
+### GEFF Builder
+- **Required features**: `["time"]` only
+  - Graph structure stored in separate arrays
+- **read_header()**: Read zarr property names (TODO)
+- **load_source()**: Direct InMemoryGeff loading
+  - Uses existing `import_graph_from_geff()`
+  - Metadata already present
+
+## Migration from Old Import Functions
+
+The builder pattern replaces the previous direct import functions:
+
+### Old: `import_from_geff()`
+```python
+tracks = import_from_geff(
+    directory=Path("data.zarr"),
+    name_map={"time": "t", "x": "x", "y": "y"},
+    segmentation_path=Path("seg.tif"),
+    scale=[1.0, 1.0, 1.0],
+    node_features={"area": True}
+)
+```
+
+### New: `GeffTracksBuilder`
+```python
+builder = GeffTracksBuilder()
+builder.prepare(Path("data.zarr"))  # Auto-infer name_map
+tracks = builder.build(
+    source_path=Path("data.zarr"),
+    segmentation_path=Path("seg.tif"),
+    scale=[1.0, 1.0, 1.0],
+    node_features={"area": True}
+)
+```
+
+### Benefits of Builder Pattern
+- **Automatic inference**: No need to manually specify name_map in most cases
+- **Unified interface**: Same API for CSV, GEFF, and future formats
+- **Better validation**: Fail fast with clear errors
+- **User control**: Can inspect and override inferred mappings
+- **Maintainable**: Common logic shared across formats

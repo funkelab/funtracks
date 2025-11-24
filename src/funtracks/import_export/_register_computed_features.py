@@ -1,11 +1,26 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TypedDict
 
 from funtracks.data_model.tracks import Tracks
 
-if TYPE_CHECKING:
-    from funtracks.import_export._types import ImportedComputedFeature
+
+# TODO: mark as unused but kept around in case someone needs it
+class ImportedComputedFeature(TypedDict):
+    """Metadata for a computed feature being imported.
+
+    This is a specialized version of ImportedNodeFeature used internally for features
+    that come from the annotator system (not static features).
+
+    Args:
+        prop_name: The property name/key on the graph node
+        feature: Display name of the computed feature in the annotator system
+        recompute: Whether to recompute the feature or use existing values
+    """
+
+    prop_name: str
+    feature: str | tuple[str, ...]
+    recompute: bool
 
 
 def _rename_feature(tracks: Tracks, old_key: str, new_key: str) -> None:
