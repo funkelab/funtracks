@@ -119,8 +119,8 @@ class GeffTracksBuilder(TracksBuilder):
         metadata = GeffMetadata.read(source_path)
 
         # Extract property names from metadata
-        self.importable_node_properties = list(metadata.node_props_metadata.keys())
-        self.importable_edge_properties = list(metadata.edge_props_metadata.keys())
+        self.importable_node_props = list(metadata.node_props_metadata.keys())
+        self.importable_edge_props = list(metadata.edge_props_metadata.keys())
 
     def load_source(
         self,

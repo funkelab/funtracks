@@ -57,8 +57,8 @@ graph TD
 - **Format-specific implementation** (abstract method)
 - Reads only column names/property names without loading data
 - **CSV**: Uses `pd.read_csv(source_path, nrows=0)` to read column names
-- **GEFF**: Reads property names from zarr metadata (TODO)
-- Populates `self.available_properties`
+- **GEFF**: Reads property names from zarr metadata using `GeffMetadata.read()`
+- Populates `self.importable_node_props` and `self.importable_edge_props`
 
 #### `infer_name_map()`
 - **Common implementation** for all formats
@@ -69,8 +69,8 @@ graph TD
   3. Exact matches to feature display names (e.g., "Area" → "area")
   4. Fuzzy matches to feature display names (e.g., "Circ" → "circularity")
   5. Remaining properties map to themselves (custom properties)
-- Returns complete `name_map` dict
-- Raises `ValueError` if required features cannot be inferred
+- Returns inferred `name_map` dict (may be incomplete if required features cannot be matched)
+- **Best-effort matching**: Does not validate completeness - use `validate_name_map()` to ensure all required fields are present
 
 #### `prepare(source_path)`
 - **Convenience method** that combines:
@@ -256,30 +256,93 @@ tracks = builder.build("data.csv")
 ### GEFF Builder
 - **Required features**: `["time"]` only
   - Graph structure stored in separate arrays
-- **read_header()**: Read zarr property names (TODO)
+- **read_header()**: Read zarr property names using `GeffMetadata.read()`
 - **load_source()**: Direct InMemoryGeff loading
   - Uses existing `import_graph_from_geff()`
   - Metadata already present
 
-## Migration from Old Import Functions
+## Submodule Organization
 
-The builder pattern replaces the previous direct import functions:
+The import/export functionality is organized into format-specific submodules:
 
-### Old: `import_from_geff()`
+```
+funtracks/import_export/
+├── __init__.py              # Public API exports
+├── _tracks_builder.py       # Abstract base builder class
+├── _name_mapping.py         # Name inference helpers
+├── _validation.py           # Validation functions
+├── csv/
+│   ├── _import.py          # CSVTracksBuilder + import_from_csv()
+│   └── _export.py          # export_to_csv()
+├── geff/
+│   ├── _import.py          # GeffTracksBuilder + import_from_geff()
+│   └── _export.py          # export_to_geff()
+├── import_from_geff.py      # Deprecated shim (backward compat)
+└── export_to_geff.py        # Deprecated shim (backward compat)
+```
+
+**Public API** (exported from `funtracks.import_export`):
+- `import_from_csv()` - Wrapper around `CSVTracksBuilder`
+- `import_from_geff()` - Wrapper around `GeffTracksBuilder`
+- `export_to_csv()` - Export tracks to CSV format
+- `export_to_geff()` - Export tracks to GEFF format
+
+## Usage: Wrapper Functions vs Builder Pattern
+
+Most users should use the **wrapper functions** which provide a simpler API:
+
+### Recommended: Using Wrapper Functions
+
+**GEFF Import** (auto-infers name_map):
 ```python
+from funtracks.import_export import import_from_geff
+
 tracks = import_from_geff(
     directory=Path("data.zarr"),
-    name_map={"time": "t", "x": "x", "y": "y"},
+    name_map=None,  # Auto-infer column mappings
     segmentation_path=Path("seg.tif"),
     scale=[1.0, 1.0, 1.0],
     node_features={"area": True}
 )
 ```
 
-### New: `GeffTracksBuilder`
+**CSV Import** (auto-infers name_map):
 ```python
+from funtracks.import_export import import_from_csv
+
+tracks = import_from_csv(
+    csv_path=Path("tracks.csv"),
+    name_map=None,  # Auto-infer column mappings
+    segmentation_path=Path("seg.tif"),
+    scale=[1.0, 1.0, 1.0],
+    node_features={"area": False}
+)
+```
+
+**CSV Import** (manual name_map):
+```python
+tracks = import_from_csv(
+    csv_path=Path("tracks.csv"),
+    name_map={"time": "frame", "x": "x_pos", "y": "y_pos", "id": "cell_id"},
+    segmentation_path=Path("seg.tif")
+)
+```
+
+### Advanced: Using Builder Pattern Directly
+
+For advanced use cases where you need to inspect/modify the inferred name_map:
+
+**GEFF Builder**:
+```python
+from funtracks.import_export.geff._import import GeffTracksBuilder
+
 builder = GeffTracksBuilder()
 builder.prepare(Path("data.zarr"))  # Auto-infer name_map
+
+# Inspect and optionally modify inferred mappings
+print(builder.name_map)
+builder.name_map["circularity"] = "circ"  # Override a mapping
+
 tracks = builder.build(
     source_path=Path("data.zarr"),
     segmentation_path=Path("seg.tif"),
@@ -288,9 +351,25 @@ tracks = builder.build(
 )
 ```
 
+**CSV Builder**:
+```python
+from funtracks.import_export.csv._import import CSVTracksBuilder
+
+builder = CSVTracksBuilder()
+builder.prepare("data.csv")  # Auto-infer name_map
+
+# Inspect and modify
+print(builder.name_map)
+builder.name_map["time"] = "frame_number"
+
+tracks = builder.build(
+    source_path="data.csv",
+    segmentation_path="seg.tif"
+)
+```
+
 ### Benefits of Builder Pattern
-- **Automatic inference**: No need to manually specify name_map in most cases
+- **Inspection**: Can see inferred mappings before loading data
+- **Customization**: Can override specific mappings while keeping others
+- **Fail fast**: Validation happens before expensive data loading
 - **Unified interface**: Same API for CSV, GEFF, and future formats
-- **Better validation**: Fail fast with clear errors
-- **User control**: Can inspect and override inferred mappings
-- **Maintainable**: Common logic shared across formats
