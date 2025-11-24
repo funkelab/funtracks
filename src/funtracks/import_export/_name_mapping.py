@@ -224,16 +224,24 @@ def infer_name_map(
         position_attr: List of position attributes (e.g., ["z", "y", "x"])
         ndim: Number of dimensions (3 for 2D+time, 4 for 3D+time)
         available_computed_features: Dict of feature_key -> feature metadata
-            (should have "display_name" for each feature)
+            (should have "feature_type" and "display_name" for each feature)
+            Contains both node and edge features - will be filtered to node features only
 
     Returns:
         Inferred name_map (standard_key -> source_property). May be incomplete
         if required features cannot be matched. Use validate_name_map() to
         ensure all required fields are present before building.
     """
+    # Filter to node features only
+    node_features = {
+        k: v
+        for k, v in available_computed_features.items()
+        if v.get("feature_type") == "node"
+    }
+
     # Setup: Build list of standard fields and display name mapping
     standard_fields = build_standard_fields(required_features, position_attr, ndim)
-    display_name_to_key = build_display_name_mapping(available_computed_features)
+    display_name_to_key = build_display_name_mapping(node_features)
 
     # Initialize state
     mapping: dict[str, str] = {}
@@ -251,6 +259,68 @@ def infer_name_map(
 
     # Step 4: Fuzzy matches with feature display names
     props_left = _match_display_names_fuzzy(props_left, display_name_to_key, mapping)
+
+    # Step 5: Map remaining properties to themselves (custom properties)
+    custom_mapping = _map_remaining_to_self(props_left)
+    mapping.update(custom_mapping)
+
+    return mapping
+
+
+def infer_edge_name_map(
+    importable_edge_properties: list[str],
+    available_computed_features: dict | None = None,
+) -> dict[str, str]:
+    """Infer edge_name_map by matching importable edge properties to standard keys.
+
+    Uses difflib fuzzy matching with the following priority:
+    1. Exact matches to edge feature default keys
+    2. Fuzzy matches to edge feature default keys (case-insensitive, 40%
+       similarity cutoff)
+    3. Exact matches to edge feature display names
+    4. Fuzzy matches to edge feature display names (case-insensitive, 40% cutoff)
+    5. Remaining properties map to themselves (custom properties)
+
+    Args:
+        importable_edge_properties: List of edge property names available in source
+        available_computed_features: Optional dict of feature_key -> feature metadata
+            (should have "feature_type" and "display_name" for each feature)
+            Contains both node and edge features - will be filtered to edge features only
+
+    Returns:
+        Inferred edge_name_map (standard_key -> source_property)
+    """
+    # Filter to edge features only
+    edge_features = {}
+    if available_computed_features is not None:
+        edge_features = {
+            k: v
+            for k, v in available_computed_features.items()
+            if v.get("feature_type") == "edge"
+        }
+
+    # Extract edge feature keys and display name mapping
+    edge_feature_keys = list(edge_features.keys())
+    display_name_to_key = build_display_name_mapping(edge_features)
+
+    # Initialize state
+    mapping: dict[str, str] = {}
+    props_left = importable_edge_properties.copy()
+
+    # Pipeline of matching steps
+    # Step 1: Exact matches for edge feature keys
+    props_left = _match_exact(edge_feature_keys, props_left, mapping)
+
+    # Step 2: Fuzzy matches for edge feature keys
+    props_left = _match_fuzzy(edge_feature_keys, props_left, mapping)
+
+    # Step 3: Exact matches with edge feature display names
+    if display_name_to_key:
+        props_left = _match_display_names_exact(props_left, display_name_to_key, mapping)
+
+    # Step 4: Fuzzy matches with edge feature display names
+    if display_name_to_key:
+        props_left = _match_display_names_fuzzy(props_left, display_name_to_key, mapping)
 
     # Step 5: Map remaining properties to themselves (custom properties)
     custom_mapping = _map_remaining_to_self(props_left)

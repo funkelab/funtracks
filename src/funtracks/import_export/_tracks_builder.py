@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Literal, cast
 
 import geff
 import networkx as nx
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 from funtracks.data_model.graph_attributes import NodeAttr
 from funtracks.data_model.solution_tracks import SolutionTracks
 from funtracks.features import Feature
-from funtracks.import_export._name_mapping import infer_name_map
+from funtracks.import_export._name_mapping import infer_edge_name_map, infer_name_map
 from funtracks.import_export._utils import (
     _infer_dtype_from_array,
     get_default_key_to_feature_mapping,
@@ -54,6 +54,7 @@ class TracksBuilder(ABC):
         self.position_attr: list[str] = ["z", "y", "x"]
         self.ndim: int = 3
         self.name_map: dict[str, str] = {}
+        self.edge_name_map: dict[str, str] | None = None
         self.importable_node_props: list[str] = []
         self.importable_edge_props: list[str] = []
 
@@ -98,15 +99,43 @@ class TracksBuilder(ABC):
             self.available_computed_features,
         )
 
-    def validate_name_map(self) -> None:
-        """Validate that name_map contains all required mappings.
+    def infer_edge_name_map(self) -> dict[str, str]:
+        """Infer edge_name_map by matching importable edge properties to standard keys.
 
-        Checks:
+        Uses difflib fuzzy matching with the following priority:
+        1. Exact matches to edge feature default keys
+        2. Fuzzy matches to edge feature default keys (case-insensitive, 40%
+           similarity cutoff)
+        3. Exact matches to edge feature display names
+        4. Fuzzy matches to edge feature display names (case-insensitive,
+           40% cutoff)
+        5. Remaining properties map to themselves (custom properties)
+
+        Returns:
+            Inferred edge_name_map (standard_key -> source_property)
+        """
+        if not self.importable_edge_props:
+            return {}
+
+        return infer_edge_name_map(
+            self.importable_edge_props, self.available_computed_features
+        )
+
+    def validate_name_map(self) -> None:
+        """Validate that name_map and edge_name_map contain valid mappings.
+
+        Checks for nodes:
         - No None values in required mappings
         - No duplicate values in required mappings
         - All required_features are mapped
         - All position_attr are mapped (based on ndim)
         - All mapped properties exist in importable_node_props
+
+        Checks for edges:
+        - All mapped edge properties exist in importable_edge_props
+
+        Checks for both:
+        - No feature key collisions between node and edge features
 
         Raises:
             ValueError: If validation fails
@@ -117,14 +146,17 @@ class TracksBuilder(ABC):
             self.required_features,
             self.position_attr,
             self.ndim,
+            edge_name_map=self.edge_name_map,
+            importable_edge_props=self.importable_edge_props,
         )
 
     def prepare(self, source: Path | pd.DataFrame) -> None:
-        """Prepare for building by reading headers and inferring name_map.
+        """Prepare for building by reading headers and inferring name maps.
 
         This method reads the data source headers/metadata and automatically
-        infers a name_map. After calling this, you can inspect and modify
-        self.name_map before calling build().
+        infers both name_map and edge_name_map. After calling this, you can
+        inspect and modify self.name_map and self.edge_name_map before calling
+        build().
 
         Args:
             source: Path to data source or DataFrame
@@ -132,12 +164,14 @@ class TracksBuilder(ABC):
         Example:
             >>> builder = CSVTracksBuilder()
             >>> builder.prepare("data.csv")
-            >>> # Optionally modify the inferred mapping
+            >>> # Optionally modify the inferred mappings
             >>> builder.name_map["circularity"] = "circ"
+            >>> builder.edge_name_map["iou"] = "overlap"
             >>> tracks = builder.build("data.csv", segmentation_path="seg.tif")
         """
         self.read_header(source)
         self.name_map = self.infer_name_map()
+        self.edge_name_map = self.infer_edge_name_map()
 
     @abstractmethod
     def load_source(
@@ -277,49 +311,57 @@ class TracksBuilder(ABC):
     def enable_features(
         self,
         tracks: SolutionTracks,
-        node_features: dict[str, bool] | None,
+        features: dict[str, bool] | None,
+        feature_type: Literal["node", "edge"] = "node",
     ) -> None:
         """Enable and register features on tracks object.
 
-        Common logic shared across all formats.
+        Common logic shared across all formats for both node and edge features.
 
         Args:
             tracks: SolutionTracks object to add features to
-            node_features: Dict mapping feature names to recompute flags
+            features: Dict mapping feature names to recompute flags
+            feature_type: Type of features ("node" or "edge")
         """
-        if node_features is None:
+        if features is None:
             return
 
         if self.in_memory_geff is None:
             raise ValueError("No data loaded. Call load_source() first.")
 
-        node_props = self.in_memory_geff["node_props"]
+        # Get the appropriate props dict based on feature_type
+        props = (
+            self.in_memory_geff["node_props"]
+            if feature_type == "node"
+            else self.in_memory_geff["edge_props"]
+        )
 
         # Validate requested features before enabling
         invalid_features = []
-        for key, recompute in node_features.items():
+        for key, recompute in features.items():
             if recompute:
                 # Features to compute must exist in annotators
                 if key not in tracks.annotators.all_features:
                     invalid_features.append(key)
             else:
-                # Features to load must exist in node_props
-                if key not in node_props:
+                # Features to load must exist in props
+                if key not in props:
                     invalid_features.append(key)
 
         if invalid_features:
             available_computed = list(tracks.annotators.all_features.keys())
-            available_geff = list(node_props.keys())
+            available_geff = list(props.keys())
             raise KeyError(
-                f"Features not available: {invalid_features}. "
+                f"{feature_type.capitalize()} features not available: "
+                f"{invalid_features}. "
                 f"Available computed features: {available_computed}. "
-                f"Available properties: {available_geff}"
+                f"Available {feature_type} properties: {available_geff}"
             )
 
         # Separate into features that exist in annotators vs static features
         annotator_features = {
             key: recompute
-            for key, recompute in node_features.items()
+            for key, recompute in features.items()
             if key in tracks.annotators.all_features
         }
 
@@ -328,13 +370,13 @@ class TracksBuilder(ABC):
             tracks.enable_features([key], recompute=recompute)
 
         # Register static features (features not in annotator registry)
-        static_keys = [key for key in node_features if key not in annotator_features]
+        static_keys = [key for key in features if key not in annotator_features]
         static_features: dict[str, Feature] = {}
         for key in static_keys:
             static_features[key] = Feature(
                 display_name=key,
-                feature_type="node",
-                value_type=_infer_dtype_from_array(node_props[key]["values"]),
+                feature_type=feature_type,
+                value_type=_infer_dtype_from_array(props[key]["values"]),
                 num_values=1,
                 required=False,
                 default_value=None,
@@ -347,6 +389,7 @@ class TracksBuilder(ABC):
         segmentation: Path | np.ndarray | None = None,
         scale: list[float] | None = None,
         node_features: dict[str, bool] | None = None,
+        edge_features: dict[str, bool] | None = None,
     ) -> SolutionTracks:
         """Orchestrate the full construction process.
 
@@ -354,7 +397,8 @@ class TracksBuilder(ABC):
             source: Path to data source or DataFrame
             segmentation: Optional path to segmentation or pre-loaded segmentation array
             scale: Optional spatial scale
-            node_features: Optional features to enable/load
+            node_features: Optional node features to enable/load
+            edge_features: Optional edge features to enable/load
 
         Returns:
             Fully constructed SolutionTracks object
@@ -407,6 +451,9 @@ class TracksBuilder(ABC):
         )
 
         # 6. Enable and register features
-        self.enable_features(tracks, node_features)
+        if node_features is not None:
+            self.enable_features(tracks, node_features, feature_type="node")
+        if edge_features is not None:
+            self.enable_features(tracks, edge_features, feature_type="edge")
 
         return tracks

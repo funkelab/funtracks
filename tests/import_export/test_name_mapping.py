@@ -10,6 +10,7 @@ from funtracks.import_export._name_mapping import (
     _match_fuzzy,
     build_display_name_mapping,
     build_standard_fields,
+    infer_edge_name_map,
     infer_name_map,
 )
 
@@ -393,8 +394,8 @@ class TestInferNameMapIntegration:
         position_attr = ["z", "y", "x"]
         ndim = 3
         available_computed_features = {
-            "area": {"display_name": "Area"},
-            "circularity": {"display_name": "Circularity"},
+            "area": {"feature_type": "node", "display_name": "Area"},
+            "circularity": {"feature_type": "node", "display_name": "Circularity"},
         }
 
         mapping = infer_name_map(
@@ -418,7 +419,7 @@ class TestInferNameMapIntegration:
         position_attr = ["z", "y", "x"]
         ndim = 3
         available_computed_features = {
-            "circularity": {"display_name": "Circularity"},
+            "circularity": {"feature_type": "node", "display_name": "Circularity"},
         }
 
         mapping = infer_name_map(
@@ -464,7 +465,7 @@ class TestInferNameMapIntegration:
         position_attr = ["z", "y", "x"]
         ndim = 3
         available_computed_features = {
-            "time_feature": {"display_name": "Time"},
+            "time_feature": {"feature_type": "node", "display_name": "Time"},
         }
 
         mapping = infer_name_map(
@@ -529,7 +530,7 @@ class TestInferNameMapIntegration:
         position_attr = ["z", "y", "x"]
         ndim = 3
         available_computed_features = {
-            "area": {"display_name": "Area"},
+            "area": {"feature_type": "node", "display_name": "Area"},
         }
 
         mapping = infer_name_map(
@@ -547,3 +548,99 @@ class TestInferNameMapIntegration:
         assert mapping["parent_id"] == "parent_id"
         # Should exact match Area via display name
         assert mapping["area"] == "Area"
+
+
+class TestInferEdgeNameMapIntegration:
+    """Integration tests for the full infer_edge_name_map pipeline."""
+
+    def test_perfect_exact_matches(self):
+        """Test when all edge properties have exact matches."""
+        importable_props = ["iou", "distance", "custom_edge_prop"]
+        available_computed_features = {
+            "iou": {"feature_type": "edge", "display_name": "IOU"},
+            "distance": {"feature_type": "edge", "display_name": "Distance"},
+            "area": {"feature_type": "node", "display_name": "Area"},  # Should be ignored
+        }
+
+        mapping = infer_edge_name_map(importable_props, available_computed_features)
+
+        assert mapping["iou"] == "iou"
+        assert mapping["distance"] == "distance"
+        assert mapping["custom_edge_prop"] == "custom_edge_prop"
+
+    def test_fuzzy_matching_abbreviations(self):
+        """Test fuzzy matching with abbreviations."""
+        importable_props = ["IOU", "dist"]
+        available_computed_features = {
+            "iou": {"feature_type": "edge", "display_name": "IOU"},
+            "distance": {"feature_type": "edge", "display_name": "Distance"},
+        }
+
+        mapping = infer_edge_name_map(importable_props, available_computed_features)
+
+        # Should fuzzy match IOU->iou, dist->distance
+        assert mapping["iou"] == "IOU"
+        assert mapping["distance"] == "dist"
+
+    def test_custom_properties(self):
+        """Test that unmatched edge properties map to themselves."""
+        importable_props = ["custom_edge1", "custom_edge2", "iou"]
+        available_computed_features = {
+            "iou": {"feature_type": "edge", "display_name": "IOU"},
+        }
+
+        mapping = infer_edge_name_map(importable_props, available_computed_features)
+
+        # Custom properties should map to themselves
+        assert mapping["custom_edge1"] == "custom_edge1"
+        assert mapping["custom_edge2"] == "custom_edge2"
+        # Standard property should exact match
+        assert mapping["iou"] == "iou"
+
+    def test_empty_input(self):
+        """Test with empty edge properties list."""
+        mapping = infer_edge_name_map([])
+        assert mapping == {}
+
+    def test_with_edge_features_dict(self):
+        """Test inference with edge feature display names."""
+        importable_props = ["Overlap", "Dist", "custom"]
+        available_computed_features = {
+            "iou": {"feature_type": "edge", "display_name": "Overlap"},
+            "distance": {"feature_type": "edge", "display_name": "Distance"},
+            "area": {"feature_type": "node", "display_name": "Area"},  # Should be ignored
+        }
+
+        mapping = infer_edge_name_map(importable_props, available_computed_features)
+
+        # Should match via display names
+        assert mapping["iou"] == "Overlap"
+        # Dist should fuzzy match to "distance" edge feature key
+        assert mapping["distance"] == "Dist"
+        # Custom should map to itself
+        assert mapping["custom"] == "custom"
+
+    def test_without_edge_features_dict(self):
+        """Test inference without edge feature display names (None)."""
+        importable_props = ["iou", "distance", "custom"]
+
+        mapping = infer_edge_name_map(importable_props, available_computed_features=None)
+
+        # Without feature dict, everything maps to itself
+        assert mapping["iou"] == "iou"
+        assert mapping["distance"] == "distance"
+        assert mapping["custom"] == "custom"
+
+    def test_case_insensitive_matching(self):
+        """Test that matching is case-insensitive."""
+        importable_props = ["IOU", "Distance"]
+        available_computed_features = {
+            "iou": {"feature_type": "edge", "display_name": "IOU"},
+            "distance": {"feature_type": "edge", "display_name": "Distance"},
+        }
+
+        mapping = infer_edge_name_map(importable_props, available_computed_features)
+
+        # Should fuzzy match despite case differences
+        assert mapping["iou"] == "IOU"
+        assert mapping["distance"] == "Distance"

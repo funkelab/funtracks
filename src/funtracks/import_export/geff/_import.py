@@ -146,7 +146,7 @@ class GeffTracksBuilder(TracksBuilder):
 
         # Load GEFF data with renamed properties (returns InMemoryGeff with standard keys)
         self.in_memory_geff, self.position_attr, self.ndim = import_graph_from_geff(
-            source_path, extended_name_map
+            source_path, extended_name_map, edge_name_map=self.edge_name_map
         )
 
 
@@ -156,15 +156,68 @@ def import_from_geff(
     segmentation_path: Path | None = None,
     scale: list[float] | None = None,
     node_features: dict[str, bool] | None = None,
+    edge_features: dict[str, bool] | None = None,
+    extra_features: dict[str, bool] | None = None,
     edge_name_map: dict[str, str] | None = None,
+    edge_prop_filter: list[str] | None = None,
 ) -> SolutionTracks:
+    """Import tracks from GEFF format.
+
+    Args:
+        directory: Path to GEFF zarr store
+        name_map: Maps standard keys to GEFF property names
+        segmentation_path: Optional path to segmentation data
+        scale: Optional spatial scale
+        node_features: Optional node features to enable/load
+        edge_features: Optional edge features to enable/load
+        extra_features: (Deprecated) Use node_features instead. Kept for
+            backward compatibility.
+        edge_name_map: Optional mapping for edge property names
+        edge_prop_filter: (Deprecated) Use edge_name_map instead. Kept for
+            backward compatibility.
+
+    Returns:
+        SolutionTracks object
+
+    Raises:
+        ValueError: If both node_features and extra_features are provided
+    """
+    # Handle backward compatibility: extra_features -> node_features
+    if extra_features is not None and node_features is not None:
+        raise ValueError(
+            "Cannot specify both 'node_features' and 'extra_features'. "
+            "Please use 'node_features' (extra_features is deprecated)."
+        )
+    if extra_features is not None:
+        node_features = extra_features
+
+    # Handle backward compatibility: edge_prop_filter -> edge_name_map
+    # edge_prop_filter was a list of property names to load
+    # edge_name_map is a dict mapping standard keys to GEFF property names
+    # If edge_prop_filter is provided, convert it to edge_name_map format
+    if edge_prop_filter is not None and edge_name_map is None:
+        # Map each property to itself (no renaming, just filtering)
+        edge_name_map = {prop: prop for prop in edge_prop_filter}
+
+    # Filter out None values and "None" strings from name_map
+    # (e.g., {"lineage_id": None} or {"lineage_id": "None"})
+    if name_map is not None:
+        name_map = {k: v for k, v in name_map.items() if v is not None and v != "None"}
+
+    # Filter edge_name_map as well
+    if edge_name_map is not None:
+        edge_name_map = {
+            k: v for k, v in edge_name_map.items() if v is not None and v != "None"
+        }
+
     builder = GeffTracksBuilder()
     builder.prepare(directory)
-    if name_map is None and edge_name_map is not None:
-        name_map = edge_name_map
-    elif name_map is not None and edge_name_map is not None:
-        name_map.update(edge_name_map)
     builder.name_map = name_map
+    builder.edge_name_map = edge_name_map
     return builder.build(
-        directory, segmentation_path, scale=scale, node_features=node_features
+        directory,
+        segmentation_path,
+        scale=scale,
+        node_features=node_features,
+        edge_features=edge_features,
     )

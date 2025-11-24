@@ -212,14 +212,14 @@ def _test_valid(
     return value == seg_id
 
 
-def validate_name_map(
+def _validate_node_name_map(
     name_map: dict[str, str],
     importable_node_props: list[str],
     required_features: list[str],
     position_attr: list[str],
     ndim: int,
 ) -> None:
-    """Validate that name_map contains all required mappings.
+    """Validate node name_map contains all required mappings.
 
     Checks:
     - No None values in required mappings
@@ -293,6 +293,115 @@ def validate_name_map(
                 f"{invalid_mappings}. "
                 f"Importable node properties: {importable_node_props}"
             )
+
+
+def _validate_edge_name_map(
+    edge_name_map: dict[str, str],
+    importable_edge_props: list[str],
+) -> None:
+    """Validate edge name_map mappings exist in source.
+
+    Checks:
+    - All mapped edge properties exist in importable_edge_props
+
+    Args:
+        edge_name_map: Mapping from standard keys to edge property names
+        importable_edge_props: List of edge property names available in the source
+
+    Raises:
+        ValueError: If validation fails
+    """
+    if not importable_edge_props:
+        return
+
+    invalid_mappings = []
+    for std_key, source_prop in edge_name_map.items():
+        if source_prop not in importable_edge_props:
+            invalid_mappings.append(f"{std_key} -> '{source_prop}'")
+
+    if invalid_mappings:
+        raise ValueError(
+            f"edge_name_map contains mappings to non-existent properties: "
+            f"{invalid_mappings}. "
+            f"Importable edge properties: {importable_edge_props}"
+        )
+
+
+def _validate_feature_key_collisions(
+    name_map: dict[str, str],
+    edge_name_map: dict[str, str] | None,
+) -> None:
+    """Validate that node and edge feature keys don't overlap.
+
+    Feature keys must be unique across both node and edge features because
+    they share the same namespace in FeatureDict.
+
+    Args:
+        name_map: Mapping from standard keys to node property names
+        edge_name_map: Optional mapping from standard keys to edge property names
+
+    Raises:
+        ValueError: If any keys appear in both name_map and edge_name_map
+    """
+    if edge_name_map is None:
+        return
+
+    # Get the standard keys (not the source property names) from both maps
+    node_keys = set(name_map.keys())
+    edge_keys = set(edge_name_map.keys())
+
+    # Find overlapping keys
+    colliding_keys = node_keys & edge_keys
+
+    if colliding_keys:
+        raise ValueError(
+            f"Feature keys cannot be shared between nodes and edges. "
+            f"Colliding keys: {sorted(colliding_keys)}. "
+            f"Please use unique keys for node and edge features."
+        )
+
+
+def validate_name_map(
+    name_map: dict[str, str],
+    importable_node_props: list[str],
+    required_features: list[str],
+    position_attr: list[str],
+    ndim: int,
+    edge_name_map: dict[str, str] | None = None,
+    importable_edge_props: list[str] | None = None,
+) -> None:
+    """Validate that name_map and edge_name_map contain valid mappings.
+
+    Orchestrates validation by calling:
+    1. _validate_node_name_map() - validates node mappings
+    2. _validate_edge_name_map() - validates edge mappings (if provided)
+    3. _validate_feature_key_collisions() - checks for key conflicts
+
+    Args:
+        name_map: Mapping from standard keys to source property names
+        importable_node_props: List of property names available in the source
+        required_features: List of required feature names (e.g., ["time"])
+        position_attr: List of position attributes (e.g., ["z", "y", "x"])
+        ndim: Number of dimensions (3 for 2D+time, 4 for 3D+time)
+        edge_name_map: Optional mapping from standard keys to edge property names
+        importable_edge_props: Optional list of edge property names available
+
+    Raises:
+        ValueError: If validation fails
+    """
+    # Validate node name_map
+    _validate_node_name_map(
+        name_map, importable_node_props, required_features, position_attr, ndim
+    )
+
+    # Validate edge name_map if provided
+    if edge_name_map is not None:
+        if importable_edge_props is None:
+            importable_edge_props = []
+        _validate_edge_name_map(edge_name_map, importable_edge_props)
+
+    # Check for feature key collisions between nodes and edges
+    _validate_feature_key_collisions(name_map, edge_name_map)
 
 
 def validate_in_memory_geff(in_memory_geff: InMemoryGeff) -> None:

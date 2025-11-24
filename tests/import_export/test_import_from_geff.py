@@ -462,7 +462,7 @@ def test_node_features_unknown(valid_geff, valid_segmentation, tmp_path):
 
     with pytest.raises(
         KeyError,
-        match="Features not available",
+        match="Node features not available",
     ):
         import_from_geff(
             store,
@@ -486,7 +486,7 @@ def test_compute_features_without_segmentation(valid_geff):
 
     with pytest.raises(
         KeyError,
-        match="Features not available",
+        match="Node features not available",
     ):
         import_from_geff(
             store,
