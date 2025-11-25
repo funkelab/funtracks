@@ -62,166 +62,109 @@ graph LR
 ## Process Steps
 
 ### Preparation Phase
-**Read metadata and infer mappings**:
 
 #### `read_header(source_path)` <span class="badge badge-gold">Format-specific</span>
 
-- Populates `self.importable_node_props` and `self.importable_edge_props` from format metadata
+Reads metadata/headers from source without loading data. Implemented differently for each format (CSV reads column names, GEFF reads zarr metadata).
+
+??? "Show API documentation"
+
+    ::: funtracks.import_export._tracks_builder.TracksBuilder.read_header
+        options:
+          heading_level: 5
+          show_root_heading: false
 
 #### `infer_name_map()` <span class="badge badge-purple">Common</span>
 
-- Automatically maps importable node and edge properties to default keys
-- **Matching priority**:
-    1. Exact matches to standard keys (e.g., "time" → "time")
-    2. Fuzzy matches to standard keys (40% similarity, e.g., "t" → "time")
-    3. Exact matches to feature display names (e.g., "Area" → "area")
-    4. Fuzzy matches to feature display names (e.g., "Circ" → "circularity")
-    5. Remaining properties map to themselves (custom properties)
-- **Best-effort matching**: Does not validate completeness - use `validate_name_map()` to ensure all required fields are present
+??? "Show API documentation"
 
-#### `prepare(source_path)`
-- **Convenience method** that combines:
-  1. `read_header(source_path)`
-  2. `self.name_map = infer_name_map()`
-- Allows user to inspect/modify `self.name_map` before building
+    ::: funtracks.import_export._tracks_builder.TracksBuilder.infer_name_map
+        options:
+          heading_level: 5
+          show_root_heading: false
+
+#### `prepare(source_path)` <span class="badge badge-purple">Common</span>
+
+??? "Show API documentation"
+
+    ::: funtracks.import_export._tracks_builder.TracksBuilder.prepare
+        options:
+          heading_level: 5
+          show_root_heading: false
 
 ### Build Phase
-**Validate, load, construct, and assemble tracks**:
 
 #### `validate_name_map()` <span class="badge badge-purple">Common</span>
 
-- Validates that `self.name_map` contains:
-  - All `required_features` (e.g., ["time"] for base, ["time", "id", "parent_id"] for CSV)
-  - All `position_attr` based on `ndim` (["y", "x"] for 3D, ["z", "y", "x"] for 4D)
-- Validates all mapped properties in self.name_map and self.edge_name_map exist in importable properties
-- Raises `ValueError` with helpful message if validation fails
+??? "Show API documentation"
+
+    ::: funtracks.import_export._tracks_builder.TracksBuilder.validate_name_map
+        options:
+          heading_level: 5
+          show_root_heading: false
 
 #### `load_source(source_path, name_map, node_features)` <span class="badge badge-gold">Format-specific</span>
 
-- Reads data from source using the validated `name_map` and turns into an InMemoryGeff
-- All properties now use **standard keys**
+Loads data from source file and converts to InMemoryGeff format. Implemented differently for each format.
+
+??? "Show API documentation"
+
+    ::: funtracks.import_export._tracks_builder.TracksBuilder.load_source
+        options:
+          heading_level: 5
+          show_root_heading: false
 
 #### `validate()` <span class="badge badge-purple">Common</span>
 
-- Validates graph structure (required - raises on failure):
-- Validates optional properties (warns and removes if invalid):
-  - `validate_tracklets`: track_id must form valid tracklets
-  - `validate_lineages`: lineage_id must form valid lineages
+??? "Show API documentation"
+
+    ::: funtracks.import_export._tracks_builder.TracksBuilder.validate
+        options:
+          heading_level: 5
+          show_root_heading: false
 
 #### `construct_graph()` <span class="badge badge-purple">Common</span>
 
-- Constructs NetworkX DiGraph from validated InMemoryGeff using `geff.construct()`
+??? "Show API documentation"
+
+    ::: funtracks.import_export._tracks_builder.TracksBuilder.construct_graph
+        options:
+          heading_level: 5
+          show_root_heading: false
 
 #### `handle_segmentation(segmentation_path, scale)` <span class="badge badge-purple">Common</span>
 
-- Lazy loads segmentation using `magic_imread(use_dask=True)`
-- Validates segmentation dimensions match graph `ndim`
-- **Relabeling logic**:
-  - If no `seg_id` property: use segmentation as-is (assumes seg labels = node IDs)
-  - If `seg_id == node_id` for all nodes: use segmentation as-is
-  - Otherwise: relabel segmentation from seg_id → node_id per time point
-- Returns processed segmentation array (or None)
+??? "Show API documentation"
+
+    ::: funtracks.import_export._tracks_builder.TracksBuilder.handle_segmentation
+        options:
+          heading_level: 5
+          show_root_heading: false
 
 #### `enable_features(tracks, node_features)` <span class="badge badge-purple">Common</span>
 
-- Validates requested features exist (in annotators or node_props)
-- Enables annotator features with appropriate `recompute` flag:
-  - `recompute=True`: Compute using annotator
-  - `recompute=False`: Use existing values from graph
-- Registers static features (not in annotators) with inferred dtypes
+??? "Show API documentation"
 
-## Usage Examples
+    ::: funtracks.import_export._tracks_builder.TracksBuilder.enable_features
+        options:
+          heading_level: 5
+          show_root_heading: false
 
-### Using prepare() for automatic inference
+#### `build(source, segmentation, ...)` <span class="badge badge-purple">Common</span>
 
-```python
-# Create builder
-builder = CSVTracksBuilder()
+??? "Show API documentation"
 
-# Read headers and auto-infer mappings
-builder.prepare("data.csv")
+    ::: funtracks.import_export._tracks_builder.TracksBuilder.build
+        options:
+          heading_level: 5
+          show_root_heading: false
 
-# Optionally inspect/modify inferred mappings
-print(builder.name_map)
-builder.name_map["circularity"] = "circ"  # Custom override
+## Format-Specific Builders
 
-# Build tracks
-tracks = builder.build(
-    source_path="data.csv",
-    segmentation_path="seg.tif",
-    scale=[1.0, 1.0, 1.0],
-    node_features={"area": True, "custom_feature": False}
-)
-```
-
-### Manual name_map specification
-
-```python
-# Create builder
-builder = CSVTracksBuilder()
-
-# Manually set name_map
-builder.name_map = {
-    "time": "t",
-    "x": "x",
-    "y": "y",
-    "id": "id",
-    "parent_id": "parent_id",
-    "area": "Area"
-}
-
-# Read headers for validation
-builder.read_header("data.csv")
-
-# Build tracks (validates name_map automatically)
-tracks = builder.build("data.csv")
-```
-
-## Format-Specific Differences
-
-### CSV Builder
-- **Required features**: `["time", "id", "parent_id"]`
-  - Graph structure stored in columns
-- **read_header()**: Simple CSV column reading
-- **load_source()**: DataFrame → InMemoryGeff conversion
-  - Builds position from separate x, y, z columns
-  - Extracts edges from parent_id column
-  - Creates GeffMetadata with property metadata
-
-### GEFF Builder
-- **Required features**: `["time"]` only
-  - Graph structure stored in separate arrays
-- **read_header()**: Read zarr property names using `GeffMetadata.read()`
-- **load_source()**: Direct InMemoryGeff loading
-  - Uses existing `import_graph_from_geff()`
-  - Metadata already present
-
-## Submodule Organization
-
-The import/export functionality is organized into format-specific submodules:
-
-```
-funtracks/import_export/
-├── __init__.py              # Public API exports
-├── _tracks_builder.py       # Abstract base builder class
-├── _name_mapping.py         # Name inference helpers
-├── _validation.py           # Validation functions
-├── csv/
-│   ├── _import.py          # CSVTracksBuilder + tracks_from_df()
-│   └── _export.py          # export_to_csv()
-├── geff/
-│   ├── _import.py          # GeffTracksBuilder + import_from_geff()
-│   └── _export.py          # export_to_geff()
-├── import_from_geff.py      # Deprecated shim (backward compat)
-└── export_to_geff.py        # Deprecated shim (backward compat)
-```
-
-**Public API** (exported from `funtracks.import_export`):
-
-- `tracks_from_df()` - Import tracks from pandas DataFrame
-- `import_from_geff()` - Wrapper around `GeffTracksBuilder`
-- `export_to_csv()` - Export tracks to CSV format
-- `export_to_geff()` - Export tracks to GEFF format
+| Builder | Required Properties | Edge Properties | API Reference |
+|---------|-------------------|-----------------|---------------|
+| **CSVTracksBuilder** | `time`, `id`, `parent_id`, `[z]`, `y`, `x` | No | [API](../reference/funtracks/import_export/csv/#funtracks.import_export.csv.CSVTracksBuilder) |
+| **GeffTracksBuilder** | `time`, `[z]`, `y`, `x` | Yes | [API](../reference/funtracks/import_export/geff/#funtracks.import_export.geff.GeffTracksBuilder) |
 
 ## Usage: Wrapper Functions vs Builder Pattern
 
