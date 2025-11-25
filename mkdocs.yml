@@ -4,6 +4,8 @@ site_url: https://funkelab.github.io/funtracks/
 
 theme:
   name: "material"
+  logo: assets/logo.svg
+  favicon: assets/logo.svg
   palette:
     scheme: slate
     primary: purple
@@ -11,6 +13,9 @@ theme:
   features:
     - navigation.indexes
     - content.code.copy
+
+extra_css:
+  - stylesheets/extra.css
 
 extra_javascript:
   - https://unpkg.com/mermaid@10/dist/mermaid.min.js

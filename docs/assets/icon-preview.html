@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Funtracks Icon Preview</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      padding: 40px;
+      margin: 0;
+    }
+    h1 {
+      color: #333;
+    }
+    .comparison {
+      display: flex;
+      gap: 40px;
+      margin-top: 20px;
+    }
+    .bg-white {
+      background: #ffffff;
+      padding: 30px;
+      border: 1px solid #ccc;
+    }
+    .bg-dark {
+      background: #2d2d2d;
+      padding: 30px;
+    }
+    .label {
+      font-size: 14px;
+      margin-bottom: 10px;
+      color: inherit;
+    }
+    .bg-dark .label {
+      color: #fff;
+    }
+    .logos {
+      display: flex;
+      gap: 20px;
+    }
+    .logo-item {
+      text-align: center;
+    }
+    .logo-label {
+      font-size: 12px;
+      margin-top: 8px;
+      color: #888;
+    }
+  </style>
+</head>
+<body>
+  <h1>Funtracks Logo Preview</h1>
+
+  <div class="comparison">
+    <div class="bg-white">
+      <div class="label">White background</div>
+      <div class="logos">
+        <div class="logo-item">
+          <img src="logo.svg" width="128" height="128">
+          <div class="logo-label">logo.svg (dark purple)</div>
+        </div>
+        <div class="logo-item">
+          <img src="logo-dark.svg" width="128" height="128">
+          <div class="logo-label">logo-dark.svg (mid purple)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-dark">
+      <div class="label">Dark background</div>
+      <div class="logos">
+        <div class="logo-item">
+          <img src="logo.svg" width="128" height="128">
+          <div class="logo-label" style="color: #888;">logo.svg (dark purple)</div>
+        </div>
+        <div class="logo-item">
+          <img src="logo-dark.svg" width="128" height="128">
+          <div class="logo-label" style="color: #888;">logo-dark.svg (mid purple)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
