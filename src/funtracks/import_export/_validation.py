@@ -4,8 +4,6 @@ from typing import TYPE_CHECKING
 from warnings import warn
 
 import networkx as nx
-import numpy as np
-import pandas as pd
 from geff._typing import InMemoryGeff
 from geff.validate.graph import (
     validate_no_repeated_edges,
@@ -15,8 +13,6 @@ from geff.validate.graph import (
 )
 from geff.validate.segmentation import has_seg_ids_at_coords
 from geff.validate.tracks import validate_lineages, validate_tracklets
-
-from funtracks.data_model.graph_attributes import NodeAttr
 
 if TYPE_CHECKING:
     import dask.array as da
@@ -91,125 +87,6 @@ def validate_graph_seg_match(
 
     # Return True if relabeling is needed (seg_id != node_id)
     return last_node_id != seg_id
-
-
-def ensure_integer_ids(df: pd.DataFrame) -> pd.DataFrame:
-    """Ensure that the 'id' column in the dataframe contains integer values
-
-    Args:
-        df (pd.DataFrame): A pandas dataframe with a columns named "id" and "parent_id"
-
-    Returns:
-        pd.DataFrame: The same dataframe with the ids remapped to be unique integers.
-            Parent id column is also remapped.
-    """
-    if not pd.api.types.is_integer_dtype(df["id"]):
-        unique_ids = df["id"].unique()
-        id_mapping = {
-            original_id: new_id for new_id, original_id in enumerate(unique_ids, start=1)
-        }
-        df["id"] = df["id"].map(id_mapping)
-        df["parent_id"] = df["parent_id"].map(id_mapping).astype(pd.Int64Dtype())
-
-    return df
-
-
-def ensure_correct_labels(df: pd.DataFrame, segmentation: np.ndarray) -> np.ndarray:
-    """Create a new segmentation where the values from the column df['seg_id'] are
-    replaced by those in df['id']
-
-    Args:
-        df (pd.DataFrame): A pandas dataframe with columns "seg_id" and "id" where
-            the "id" column contains unique integers
-        segmentation (np.ndarray): A numpy array where segmentation label values
-            are recorded in the "seg_id" column of the dataframe
-
-    Returns:
-        np.ndarray: A numpy array similar to the input segmentation of dtype uint64
-            where each segmentation now has a unique label across time that corresponds
-            to the ID of each node
-    """
-
-    # Create a new segmentation image
-    new_segmentation = np.zeros_like(segmentation).astype(np.uint64)
-
-    # Loop through each time point
-    for t in df[NodeAttr.TIME.value].unique():
-        # Filter the dataframe for the current time point
-        df_t = df[df[NodeAttr.TIME.value] == t]
-
-        # Create a mapping from seg_id to id for the current time point
-        seg_id_to_id = dict(zip(df_t["seg_id"], df_t["id"], strict=True))
-
-        # Apply the mapping to the segmentation image for the current time point
-        for seg_id, new_id in seg_id_to_id.items():
-            new_segmentation[t][segmentation[t] == seg_id] = new_id
-
-    return new_segmentation
-
-
-def _test_valid(
-    df: pd.DataFrame, segmentation: np.ndarray, scale: list[float] | None
-) -> bool:
-    """Test if the provided segmentation, dataframe, and scale values are valid together.
-    Tests the following requirements:
-      - The scale, if provided, has same dimensions as the segmentation
-      - The location coordinates have the same dimensions as the segmentation
-      - The segmentation pixel value for the coordinates of first node corresponds
-    with the provided seg_id as a basic sanity check that the csv file matches with the
-    segmentation file
-
-    Args:
-        df (pd.DataFrame): the pandas dataframe to turn into tracks, with standardized
-            column names
-        segmentation (np.ndarray): The segmentation, a 3D or 4D array of integer labels
-        scale (list[float] | None): A list of floats representing the relationship between
-            the point coordinates and the pixels in the segmentation
-
-    Returns:
-        bool: True if the combination of segmentation, dataframe, and scale
-            pass all validity tests and can likely be loaded, and False otherwise
-    """
-    if scale is not None:
-        if segmentation.ndim != len(scale):
-            warn(
-                f"Dimensions of the segmentation image ({segmentation.ndim}) "
-                f"do not match the number of scale values given ({len(scale)})",
-                stacklevel=2,
-            )
-            return False
-    else:
-        scale = [
-            1,
-        ] * segmentation.ndim
-
-    row = df.iloc[0]
-    pos = (
-        [row[NodeAttr.TIME.value], row["z"], row["y"], row["x"]]
-        if "z" in df.columns
-        else [row[NodeAttr.TIME.value], row["y"], row["x"]]
-    )
-
-    if segmentation.ndim != len(pos):
-        warn(
-            f"Dimensions of the segmentation ({segmentation.ndim}) do not match the "
-            f"number of positional dimensions ({len(pos)})",
-            stacklevel=2,
-        )
-        return False
-
-    seg_id = row["seg_id"]
-    coordinates = [
-        int(coord / scale_value) for coord, scale_value in zip(pos, scale, strict=True)
-    ]
-
-    try:
-        value = segmentation[tuple(coordinates)]
-    except IndexError:
-        warn(f"Could not get the segmentation value at index {coordinates}", stacklevel=2)
-        return False
-
-    return value == seg_id
 
 
 def _validate_node_name_map(
