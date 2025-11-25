@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import networkx as nx
 import numpy as np
 
 if TYPE_CHECKING:
@@ -65,3 +66,23 @@ def _infer_dtype_from_array(arr: ArrayLike) -> ValueType:
         return "bool"
     else:
         return "str"
+
+
+def filter_graph_with_ancestors(graph: nx.DiGraph, nodes_to_keep: set[int]) -> list[int]:
+    """Filter a graph to keep only the nodes in `nodes_to_keep` and their ancestors.
+
+    Args:
+        graph: The original directed graph.
+        nodes_to_keep: The set of nodes to keep in the graph.
+
+    Returns:
+        A subset of the original nodes in the graph containing only the nodes
+        in `nodes_to_keep` and their ancestors.
+    """
+    all_nodes_to_keep = set(nodes_to_keep)
+
+    for node in nodes_to_keep:
+        ancestors = nx.ancestors(graph, node)
+        all_nodes_to_keep.update(ancestors)
+
+    return list(all_nodes_to_keep)

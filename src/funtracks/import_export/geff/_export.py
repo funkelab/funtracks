@@ -13,7 +13,7 @@ import numpy as np
 import zarr
 from geff_spec import GeffMetadata
 
-from ..export_utils import filter_graph_with_ancestors
+from .._utils import filter_graph_with_ancestors
 
 if TYPE_CHECKING:
     from pathlib import Path

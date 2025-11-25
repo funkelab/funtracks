@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 
-from ..export_utils import filter_graph_with_ancestors
+from .._utils import filter_graph_with_ancestors
 
 if TYPE_CHECKING:
     from funtracks.data_model.solution_tracks import SolutionTracks
