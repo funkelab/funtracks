@@ -4,7 +4,7 @@ This document describes the process of importing tracking data from various form
 
 ## Builder Pattern Overview
 
-The new builder pattern provides a unified interface for importing tracks from different formats while sharing common validation and construction logic.
+The builder pattern provides a unified interface for importing tracks from different formats while sharing common validation and construction logic.
 
 ```mermaid
 graph TD

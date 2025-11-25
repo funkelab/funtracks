@@ -22,7 +22,9 @@ extra:
 
 nav:
   - Home: index.md
-  - Architecture: architecture.md
+  - Architecture:
+    - Features: features.md
+    - Import: import-flow.md
   - API Reference: reference/
 
 markdown_extensions:
