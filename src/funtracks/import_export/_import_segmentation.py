@@ -1,5 +1,12 @@
+"""Segmentation import and relabeling utilities.
+
+This module provides functions for loading segmentation data and relabeling
+segmentation masks to match graph node IDs.
+"""
+
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import dask.array as da
@@ -9,85 +16,78 @@ import numpy as np
 from funtracks.import_export.magic_imread import magic_imread
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from numpy.typing import ArrayLike
 
-# Constants from import_from_geff
-SEG_KEY = "seg_id"
+
+def load_segmentation(segmentation: Path | np.ndarray) -> da.Array:
+    """Load segmentation from path or wrap array in dask.
+
+    Args:
+        segmentation: Path to segmentation file or numpy array
+
+    Returns:
+        Dask array containing segmentation data
+    """
+    if isinstance(segmentation, Path):
+        return magic_imread(segmentation, use_dask=True)
+    else:
+        # Wrap in dask array for consistency
+        return da.from_array(segmentation, chunks=segmentation.shape)
 
 
-def lazy_load_segmentation(segmentation_path: Path) -> da.Array:
-    """Lazily load segmentation from disk without reading into memory."""
-    return magic_imread(segmentation_path, use_dask=True)
-
-
-def import_segmentation(
-    segmentation_path: Path,
+def relabel_segmentation(
+    seg_array: da.Array | np.ndarray,
     graph: nx.DiGraph,
-    relabel: bool = False,
-) -> da.Array | np.ndarray:
-    """Load segmentation data from file and optionally relabel.
-
-    Args:
-        segmentation_path: Path to segmentation data
-        graph: NetworkX graph with standard keys
-        relabel: If True, relabel segmentation from seg_id to node_id
-
-    Returns:
-        Segmentation array, possibly relabeled to match node IDs
-    """
-    segmentation = magic_imread(segmentation_path, use_dask=True)
-
-    # If the provided segmentation has seg ids that are not identical to node ids,
-    # relabel it now.
-    if relabel:
-        # Extract data from graph (which has standard keys)
-        times = []
-        ids = []
-        seg_ids = []
-
-        for node_id, data in graph.nodes(data=True):
-            times.append(data["time"])
-            ids.append(node_id)
-            seg_ids.append(data[SEG_KEY])
-
-        times = np.array(times)
-        ids = np.array(ids)
-        seg_ids = np.array(seg_ids)
-
-        if not len(times) == len(ids) == len(seg_ids):
-            raise ValueError(
-                "Encountered missing values in the seg_id to node id conversion."
-            )
-        segmentation = relabel_seg_id_to_node_id(times, ids, seg_ids, segmentation)
-
-    return segmentation
-
-
-def relabel_seg_id_to_node_id(
-    times: ArrayLike, ids: ArrayLike, seg_ids: ArrayLike, segmentation: da.Array
+    node_ids: ArrayLike,
+    seg_ids: ArrayLike,
+    time_values: ArrayLike,
 ) -> np.ndarray:
-    """Create a new segmentation where masks are relabeled to match node ids.
+    """Relabel segmentation from seg_id to node_id.
 
-    TODO: How does this relate to motile_toolbox.ensure_unique_labels? Just lazy/dask?
+    Handles the case where node_id 0 exists by offsetting all node IDs by 1,
+    since 0 is reserved for background in segmentation arrays.
 
     Args:
-        times (ArrayLike): array of time points, one per node
-        ids (ArrayLike): array of node ids
-        seg_ids (ArrayLike): array of segmentation ids, one per node
-        segmentation (da.array): A dask array where segmentation label values match the
-          "seg_id" values.
+        seg_array: Segmentation array (dask or numpy)
+        graph: NetworkX graph (modified in-place if node_id 0 exists)
+        node_ids: Array of node IDs
+        seg_ids: Array of segmentation IDs corresponding to each node
+        time_values: Array of time values for each node
 
     Returns:
-        np.ndarray: A numpy array of dtype uint64, similar to the input segmentation
-            where each segmentation now has a unique label across time that corresponds
-            to the ID of each node.
+        Relabeled segmentation as numpy array with dtype uint64
     """
+    # Convert to numpy arrays for processing
+    node_ids = np.asarray(node_ids)
+    seg_ids = np.asarray(seg_ids)
+    time_values = np.asarray(time_values)
 
-    new_segmentation = np.zeros(segmentation.shape, dtype=np.uint64)
-    for i, node in enumerate(ids):
-        mask = segmentation[times[i]].compute() == seg_ids[i]
-        new_segmentation[times[i], mask] = node
+    # Compute segmentation if it's a dask array
+    computed_seg = seg_array.compute() if isinstance(seg_array, da.Array) else seg_array
+
+    # If node_id 0 exists, we need to offset all labels by 1 since 0 is background
+    # in segmentation arrays. We also need to relabel the graph nodes.
+    offset = 1 if 0 in node_ids else 0
+    if offset:
+        mapping = {old_id: old_id + offset for old_id in graph.nodes()}
+        nx.relabel_nodes(graph, mapping, copy=False)
+        # Update node_ids array to match
+        node_ids = node_ids + offset
+
+    # Relabel segmentation: seg_id -> node_id (with offset if needed)
+    new_segmentation = np.zeros_like(computed_seg).astype(np.uint64)
+
+    for t in np.unique(time_values):
+        # Get nodes at this time point
+        mask = time_values == t
+        seg_ids_t = seg_ids[mask]
+        node_ids_t = node_ids[mask]
+
+        # Create mapping: seg_id -> node_id
+        seg_to_node = dict(zip(seg_ids_t, node_ids_t, strict=True))
+
+        # Apply mapping to segmentation at this time point
+        for seg_id, node_id in seg_to_node.items():
+            new_segmentation[t][computed_seg[t] == seg_id] = node_id
 
     return new_segmentation

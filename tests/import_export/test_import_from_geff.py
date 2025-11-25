@@ -300,7 +300,8 @@ def test_tracks_with_segmentation(valid_geff, invalid_geff, valid_segmentation, 
     )
     assert hasattr(tracks, "segmentation")
     assert tracks.segmentation.shape == valid_segmentation.shape
-    last_node = list(tracks.graph.nodes)[-1]
+    # Get last node by ID (don't rely on iteration order)
+    last_node = max(tracks.graph.nodes())
     coords = [
         tracks.graph.nodes[last_node]["time"],
         tracks.graph.nodes[last_node]["y"],
@@ -315,7 +316,7 @@ def test_tracks_with_segmentation(valid_geff, invalid_geff, valid_segmentation, 
     )  # test that the seg id has been relabeled
 
     # Check that only required/requested features are present, and that area is recomputed
-    _, data = list(tracks.graph.nodes(data=True))[-1]
+    data = tracks.graph.nodes[last_node]
     assert "random_feature" in data
     assert "random_feature2" not in data
     assert "area" in data
@@ -336,7 +337,9 @@ def test_tracks_with_segmentation(valid_geff, invalid_geff, valid_segmentation, 
         scale=scale,
         node_features=node_features,
     )
-    _, data = list(tracks.graph.nodes(data=True))[-1]
+    # Get last node by ID (don't rely on iteration order)
+    last_node = max(tracks.graph.nodes())
+    data = tracks.graph.nodes[last_node]
     assert "area" in data
     assert data["area"] == 21
 
@@ -431,7 +434,9 @@ def test_node_features_compute_vs_load(valid_geff, valid_segmentation, tmp_path)
     for key in feature_keys:
         assert key in tracks.features
 
-    _, data = list(tracks.graph.nodes(data=True))[-1]
+    # Get last node by ID (don't rely on iteration order)
+    max_node_id = max(tracks.graph.nodes())
+    data = tracks.graph.nodes[max_node_id]
 
     # All requested features should be present
     for key in feature_keys:

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, cast
+from typing import TYPE_CHECKING, Literal
 
 import geff
 import networkx as nx
@@ -22,6 +22,10 @@ if TYPE_CHECKING:
 from funtracks.data_model.graph_attributes import NodeAttr
 from funtracks.data_model.solution_tracks import SolutionTracks
 from funtracks.features import Feature
+from funtracks.import_export._import_segmentation import (
+    load_segmentation,
+    relabel_segmentation,
+)
 from funtracks.import_export._name_mapping import infer_edge_name_map, infer_name_map
 from funtracks.import_export._utils import (
     _infer_dtype_from_array,
@@ -31,7 +35,6 @@ from funtracks.import_export._validation import (
     validate_in_memory_geff,
     validate_name_map,
 )
-from funtracks.import_export.magic_imread import magic_imread
 
 # defining constants here because they are only used in the context of import
 TRACK_KEY = "track_id"
@@ -247,14 +250,8 @@ class TracksBuilder(ABC):
         if self.in_memory_geff is None:
             raise ValueError("No data loaded. Call load_source() first.")
 
-        # Load segmentation if it's a Path, otherwise use the provided array
-        if isinstance(segmentation, Path):
-            seg_array = cast(np.ndarray, magic_imread(segmentation, use_dask=True))
-        else:
-            # Wrap in dask array for consistency
-            import dask.array as da
-
-            seg_array = da.from_array(segmentation, chunks=segmentation.shape)
+        # Load segmentation from path or wrap array
+        seg_array = load_segmentation(segmentation)
 
         # Validate dimensions match graph
         if seg_array.ndim != self.ndim:
@@ -286,25 +283,11 @@ class TracksBuilder(ABC):
             # No relabeling needed
             return seg_array.compute(), scale
 
-        # Compute segmentation before relabeling
-        computed_seg = seg_array.compute()
-
-        # Relabel segmentation: seg_id → node_id
-        new_segmentation = np.zeros_like(computed_seg).astype(np.uint64)
+        # Relabel segmentation: seg_id -> node_id
         time_values = node_props[NodeAttr.TIME.value]["values"]
-
-        for t in np.unique(time_values):
-            # Get nodes at this time point
-            mask = time_values == t
-            seg_ids_t = seg_ids[mask]
-            node_ids_t = node_ids[mask]
-
-            # Create mapping: seg_id → node_id
-            seg_to_node = dict(zip(seg_ids_t, node_ids_t, strict=True))
-
-            # Apply mapping to segmentation at this time point
-            for seg_id, node_id in seg_to_node.items():
-                new_segmentation[t][computed_seg[t] == seg_id] = node_id
+        new_segmentation = relabel_segmentation(
+            seg_array, graph, node_ids, seg_ids, time_values
+        )
 
         return new_segmentation, scale
 
