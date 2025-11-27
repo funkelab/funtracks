@@ -19,6 +19,11 @@ if TYPE_CHECKING:
     from numpy.typing import ArrayLike
 
 
+def read_dims(segmentation: Path | np.ndarray):
+    arr = load_segmentation(segmentation)
+    return arr.ndim
+
+
 def load_segmentation(segmentation: Path | np.ndarray) -> da.Array:
     """Load segmentation from path or wrap array in dask.
 

@@ -160,7 +160,7 @@ def _map_remaining_to_self(remaining_props: list[str]) -> dict[str, str]:
 def build_standard_fields(
     required_features: list[str],
     position_attr: list[str],
-    ndim: int,
+    ndim: int | None,
 ) -> list[str]:
     """Build list of standard fields to match.
     # TODO: just use required fields and computed keys
@@ -174,10 +174,10 @@ def build_standard_fields(
     """
     standard_fields = required_features.copy()
     # Add position attributes based on ndim
-    required_pos_attrs = position_attr[-(ndim - 1) :]
-    standard_fields.extend(required_pos_attrs)
+    pos_attrs = position_attr[-(ndim - 1) :] if ndim is not None else position_attr
+    standard_fields.extend(pos_attrs)
     # Add optional standard fields
-    optional_standard = ["seg_id", "track_id", "lineage_id"]
+    optional_standard = ["seg_id"]
     standard_fields.extend(optional_standard)
     return standard_fields
 
@@ -206,7 +206,7 @@ def infer_name_map(
     importable_node_properties: list[str],
     required_features: list[str],
     position_attr: list[str],
-    ndim: int,
+    ndim: int | None,
     available_computed_features: dict,
 ) -> dict[str, str]:
     """Infer name_map by matching importable node properties to standard keys.

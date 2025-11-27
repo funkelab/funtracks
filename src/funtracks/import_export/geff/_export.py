@@ -62,8 +62,9 @@ def export_to_geff(
             raise ValueError(
                 f"Directory {directory} is not empty. Use overwrite=True to allow export."
             )
-        shutil.rmtree(directory)  # remove directory since overwriting in a non-empty zarr
-        # dir may trigger geff warnings.
+        # TODO: figure out geff overwrite issue
+        # Remove directory since overwriting non-empty zarr may trigger geff warnings
+        shutil.rmtree(directory)
 
     # Create dir
     directory.mkdir()
@@ -93,6 +94,8 @@ def export_to_geff(
     )
 
     # Save segmentation if present
+
+    # TODO: helper function in _export_segmentation file
     if tracks.segmentation is not None:
         seg_path = directory / "segmentation"
         seg_path.mkdir(exist_ok=True)
@@ -101,6 +104,7 @@ def export_to_geff(
         shape = seg_data.shape
         dtype = seg_data.dtype
 
+        # TODO: this probably isn't a good chunk size - time should be 1?
         chunk_size: tuple[int, ...] = (64, 64, 64)
         chunk_size = tuple(list(chunk_size) + [1] * (len(shape) - len(chunk_size)))
         chunk_size = chunk_size[: len(shape)]
@@ -162,6 +166,7 @@ def export_to_geff(
 
 
 def split_position_attr(tracks: Tracks) -> tuple[nx.DiGraph, list[str] | None]:
+    # TODO: this exists in unsqueeze in geff somehow?
     """Spread the spatial coordinates to separate node attrs in order to export to geff
     format.
 

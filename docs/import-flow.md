@@ -1,8 +1,8 @@
-# Tracks Import Process Flow
+# Importing Tracks
 
-This document describes the process of importing tracking data from various formats (GEFF, CSV) into funtracks using the Builder Pattern.
+This document describes the code architecture for importing tracking data from various formats into `funtracks` using the Builder Pattern.
 
-## Builder Pattern Overview
+## TracksBuilder Overview
 
 The builder pattern provides a unified interface for importing tracks from different formats while sharing common validation and construction logic.
 
@@ -42,6 +42,8 @@ graph LR
         direction TB
         L1[Format-specific]
         L2[Common]
+
+        L1 ~~~ L2
     end
 
     Build ~~~ Legend
@@ -64,8 +66,6 @@ graph LR
 ### Preparation Phase
 
 #### `read_header(source_path)` <span class="badge badge-gold">Format-specific</span>
-
-Reads metadata/headers from source without loading data. Implemented differently for each format (CSV reads column names, GEFF reads zarr metadata).
 
 ??? "Show API documentation"
 

@@ -18,18 +18,20 @@ from geff._typing import InMemoryGeff
 
 if TYPE_CHECKING:
     import pandas as pd
+    from numpy.typing import ArrayLike
 
 from funtracks.data_model.graph_attributes import NodeAttr
 from funtracks.data_model.solution_tracks import SolutionTracks
 from funtracks.features import Feature
 from funtracks.import_export._import_segmentation import (
     load_segmentation,
+    read_dims,
     relabel_segmentation,
 )
 from funtracks.import_export._name_mapping import infer_edge_name_map, infer_name_map
 from funtracks.import_export._utils import (
-    _infer_dtype_from_array,
     get_default_key_to_feature_mapping,
+    infer_dtype_from_array,
 )
 from funtracks.import_export._validation import (
     validate_in_memory_geff,
@@ -54,8 +56,10 @@ class TracksBuilder(ABC):
         """Initialize builder state."""
         # State transferred between steps
         self.in_memory_geff: InMemoryGeff | None = None
-        self.position_attr: list[str] = ["z", "y", "x"]
-        self.ndim: int = 3
+        self.axis_names: list[str] = ["z", "y", "x"]
+        self.ndim: int | None = None
+        # TODO: self.node_name_map instead of self.name_map
+        # TODO: how much of the node/edge stuff can we abstract?
         self.name_map: dict[str, str] = {}
         self.edge_name_map: dict[str, str] | None = None
         self.importable_node_props: list[str] = []
@@ -78,6 +82,7 @@ class TracksBuilder(ABC):
             source: Path to data source (zarr store, CSV file, etc.) or DataFrame
         """
 
+    # TODO: infer_node_name_map
     def infer_name_map(self) -> dict[str, str]:
         """Infer name_map by matching importable node properties to standard keys.
 
@@ -97,7 +102,7 @@ class TracksBuilder(ABC):
         return infer_name_map(
             self.importable_node_props,
             self.required_features,
-            self.position_attr,
+            self.axis_names,
             self.ndim,
             self.available_computed_features,
         )
@@ -124,6 +129,7 @@ class TracksBuilder(ABC):
             self.importable_edge_props, self.available_computed_features
         )
 
+    # TODO: validate_node_name_map, validate_edge_name_map?
     def validate_name_map(self) -> None:
         """Validate that name_map and edge_name_map contain valid mappings.
 
@@ -141,19 +147,25 @@ class TracksBuilder(ABC):
         - No feature key collisions between node and edge features
 
         Raises:
-            ValueError: If validation fails
+            ValueError: If validation fails or ndim is not set
         """
+        if self.ndim is None:
+            raise ValueError("ndim must be set before validating name_map")
         validate_name_map(
             self.name_map,
             self.importable_node_props,
             self.required_features,
-            self.position_attr,
+            self.axis_names,
             self.ndim,
             edge_name_map=self.edge_name_map,
             importable_edge_props=self.importable_edge_props,
         )
 
-    def prepare(self, source: Path | pd.DataFrame) -> None:
+    def prepare(
+        self,
+        source: Path | pd.DataFrame,
+        segmentation: Path | ArrayLike | None = None,
+    ) -> None:
         """Prepare for building by reading headers and inferring name maps.
 
         This method reads the data source headers/metadata and automatically
@@ -163,6 +175,7 @@ class TracksBuilder(ABC):
 
         Args:
             source: Path to data source or DataFrame
+            segmentation: Optional path to segmentation or array to infer ndim
 
         Example:
             >>> builder = CSVTracksBuilder()
@@ -173,6 +186,8 @@ class TracksBuilder(ABC):
             >>> tracks = builder.build("data.csv", segmentation_path="seg.tif")
         """
         self.read_header(source)
+        if segmentation is not None:
+            self.ndim = read_dims(segmentation)
         self.name_map = self.infer_name_map()
         self.edge_name_map = self.infer_edge_name_map()
 
@@ -267,7 +282,7 @@ class TracksBuilder(ABC):
         # Validate segmentation matches graph
         from funtracks.import_export._validation import validate_graph_seg_match
 
-        validate_graph_seg_match(graph, seg_array, scale, self.position_attr)
+        validate_graph_seg_match(graph, seg_array, scale, self.axis_names)
 
         # Check if relabeling is needed (seg_id != node_id)
         node_props = self.in_memory_geff["node_props"]
@@ -359,7 +374,7 @@ class TracksBuilder(ABC):
             static_features[key] = Feature(
                 display_name=key,
                 feature_type=feature_type,
-                value_type=_infer_dtype_from_array(props[key]["values"]),
+                value_type=infer_dtype_from_array(props[key]["values"]),
                 num_values=1,
                 required=False,
                 default_value=None,
@@ -427,7 +442,7 @@ class TracksBuilder(ABC):
         tracks = SolutionTracks(
             graph=graph,
             segmentation=segmentation_array,
-            pos_attr=self.position_attr,
+            pos_attr=self.axis_names,
             time_attr=self.TIME_ATTR,
             ndim=self.ndim,
             scale=scale,

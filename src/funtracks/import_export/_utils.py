@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING
 import networkx as nx
 import numpy as np
 
+from funtracks.data_model.tracks import Tracks
+
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike
 
@@ -48,7 +50,7 @@ def get_default_key_to_feature_mapping(
     return mapping
 
 
-def _infer_dtype_from_array(arr: ArrayLike) -> ValueType:
+def infer_dtype_from_array(arr: ArrayLike) -> ValueType:
     """Infer ValueType from numpy array dtype.
 
     Args:
@@ -86,3 +88,30 @@ def filter_graph_with_ancestors(graph: nx.DiGraph, nodes_to_keep: set[int]) -> l
         all_nodes_to_keep.update(ancestors)
 
     return list(all_nodes_to_keep)
+
+
+def rename_feature(tracks: Tracks, old_key: str, new_key: str) -> None:
+    """Rename a feature from old_key to new_key in annotators and features dict.
+
+    Args:
+        tracks: Tracks instance to modify
+        old_key: Current feature key
+        new_key: New feature key
+    """
+    # Get the feature from the annotator
+    feature_dict = tracks.annotators.all_features[old_key][0]
+
+    # Change the annotator key and activate it to ensure recomputation on update
+    tracks.annotators.change_key(old_key, new_key)
+    tracks.annotators.activate_features([new_key])
+
+    # Register it to the feature dictionary, removing old key if necessary
+    if old_key in tracks.features:
+        tracks.features.pop(old_key)
+    tracks.features[new_key] = feature_dict
+
+    # Update FeatureDict special key attributes if we renamed position or tracklet
+    if tracks.features.position_key == old_key:
+        tracks.features.position_key = new_key
+    if tracks.features.tracklet_key == old_key:
+        tracks.features.tracklet_key = new_key

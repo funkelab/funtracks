@@ -20,6 +20,8 @@ def export_to_csv(
     use_display_names: bool = False,
 ) -> None:
     """Export tracks to a CSV file.
+    TODO: export_all = False for backward compatibility - display names option shouldn't
+    change which columns are exported, just using which names
 
     Exports tracking data to CSV format with columns for node ID, parent ID,
     and all registered features.
