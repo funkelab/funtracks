@@ -86,6 +86,7 @@ def test_next_track_id_empty():
 def test_export_to_csv(
     graph_2d_with_computed_features, graph_3d_with_computed_features, tmp_path
 ):
+    # Test backward-compatible default format (use_display_names=False)
     tracks = SolutionTracks(graph_2d_with_computed_features, **track_attrs, ndim=3)
     temp_file = tmp_path / "test_export_2d.csv"
     tracks.export_tracks(temp_file)
@@ -94,7 +95,8 @@ def test_export_to_csv(
 
     assert len(lines) == tracks.graph.number_of_nodes() + 1  # add header
 
-    header = ["ID", "Parent ID", "Time", "y", "x", "Tracklet ID"]
+    # Backward compatible format: t, y, x, id, parent_id, track_id
+    header = ["t", "y", "x", "id", "parent_id", "track_id"]
     assert lines[0].strip().split(",") == header
 
     tracks = SolutionTracks(graph_3d_with_computed_features, **track_attrs, ndim=4)
@@ -105,7 +107,8 @@ def test_export_to_csv(
 
     assert len(lines) == tracks.graph.number_of_nodes() + 1  # add header
 
-    header = ["ID", "Parent ID", "Time", "z", "y", "x", "Tracklet ID"]
+    # Backward compatible format: t, z, y, x, id, parent_id, track_id
+    header = ["t", "z", "y", "x", "id", "parent_id", "track_id"]
     assert lines[0].strip().split(",") == header
 
     # Test exporting a selection of nodes. We have 6 nodes in total and we ask to save
@@ -117,11 +120,46 @@ def test_export_to_csv(
 
     assert len(lines) == 5  # (4 nodes + 1 header)
 
-    node_ids_in_csv = [int(line.split(",")[0]) for line in lines[1:]]
+    # In backward-compatible format, node ID is 5th column (index 4): t, z, y, x, id, ...
+    node_ids_in_csv = [int(line.split(",")[4]) for line in lines[1:]]
     expected_node_ids = [1, 3, 4, 6]
     assert sorted(node_ids_in_csv) == sorted(expected_node_ids), (
         f"Unexpected nodes in CSV: {node_ids_in_csv}"
     )
 
+    # Backward compatible format
+    header = ["t", "z", "y", "x", "id", "parent_id", "track_id"]
+    assert lines[0].strip().split(",") == header
+
+
+def test_export_to_csv_with_display_names(
+    graph_2d_with_computed_features, graph_3d_with_computed_features, tmp_path
+):
+    """Test CSV export with use_display_names=True option."""
+    from funtracks.import_export import export_to_csv
+
+    # Test 2D with display names
+    tracks = SolutionTracks(graph_2d_with_computed_features, **track_attrs, ndim=3)
+    temp_file = tmp_path / "test_export_2d_display.csv"
+    export_to_csv(tracks, temp_file, use_display_names=True)
+    with open(temp_file) as f:
+        lines = f.readlines()
+
+    assert len(lines) == tracks.graph.number_of_nodes() + 1  # add header
+
+    # With display names: ID, Parent ID, Time, y, x, Tracklet ID
+    header = ["ID", "Parent ID", "Time", "y", "x", "Tracklet ID"]
+    assert lines[0].strip().split(",") == header
+
+    # Test 3D with display names
+    tracks = SolutionTracks(graph_3d_with_computed_features, **track_attrs, ndim=4)
+    temp_file = tmp_path / "test_export_3d_display.csv"
+    export_to_csv(tracks, temp_file, use_display_names=True)
+    with open(temp_file) as f:
+        lines = f.readlines()
+
+    assert len(lines) == tracks.graph.number_of_nodes() + 1  # add header
+
+    # With display names: ID, Parent ID, Time, z, y, x, Tracklet ID
     header = ["ID", "Parent ID", "Time", "z", "y", "x", "Tracklet ID"]
     assert lines[0].strip().split(",") == header

@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING
 
 import networkx as nx
 import numpy as np
 
 from funtracks.features import FeatureDict
-from funtracks.import_export.export_utils import filter_graph_with_ancestors
 
 from .tracks import Tracks
 
@@ -175,47 +174,22 @@ class SolutionTracks(Tracks):
             outfile (Path): path to output csv file
             node_ids (set[int], optional): nodes to be included. If provided, only these
             nodes and their ancestors will be included in the output.
+
+        .. deprecated:: 1.0
+            `SolutionTracks.export_tracks()` is deprecated and will be removed in v2.0.
+            Use :func:`funtracks.import_export.export_to_csv` instead.
         """
+        warnings.warn(
+            "SolutionTracks.export_tracks() is deprecated and will be removed in v2.0. "
+            "Use funtracks.import_export.export_to_csv() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
-        def convert_numpy_to_python(value):
-            """Convert numpy types to native Python types."""
-            if isinstance(value, (np.float64, np.float32, np.float16)):
-                return float(value)
-            elif isinstance(value, (np.int64, np.int32, np.int16)):
-                return int(value)
-            return value
+        # Import here to avoid circular imports
+        from funtracks.import_export.csv._export import export_to_csv
 
-        header = ["ID", "Parent ID"]
-        feature_names = []
-        for feature_name, feature_dict in self.features.items():
-            col_name = feature_dict["display_name"]
-            feature_names.append(feature_name)
-            if isinstance(col_name, (list, tuple)):
-                header.extend(col_name)
-            else:
-                header.append(cast(str, col_name))
-
-        if node_ids is None:
-            node_to_keep = self.graph.nodes()
-        else:
-            node_to_keep = filter_graph_with_ancestors(self.graph, node_ids)
-
-        with open(outfile, "w") as f:
-            f.write(",".join(header))
-            for node_id in node_to_keep:
-                parents = list(self.graph.predecessors(node_id))
-                parent_id = "" if len(parents) == 0 else parents[0]
-                features: list[Any] = []
-                for feature_name in feature_names:
-                    feature_value = self.get_node_attr(node_id, feature_name)
-                    if isinstance(feature_value, list | tuple):
-                        features.extend(feature_value)
-                    else:
-                        features.append(feature_value)
-                row = [node_id, parent_id, *features]
-                row = [convert_numpy_to_python(value) for value in row]
-                f.write("\n")
-                f.write(",".join(map(str, row)))
+        export_to_csv(self, outfile, node_ids)
 
     def get_track_neighbors(
         self, track_id: int, time: int

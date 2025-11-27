@@ -3,13 +3,15 @@ from __future__ import annotations
 import json
 import warnings
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import networkx as nx
 import numpy as np
 
 from funtracks.features import FeatureDict
 
-from ..data_model import SolutionTracks, Tracks
+if TYPE_CHECKING:
+    from ..data_model import SolutionTracks, Tracks
 
 GRAPH_FILE = "graph.json"
 SEG_FILE = "seg.npy"
@@ -127,6 +129,9 @@ def load_tracks(
     # pos_attr and time_attr will always trigger the warning. Updating default values
     # is breaking, and manually setting the attrs to None if features is present will
     # break if the attrs are changed/removed in the future. Can remove in v2.0.
+    # Import at runtime to avoid circular dependency
+    from ..data_model import SolutionTracks, Tracks
+
     with warnings.catch_warnings():
         warnings.filterwarnings(
             "ignore", message="Provided both FeatureDict and pos_attr or time_attr"

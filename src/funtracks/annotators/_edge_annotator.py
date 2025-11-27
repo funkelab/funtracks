@@ -45,21 +45,19 @@ class EdgeAnnotator(GraphAnnotator):
         return tracks.segmentation is not None
 
     @classmethod
-    def get_available_features(cls, tracks) -> dict[str, Feature]:
+    def get_available_features(cls, ndim: int = 3) -> dict[str, Feature]:
         """Get all features that can be computed by this annotator.
 
         Returns features with default keys. Custom keys can be specified at
         initialization time.
 
         Args:
-            tracks: The tracks to get available features for
+            ndim: Total number of dimensions including time (unused for this annotator,
+                kept for API consistency). Defaults to 3.
 
         Returns:
-            Dictionary mapping feature keys to Feature definitions. Empty if no
-            segmentation.
+            Dictionary mapping feature keys to Feature definitions.
         """
-        if not cls.can_annotate(tracks):
-            return {}
         return {DEFAULT_IOU_KEY: IoU()}
 
     def __init__(self, tracks: Tracks) -> None:
@@ -172,3 +170,22 @@ class EdgeAnnotator(GraphAnnotator):
                 iou_list = _compute_ious(masked_start, masked_end)
                 iou = 0 if len(iou_list) == 0 else iou_list[0][2]
                 self.tracks._set_edge_attr(edge, self.iou_key, iou)
+
+    def change_key(self, old_key: str, new_key: str) -> None:
+        """Rename a feature key in this annotator.
+
+        Overrides base implementation to also update the iou_key instance variable.
+
+        Args:
+            old_key: Existing key to rename.
+            new_key: New key to replace it with.
+
+        Raises:
+            KeyError: If old_key does not exist.
+        """
+        # Call base implementation to update all_features
+        super().change_key(old_key, new_key)
+
+        # Update iou_key if it matches
+        if self.iou_key == old_key:
+            self.iou_key = new_key

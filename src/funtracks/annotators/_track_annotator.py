@@ -65,21 +65,19 @@ class TrackAnnotator(GraphAnnotator):
         return isinstance(tracks, SolutionTracks)
 
     @classmethod
-    def get_available_features(cls, tracks) -> dict[str, Feature]:
+    def get_available_features(cls, ndim: int = 3) -> dict[str, Feature]:
         """Get all features that can be computed by this annotator.
 
         Returns features with default keys. Custom keys can be specified at
         initialization time.
 
         Args:
-            tracks: The tracks to get available features for
+            ndim: Total number of dimensions including time (unused for this annotator,
+                kept for API consistency). Defaults to 3.
 
         Returns:
-            Dictionary mapping feature keys to Feature definitions. Empty if not
-            SolutionTracks.
+            Dictionary mapping feature keys to Feature definitions.
         """
-        if not cls.can_annotate(tracks):
-            return {}
         return {
             DEFAULT_TRACKLET_KEY: TrackletID(),
             DEFAULT_LINEAGE_KEY: LineageID(),
@@ -317,3 +315,27 @@ class TrackAnnotator(GraphAnnotator):
             # Clean up empty list
             if not self.tracklet_id_to_nodes[track_id]:
                 del self.tracklet_id_to_nodes[track_id]
+
+    def change_key(self, old_key: str, new_key: str) -> None:
+        """Rename a feature key in this annotator.
+
+        Overrides base implementation to also update the tracklet_key and
+        lineage_key instance variables.
+
+        Args:
+            old_key: Existing key to rename.
+            new_key: New key to replace it with.
+
+        Raises:
+            KeyError: If old_key does not exist.
+        """
+        # Call base implementation to update all_features
+        super().change_key(old_key, new_key)
+
+        # Update tracklet_key if it matches
+        if self.tracklet_key == old_key:
+            self.tracklet_key = new_key
+
+        # Update lineage_key if it matches
+        if self.lineage_key == old_key:
+            self.lineage_key = new_key

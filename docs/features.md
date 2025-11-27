@@ -1,8 +1,7 @@
-# Funtracks Feature Architecture Design
 
-This document describes the internal architecture of funtracks Features for developers who want to understand or extend the system.
 
-## Overview
+
+# Features
 
 Funtracks has a **feature computation system** that manages attributes (features) from tracking graphs with optional segmentation data. The architecture separates:
 

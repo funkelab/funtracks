@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/logo.svg" alt="Funtracks Logo" width="128" height="128">
+</p>
+
 # Funtracks
 A data model for cell tracking with actions, undo history, persistence, and more!
 

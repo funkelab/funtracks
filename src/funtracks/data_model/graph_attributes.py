@@ -59,6 +59,7 @@ class NodeAttr(Enum, metaclass=DeprecatedEnumMeta):
     TIME = "time"
     AREA = "area"
     TRACK_ID = "track_id"
+    SEG_ID = "seg_id"
 
 
 class EdgeAttr(Enum, metaclass=DeprecatedEnumMeta):
