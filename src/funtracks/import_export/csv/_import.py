@@ -191,6 +191,7 @@ def tracks_from_df(
     segmentation: np.ndarray | None = None,
     scale: list[float] | None = None,
     features: dict[str, str] | None = None,
+    name_map: dict[str, str] | None = None,
 ) -> SolutionTracks:
     """Import tracks from pandas DataFrame (motile_tracker-compatible API).
 
@@ -214,6 +215,9 @@ def tracks_from_df(
             Example: {"Area": "area"} loads from column "area"
                      {"Area": "Recompute"} recomputes from segmentation
             Defaults to None.
+        name_map: Optional mapping from standard field names to DataFrame column names.
+            Standard keys include: "id", "parent_id", "time", "y", "x", "z", "seg_id".
+            If None, column names are auto-inferred using fuzzy matching.
 
     Returns:
         SolutionTracks: a solution tracks object
@@ -241,8 +245,12 @@ def tracks_from_df(
 
     builder = CSVTracksBuilder()
 
-    # Auto-infer name mapping from DataFrame columns
-    builder.prepare(df)
+    if name_map is not None:
+        builder.read_header(df)
+        builder.name_map = name_map
+    else:
+        # Auto-infer name mapping from DataFrame columns
+        builder.prepare(df)
 
     return builder.build(
         df,
