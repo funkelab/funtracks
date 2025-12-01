@@ -202,14 +202,14 @@ def build_display_name_mapping(available_computed_features: dict) -> dict[str, s
     return display_name_to_key
 
 
-def infer_name_map(
+def infer_node_name_map(
     importable_node_properties: list[str],
     required_features: list[str],
     position_attr: list[str],
     ndim: int | None,
     available_computed_features: dict,
 ) -> dict[str, str]:
-    """Infer name_map by matching importable node properties to standard keys.
+    """Infer node_name_map by matching importable node properties to standard keys.
 
     Uses difflib fuzzy matching with the following priority:
     1. Exact matches to standard keys
@@ -228,7 +228,7 @@ def infer_name_map(
             Contains both node and edge features - will be filtered to node features only
 
     Returns:
-        Inferred name_map (standard_key -> source_property). May be incomplete
+        Inferred node_name_map (standard_key -> source_property). May be incomplete
         if required features cannot be matched. Use validate_name_map() to
         ensure all required fields are present before building.
     """

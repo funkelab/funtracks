@@ -11,7 +11,7 @@ from funtracks.import_export._name_mapping import (
     build_display_name_mapping,
     build_standard_fields,
     infer_edge_name_map,
-    infer_name_map,
+    infer_node_name_map,
 )
 
 
@@ -382,8 +382,8 @@ class TestBuildDisplayNameMapping:
         assert mapping == {}
 
 
-class TestInferNameMapIntegration:
-    """Integration tests for the full infer_name_map pipeline."""
+class TestInferNodeNameMapIntegration:
+    """Integration tests for the full infer_node_name_map pipeline."""
 
     def test_perfect_exact_matches(self):
         """Test when all fields have exact matches."""
@@ -396,7 +396,7 @@ class TestInferNameMapIntegration:
             "circularity": {"feature_type": "node", "display_name": "Circularity"},
         }
 
-        mapping = infer_name_map(
+        mapping = infer_node_name_map(
             importable_props,
             required_features,
             position_attr,
@@ -420,7 +420,7 @@ class TestInferNameMapIntegration:
             "circularity": {"feature_type": "node", "display_name": "Circularity"},
         }
 
-        mapping = infer_name_map(
+        mapping = infer_node_name_map(
             importable_props,
             required_features,
             position_attr,
@@ -443,7 +443,7 @@ class TestInferNameMapIntegration:
         ndim = 3
         available_computed_features = {}
 
-        mapping = infer_name_map(
+        mapping = infer_node_name_map(
             importable_props,
             required_features,
             position_attr,
@@ -466,7 +466,7 @@ class TestInferNameMapIntegration:
             "time_feature": {"feature_type": "node", "display_name": "Time"},
         }
 
-        mapping = infer_name_map(
+        mapping = infer_node_name_map(
             importable_props,
             required_features,
             position_attr,
@@ -487,7 +487,7 @@ class TestInferNameMapIntegration:
         ndim = 4
         available_computed_features = {}
 
-        mapping = infer_name_map(
+        mapping = infer_node_name_map(
             importable_props,
             required_features,
             position_attr,
@@ -510,7 +510,7 @@ class TestInferNameMapIntegration:
         ndim = 3
         available_computed_features = {}
 
-        mapping = infer_name_map(
+        mapping = infer_node_name_map(
             importable_props,
             required_features,
             position_attr,
@@ -531,7 +531,7 @@ class TestInferNameMapIntegration:
             "area": {"feature_type": "node", "display_name": "Area"},
         }
 
-        mapping = infer_name_map(
+        mapping = infer_node_name_map(
             importable_props,
             required_features,
             position_attr,

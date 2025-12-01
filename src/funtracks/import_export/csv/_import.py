@@ -61,14 +61,14 @@ class CSVTracksBuilder(TracksBuilder):
     def load_source(
         self,
         source: Path | pd.DataFrame,
-        name_map: dict[str, str],
+        node_name_map: dict[str, str],
         node_features: dict[str, bool] | None = None,
     ) -> None:
         """Load CSV and convert to InMemoryGeff format.
 
         Args:
             source: Path to CSV file or DataFrame
-            name_map: Maps standard keys to CSV column names
+            node_name_map: Maps standard keys to CSV column names
             node_features: Optional features dict for backward compatibility
         """
         # Read CSV or use provided DataFrame
@@ -86,9 +86,9 @@ class CSVTracksBuilder(TracksBuilder):
         if "id" in df.columns and "parent_id" in df.columns:
             df = _ensure_integer_ids(df)
 
-        # For backward compatibility, extend name_map with node_features
+        # For backward compatibility, extend node_name_map with node_features
         # Only add features that should be loaded (recompute=False)
-        extended_name_map = dict(name_map)
+        extended_name_map = dict(node_name_map)
         if node_features is not None:
             for feature_key, recompute in node_features.items():
                 if feature_key not in extended_name_map and not recompute:
@@ -116,7 +116,7 @@ class CSVTracksBuilder(TracksBuilder):
 
         # Handle type conversions - lists stored as strings like "[1, 2, 3]"
         for col in df.columns:
-            if col not in name_map:  # custom attributes
+            if col not in node_name_map:  # custom attributes
                 df[col] = df[col].apply(
                     lambda x: ast.literal_eval(x)
                     if isinstance(x, str) and x.startswith("[") and x.endswith("]")
@@ -191,7 +191,8 @@ def tracks_from_df(
     segmentation: np.ndarray | None = None,
     scale: list[float] | None = None,
     features: dict[str, str] | None = None,
-    name_map: dict[str, str] | None = None,
+    node_name_map: dict[str, str] | None = None,
+    name_map: dict[str, str] | None = None,  # deprecated
 ) -> SolutionTracks:
     """Import tracks from pandas DataFrame (motile_tracker-compatible API).
 
@@ -215,9 +216,10 @@ def tracks_from_df(
             Example: {"Area": "area"} loads from column "area"
                      {"Area": "Recompute"} recomputes from segmentation
             Defaults to None.
-        name_map: Optional mapping from standard field names to DataFrame column names.
-            Standard keys include: "id", "parent_id", "time", "y", "x", "z", "seg_id".
-            If None, column names are auto-inferred using fuzzy matching.
+        node_name_map: Optional mapping from standard field names to DataFrame column
+            names. Standard keys include: "id", "parent_id", "time", "y", "x", "z",
+            "seg_id". If None, column names are auto-inferred using fuzzy matching.
+        name_map: Deprecated. Use node_name_map instead.
 
     Returns:
         SolutionTracks: a solution tracks object
@@ -229,6 +231,18 @@ def tracks_from_df(
     Example:
         >>> tracks = tracks_from_df(df, segmentation=seg, scale=[1.0, 1.0, 0.5, 0.5])
     """
+    from warnings import warn
+
+    # Handle deprecated name_map parameter
+    if name_map is not None:
+        warn(
+            "name_map is deprecated, use node_name_map instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        if node_name_map is None:
+            node_name_map = name_map
+
     # Convert features dict from motile_tracker format to funtracks format
     node_features = None
     if features is not None:
@@ -245,9 +259,9 @@ def tracks_from_df(
 
     builder = CSVTracksBuilder()
 
-    if name_map is not None:
+    if node_name_map is not None:
         builder.read_header(df)
-        builder.name_map = name_map
+        builder.node_name_map = node_name_map
     else:
         # Auto-infer name mapping from DataFrame columns
         builder.prepare(df)

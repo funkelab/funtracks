@@ -125,19 +125,19 @@ class GeffTracksBuilder(TracksBuilder):
     def load_source(
         self,
         source_path: Path,
-        name_map: dict[str, str],
+        node_name_map: dict[str, str],
         node_features: dict[str, bool] | None = None,
     ) -> None:
         """Load GEFF data and convert to InMemoryGeff format.
 
         Args:
             source_path: Path to GEFF zarr store
-            name_map: Maps standard keys to GEFF property names
+            node_name_map: Maps standard keys to GEFF property names
             node_features: Optional features dict (handled by import_graph_from_geff)
         """
-        # For backward compatibility, extend name_map with node_features
+        # For backward compatibility, extend node_name_map with node_features
         # Only add features that should be loaded (recompute=False)
-        extended_name_map = dict(name_map)
+        extended_name_map = dict(node_name_map)
         if node_features is not None:
             for feature_key, recompute in node_features.items():
                 if feature_key not in extended_name_map and not recompute:
@@ -152,7 +152,7 @@ class GeffTracksBuilder(TracksBuilder):
 
 def import_from_geff(
     directory: Path,
-    name_map: dict[str, str],
+    node_name_map: dict[str, str] | None = None,
     segmentation_path: Path | None = None,
     scale: list[float] | None = None,
     node_features: dict[str, bool] | None = None,
@@ -160,12 +160,13 @@ def import_from_geff(
     extra_features: dict[str, bool] | None = None,
     edge_name_map: dict[str, str] | None = None,
     edge_prop_filter: list[str] | None = None,
+    name_map: dict[str, str] | None = None,  # deprecated
 ) -> SolutionTracks:
     """Import tracks from GEFF format.
 
     Args:
         directory: Path to GEFF zarr store
-        name_map: Maps standard keys to GEFF property names
+        node_name_map: Maps standard keys to GEFF property names
         segmentation_path: Optional path to segmentation data
         scale: Optional spatial scale
         node_features: Optional node features to enable/load
@@ -175,6 +176,7 @@ def import_from_geff(
         edge_name_map: Optional mapping for edge property names
         edge_prop_filter: (Deprecated) Use edge_name_map instead. Kept for
             backward compatibility.
+        name_map: Deprecated. Use node_name_map instead.
 
     Returns:
         SolutionTracks object
@@ -182,6 +184,18 @@ def import_from_geff(
     Raises:
         ValueError: If both node_features and extra_features are provided
     """
+    from warnings import warn
+
+    # Handle deprecated name_map parameter
+    if name_map is not None:
+        warn(
+            "name_map is deprecated, use node_name_map instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        if node_name_map is None:
+            node_name_map = name_map
+
     # Handle backward compatibility: extra_features -> node_features
     if extra_features is not None and node_features is not None:
         raise ValueError(
@@ -199,10 +213,12 @@ def import_from_geff(
         # Map each property to itself (no renaming, just filtering)
         edge_name_map = {prop: prop for prop in edge_prop_filter}
 
-    # Filter out None values and "None" strings from name_map
+    # Filter out None values and "None" strings from node_name_map
     # (e.g., {"lineage_id": None} or {"lineage_id": "None"})
-    if name_map is not None:
-        name_map = {k: v for k, v in name_map.items() if v is not None and v != "None"}
+    if node_name_map is not None:
+        node_name_map = {
+            k: v for k, v in node_name_map.items() if v is not None and v != "None"
+        }
 
     # Filter edge_name_map as well
     if edge_name_map is not None:
@@ -212,8 +228,10 @@ def import_from_geff(
 
     builder = GeffTracksBuilder()
     builder.prepare(directory)
-    builder.name_map = name_map
-    builder.edge_name_map = edge_name_map
+    if node_name_map is not None:
+        builder.node_name_map = node_name_map
+    if edge_name_map is not None:
+        builder.edge_name_map = edge_name_map
     return builder.build(
         directory,
         segmentation_path,

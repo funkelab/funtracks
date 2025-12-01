@@ -28,14 +28,19 @@ from funtracks.import_export._import_segmentation import (
     read_dims,
     relabel_segmentation,
 )
-from funtracks.import_export._name_mapping import infer_edge_name_map, infer_name_map
+from funtracks.import_export._name_mapping import (
+    infer_edge_name_map,
+    infer_node_name_map,
+)
 from funtracks.import_export._utils import (
     get_default_key_to_feature_mapping,
     infer_dtype_from_array,
 )
 from funtracks.import_export._validation import (
+    validate_edge_name_map,
+    validate_feature_key_collisions,
     validate_in_memory_geff,
-    validate_name_map,
+    validate_node_name_map,
 )
 
 # defining constants here because they are only used in the context of import
@@ -57,9 +62,8 @@ class TracksBuilder(ABC):
         # State transferred between steps
         self.in_memory_geff: InMemoryGeff | None = None
         self.ndim: int | None = None
-        # TODO: self.node_name_map instead of self.name_map
         # TODO: how much of the node/edge stuff can we abstract?
-        self.name_map: dict[str, str] = {}
+        self.node_name_map: dict[str, str] = {}
         self.edge_name_map: dict[str, str] | None = None
         self.importable_node_props: list[str] = []
         self.importable_edge_props: list[str] = []
@@ -92,9 +96,8 @@ class TracksBuilder(ABC):
             source: Path to data source (zarr store, CSV file, etc.) or DataFrame
         """
 
-    # TODO: infer_node_name_map
-    def infer_name_map(self) -> dict[str, str]:
-        """Infer name_map by matching importable node properties to standard keys.
+    def infer_node_name_map(self) -> dict[str, str]:
+        """Infer node_name_map by matching importable node properties to standard keys.
 
         Uses difflib fuzzy matching with the following priority:
         1. Exact matches to standard keys
@@ -104,12 +107,12 @@ class TracksBuilder(ABC):
         5. Remaining properties map to themselves (custom properties)
 
         Returns:
-            Inferred name_map (standard_key -> source_property)
+            Inferred node_name_map (standard_key -> source_property)
 
         Raises:
             ValueError: If required features cannot be inferred
         """
-        return infer_name_map(
+        return infer_node_name_map(
             self.importable_node_props,
             self.required_features,
             self.axis_names,
@@ -139,9 +142,8 @@ class TracksBuilder(ABC):
             self.importable_edge_props, self.available_computed_features
         )
 
-    # TODO: validate_node_name_map, validate_edge_name_map?
     def validate_name_map(self) -> None:
-        """Validate that name_map and edge_name_map contain valid mappings.
+        """Validate that node_name_map and edge_name_map contain valid mappings.
 
         Checks for nodes:
         - No None values in required mappings
@@ -159,15 +161,21 @@ class TracksBuilder(ABC):
         Raises:
             ValueError: If validation fails
         """
-        validate_name_map(
-            self.name_map,
+        # Validate node_name_map
+        validate_node_name_map(
+            self.node_name_map,
             self.importable_node_props,
             self.required_features,
             self.axis_names,
             self.ndim,
-            edge_name_map=self.edge_name_map,
-            importable_edge_props=self.importable_edge_props,
         )
+
+        # Validate edge_name_map if provided
+        if self.edge_name_map is not None:
+            validate_edge_name_map(self.edge_name_map, self.importable_edge_props)
+
+        # Check for feature key collisions between nodes and edges
+        validate_feature_key_collisions(self.node_name_map, self.edge_name_map)
 
     def prepare(
         self,
@@ -177,8 +185,8 @@ class TracksBuilder(ABC):
         """Prepare for building by reading headers and inferring name maps.
 
         This method reads the data source headers/metadata and automatically
-        infers both name_map and edge_name_map. After calling this, you can
-        inspect and modify self.name_map and self.edge_name_map before calling
+        infers both node_name_map and edge_name_map. After calling this, you can
+        inspect and modify self.node_name_map and self.edge_name_map before calling
         build().
 
         Args:
@@ -189,21 +197,21 @@ class TracksBuilder(ABC):
             >>> builder = CSVTracksBuilder()
             >>> builder.prepare("data.csv")
             >>> # Optionally modify the inferred mappings
-            >>> builder.name_map["circularity"] = "circ"
+            >>> builder.node_name_map["circularity"] = "circ"
             >>> builder.edge_name_map["iou"] = "overlap"
             >>> tracks = builder.build("data.csv", segmentation_path="seg.tif")
         """
         self.read_header(source)
         if segmentation is not None:
             self.ndim = read_dims(segmentation)
-        self.name_map = self.infer_name_map()
+        self.node_name_map = self.infer_node_name_map()
         self.edge_name_map = self.infer_edge_name_map()
 
     @abstractmethod
     def load_source(
         self,
         source: Path | pd.DataFrame,
-        name_map: dict[str, str],
+        node_name_map: dict[str, str],
         node_features: dict[str, bool] | None = None,
     ) -> None:
         """Load data from source file and convert to InMemoryGeff format.
@@ -212,7 +220,7 @@ class TracksBuilder(ABC):
 
         Args:
             source: Path to data source (zarr store, CSV file, etc.) or DataFrame
-            name_map: Maps standard keys to source property names
+            node_name_map: Maps standard keys to source property names
             node_features: Optional features dict for backward compatibility
         """
 
@@ -410,32 +418,32 @@ class TracksBuilder(ABC):
             Fully constructed SolutionTracks object
 
         Raises:
-            ValueError: If self.name_map is not set or validation fails
+            ValueError: If self.node_name_map is not set or validation fails
 
         Example:
-            >>> # Using prepare() to auto-infer name_map
+            >>> # Using prepare() to auto-infer node_name_map
             >>> builder = CSVTracksBuilder()
             >>> builder.prepare("data.csv")
             >>> tracks = builder.build("data.csv")
             >>>
-            >>> # Or set name_map manually
+            >>> # Or set node_name_map manually
             >>> builder = CSVTracksBuilder()
             >>> builder.read_header("data.csv")
-            >>> builder.name_map = {"time": "t", "x": "x", "y": "y", "id": "id"}
+            >>> builder.node_name_map = {"time": "t", "x": "x", "y": "y", "id": "id"}
             >>> tracks = builder.build("data.csv")
         """
-        # Validate we have a name_map
-        if not self.name_map:
+        # Validate we have a node_name_map
+        if not self.node_name_map:
             raise ValueError(
-                "self.name_map must be set before calling build(). "
+                "self.node_name_map must be set before calling build(). "
                 "Call prepare() to auto-infer or set manually."
             )
 
-        # Validate name_map is complete and valid
+        # Validate node_name_map is complete and valid
         self.validate_name_map()
 
         # 1. Load source data to InMemoryGeff
-        self.load_source(source, self.name_map, node_features)
+        self.load_source(source, self.node_name_map, node_features)
 
         # 2. Validate InMemoryGeff
         self.validate()
