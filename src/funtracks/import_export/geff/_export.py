@@ -105,6 +105,7 @@ def export_to_geff(
         dtype = seg_data.dtype
 
         # TODO: this probably isn't a good chunk size - time should be 1?
+        # TODO: export to tiffs
         chunk_size: tuple[int, ...] = (64, 64, 64)
         chunk_size = tuple(list(chunk_size) + [1] * (len(shape) - len(chunk_size)))
         chunk_size = chunk_size[: len(shape)]

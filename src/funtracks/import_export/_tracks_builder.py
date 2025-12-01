@@ -56,7 +56,6 @@ class TracksBuilder(ABC):
         """Initialize builder state."""
         # State transferred between steps
         self.in_memory_geff: InMemoryGeff | None = None
-        self.axis_names: list[str] = ["z", "y", "x"]
         self.ndim: int | None = None
         # TODO: self.node_name_map instead of self.name_map
         # TODO: how much of the node/edge stuff can we abstract?
@@ -70,6 +69,17 @@ class TracksBuilder(ABC):
         self.available_computed_features = get_default_key_to_feature_mapping(
             self.ndim, display_name=False
         )
+
+    @property
+    def axis_names(self) -> list[str]:
+        """Position attribute names derived from ndim.
+
+        Returns ["z", "y", "x"] for 3D (ndim=4) or ["y", "x"] for 2D (ndim=3).
+        If ndim is None, returns ["z", "y", "x"] as default.
+        """
+        if self.ndim is None or self.ndim == 4:
+            return ["z", "y", "x"]
+        return ["y", "x"]
 
     @abstractmethod
     def read_header(self, source: Path | pd.DataFrame) -> None:
@@ -137,7 +147,7 @@ class TracksBuilder(ABC):
         - No None values in required mappings
         - No duplicate values in required mappings
         - All required_features are mapped
-        - All position_attr are mapped (based on ndim)
+        - All position_attr are mapped (based on ndim, or y/x minimum if ndim is None)
         - All mapped properties exist in importable_node_props
 
         Checks for edges:
@@ -147,10 +157,8 @@ class TracksBuilder(ABC):
         - No feature key collisions between node and edge features
 
         Raises:
-            ValueError: If validation fails or ndim is not set
+            ValueError: If validation fails
         """
-        if self.ndim is None:
-            raise ValueError("ndim must be set before validating name_map")
         validate_name_map(
             self.name_map,
             self.importable_node_props,

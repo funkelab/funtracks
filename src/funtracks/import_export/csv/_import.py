@@ -123,9 +123,8 @@ class CSVTracksBuilder(TracksBuilder):
                     else x
                 )
 
-        # Determine dimensionality
-        self.position_attr = ["z", "y", "x"] if "z" in df.columns else ["y", "x"]
-        self.ndim = len(self.position_attr) + 1  # +1 for time
+        # Determine dimensionality (axis_names is derived from ndim as a property)
+        self.ndim = 4 if "z" in df.columns else 3
 
         # Convert DataFrame to InMemoryGeff format
         df_dict = df.to_dict(orient="list")

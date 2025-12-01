@@ -85,6 +85,10 @@ def validate_graph_seg_match(
         error_msg = "Error testing seg id:\n" + "\n".join(f"- {e}" for e in errors)
         raise ValueError(error_msg)
 
+    # TODO: The relabeling check (seg_id != node_id) is duplicated in
+    # TracksBuilder.handle_segmentation. Consider deduplicating by either:
+    # 1. Using this return value in the caller, or
+    # 2. Removing the return value and making this purely a validation function
     # Return True if relabeling is needed (seg_id != node_id)
     return last_node_id != seg_id
 
@@ -94,7 +98,7 @@ def _validate_node_name_map(
     importable_node_props: list[str],
     required_features: list[str],
     position_attr: list[str],
-    ndim: int,
+    ndim: int | None,
 ) -> None:
     """Validate node name_map contains all required mappings.
 
@@ -110,13 +114,18 @@ def _validate_node_name_map(
         importable_node_props: List of property names available in the source
         required_features: List of required feature names (e.g., ["time"])
         position_attr: List of position attributes (e.g., ["z", "y", "x"])
-        ndim: Number of dimensions (3 for 2D+time, 4 for 3D+time)
+        ndim: Number of dimensions (3 for 2D+time, 4 for 3D+time), or None to
+            accept either 2D or 3D
 
     Raises:
         ValueError: If validation fails
     """
-    # Build list of required fields
+    # Build list of required position attributes
+    # When ndim is None, require y and x at minimum; z is optional
+    if ndim is None:
+        ndim = 3
     required_pos_attrs = position_attr[-(ndim - 1) :]
+
     required_fields = required_features + required_pos_attrs
 
     # Check for None values in required fields
@@ -138,17 +147,9 @@ def _validate_node_name_map(
     missing_features = []
 
     # Check required features
-    for feature in required_features:
+    for feature in required_fields:
         if feature not in name_map:
             missing_features.append(feature)
-
-    # Check position attributes based on ndim
-    # For 3D (ndim=3): require y, x
-    # For 4D (ndim=4): require z, y, x
-    required_pos_attrs = position_attr[-(ndim - 1) :]
-    for pos_attr in required_pos_attrs:
-        if pos_attr not in name_map:
-            missing_features.append(pos_attr)
 
     if missing_features:
         raise ValueError(
@@ -243,7 +244,7 @@ def validate_name_map(
     importable_node_props: list[str],
     required_features: list[str],
     position_attr: list[str],
-    ndim: int,
+    ndim: int | None,
     edge_name_map: dict[str, str] | None = None,
     importable_edge_props: list[str] | None = None,
 ) -> None:
@@ -259,7 +260,8 @@ def validate_name_map(
         importable_node_props: List of property names available in the source
         required_features: List of required feature names (e.g., ["time"])
         position_attr: List of position attributes (e.g., ["z", "y", "x"])
-        ndim: Number of dimensions (3 for 2D+time, 4 for 3D+time)
+        ndim: Number of dimensions (3 for 2D+time, 4 for 3D+time), or None to
+            accept either 2D or 3D
         edge_name_map: Optional mapping from standard keys to edge property names
         importable_edge_props: Optional list of edge property names available
 
