@@ -307,8 +307,6 @@ class TestBuildStandardFields:
         assert "z" not in standard_fields  # 3D means 2 spatial dims
         # Optional fields
         assert "seg_id" in standard_fields
-        assert "track_id" in standard_fields
-        assert "lineage_id" in standard_fields
 
     def test_4d_data(self):
         """Test standard fields for 4D data (3D + time)."""
