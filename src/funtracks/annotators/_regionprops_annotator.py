@@ -84,7 +84,7 @@ class RegionpropsAnnotator(GraphAnnotator):
         self.perimeter_key = DEFAULT_PERIMETER_KEY
 
         specs = RegionpropsAnnotator._define_features(
-            tracks,
+            tracks.ndim,
         )
         # update position key in spec
         if self.pos_key != DEFAULT_POS_KEY:
@@ -105,7 +105,7 @@ class RegionpropsAnnotator(GraphAnnotator):
     @classmethod
     def _define_features(
         cls,
-        tracks: Tracks,
+        ndim: int,
     ) -> list[FeatureSpec]:
         """Define all supported regionprops features along with keys and function names.
 
@@ -113,53 +113,39 @@ class RegionpropsAnnotator(GraphAnnotator):
         that include the regionprops attribute mapping needed for computation.
 
         Args:
-            tracks: The tracks to build feature specs for
-            pos_key: The key to use for the position/centroid feature. Defaults to "pos".
-            area_key: The key to use for the area feature. Defaults to "area".
-            ellipse_axis_radii_key: The key to use for the ellipse axis radii feature.
-                Defaults to "ellipse_axis_radii".
-            circularity_key: The key to use for the circularity feature.
-                Defaults to "circularity".
-            perimeter_key: The key to use for the perimeter feature.
-                Defaults to "perimeter".
+            ndim: Total number of dimensions including time (3 or 4)
 
         Returns:
             list[FeatureSpec]: List of feature specifications with key, feature,
-                and regionprops attribute name. Empty list if no segmentation.
+                and regionprops attribute name.
         """
-        if not cls.can_annotate(tracks):
-            return []
+        # Derive axis names from ndim (spatial dimensions only, no time)
+        axis_names = ["z", "y", "x"] if ndim == 4 else ["y", "x"]
+
         return [
-            FeatureSpec(DEFAULT_POS_KEY, Position(axes=tracks.axis_names), "centroid"),
-            FeatureSpec(DEFAULT_AREA_KEY, Area(ndim=tracks.ndim), "area"),
+            FeatureSpec(DEFAULT_POS_KEY, Position(axes=axis_names), "centroid"),
+            FeatureSpec(DEFAULT_AREA_KEY, Area(ndim=ndim), "area"),
             # TODO: Add in intensity when image is passed
-            # FeatureSpec("intensity", Intensity(ndim=tracks.ndim), "intensity"),
-            FeatureSpec(
-                DEFAULT_ELLIPSE_AXIS_KEY, EllipsoidAxes(ndim=tracks.ndim), "axes"
-            ),
-            FeatureSpec(
-                DEFAULT_CIRCULARITY_KEY, Circularity(ndim=tracks.ndim), "circularity"
-            ),
-            FeatureSpec(DEFAULT_PERIMETER_KEY, Perimeter(ndim=tracks.ndim), "perimeter"),
+            # FeatureSpec("intensity", Intensity(ndim=ndim), "intensity"),
+            FeatureSpec(DEFAULT_ELLIPSE_AXIS_KEY, EllipsoidAxes(ndim=ndim), "axes"),
+            FeatureSpec(DEFAULT_CIRCULARITY_KEY, Circularity(ndim=ndim), "circularity"),
+            FeatureSpec(DEFAULT_PERIMETER_KEY, Perimeter(ndim=ndim), "perimeter"),
         ]
 
     @classmethod
-    def get_available_features(cls, tracks) -> dict[str, Feature]:
+    def get_available_features(cls, ndim: int = 3) -> dict[str, Feature]:
         """Get all features that can be computed by this annotator.
 
         Returns features with default keys. Custom keys can be specified at
         initialization time.
 
         Args:
-            tracks: The tracks to get available features for
+            ndim: Total number of dimensions including time (3 or 4). Defaults to 3.
 
         Returns:
-            Dictionary mapping feature keys to Feature definitions. Empty if no
-            segmentation.
+            Dictionary mapping feature keys to Feature definitions.
         """
-        if not cls.can_annotate(tracks):
-            return {}
-        specs = RegionpropsAnnotator._define_features(tracks)
+        specs = RegionpropsAnnotator._define_features(ndim)
         return {spec.key: spec.feature for spec in specs}
 
     def compute(self, feature_keys: list[str] | None = None) -> None:
@@ -238,3 +224,23 @@ class RegionpropsAnnotator(GraphAnnotator):
                 self.tracks._set_node_attr(node, key, value)
         else:
             self._regionprops_update(masked_frame, keys_to_compute)
+
+    def change_key(self, old_key: str, new_key: str) -> None:
+        """Rename a feature key in this annotator, and related mappings.
+
+        Overrides base implementation to also update the regionprops name mapping.
+
+        Args:
+            old_key: Existing key to rename.
+            new_key: New key to replace it with.
+
+        Raises:
+            KeyError: If old_key does not exist.
+        """
+        # Call base implementation to update all_features
+        super().change_key(old_key, new_key)
+
+        # Update regionprops-specific name mapping
+        if old_key in self.regionprops_names:
+            rp_name = self.regionprops_names.pop(old_key)
+            self.regionprops_names[new_key] = rp_name
