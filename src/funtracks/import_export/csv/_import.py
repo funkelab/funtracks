@@ -103,11 +103,14 @@ class CSVTracksBuilder(TracksBuilder):
         }
         df = df.rename(columns=rename_map)
 
-        # Only keep columns that were in extended_name_map
+        # Only keep columns that exist in the DataFrame after renaming
+        # A column exists if:
+        # 1. It was renamed from a CSV column (std_key is in rename_map values), or
+        # 2. It already exists in df with the standard key name
         columns_to_keep = [
             std_key
             for std_key, csv_col in extended_name_map.items()
-            if csv_col in rename_map.values() or std_key in df.columns
+            if std_key in rename_map.values() or std_key in df.columns
         ]
         df = df[columns_to_keep]
 

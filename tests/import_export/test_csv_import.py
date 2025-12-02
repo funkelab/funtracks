@@ -232,6 +232,53 @@ class TestEdgeCases:
             tracks_from_df(df)
 
 
+class TestFeatureHandling:
+    """Test feature computation and loading."""
+
+    def test_load_area_from_df(self):
+        """Test loading pre-computed area from DataFrame."""
+        df = pd.DataFrame(
+            {
+                "time": [0, 1],
+                "y": [10.0, 20.0],
+                "x": [15.0, 25.0],
+                "id": [1, 2],
+                "parent_id": [-1, 1],
+                "area": [100.0, 200.0],
+            }
+        )
+
+        tracks = tracks_from_df(df, features={"Area": "area"})
+
+        # Area should be loaded from DataFrame
+        assert tracks.get_node_attr(1, "area") == 100.0
+        assert tracks.get_node_attr(2, "area") == 200.0
+
+    def test_recompute_area_from_seg(self):
+        """Test recomputing area from segmentation."""
+        df = pd.DataFrame(
+            {
+                "time": [0, 1],
+                "y": [10.0, 20.0],
+                "x": [15.0, 25.0],
+                "id": [1, 2],
+                "parent_id": [-1, 1],
+                "seg_id": [1, 2],  # Required when segmentation provided
+            }
+        )
+
+        # Create segmentation with known areas
+        seg = np.zeros((2, 100, 100), dtype=np.uint16)
+        seg[0, 8:13, 13:18] = 1  # 5x5 = 25 pixels
+        seg[1, 18:23, 23:28] = 2  # 5x5 = 25 pixels
+
+        tracks = tracks_from_df(df, seg, features={"Area": "Recompute"})
+
+        # Area should be computed from segmentation
+        assert tracks.get_node_attr(1, "area") == 25
+        assert tracks.get_node_attr(2, "area") == 25
+
+
 class TestValidationErrors:
     """Test that invalid data raises appropriate errors."""
 
