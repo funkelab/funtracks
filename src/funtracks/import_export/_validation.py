@@ -136,6 +136,11 @@ def validate_node_name_map(
             f"Fields with None values: {none_mappings}"
         )
 
+    # Add seg_id to required fields if present in name map. It is allowed to be None, but
+    # it cannot have a duplicate value.
+    if "seg_id" in name_map:
+        required_fields.append("seg_id")
+
     # Check for duplicate values in required fields
     required_values = [name_map[key] for key in required_fields if key in name_map]
     if len(set(required_values)) != len(required_values):
