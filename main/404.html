@@ -14,7 +14,7 @@
         
       
       
-      <link rel="icon" href="/funtracks/main/assets/images/favicon.png">
+      <link rel="icon" href="/funtracks/main/assets/logo.svg">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.0">
     
     
@@ -46,6 +46,8 @@
     
     
       <link rel="stylesheet" href="/funtracks/main/assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="/funtracks/main/stylesheets/extra.css">
     
     <script>__md_scope=new URL("/funtracks/main",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
@@ -87,8 +89,7 @@
   <nav class="md-header__inner md-grid" aria-label="Header">
     <a href="/funtracks/main/." title="funtracks" class="md-header__button md-logo" aria-label="funtracks" data-md-component="logo">
       
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+  <img src="/funtracks/main/assets/logo.svg" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -185,8 +186,7 @@
   <label class="md-nav__title" for="__drawer">
     <a href="/funtracks/main/." title="funtracks" class="md-nav__button md-logo" aria-label="funtracks" data-md-component="logo">
       
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+  <img src="/funtracks/main/assets/logo.svg" alt="logo">
 
     </a>
     funtracks
@@ -227,9 +227,26 @@
   
   
   
-    <li class="md-nav__item">
-      <a href="/funtracks/main/architecture/" class="md-nav__link">
+    
+    
+      
         
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
   
   
   <span class="md-ellipsis">
@@ -243,7 +260,79 @@
   
   
 
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="/funtracks/main/features/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Features
+  
+
+    
+  </span>
+  
+  
+
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="/funtracks/main/import-flow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Import
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -922,6 +1011,8 @@
       
         
       
+        
+      
     
     
     
@@ -978,6 +1069,34 @@
   
   
     <li class="md-nav__item">
+      <a href="/funtracks/main/reference/funtracks/import_export/csv/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>csv
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="/funtracks/main/reference/funtracks/import_export/export_to_geff/" class="md-nav__link">
         
   
@@ -1006,14 +1125,14 @@
   
   
     <li class="md-nav__item">
-      <a href="/funtracks/main/reference/funtracks/import_export/export_utils/" class="md-nav__link">
+      <a href="/funtracks/main/reference/funtracks/import_export/geff/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>export_utils
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>geff
   
 
     

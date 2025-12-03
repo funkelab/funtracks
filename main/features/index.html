@@ -8,24 +8,24 @@
       
       
       
-        <link rel="canonical" href="https://funkelab.github.io/funtracks/main/architecture/">
+        <link rel="canonical" href="https://funkelab.github.io/funtracks/main/features/">
       
       
         <link rel="prev" href="..">
       
       
-        <link rel="next" href="../reference/funtracks/">
+        <link rel="next" href="../import-flow/">
       
       
         
       
       
-      <link rel="icon" href="../assets/images/favicon.png">
+      <link rel="icon" href="../assets/logo.svg">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.0">
     
     
       
-        <title>Architecture - funtracks</title>
+        <title>Features - funtracks</title>
       
     
     
@@ -53,6 +53,8 @@
     
       <link rel="stylesheet" href="../assets/_mkdocstrings.css">
     
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
     <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
@@ -76,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#funtracks-feature-architecture-design" class="md-skip">
+        <a href="#features" class="md-skip">
           Skip to content
         </a>
       
@@ -98,8 +100,7 @@
   <nav class="md-header__inner md-grid" aria-label="Header">
     <a href=".." title="funtracks" class="md-header__button md-logo" aria-label="funtracks" data-md-component="logo">
       
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+  <img src="../assets/logo.svg" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -116,7 +117,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Architecture
+              Features
             
           </span>
         </div>
@@ -196,8 +197,7 @@
   <label class="md-nav__title" for="__drawer">
     <a href=".." title="funtracks" class="md-nav__button md-logo" aria-label="funtracks" data-md-component="logo">
       
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+  <img src="../assets/logo.svg" alt="logo">
 
     </a>
     funtracks
@@ -240,6 +240,61 @@
   
   
   
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
     <li class="md-nav__item md-nav__item--active">
       
       <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
@@ -255,7 +310,7 @@
   <span class="md-ellipsis">
     
   
-    Architecture
+    Features
   
 
     
@@ -273,7 +328,7 @@
   <span class="md-ellipsis">
     
   
-    Architecture
+    Features
   
 
     
@@ -297,17 +352,6 @@
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#overview" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Overview
-      
-    </span>
-  </a>
-  
-</li>
       
         <li class="md-nav__item">
   <a href="#core-components" class="md-nav__link">
@@ -500,6 +544,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#funtracks.annotators.GraphAnnotator.change_key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;change_key
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#funtracks.annotators.GraphAnnotator.compute" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -620,6 +675,17 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;activate_features
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.annotators.AnnotatorRegistry.change_key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;change_key
       
     </span>
   </a>
@@ -982,6 +1048,42 @@
     </ul>
   
 </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../import-flow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Import
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
       
     </li>
   
@@ -1661,6 +1763,8 @@
       
         
       
+        
+      
     
     
     
@@ -1717,6 +1821,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../reference/funtracks/import_export/csv/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>csv
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../reference/funtracks/import_export/export_to_geff/" class="md-nav__link">
         
   
@@ -1745,14 +1877,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/funtracks/import_export/export_utils/" class="md-nav__link">
+      <a href="../reference/funtracks/import_export/geff/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>export_utils
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>geff
   
 
     
@@ -2120,17 +2252,6 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#overview" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Overview
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#core-components" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2321,6 +2442,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#funtracks.annotators.GraphAnnotator.change_key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;change_key
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#funtracks.annotators.GraphAnnotator.compute" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2441,6 +2573,17 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;activate_features
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.annotators.AnnotatorRegistry.change_key" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;change_key
       
     </span>
   </a>
@@ -2817,9 +2960,7 @@
 
 
 
-<h1 id="funtracks-feature-architecture-design">Funtracks Feature Architecture Design</h1>
-<p>This document describes the internal architecture of funtracks Features for developers who want to understand or extend the system.</p>
-<h2 id="overview">Overview</h2>
+<h1 id="features">Features</h1>
 <p>Funtracks has a <strong>feature computation system</strong> that manages attributes (features) from tracking graphs with optional segmentation data. The architecture separates:</p>
 <ol>
 <li><strong>Feature metadata</strong> (what features exist and their properties) - <code>Feature</code> class</li>
@@ -2876,12 +3017,11 @@ the feature applies to.</p>
           <tr class="doc-section-item">
             <td><code><span title="funtracks.features.Feature.value_type">value_type</span></code></td>
             <td>
-                  <code><span title="typing.Literal">Literal</span>[&#39;int&#39;, &#39;float&#39;, &#39;str&#39;, &#39;bool&#39;]</code>
+                  <code><span title="funtracks.features._feature.ValueType">ValueType</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The data type of the feature
-values.</p>
+                <p>The data type of the feature values.</p>
               </div>
             </td>
           </tr>
@@ -3695,6 +3835,98 @@ activated.</p>
 <div class="doc doc-object doc-function">
 
 
+<h4 id="funtracks.annotators.GraphAnnotator.change_key" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">change_key</span>
+
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">change_key</span><span class="p">(</span><span class="n">old_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">new_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Rename a feature key in this annotator.</p>
+<p>Base implementation updates the all_features dictionary. Subclasses should
+override this method to update any additional internal mappings they maintain.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>old_key</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Existing key to rename.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>new_key</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>New key to replace it with.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="KeyError">KeyError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If old_key does not exist in all_features.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
 <h4 id="funtracks.annotators.GraphAnnotator.compute" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">compute</span>
 
@@ -4184,6 +4416,99 @@ annotators.compute()</p>
             <td>
               <div class="doc-md-description">
                 <p>If any feature keys are not available</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="funtracks.annotators.AnnotatorRegistry.change_key" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">change_key</span>
+
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">change_key</span><span class="p">(</span><span class="n">old_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">new_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Rename a feature key across all annotators.</p>
+<p>Finds the annotator that owns the feature and calls its change_key method.
+This allows the Tracks user to rename features without needing to find
+the specific annotator that manages it.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>old_key</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Existing key to rename.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>new_key</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>New key to replace it with.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="KeyError">KeyError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If old_key does not exist in any annotator.</p>
               </div>
             </td>
           </tr>
@@ -4795,13 +5120,15 @@ area, track_id) are auto-detected by checking if they exist on the graph.</p>
 
 
 </h4>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">enable_features</span><span class="p">(</span><span class="n">feature_keys</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">enable_features</span><span class="p">(</span>
+    <span class="n">feature_keys</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">recompute</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
         <p>Enable multiple features for computation efficiently.</p>
-<p>Adds features to annotators and FeatureDict, then computes their values.</p>
+<p>Adds features to annotators and FeatureDict, optionally computes their values.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -4829,6 +5156,23 @@ area, track_id) are auto-detected by checking if they exist on the graph.</p>
             </td>
             <td>
                 <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>recompute</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If True, compute feature values. If False, assume values
+already exist in graph and just register the feature.</p>
+              </div>
+            </td>
+            <td>
+                  <code>True</code>
             </td>
           </tr>
       </tbody>

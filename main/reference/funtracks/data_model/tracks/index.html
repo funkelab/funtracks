@@ -20,7 +20,7 @@
         
       
       
-      <link rel="icon" href="../../../../assets/images/favicon.png">
+      <link rel="icon" href="../../../../assets/logo.svg">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.0">
     
     
@@ -52,6 +52,8 @@
     
     
       <link rel="stylesheet" href="../../../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../../../stylesheets/extra.css">
     
     <script>__md_scope=new URL("../../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
@@ -98,8 +100,7 @@
   <nav class="md-header__inner md-grid" aria-label="Header">
     <a href="../../../.." title="funtracks" class="md-header__button md-logo" aria-label="funtracks" data-md-component="logo">
       
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+  <img src="../../../../assets/logo.svg" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -196,8 +197,7 @@
   <label class="md-nav__title" for="__drawer">
     <a href="../../../.." title="funtracks" class="md-nav__button md-logo" aria-label="funtracks" data-md-component="logo">
       
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+  <img src="../../../../assets/logo.svg" alt="logo">
 
     </a>
     funtracks
@@ -238,9 +238,26 @@
   
   
   
-    <li class="md-nav__item">
-      <a href="../../../../architecture/" class="md-nav__link">
+    
+    
+      
         
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
   
   
   <span class="md-ellipsis">
@@ -254,7 +271,79 @@
   
   
 
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../features/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Features
+  
+
+    
+  </span>
+  
+  
+
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../import-flow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Import
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -1190,6 +1279,8 @@
       
         
       
+        
+      
     
     
     
@@ -1246,6 +1337,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../import_export/csv/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>csv
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../import_export/export_to_geff/" class="md-nav__link">
         
   
@@ -1274,14 +1393,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../import_export/export_utils/" class="md-nav__link">
+      <a href="../../import_export/geff/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>export_utils
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>geff
   
 
     
@@ -1971,7 +2090,7 @@ the node ids in the graph must match the segmentation labels.</p>
           <tr class="doc-section-item">
             <td><code><span title="funtracks.data_model.tracks.Tracks.features">features</span></code></td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="funtracks.features.FeatureDict" href="../../../../architecture/#funtracks.features.FeatureDict">FeatureDict</a></code>
+                  <code><a class="autorefs autorefs-internal" title="funtracks.features.FeatureDict" href="../../../../features/#funtracks.features.FeatureDict">FeatureDict</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -1982,7 +2101,7 @@ the node ids in the graph must match the segmentation labels.</p>
           <tr class="doc-section-item">
             <td><code><span title="funtracks.data_model.tracks.Tracks.annotators">annotators</span></code></td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="funtracks.annotators.AnnotatorRegistry" href="../../../../architecture/#funtracks.annotators.AnnotatorRegistry">AnnotatorRegistry</a></code>
+                  <code><a class="autorefs autorefs-internal" title="funtracks.annotators.AnnotatorRegistry" href="../../../../features/#funtracks.annotators.AnnotatorRegistry">AnnotatorRegistry</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -2156,7 +2275,7 @@ If None, inferred from segmentation or scale.</p>
                 <code>features</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="funtracks.features.FeatureDict" href="../../../../architecture/#funtracks.features.FeatureDict">FeatureDict</a> | None</code>
+                  <code><a class="autorefs autorefs-internal" title="funtracks.features.FeatureDict" href="../../../../features/#funtracks.features.FeatureDict">FeatureDict</a> | None</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -2329,13 +2448,15 @@ area, track_id) are auto-detected by checking if they exist on the graph.</p>
 
 
 </h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">enable_features</span><span class="p">(</span><span class="n">feature_keys</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">enable_features</span><span class="p">(</span>
+    <span class="n">feature_keys</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">recompute</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
         <p>Enable multiple features for computation efficiently.</p>
-<p>Adds features to annotators and FeatureDict, then computes their values.</p>
+<p>Adds features to annotators and FeatureDict, optionally computes their values.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -2363,6 +2484,23 @@ area, track_id) are auto-detected by checking if they exist on the graph.</p>
             </td>
             <td>
                 <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>recompute</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If True, compute feature values. If False, assume values
+already exist in graph and just register the feature.</p>
+              </div>
+            </td>
+            <td>
+                  <code>True</code>
             </td>
           </tr>
       </tbody>
@@ -2581,7 +2719,7 @@ attribute.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><span title="dict">dict</span>[<span title="str">str</span>, <a class="autorefs autorefs-internal" title="funtracks.features.Feature" href="../../../../architecture/#funtracks.features.Feature">Feature</a>]</code>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <a class="autorefs autorefs-internal" title="funtracks.features.Feature" href="../../../../features/#funtracks.features.Feature">Feature</a>]</code>
             </td>
             <td>
               <div class="doc-md-description">
