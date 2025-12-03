@@ -14,7 +14,7 @@ graph LR
     subgraph Prepare["prepare(source)"]
         direction TB
         ReadHeader["read_header<br/><small>get available properties</small>"]
-        InferMap["infer_name_map<br/><small>auto-map to standard keys</small>"]
+        InferMap["infer_node_name_map<br/><small>auto-map to standard keys</small>"]
         ReadHeader --> InferMap
     end
 
@@ -74,11 +74,11 @@ graph LR
           heading_level: 5
           show_root_heading: false
 
-#### `infer_name_map()` <span class="badge badge-purple">Common</span>
+#### `infer_node_name_map()` <span class="badge badge-purple">Common</span>
 
 ??? "Show API documentation"
 
-    ::: funtracks.import_export._tracks_builder.TracksBuilder.infer_name_map
+    ::: funtracks.import_export._tracks_builder.TracksBuilder.infer_node_name_map
         options:
           heading_level: 5
           show_root_heading: false

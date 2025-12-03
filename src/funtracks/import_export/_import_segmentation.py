@@ -24,19 +24,22 @@ def read_dims(segmentation: Path | np.ndarray):
     return arr.ndim
 
 
-def load_segmentation(segmentation: Path | np.ndarray) -> da.Array:
+def load_segmentation(segmentation: Path | np.ndarray | da.Array) -> da.Array:
     """Load segmentation from path or wrap array in dask.
 
     Args:
-        segmentation: Path to segmentation file or numpy array
+        segmentation: Path to segmentation file, numpy array, or dask array
 
     Returns:
         Dask array containing segmentation data
     """
     if isinstance(segmentation, Path):
         return magic_imread(segmentation, use_dask=True)
+    elif isinstance(segmentation, da.Array):
+        # Already a dask array
+        return segmentation
     else:
-        # Wrap in dask array for consistency
+        # Wrap numpy array in dask array for consistency
         return da.from_array(segmentation, chunks=segmentation.shape)
 
 

@@ -136,14 +136,6 @@ def validate_node_name_map(
             f"Fields with None values: {none_mappings}"
         )
 
-    # Check for duplicate values in required fields
-    required_values = [name_map[key] for key in required_fields if key in name_map]
-    if len(set(required_values)) != len(required_values):
-        raise ValueError(
-            "The name_map cannot contain duplicate values. "
-            "Please provide a unique mapping for each required field."
-        )
-
     missing_features = []
 
     # Check required features
