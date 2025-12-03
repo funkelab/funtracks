@@ -1,42 +1,28 @@
 import numpy as np
 import pytest
 
-from funtracks.data_model import NodeAttr, SolutionTracks
 from funtracks.exceptions import InvalidActionError
 from funtracks.user_actions import UserAddNode, UserDeleteNode
 
 
 @pytest.mark.parametrize("ndim", [3, 4])
-@pytest.mark.parametrize("use_seg", [True, False])
+@pytest.mark.parametrize("with_seg", [True, False])
 class TestUserAddDeleteNode:
-    def get_tracks(self, request, ndim, use_seg) -> SolutionTracks:
-        seg_name = "segmentation_2d" if ndim == 3 else "segmentation_3d"
-        seg = request.getfixturevalue(seg_name) if use_seg else None
-
-        gt_graph = self.get_gt_graph(request, ndim)
-        tracks = SolutionTracks(gt_graph, segmentation=seg, ndim=ndim)
-        return tracks
-
-    def get_gt_graph(self, request, ndim):
-        graph_name = "graph_2d" if ndim == 3 else "graph_3d"
-        gt_graph = request.getfixturevalue(graph_name)
-        return gt_graph
-
-    def test_user_add_invalid_node(self, request, ndim, use_seg):
-        tracks = self.get_tracks(request, ndim, use_seg=use_seg)
+    def test_user_add_invalid_node(self, get_tracks, ndim, with_seg):
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
         # duplicate node
-        with pytest.raises(ValueError, match="Node .* already exists"):
-            attrs = {"time": 5, "track_id": 1}
+        with pytest.raises(InvalidActionError, match="Node .* already exists"):
+            attrs = {"t": 5, "track_id": 1}
             UserAddNode(tracks, node=1, attributes=attrs)
 
         # no time
-        with pytest.raises(ValueError, match="Cannot add node without time"):
+        with pytest.raises(InvalidActionError, match="Cannot add node without time"):
             attrs = {"track_id": 1}
             UserAddNode(tracks, node=7, attributes=attrs)
 
         # no track_id
-        with pytest.raises(ValueError, match="Cannot add node without track id"):
-            attrs = {"time": 1}
+        with pytest.raises(InvalidActionError, match="Cannot add node without track id"):
+            attrs = {"t": 1}
             UserAddNode(tracks, node=7, attributes=attrs)
 
         # upstream division
@@ -44,29 +30,29 @@ class TestUserAddDeleteNode:
             InvalidActionError,
             match="Cannot add node here - upstream division event detected",
         ):
-            attrs = {"time": 2, "track_id": 1}
+            attrs = {"t": 2, "track_id": 1}
             UserAddNode(tracks, node=7, attributes=attrs)
 
-    def test_user_add_node(self, request, ndim, use_seg):
-        tracks = self.get_tracks(request, ndim, use_seg)
+    def test_user_add_node(self, get_tracks, ndim, with_seg):
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
         # add a node to replace a skip edge between node 4 in time 2 and node 5 in time 4
         node_id = 7
         track_id = 3
         time = 3
         position = [50, 50, 50] if ndim == 4 else [50, 50]
         attributes = {
-            NodeAttr.TRACK_ID.value: track_id,
-            NodeAttr.POS.value: position,
-            NodeAttr.TIME.value: time,
+            "track_id": track_id,
+            "pos": position,
+            "t": time,
         }
-        if use_seg:
+        if with_seg:
             seg_copy = tracks.segmentation.copy()
             if ndim == 3:
                 seg_copy[time, position[0], position[1]] = node_id
             else:
                 seg_copy[time, position[0], position[1], position[2]] = node_id
             pixels = np.nonzero(seg_copy == node_id)
-            del attributes[NodeAttr.POS.value]
+            del attributes["pos"]
         else:
             pixels = None
         graph = tracks.graph
@@ -79,8 +65,8 @@ class TestUserAddDeleteNode:
         assert graph.has_edge(node_id, 5)
         assert tracks.get_position(node_id) == position
         assert tracks.get_track_id(node_id) == track_id
-        if use_seg:
-            assert tracks.get_area(node_id) == 1
+        if with_seg:
+            assert tracks.get_node_attr(node_id, "area") == 1
 
         inverse = action.inverse()
         assert not graph.has_node(node_id)
@@ -93,12 +79,12 @@ class TestUserAddDeleteNode:
         assert graph.has_edge(node_id, 5)
         assert tracks.get_position(node_id) == position
         assert tracks.get_track_id(node_id) == track_id
-        if use_seg:
-            assert tracks.get_area(node_id) == 1
+        if with_seg:
+            assert tracks.get_node_attr(node_id, "area") == 1
         # TODO: error if node already exists?
 
-    def test_user_delete_node(self, request, ndim, use_seg):
-        tracks = self.get_tracks(request, ndim, use_seg)
+    def test_user_delete_node(self, get_tracks, ndim, with_seg):
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
         # delete node in middle of track. Should skip-connect 3 and 5 with span 3
         node_id = 4
 
@@ -127,8 +113,8 @@ class TestUserAddDeleteNode:
         assert graph.has_edge(3, 5)
         # TODO: error if node doesn't exist?
 
-    def test_user_delete_node_after_division(self, request, ndim, use_seg: bool):
-        tracks = self.get_tracks(request, ndim, use_seg)
+    def test_user_delete_node_after_division(self, get_tracks, ndim, with_seg):
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
         # delete first node after division. Should relabel the other child
         # to be the same track as parent
         parent_node = 1

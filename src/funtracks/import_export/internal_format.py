@@ -1,19 +1,24 @@
 from __future__ import annotations
 
 import json
+import warnings
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import networkx as nx
 import numpy as np
 
-from ..data_model import SolutionTracks, Tracks
+from funtracks.features import FeatureDict
+
+if TYPE_CHECKING:
+    from ..data_model import SolutionTracks, Tracks
 
 GRAPH_FILE = "graph.json"
 SEG_FILE = "seg.npy"
 ATTRS_FILE = "attrs.json"
 
 
-def save_tracks(tracks: Tracks, directory: Path):
+def save_tracks(tracks: Tracks, directory: Path) -> None:
     """Save the tracks to the given directory.
     Currently, saves the graph as a json file in networkx node link data format,
     saves the segmentation as a numpy npz file, and saves the time and position
@@ -30,7 +35,7 @@ def save_tracks(tracks: Tracks, directory: Path):
     _save_attrs(tracks, directory)
 
 
-def _save_graph(tracks: Tracks, directory: Path):
+def _save_graph(tracks: Tracks, directory: Path) -> None:
     """Save the graph to file. Currently uses networkx node link data
     format (and saves it as json).
 
@@ -62,7 +67,7 @@ def _save_graph(tracks: Tracks, directory: Path):
         json.dump(graph_data, f)
 
 
-def _save_seg(tracks: Tracks, directory: Path):
+def _save_seg(tracks: Tracks, directory: Path) -> None:
     """Save a segmentation as a numpy array using np.save. In the future,
     could be changed to use zarr or other file types.
 
@@ -75,8 +80,8 @@ def _save_seg(tracks: Tracks, directory: Path):
         np.save(out_path, tracks.segmentation)
 
 
-def _save_attrs(tracks: Tracks, directory: Path):
-    """Save the time_attr, pos_attr, and scale in a json file in the given directory.
+def _save_attrs(tracks: Tracks, directory: Path) -> None:
+    """Save the and scale, ndim, and features in a json file in the given directory.
 
     Args:
         tracks (Tracks): the tracks to save the attributes of
@@ -84,14 +89,11 @@ def _save_attrs(tracks: Tracks, directory: Path):
     """
     out_path = directory / ATTRS_FILE
     attrs_dict = {
-        "time_attr": tracks.time_attr,
-        "pos_attr": tracks.pos_attr
-        if not isinstance(tracks.pos_attr, np.ndarray)
-        else tracks.pos_attr.tolist(),
         "scale": tracks.scale
         if not isinstance(tracks.scale, np.ndarray)
         else tracks.scale.tolist(),
         "ndim": tracks.ndim,
+        "features": tracks.features.dump_json(),
     }
     with open(out_path, "w") as f:
         json.dump(attrs_dict, f)
@@ -108,7 +110,7 @@ def load_tracks(
         seg_required (bool, optional): If true, raises a FileNotFoundError if the
             segmentation file is not present in the directory. Defaults to False.
         solution (bool, optional): If true, returns a SolutionTracks object, otherwise
-            reutrns a normal Tracks object. Defaults to False.
+            returns a normal Tracks object. Defaults to False.
 
     Returns:
         Tracks: A tracks object loaded from the given directory
@@ -122,10 +124,24 @@ def load_tracks(
     attrs_file = directory / ATTRS_FILE
     attrs = _load_attrs(attrs_file)
 
-    if solution:
-        return SolutionTracks(graph, seg, **attrs)
-    else:
-        return Tracks(graph, seg, **attrs)
+    # filtering the warnings because the default values of time_attr and pos_attr are
+    # not None. Therefore, new style Tracks attrs that have features instead of
+    # pos_attr and time_attr will always trigger the warning. Updating default values
+    # is breaking, and manually setting the attrs to None if features is present will
+    # break if the attrs are changed/removed in the future. Can remove in v2.0.
+    # Import at runtime to avoid circular dependency
+    from ..data_model import SolutionTracks, Tracks
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore", message="Provided both FeatureDict and pos_attr or time_attr"
+        )
+        tracks: Tracks
+        if solution:
+            tracks = SolutionTracks(graph, seg, **attrs)
+        else:
+            tracks = Tracks(graph, seg, **attrs)
+    return tracks
 
 
 def _load_graph(graph_file: Path) -> nx.DiGraph:
@@ -173,7 +189,11 @@ def _load_seg(seg_file: Path, seg_required: bool = False) -> np.ndarray | None:
 def _load_attrs(attrs_file: Path) -> dict:
     if attrs_file.is_file():
         with open(attrs_file) as f:
-            return json.load(f)
+            json_dict = json.load(f)
+        if "features" in json_dict:
+            json_dict["features"] = FeatureDict.from_json(json_dict["features"])
+        return json_dict
+
     else:
         raise FileNotFoundError(f"No attributes at {attrs_file}")
 

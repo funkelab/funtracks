@@ -1,136 +1,24 @@
+"""Deprecated: Import from funtracks.import_export instead.
+
+This module is deprecated and will be removed in funtracks v2.0.
+Use: from funtracks.import_export import export_to_geff
+
+.. deprecated:: 1.0
+    This module location is deprecated. Import from the main package instead:
+    ``from funtracks.import_export import export_to_geff``
+"""
+
 from __future__ import annotations
 
-import shutil
-from typing import (
-    TYPE_CHECKING,
+import warnings
+
+from .geff._export import export_to_geff
+
+warnings.warn(
+    "Importing from funtracks.import_export.export_to_geff is deprecated. "
+    "Use 'from funtracks.import_export import export_to_geff' instead.",
+    DeprecationWarning,
+    stacklevel=2,
 )
 
-import geff
-import geff_spec
-import networkx as nx
-import numpy as np
-import zarr
-from geff_spec import GeffMetadata
-
-from funtracks.data_model.graph_attributes import NodeAttr
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from funtracks.data_model.tracks import Tracks
-
-
-def export_to_geff(tracks: Tracks, directory: Path, overwrite: bool = False):
-    """Export the Tracks nxgraph to geff.
-
-    Args:
-        tracks (Tracks): Tracks object containing a graph to save.
-        directory (Path): Destination directory for saving the Zarr.
-        overwrite (bool): If True, allows writing into a non-empty directory.
-
-    Raises:
-        ValueError: If the path is invalid, parent doesn't exist, is not a directory,
-                    or if the directory is not empty and overwrite is False.
-    """
-    directory = directory.resolve(strict=False)
-
-    # Ensure parent directory exists
-    parent = directory.parent
-    if not parent.exists():
-        raise ValueError(f"Parent directory {parent} does not exist.")
-
-    # Check target directory
-    if directory.exists():
-        if not directory.is_dir():
-            raise ValueError(f"Provided path {directory} exists but is not a directory.")
-        if any(directory.iterdir()) and not overwrite:
-            raise ValueError(
-                f"Directory {directory} is not empty. Use overwrite=True to allow export."
-            )
-        shutil.rmtree(directory)  # remove directory since overwriting in a non-empty zarr
-        # dir may trigger geff warnings.
-
-    # Create dir
-    directory.mkdir()
-
-    # update the graph to split the position into separate attrs, if they are currently
-    # together in a list
-    if isinstance(tracks.pos_attr, str):
-        graph = split_position_attr(tracks)
-        axis_names = (
-            [tracks.time_attr, "y", "x"]
-            if tracks.ndim == 3
-            else [tracks.time_attr, "z", "y", "x"]
-        )
-    else:
-        graph = tracks.graph
-        axis_names = list(tracks.pos_attr)
-        axis_names.insert(0, tracks.time_attr)
-
-    axis_types = (
-        ["time", "space", "space"]
-        if tracks.ndim == 3
-        else ["time", "space", "space", "space"]
-    )
-    if tracks.scale is None:
-        tracks.scale = (1.0,) * tracks.ndim
-
-    metadata = GeffMetadata(
-        geff_version=geff_spec.__version__,
-        directed=isinstance(graph, nx.DiGraph),
-        node_props_metadata={},
-        edge_props_metadata={},
-    )
-
-    # Save segmentation if present
-    if tracks.segmentation is not None:
-        seg_path = directory / "segmentation"
-        seg_path.mkdir(exist_ok=True)
-        zarr.save_array(str(seg_path), np.asarray(tracks.segmentation))
-        metadata.related_objects = [
-            {
-                "path": "../segmentation",
-                "type": "labels",
-                "label_prop": NodeAttr.SEG_ID.value,
-            }
-        ]
-
-    # Save the graph in a 'tracks' folder
-    tracks_path = directory / "tracks"
-    tracks_path.mkdir(exist_ok=True)
-    geff.write(
-        graph=graph,
-        store=tracks_path,
-        metadata=metadata,
-        axis_names=axis_names,
-        axis_types=axis_types,
-        axis_scales=tracks.scale,
-    )
-
-
-def split_position_attr(tracks: Tracks) -> nx.DiGraph:
-    """Spread the spatial coordinates to separate node attrs in order to export to geff
-    format.
-
-    Args:
-        tracks (funtracks.data_model.Tracks): tracks object holding the graph to be
-          converted.
-
-    Returns:
-        nx.DiGraph with a separate positional attribute for each coordinate.
-
-    """
-    new_graph = tracks.graph.copy()
-
-    for _, attrs in new_graph.nodes(data=True):
-        pos = attrs.pop(tracks.pos_attr)
-
-        if len(pos) == 2:
-            attrs["y"] = pos[0]
-            attrs["x"] = pos[1]
-        elif len(pos) == 3:
-            attrs["z"] = pos[0]
-            attrs["y"] = pos[1]
-            attrs["x"] = pos[2]
-
-    return new_graph
+__all__ = ["export_to_geff"]
