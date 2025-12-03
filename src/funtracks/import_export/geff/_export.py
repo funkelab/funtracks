@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import itertools
-import shutil
 from typing import (
     TYPE_CHECKING,
 )
@@ -53,21 +52,6 @@ def export_to_geff(
     parent = directory.parent
     if not parent.exists():
         raise ValueError(f"Parent directory {parent} does not exist.")
-
-    # Check target directory
-    if directory.exists():
-        if not directory.is_dir():
-            raise ValueError(f"Provided path {directory} exists but is not a directory.")
-        if any(directory.iterdir()) and not overwrite:
-            raise ValueError(
-                f"Directory {directory} is not empty. Use overwrite=True to allow export."
-            )
-        # TODO: figure out geff overwrite issue
-        # Remove directory since overwriting non-empty zarr may trigger geff warnings
-        shutil.rmtree(directory)
-
-    # Create dir
-    directory.mkdir()
 
     # update the graph to split the position into separate attrs, if they are currently
     # together in a list
@@ -155,7 +139,6 @@ def export_to_geff(
 
     # Save the graph in a 'tracks' folder
     tracks_path = directory / "tracks"
-    tracks_path.mkdir(exist_ok=True)
     geff.write(
         graph=graph,
         store=tracks_path,
@@ -163,6 +146,7 @@ def export_to_geff(
         axis_names=axis_names,
         axis_types=axis_types,
         axis_scales=tracks.scale,
+        overwrite=overwrite,
     )
 
 
