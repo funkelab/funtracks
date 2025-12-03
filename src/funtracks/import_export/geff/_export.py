@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import itertools
-import shutil
 from typing import (
     TYPE_CHECKING,
 )
@@ -36,10 +35,6 @@ def export_to_geff(
         node_ids (set[int], optional): A set of nodes that should be saved. If
             provided, a valid graph will be constructed that also includes the ancestors
             of the given nodes. All other nodes will NOT be saved.
-
-    Raises:
-        ValueError: If the path is invalid, parent doesn't exist, is not a directory,
-                    or if the directory is not empty and overwrite is False.
     """
     directory = directory.resolve(strict=False)
 
@@ -49,25 +44,9 @@ def export_to_geff(
         )  # include the ancestors to make sure the graph is valid and has no missing
         # parent nodes.
 
-    # Ensure parent directory exists
-    parent = directory.parent
-    if not parent.exists():
-        raise ValueError(f"Parent directory {parent} does not exist.")
-
-    # Check target directory
-    if directory.exists():
-        if not directory.is_dir():
-            raise ValueError(f"Provided path {directory} exists but is not a directory.")
-        if any(directory.iterdir()) and not overwrite:
-            raise ValueError(
-                f"Directory {directory} is not empty. Use overwrite=True to allow export."
-            )
-        # TODO: figure out geff overwrite issue
-        # Remove directory since overwriting non-empty zarr may trigger geff warnings
-        shutil.rmtree(directory)
-
-    # Create dir
-    directory.mkdir()
+    # Create directory if it doesn't exist (will raise FileNotFoundError if parent
+    # doesn't exist, or FileExistsError if path is a file)
+    directory.mkdir(exist_ok=True)
 
     # update the graph to split the position into separate attrs, if they are currently
     # together in a list
@@ -155,7 +134,6 @@ def export_to_geff(
 
     # Save the graph in a 'tracks' folder
     tracks_path = directory / "tracks"
-    tracks_path.mkdir(exist_ok=True)
     geff.write(
         graph=graph,
         store=tracks_path,
@@ -163,6 +141,7 @@ def export_to_geff(
         axis_names=axis_names,
         axis_types=axis_types,
         axis_scales=tracks.scale,
+        overwrite=overwrite,
     )
 
 
