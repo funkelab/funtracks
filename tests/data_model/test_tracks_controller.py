@@ -327,3 +327,22 @@ def test__add_remove_edges_no_seg(graph_2d_with_computed_features):
     assert tracks.get_track_id(edge[1]) == track_id  # dont relabel after removal
     assert tracks.get_track_id(2) != 1  # give sibling new id again (not necessarily 2)
     assert tracks.graph.number_of_edges() == num_edges
+
+
+def test__swap_nodes(graph_2d_with_computed_features):
+    """Test swapping the incoming edges of two horizontal nodes."""
+
+    tracks = SolutionTracks(
+        graph_2d_with_computed_features,
+        ndim=3,
+        time_attr="t",
+        tracklet_attr="track_id",
+    )
+    controller = TracksController(tracks)
+    controller.swap_nodes([5, 6])
+
+    assert tracks.get_track_id(5) == 6  # new (next available) track id
+    assert tracks.get_track_id(6) == 3  # now on track id 3
+
+    assert (4, 6) in tracks.graph.edges
+    assert (4, 5) not in tracks.graph.edges
