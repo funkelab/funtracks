@@ -232,6 +232,99 @@ class TestEdgeCases:
             tracks_from_df(df)
 
 
+class TestFeatureHandling:
+    """Test feature computation and loading."""
+
+    def test_load_area_from_df(self):
+        """Test loading pre-computed area from DataFrame."""
+        df = pd.DataFrame(
+            {
+                "time": [0, 1],
+                "y": [10.0, 20.0],
+                "x": [15.0, 25.0],
+                "id": [1, 2],
+                "parent_id": [-1, 1],
+                "area": [100.0, 200.0],
+            }
+        )
+
+        tracks = tracks_from_df(df, features={"Area": "area"})
+
+        # Area should be loaded from DataFrame
+        assert tracks.get_node_attr(1, "area") == 100.0
+        assert tracks.get_node_attr(2, "area") == 200.0
+
+    def test_recompute_area_from_seg(self):
+        """Test recomputing area from segmentation."""
+        df = pd.DataFrame(
+            {
+                "time": [0, 1],
+                "y": [10.0, 20.0],
+                "x": [15.0, 25.0],
+                "id": [1, 2],
+                "parent_id": [-1, 1],
+                "seg_id": [1, 2],  # Required when segmentation provided
+            }
+        )
+
+        # Create segmentation with known areas
+        seg = np.zeros((2, 100, 100), dtype=np.uint16)
+        seg[0, 8:13, 13:18] = 1  # 5x5 = 25 pixels
+        seg[1, 18:23, 23:28] = 2  # 5x5 = 25 pixels
+
+        tracks = tracks_from_df(df, seg, features={"Area": "Recompute"})
+
+        # Area should be computed from segmentation
+        assert tracks.get_node_attr(1, "area") == 25
+        assert tracks.get_node_attr(2, "area") == 25
+
+
+class TestDuplicateMappings:
+    """Test duplicate value handling in name_map."""
+
+    def test_seg_id_same_as_id(self, simple_df_2d):
+        """Test that seg_id can map to same column as id."""
+        # This is valid when segmentation labels already match node IDs
+        name_map = {
+            "id": "id",
+            "parent_id": "parent_id",
+            "time": "time",
+            "y": "y",
+            "x": "x",
+            "seg_id": "id",  # seg_id maps to same column as id
+        }
+
+        tracks = tracks_from_df(simple_df_2d, node_name_map=name_map)
+
+        # Both id and seg_id should be present with same values
+        assert tracks.graph.number_of_nodes() == 4
+        for node_id in tracks.graph.nodes():
+            assert tracks.get_node_attr(node_id, "seg_id") == node_id
+
+    def test_duplicate_mapping_with_segmentation(self, simple_df_2d):
+        """Test seg_id=id with actual segmentation (no relabeling needed)."""
+        name_map = {
+            "id": "id",
+            "parent_id": "parent_id",
+            "time": "time",
+            "y": "y",
+            "x": "x",
+            "seg_id": "id",  # seg_id = id
+        }
+
+        seg = np.zeros((3, 100, 100), dtype=np.uint16)
+        seg[0, 10, 15] = 1
+        seg[1, 20, 25] = 2
+        seg[1, 30, 35] = 3
+        seg[2, 40, 45] = 4
+
+        tracks = tracks_from_df(simple_df_2d, segmentation=seg, node_name_map=name_map)
+
+        assert tracks.segmentation is not None
+        # Segmentation should not be relabeled since seg_id == id
+        assert tracks.segmentation[0, 10, 15] == 1
+
+
 class TestValidationErrors:
     """Test that invalid data raises appropriate errors."""
 

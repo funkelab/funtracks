@@ -65,17 +65,21 @@ class TestValidateNodeNameMap:
             )
 
     def test_duplicate_values_in_required_fields(self):
-        """Test that duplicate values in required fields raise ValueError."""
+        """Test that duplicate values in required fields are allowed.
+
+        Multiple standard keys can map to the same source property.
+        This is useful for cases like seg_id mapping to the same column as id.
+        """
         name_map = {"time": "t", "x": "coord", "y": "coord"}  # Duplicate "coord"
         importable_props = ["t", "coord"]
         required_features = ["time"]
         position_attr = ["z", "y", "x"]
         ndim = 3
 
-        with pytest.raises(ValueError, match="duplicate values"):
-            validate_node_name_map(
-                name_map, importable_props, required_features, position_attr, ndim
-            )
+        # Should not raise - duplicates are allowed
+        validate_node_name_map(
+            name_map, importable_props, required_features, position_attr, ndim
+        )
 
     def test_nonexistent_property(self):
         """Test that mapping to non-existent properties raises ValueError."""
