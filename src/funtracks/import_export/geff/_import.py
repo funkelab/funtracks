@@ -70,32 +70,35 @@ def import_graph_from_geff(
             "The node_name_map cannot contain None values. Please provide a valid "
             "mapping for all required fields."
         )
-    if len(set(spatio_temporal_map.values())) != len(spatio_temporal_map.values()):
-        raise ValueError(
-            "The node_name_map cannot contain duplicate values. Please provide a unique "
-            "mapping for each required field."
-        )
 
     # Rename node property keys from custom (GEFF) to standard using node_name_map
-    # Build reverse mapping: GEFF key -> standard key
-    node_geff_to_standard = {v: k for k, v in node_name_map.items() if v is not None}
-
+    # Handle duplicate mappings (e.g., seg_id -> "node_id", id -> "node_id") by
+    # copying data for each standard key that maps to the same GEFF property.
     node_props = in_memory_geff["node_props"]
     renamed_node_props = {}
-    for geff_key, prop_data in node_props.items():
-        standard_key = node_geff_to_standard.get(geff_key, geff_key)
-        renamed_node_props[standard_key] = prop_data
+    for std_key, geff_key in node_name_map.items():
+        if geff_key is not None and geff_key in node_props:
+            prop_data = node_props[geff_key]
+            # Copy values to avoid aliasing when multiple keys map to same source
+            renamed_node_props[std_key] = {
+                "values": prop_data["values"].copy(),
+                "missing": prop_data.get("missing"),
+            }
     in_memory_geff["node_props"] = renamed_node_props
 
     # Rename edge property keys from custom (GEFF) to standard using edge_name_map
+    # Handle duplicate mappings by copying data for each standard key.
     if edge_name_map is not None:
-        edge_geff_to_standard = {v: k for k, v in edge_name_map.items() if v is not None}
-
         edge_props = in_memory_geff["edge_props"]
         renamed_edge_props = {}
-        for geff_key, prop_data in edge_props.items():
-            standard_key = edge_geff_to_standard.get(geff_key, geff_key)
-            renamed_edge_props[standard_key] = prop_data
+        for std_key, geff_key in edge_name_map.items():
+            if geff_key is not None and geff_key in edge_props:
+                prop_data = edge_props[geff_key]
+                # Copy values to avoid aliasing when multiple keys map to same source
+                renamed_edge_props[std_key] = {
+                    "values": prop_data["values"].copy(),
+                    "missing": prop_data.get("missing"),
+                }
         in_memory_geff["edge_props"] = renamed_edge_props
 
     # Extract time and position attributes (now using standard keys)

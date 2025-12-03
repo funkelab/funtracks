@@ -95,24 +95,14 @@ class CSVTracksBuilder(TracksBuilder):
                     # Assume feature name in CSV matches standard key
                     extended_name_map[feature_key] = feature_key
 
-        # Apply extended_name_map: rename CSV columns to standard keys
-        rename_map = {
-            csv_col: std_key
-            for std_key, csv_col in extended_name_map.items()
-            if csv_col is not None and csv_col in df.columns
-        }
-        df = df.rename(columns=rename_map)
-
-        # Only keep columns that exist in the DataFrame after renaming
-        # A column exists if:
-        # 1. It was renamed from a CSV column (std_key is in rename_map values), or
-        # 2. It already exists in df with the standard key name
-        columns_to_keep = [
-            std_key
-            for std_key, csv_col in extended_name_map.items()
-            if std_key in rename_map.values() or std_key in df.columns
-        ]
-        df = df[columns_to_keep]
+        # Build a new DataFrame with standard key names, copying data for each mapping.
+        # This handles duplicate mappings (e.g., seg_id -> "node_id", id -> "node_id")
+        # by copying the source column data to each standard key.
+        new_df_data = {}
+        for std_key, csv_col in extended_name_map.items():
+            if csv_col is not None and csv_col in df.columns:
+                new_df_data[std_key] = df[csv_col].copy()
+        df = pd.DataFrame(new_df_data)
 
         # Convert NaN to None
         df = df.map(lambda x: None if pd.isna(x) else x)

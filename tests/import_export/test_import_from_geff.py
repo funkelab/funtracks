@@ -238,18 +238,31 @@ def test_import_graph_from_geff_edge_name_map_none(valid_geff):
     assert in_memory_geff["edge_props"] == {}
 
 
-def test_duplicate_or_none_in_name_map(valid_geff):
-    """Test that duplicate values or missing t/y/x attributes are caught"""
+def test_none_in_name_map(valid_geff):
+    """Test that None values in required t/y/x attributes are caught"""
 
     store, _ = valid_geff
-    # Duplicate value
-    name_map = {"time": "t", "y": "y", "x": "y"}
-    with pytest.raises(ValueError, match="duplicate values"):
-        import_from_geff(store, name_map)
-    # None value
+    # None value for required field should raise error
     name_map = {"time": None, "y": "y", "x": "x"}
     with pytest.raises(ValueError, match="None values"):
         import_from_geff(store, name_map)
+
+
+def test_duplicate_values_in_name_map(valid_geff):
+    """Test that duplicate values in name_map are allowed."""
+    store, _ = valid_geff
+
+    # Duplicate values should be allowed - each standard key gets a copy of the data
+    name_map = {"time": "t", "y": "y", "x": "x", "seg_id": "t"}
+
+    # Should not raise - seg_id maps to same source as time
+    tracks = import_from_geff(store, name_map)
+
+    # Both time and seg_id should be present with same values
+    for node_id in tracks.graph.nodes():
+        assert tracks.get_node_attr(node_id, "seg_id") == tracks.get_node_attr(
+            node_id, "time"
+        )
 
 
 def test_segmentation_axes_mismatch(valid_geff, tmp_path):
