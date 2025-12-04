@@ -162,6 +162,40 @@ class TracksController:
             )
         return ActionGroup(self.tracks, actions)
 
+    def swap_nodes(self, nodes: tuple[Node, Node]) -> None:
+        """'Swaps' nodes by swapping the incoming edges of two horizontal nodes.
+
+        Args:
+            nodes (tuple[Node, Node]): A tuple with two nodes at the same time point.
+        """
+
+        if not self.is_valid_swap(nodes):
+            return
+
+        edges_to_make = []
+        edges_to_break = []
+
+        node1, node2 = nodes[0], nodes[1]
+        pred1 = next(self.tracks.graph.predecessors(node1), None)
+        pred2 = next(self.tracks.graph.predecessors(node2), None)
+
+        if pred1 is not None:
+            edges_to_break.append((pred1, node1))
+            edges_to_make.append((pred1, node2))
+
+        if pred2 is not None:
+            edges_to_break.append((pred2, node2))
+            edges_to_make.append((pred2, node1))
+
+        actions: list[Action] = []
+        if len(edges_to_break) > 0:
+            actions.append(self._delete_edges(edges_to_break))
+        if len(edges_to_make) > 0:
+            actions.append(self._add_edges(edges_to_make))
+
+        self.action_history.add_new_action(ActionGroup(self.tracks, actions))
+        self.tracks.refresh.emit()
+
     def add_edges(self, edges: Iterable[Edge], force: bool = False) -> None:
         """Add edges to the graph. Also update the track ids and
         corresponding segmentations if applicable
@@ -231,6 +265,29 @@ class TracksController:
         for edge in edges:
             actions.append(UserAddEdge(self.tracks, edge, force))
         return ActionGroup(self.tracks, actions)
+
+    def is_valid_swap(self, node_pair: tuple[Node, Node]) -> bool:
+        """Check if these two nodes share the same time point and can therefore be
+        swapped
+        Args:
+            node_pair ([Node, Node]): pair of nodes to check.
+        Returns:
+            True if the two nodes share the same time point.
+        """
+
+        if len(node_pair) != 2:
+            warn("You can only swap a pair of two nodes.", stacklevel=2)
+            return False
+        node1, node2 = node_pair[0], node_pair[1]
+
+        time1 = self.tracks.get_time(node1)
+        time2 = self.tracks.get_time(node2)
+
+        if time1 != time2:
+            warn("Both nodes must have the same time point to swap.", stacklevel=2)
+            return False
+
+        return True
 
     def is_valid(self, edge: Edge) -> bool:
         """Check if this edge is valid.
