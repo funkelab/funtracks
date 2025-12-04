@@ -23,7 +23,7 @@ class SolutionTracks(Tracks):
     def __init__(
         self,
         graph: td.graph,
-        segmentation: np.ndarray | None = None,
+        segmentation_shape: tuple[int, ...],
         time_attr: str = NodeAttr.TIME.value,
         pos_attr: str | tuple[str] | list[str] = NodeAttr.POS.value,
         scale: list[float] | None = None,
@@ -32,7 +32,7 @@ class SolutionTracks(Tracks):
     ):
         super().__init__(
             graph,
-            segmentation=segmentation,
+            segmentation_shape=segmentation_shape,
             time_attr=time_attr,
             pos_attr=pos_attr,
             scale=scale,
@@ -52,7 +52,7 @@ class SolutionTracks(Tracks):
     def from_tracks(cls, tracks: Tracks):
         return cls(
             tracks.graph,
-            segmentation=tracks.segmentation,
+            segmentation_shape=tracks.segmentation_shape,
             time_attr=tracks.time_attr,
             pos_attr=tracks.pos_attr,
             scale=tracks.scale,

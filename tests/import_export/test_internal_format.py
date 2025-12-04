@@ -22,13 +22,13 @@ def test_save_load(
 ):
     if ndim == 2:
         graph = request.getfixturevalue("graph_2d")
-        seg = request.getfixturevalue("segmentation_2d")
+        segmentation_shape = (5, 100, 100)
     else:
         graph = request.getfixturevalue("graph_3d")
-        seg = request.getfixturevalue("segmentation_3d")
+        segmentation_shape = (2, 100, 100, 100)
     if not use_seg:
-        seg = None
-    tracks = track_type(graph, seg, ndim=ndim + 1)
+        segmentation_shape = None
+    tracks = track_type(graph, segmentation_shape, ndim=ndim + 1)
     save_tracks(tracks, tmp_path)
 
     solution = bool(issubclass(track_type, SolutionTracks))
@@ -71,13 +71,13 @@ def test_delete(
     tracks_path = tmp_path / "test_tracks"
     if ndim == 2:
         graph = request.getfixturevalue("graph_2d")
-        seg = request.getfixturevalue("segmentation_2d")
+        segmentation_shape = (5, 100, 100)
     else:
         graph = request.getfixturevalue("graph_3d")
-        seg = request.getfixturevalue("segmentation_3d")
+        segmentation_shape = (2, 100, 100, 100)
     if not use_seg:
-        seg = None
-    tracks = track_type(graph, seg, ndim=ndim + 1)
+        segmentation_shape = None
+    tracks = track_type(graph, segmentation_shape, ndim=ndim + 1)
     save_tracks(tracks, tracks_path)
     delete_tracks(tracks_path)
     with pytest.raises(StopIteration):

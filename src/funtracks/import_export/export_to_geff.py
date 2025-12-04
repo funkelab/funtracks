@@ -65,7 +65,8 @@ def export_to_geff(tracks: Tracks, directory: Path, overwrite: bool = False):
         axis_names = list(tracks.pos_attr)
         axis_names.insert(0, tracks.time_attr)
 
-    # TODO: this is not correct, we need to add the type of the axis to the metadata
+    # TODO: commenting this out is not correct, we need
+    # to add the type of the axis to the metadata
     # axis_types = (
     #     ["time", "space", "space"]
     #     if tracks.ndim == 3

@@ -127,7 +127,7 @@ def test_tracks_with_segmentation(
         scale=scale,
         extra_features=extra_features,
     )
-    assert isinstance(tracks.graph, td.graph.SQLGraph)
+    assert isinstance(tracks.graph, td.graph.GraphView)
     assert hasattr(tracks, "segmentation")
     assert tracks.segmentation.shape == valid_segmentation.shape
     last_node = list(tracks.graph.node_ids())[-1]
@@ -166,7 +166,7 @@ def test_tracks_with_segmentation(
         scale=scale,
         extra_features=extra_features,
     )
-    assert isinstance(tracks.graph, td.graph.SQLGraph)
+    assert isinstance(tracks.graph, td.graph.GraphView)
     data = tracks.graph.node_attrs()
     assert "area" in data.columns
     assert data["area"][-1] == 21
@@ -220,6 +220,6 @@ def test_segmentation_loading_formats(
         scale=scale,
         extra_features={"area": False, "random_feature": False, "track_id": True},
     )
-    assert isinstance(tracks.graph, td.graph.SQLGraph)
+    assert isinstance(tracks.graph, td.graph.GraphView)
     assert hasattr(tracks, "segmentation")
     assert np.array(tracks.segmentation).shape == seg.shape

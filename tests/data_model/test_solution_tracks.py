@@ -1,29 +1,39 @@
 import numpy as np
-import tracksdata as td
+from tracksdata.array import GraphArrayView
+from tracksdata.nodes._mask import Mask
 
 from funtracks.data_model import NodeAttr, SolutionTracks, Tracks
 from funtracks.data_model.actions import AddNodes
+from funtracks.data_model.tracksdata_utils import create_empty_graphview_graph
 
 
 def test_next_track_id(graph_2d):
-    tracks = SolutionTracks(graph_2d, ndim=3)
+    tracks = SolutionTracks(graph_2d, segmentation_shape=(5, 100, 100), ndim=3)
+
     assert tracks.get_next_track_id() == 6
+    mask = Mask(np.ones((3, 3)), bbox=np.array([0, 0, 3, 3]))
     AddNodes(
         tracks,
         nodes=[10],
-        attributes={"t": [3], "pos": [[0, 0]], "track_id": [10]},
-        # TODO: Caroline/Anniek, why did this test have a 4D pos vector?
+        attributes={
+            "t": [3],
+            "pos": [np.array([0, 0])],
+            "track_id": [10],
+            "area": [9],
+            "mask": [mask],
+            "bbox": [mask.bbox],
+        },
     )
     assert tracks.get_next_track_id() == 11
 
 
 def test_from_tracks_cls(graph_2d):
     tracks = Tracks(
-        graph_2d, ndim=3, pos_attr="POSITION", time_attr="TIME", scale=(2, 2, 2)
+        graph_2d, segmentation_shape=(5,100,100), ndim=3, pos_attr="POSITION", time_attr="TIME", scale=(2, 2, 2)
     )
     solution_tracks = SolutionTracks.from_tracks(tracks)
     assert solution_tracks.graph == tracks.graph
-    assert solution_tracks.segmentation == tracks.segmentation
+    np.testing.assert_array_equal(np.asarray(solution_tracks.segmentation), np.asarray(solution_tracks.segmentation))
     assert solution_tracks.time_attr == tracks.time_attr
     assert solution_tracks.pos_attr == tracks.pos_attr
     assert solution_tracks.scale == tracks.scale
@@ -40,21 +50,14 @@ def test_from_tracks_cls(graph_2d):
 
 
 def test_next_track_id_empty():
-    kwargs = {
-        "drivername": "sqlite",
-        "database": ":memory:",
-        "overwrite": True,
-    }
-    graph_td = td.graph.SQLGraph(**kwargs)
-    # TODO: somewhere we have to make track_id a mandatory node attr
-    graph_td.add_node_attr_key(key="track_id", default_value=0)
-    seg = np.zeros(shape=(10, 100, 100, 100), dtype=np.uint64)
-    tracks = SolutionTracks(graph_td, segmentation=seg)
+    graph_td = create_empty_graphview_graph(database=":memory:", position_attrs=["pos"])
+
+    tracks = SolutionTracks(graph_td, segmentation_shape=(10, 100, 100, 100), ndim=4)
     assert tracks.get_next_track_id() == 1
 
 
 def test_export_to_csv(graph_2d, graph_3d, tmp_path):
-    tracks = SolutionTracks(graph_2d, ndim=3)
+    tracks = SolutionTracks(graph_2d, segmentation_shape=(5, 100, 100), ndim=3)
     temp_file = tmp_path / "test_export_2d.csv"
     tracks.export_tracks(temp_file)
     with open(temp_file) as f:
@@ -65,7 +68,7 @@ def test_export_to_csv(graph_2d, graph_3d, tmp_path):
     header = ["t", "y", "x", "id", "parent_id", "track_id"]
     assert lines[0].strip().split(",") == header
 
-    tracks = SolutionTracks(graph_3d, ndim=4)
+    tracks = SolutionTracks(graph_3d, segmentation_shape=(5, 100, 100, 100), ndim=4)
     temp_file = tmp_path / "test_export_3d.csv"
     tracks.export_tracks(temp_file)
     with open(temp_file) as f:

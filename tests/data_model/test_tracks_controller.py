@@ -8,7 +8,7 @@ from funtracks.data_model.tracks_controller import TracksController
 
 def test__add_nodes_no_seg(graph_2d):
     # add without segmentation
-    tracks = SolutionTracks(graph_2d, ndim=3)
+    tracks = SolutionTracks(graph_2d, segmentation_shape=(5, 100, 100), ndim=3)
     controller = TracksController(tracks)
 
     num_edges = tracks.graph.num_edges
@@ -68,14 +68,14 @@ def test__add_nodes_no_seg(graph_2d):
     assert not tracks.graph.has_edge(5, 6)
 
 
-def test__add_nodes_with_seg(graph_2d, segmentation_2d):
+def test__add_nodes_with_seg(graph_2d):
     # add with segmentation
-    tracks = SolutionTracks(graph_2d, segmentation=segmentation_2d)
+    tracks = SolutionTracks(graph_2d, segmentation_shape=(5, 100, 100))
     controller = TracksController(tracks)
 
     num_edges = tracks.graph.num_edges
 
-    new_seg = segmentation_2d.copy()
+    new_seg = np.asarray(tracks.segmentation).copy()
     time = 0
     track_id = 6
     node1 = 7
@@ -170,7 +170,7 @@ def test__add_nodes_with_seg(graph_2d, segmentation_2d):
 
 
 def test__delete_nodes_no_seg(graph_2d):
-    tracks = SolutionTracks(graph_2d, ndim=3)
+    tracks = SolutionTracks(graph_2d, segmentation_shape=(5, 100, 100), ndim=3)
     controller = TracksController(tracks)
     num_edges = tracks.graph.num_edges
 
@@ -213,8 +213,8 @@ def test__delete_nodes_no_seg(graph_2d):
     assert tracks.get_track_id(2) == 1  # update track id for other child
 
 
-def test__delete_nodes_with_seg(graph_2d, segmentation_2d):
-    tracks = SolutionTracks(graph_2d, segmentation=segmentation_2d)
+def test__delete_nodes_with_seg(graph_2d):
+    tracks = SolutionTracks(graph_2d, segmentation_shape=(5, 100, 100))
     controller = TracksController(tracks)
     num_edges = tracks.graph.num_edges
 
@@ -274,7 +274,7 @@ def test__delete_nodes_with_seg(graph_2d, segmentation_2d):
 
 
 def test__add_remove_edges_no_seg(graph_2d):
-    tracks = SolutionTracks(graph_2d, ndim=3)
+    tracks = SolutionTracks(graph_2d, segmentation_shape=(5, 100, 100), ndim=3)
     controller = TracksController(tracks)
     num_edges = tracks.graph.num_edges
 

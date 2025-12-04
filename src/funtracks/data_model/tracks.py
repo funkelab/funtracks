@@ -13,11 +13,14 @@ from warnings import warn
 import numpy as np
 import tracksdata as td
 from psygnal import Signal
-from skimage import measure
 
 from .compute_ious import _compute_ious
 from .graph_attributes import EdgeAttr, NodeAttr
+from tracksdata.array import GraphArrayView
 from .tracksdata_utils import (
+    combine_td_masks,
+    pixels_to_td_mask,
+    subtract_td_masks,
     td_get_predecessors,
     td_get_single_attr_from_edge,
     td_get_successors,
@@ -64,20 +67,25 @@ class Tracks:
     def __init__(
         self,
         graph: td.graph.BaseGraph,
-        segmentation: np.ndarray | None = None,
+        segmentation_shape: tuple[int, ...],
         time_attr: str = NodeAttr.TIME.value,
         pos_attr: str | tuple[str] | list[str] = NodeAttr.POS.value,
         scale: list[float] | None = None,
         ndim: int | None = None,
     ):
-        if not isinstance(graph, td.graph.BaseGraph):
-            raise ValueError("graph must be a tracksdata.BaseGraph")
+        if not isinstance(graph, td.graph.GraphView):
+            raise ValueError("graph must be a tracksdata.graph.GraphView")
         self.graph = graph
-        self.segmentation = segmentation
+        array_view = GraphArrayView(
+            graph=graph, shape=segmentation_shape, attr_key="node_id", offset=0
+        )
+        #TODO: Teun: we need the option of having Tracks without segmentation
+        self.segmentation_shape = segmentation_shape
+        self.segmentation = array_view
         self.time_attr = time_attr
         self.pos_attr = pos_attr
         self.scale = scale
-        self.ndim = self._compute_ndim(segmentation, scale, ndim)
+        self.ndim = self._compute_ndim(self.segmentation, scale, ndim)
 
     def nodes(self):
         """Get the node ids in the graph."""
@@ -261,16 +269,33 @@ class Tracks:
         """
         if self.segmentation is None:
             return None
+
         pix_list = []
         for node in nodes:
+            # Get time and mask for the node
             time = self.get_time(node)
-            loc_pixels = np.nonzero(self.segmentation[time] == node)
-            time_array = np.ones_like(loc_pixels[0]) * time
-            pix_list.append((time_array, *loc_pixels))
+            mask = self.graph[node][td.DEFAULT_ATTR_KEYS.MASK]
+
+            # Get local coordinates and convert to global using bbox offset
+            local_coords = np.nonzero(mask.mask)
+            global_coords = [
+                coord + mask.bbox[dim] for dim, coord in enumerate(local_coords)
+            ]
+
+            # Create time array matching the number of points
+            time_array = np.full_like(global_coords[0], time)
+
+            # Combine time and spatial coordinates
+            pix_list.append((time_array, *global_coords))
+
         return pix_list
 
     def set_pixels(
-        self, pixels: Iterable[tuple[np.ndarray, ...]], values: Iterable[int | None]
+        self,
+        pixels: Iterable[tuple[np.ndarray, ...]],
+        values: Iterable[int | None],
+        added: bool = True,
+        nodes: Iterable[int] | None = None,
     ):
         """Set the given pixels in the segmentation to the given value.
 
@@ -280,13 +305,79 @@ class Tracks:
                 represents one dimension, containing an array of indices in that
                 dimension). Can be used to directly index the segmentation.
             value (Iterable[int | None]): The value to set each pixel to
+            added (bool, optional): If true, the pixels will be added to the
+                segmentation. If false, they will be removed (set to 0). Defaults
+                to True.
+            nodes (Iterable[int] | None, optional): The node ids that the pixels
+                correspond to. Only needed if pixels need to be removed (val=0)
         """
+
         if self.segmentation is None:
             raise ValueError("Cannot set pixels when segmentation is None")
-        for pix, val in zip(pixels, values, strict=False):
+        nodes_list = list(nodes) if nodes is not None else None
+        for idx, (pix, val) in enumerate(zip(pixels, values, strict=False)):
+            node_id = None if nodes_list is None else nodes_list[idx]
+
             if val is None:
                 raise ValueError("Cannot set pixels to None value")
-            self.segmentation[pix] = val
+
+            mask_new, area_new = pixels_to_td_mask(pix, self.ndim, self.scale)
+
+            if val == 0 or not added:
+                # val=0 means deleting the pixels from the mask
+                mask_old = self.graph[node_id][td.DEFAULT_ATTR_KEYS.MASK]
+                mask_subtracted, area_subtracted = subtract_td_masks(
+                    mask_old, mask_new, self.scale
+                )
+                self.graph.update_node_attrs(
+                    attrs={
+                        td.DEFAULT_ATTR_KEYS.MASK: [mask_subtracted],
+                        td.DEFAULT_ATTR_KEYS.BBOX: [mask_subtracted.bbox],
+                        NodeAttr.AREA.value: [area_subtracted],
+                    },
+                    node_ids=[node_id],
+                )
+
+            elif val in self.graph.node_ids():
+                # if node already exists:
+                mask_old = self.graph[val][td.DEFAULT_ATTR_KEYS.MASK]
+                mask_combined, area_combined = combine_td_masks(
+                    mask_old, mask_new, self.scale
+                )
+                self.graph.update_node_attrs(
+                    attrs={
+                        td.DEFAULT_ATTR_KEYS.MASK: [mask_combined],
+                        td.DEFAULT_ATTR_KEYS.BBOX: [mask_combined.bbox],
+                        NodeAttr.AREA.value: [area_combined],
+                    },
+                    node_ids=[val],
+                )
+
+            else:
+                if len(np.unique(pix[0])) > 1:
+                    raise ValueError(
+                        f"pixels in Tracks.set_pixels has more than 1 timepoint "
+                        f"for node {val}. This is not implemented, so if this is "
+                        "necessary, set_pixels should be updated"
+                    )
+
+                time = int(np.unique(pix[0])[0])
+                pos = np.array([np.mean(pix[dim + 1]) for dim in range(self.ndim - 1)])
+                track_id = -1  # dummy, will be replaced in AddNodes._apply()
+
+                node_dict = {
+                    NodeAttr.TIME.value: time,
+                    NodeAttr.POS.value: pos,
+                    NodeAttr.TRACK_ID.value: track_id,
+                    NodeAttr.AREA.value: area_new,
+                    td.DEFAULT_ATTR_KEYS.SOLUTION: 1,
+                    td.DEFAULT_ATTR_KEYS.MASK: mask_new,
+                    td.DEFAULT_ATTR_KEYS.BBOX: mask_new.bbox,
+                }
+
+                self.graph.add_node(node_dict, index=val)
+
+        # TODO: Teun: implement the cach clearing stuff!
 
     def _set_node_attributes(self, nodes: Iterable[Node], attributes: Attrs):
         """Update the attributes for given nodes"""
@@ -399,49 +490,6 @@ class Tracks:
     def get_edges_attr(self, edges: Iterable[Edge], attr: str, required: bool = False):
         return [self.get_edge_attr(edge, attr, required=required) for edge in edges]
 
-    def _compute_node_attrs(self, nodes: Iterable[Node], times: Iterable[int]) -> Attrs:
-        """Get the segmentation controlled node attributes (area and position)
-        from the segmentation with label based on the node id in the given time point.
-
-        Args:
-            nodes (Iterable[int]): The node ids to query the current segmentation for
-            time (int): The time frames of the current segmentation to query
-
-        Returns:
-            dict[str, int]: A dictionary containing the attributes that could be
-                determined from the segmentation. It will be empty if self.segmentation
-                is None. If self.segmentation exists but node id is not present in time,
-                area will be 0 and position will be None. If self.segmentation
-                exists and node id is present in time, area and position will be included.
-        """
-        if self.segmentation is None:
-            return {}
-
-        attrs: dict[str, list[Any]] = {
-            NodeAttr.POS.value: [],
-            NodeAttr.AREA.value: [],
-        }
-        for node, time in zip(nodes, times, strict=False):
-            seg = self.segmentation[time] == node
-            pos_scale = self.scale[1:] if self.scale is not None else None
-            area = np.sum(seg)
-            if pos_scale is not None:
-                area *= np.prod(pos_scale)
-            # only include the position if the segmentation was actually there
-            pos = (
-                measure.centroid(seg, spacing=pos_scale)  # type: ignore
-                if area > 0
-                else np.array(
-                    [
-                        None,
-                    ]
-                    * (self.ndim - 1)
-                )
-            )
-            attrs[NodeAttr.AREA.value].append(float(area))
-            attrs[NodeAttr.POS.value].append(pos)
-        return attrs
-
     def _compute_edge_attrs(self, edges: Iterable[Edge]) -> Attrs:
         """Get the segmentation controlled edge attributes (IOU)
         from the segmentations associated with the endpoints of the edge.
@@ -462,56 +510,84 @@ class Tracks:
         attrs: dict[str, list[Any]] = {EdgeAttr.IOU.value: []}
         for edge in edges:
             source, target = edge
-            source_time = self.get_time(source)
-            target_time = self.get_time(target)
 
-            source_arr = self.segmentation[source_time] == source
-            target_arr = self.segmentation[target_time] == target
+            # Get masks and calculate common bounding box
+            source_mask = self.graph[source][td.DEFAULT_ATTR_KEYS.MASK]
+            target_mask = self.graph[target][td.DEFAULT_ATTR_KEYS.MASK]
+            spatial_dims = self.ndim - 1
 
-            iou_list = _compute_ious(source_arr, target_arr)  # list of (id1, id2, iou)
+            # Calculate common bounding box and shape more efficiently
+            bbox_slice = slice(None, spatial_dims)
+            common_bbox_min = np.minimum(
+                source_mask.bbox[bbox_slice], target_mask.bbox[bbox_slice]
+            )
+            common_bbox_max = np.maximum(
+                source_mask.bbox[spatial_dims:], target_mask.bbox[spatial_dims:]
+            )
+
+            # Create slices for both masks in common space
+            source_offset = source_mask.bbox[bbox_slice] - common_bbox_min
+            target_offset = target_mask.bbox[bbox_slice] - common_bbox_min
+            source_slice = tuple(
+                slice(off, off + dim)
+                for off, dim in zip(source_offset, source_mask.mask.shape, strict=False)
+            )
+            target_slice = tuple(
+                slice(off, off + dim)
+                for off, dim in zip(target_offset, target_mask.mask.shape, strict=False)
+            )
+
+            # Create and fill source and target masks in common space
+            common_shape = common_bbox_max - common_bbox_min
+            source_in_common = np.zeros(common_shape, dtype=bool)
+            target_in_common = np.zeros(common_shape, dtype=bool)
+            source_in_common[source_slice] = source_mask.mask
+            target_in_common[target_slice] = target_mask.mask
+
+            iou_list = _compute_ious(source_in_common, target_in_common)
             iou = 0 if len(iou_list) == 0 else iou_list[0][2]
 
             attrs[EdgeAttr.IOU.value].append(iou)
         return attrs
 
-    def save(self, directory: Path):
-        """Save the tracks to the given directory.
-        Currently, saves the graph as a json file in networkx node link data format,
-        saves the segmentation as a numpy npz file, and saves the time and position
-        attributes and scale information in an attributes json file.
-        Args:
-            directory (Path): The directory to save the tracks in.
-        """
-        warn(
-            "`Tracks.save` is deprecated and will be removed in 2.0, use "
-            "`funtracks.import_export.internal_format.save` instead",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        from ..import_export.internal_format import save_tracks
+    # TODO: add save and load are removed!
+    # def save(self, directory: Path):
+    #     """Save the tracks to the given directory.
+    #     Currently, saves the graph as a json file in networkx node link data format,
+    #     saves the segmentation as a numpy npz file, and saves the time and position
+    #     attributes and scale information in an attributes json file.
+    #     Args:
+    #         directory (Path): The directory to save the tracks in.
+    #     """
+    #     warn(
+    #         "`Tracks.save` is deprecated and will be removed in 2.0, use "
+    #         "`funtracks.import_export.internal_format.save` instead",
+    #         DeprecationWarning,
+    #         stacklevel=2,
+    #     )
+    #     from ..import_export.internal_format import save_tracks
 
-        save_tracks(self, directory)
+    #     save_tracks(self, directory)
+    # @classmethod
+    # def load(cls, directory: Path, seg_required=False, solution=False) -> Tracks:
+    #     """Load a Tracks object from the given directory. Looks for files
+    #     in the format generated by Tracks.save.
+    #     Args:
+    #         directory (Path): The directory containing tracks to load
+    #         seg_required (bool, optional): If true, raises a FileNotFoundError if the
+    #             segmentation file is not present in the directory. Defaults to False.
+    #     Returns:
+    #         Tracks: A tracks object loaded from the given directory
+    #     """
+    #     warn(
+    #         "`Tracks.load` is deprecated and will be removed in 2.0, use "
+    #         "`funtracks.import_export.internal_format.load` instead",
+    #         DeprecationWarning,
+    #         stacklevel=2,
+    #     )
+    #     from ..import_export.internal_format import load_tracks
 
-    @classmethod
-    def load(cls, directory: Path, seg_required=False, solution=False) -> Tracks:
-        """Load a Tracks object from the given directory. Looks for files
-        in the format generated by Tracks.save.
-        Args:
-            directory (Path): The directory containing tracks to load
-            seg_required (bool, optional): If true, raises a FileNotFoundError if the
-                segmentation file is not present in the directory. Defaults to False.
-        Returns:
-            Tracks: A tracks object loaded from the given directory
-        """
-        warn(
-            "`Tracks.load` is deprecated and will be removed in 2.0, use "
-            "`funtracks.import_export.internal_format.load` instead",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        from ..import_export.internal_format import load_tracks
-
-        return load_tracks(directory, seg_required=seg_required, solution=solution)
+    #     return load_tracks(directory, seg_required=seg_required, solution=solution)
 
     @classmethod
     def delete(cls, directory: Path):

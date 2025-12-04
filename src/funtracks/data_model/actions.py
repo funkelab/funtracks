@@ -28,10 +28,11 @@ from .graph_attributes import NodeAttr
 from .solution_tracks import SolutionTracks
 from .tracks import Attrs, Edge, Node, SegMask, Tracks
 from .tracksdata_utils import (
+    compute_node_attrs_from_masks,
+    compute_node_attrs_from_pixels,
     td_get_predecessors,
     td_get_successors,
     td_graph_edge_list,
-    validate_and_merge_node_attrs,
 )
 
 if TYPE_CHECKING:
@@ -127,15 +128,21 @@ class AddNodes(TracksAction):
 
     def _apply(self):
         """Apply the action, and set segmentation if provided in self.pixels"""
-        if self.pixels is not None:
-            self.tracks.set_pixels(self.pixels, self.nodes)
+
         attrs = self.attributes
         if attrs is None:
             attrs = {}
 
         final_pos: np.ndarray
         if self.tracks.segmentation is not None:
-            computed_attrs = self.tracks._compute_node_attrs(self.nodes, self.times)
+            if self.pixels is not None:
+                computed_attrs = compute_node_attrs_from_pixels(
+                    self.pixels, self.tracks.ndim, self.tracks.scale
+                )  # if self.pixels is not None else computed_attrs
+            elif "mask" in attrs:
+                computed_attrs = compute_node_attrs_from_masks(
+                    attrs["mask"], self.tracks.ndim, self.tracks.scale
+                )
             if self.positions is None:
                 final_pos = np.array(computed_attrs[NodeAttr.POS.value])
             else:
@@ -149,7 +156,9 @@ class AddNodes(TracksAction):
         self.attributes[NodeAttr.POS.value] = final_pos
 
         # Add nodes to td graph
-        required_attrs = self.tracks.graph.node_attr_keys
+        required_attrs = self.tracks.graph.node_attr_keys.copy()
+        if td.DEFAULT_ATTR_KEYS.NODE_ID in required_attrs:
+            required_attrs.remove(td.DEFAULT_ATTR_KEYS.NODE_ID)
         if td.DEFAULT_ATTR_KEYS.SOLUTION not in attrs:
             attrs[td.DEFAULT_ATTR_KEYS.SOLUTION] = [1] * len(self.nodes)
         for attr in required_attrs:
@@ -165,46 +174,11 @@ class AddNodes(TracksAction):
             node_dicts.append(node_dict)
 
         for node_id, node_dict in zip(self.nodes, node_dicts, strict=True):
-            if isinstance(self.tracks.graph, td.graph.GraphView):
-                node_in_root = node_id in self.tracks.graph._root.node_ids()
-                if node_in_root:
-                    node_in_solution = (
-                        self.tracks.graph._root.node_attrs()
-                        .filter(pl.col(td.DEFAULT_ATTR_KEYS.NODE_ID) == node_id)[
-                            td.DEFAULT_ATTR_KEYS.SOLUTION
-                        ]
-                        .item()
-                    )
-                    if not node_in_solution:
-                        # update the node in the root graph to be in solution,
-                        # and recreate graph_view
-                        self.tracks.graph._root.update_node_attrs(
-                            attrs={td.DEFAULT_ATTR_KEYS.SOLUTION: [1]}, node_ids=[node_id]
-                        )
-                        attrs_of_root_node = (
-                            self.tracks.graph._root.node_attrs()
-                            .filter(pl.col(td.DEFAULT_ATTR_KEYS.NODE_ID) == node_id)
-                            .to_dicts()[0]
-                        )
-                        node_dict = validate_and_merge_node_attrs(
-                            attrs_of_root_node, node_dict
-                        )
+            # TODO: Teun: graph is now always a graphview, by definition!
+            self.tracks.graph.add_node(attrs=node_dict, index=node_id)
 
-                        # TODO: check if all attributes are the same, if not,
-                        # update them in the root
-                        self.tracks.graph = self.tracks.graph._root.filter(
-                            td.NodeAttr(td.DEFAULT_ATTR_KEYS.SOLUTION) == 1,
-                            td.EdgeAttr(td.DEFAULT_ATTR_KEYS.SOLUTION) == 1,
-                        ).subgraph()
-                    else:
-                        # if node not in solution, simply add it to the graph
-                        self.tracks.graph.add_node(node_dict, index=node_id)
-                else:
-                    # if node not in root, simply add it to the graph
-                    self.tracks.graph.add_node(node_dict, index=node_id)
-            else:
-                # if graph is not a view, simply add the node directly to the graph
-                self.tracks.graph.add_node(node_dict, index=node_id)
+        if self.pixels is not None:
+            self.tracks.set_pixels(self.pixels, self.nodes)
 
         if isinstance(self.tracks, SolutionTracks):
             for node, track_id in zip(
@@ -235,6 +209,16 @@ class DeleteNodes(TracksAction):
             NodeAttr.TRACK_ID.value: self.tracks.get_nodes_attr(
                 nodes, NodeAttr.TRACK_ID.value
             ),
+            NodeAttr.AREA.value: self.tracks.get_nodes_attr(nodes, NodeAttr.AREA.value),
+            td.DEFAULT_ATTR_KEYS.SOLUTION: self.tracks.get_nodes_attr(
+                nodes, td.DEFAULT_ATTR_KEYS.SOLUTION
+            ),
+            td.DEFAULT_ATTR_KEYS.MASK: self.tracks.get_nodes_attr(
+                nodes, td.DEFAULT_ATTR_KEYS.MASK
+            ),
+            td.DEFAULT_ATTR_KEYS.BBOX: self.tracks.get_nodes_attr(
+                nodes, td.DEFAULT_ATTR_KEYS.BBOX
+            ),
         }
         self.pixels = self.tracks.get_pixels(nodes) if pixels is None else pixels
         self._apply()
@@ -252,27 +236,22 @@ class DeleteNodes(TracksAction):
             set pixels to 0 if self.pixels is provided
         - Remove nodes from graph
         """
-        if self.pixels is not None:
-            self.tracks.set_pixels(
-                self.pixels,
-                [0] * len(self.pixels),
-            )
 
         if isinstance(self.tracks, SolutionTracks):
             for node in self.nodes:
                 self.tracks.track_id_to_node[self.tracks.get_track_id(node)].remove(node)
 
-        # Delete the node, by 1) setting solution to 0, and
-        # 2) removing the node from the graph by filter+subgraph
-        self.tracks.graph.update_node_attrs(
+        for node in self.nodes:
+            self.tracks.graph.node_removed.emit_fast(node)
+            self.tracks.graph.rx_graph.remove_node(
+                self.tracks.graph._external_to_local[node]
+            )
+            self.tracks.graph._external_to_local.pop(node)
+
+        self.tracks.graph._root.update_node_attrs(
             attrs={td.DEFAULT_ATTR_KEYS.SOLUTION: [0] * len(self.nodes)},
             node_ids=self.nodes,
         )
-
-        self.tracks.graph = self.tracks.graph.filter(
-            td.NodeAttr(td.DEFAULT_ATTR_KEYS.SOLUTION) == 1,
-            td.EdgeAttr(td.DEFAULT_ATTR_KEYS.SOLUTION) == 1,
-        ).subgraph()
 
 
 class UpdateNodeSegs(TracksAction):
@@ -312,10 +291,13 @@ class UpdateNodeSegs(TracksAction):
 
     def _apply(self):
         """Set new attributes"""
-        times = self.tracks.get_times(self.nodes)
         values = self.nodes if self.added else [0 for _ in self.nodes]
-        self.tracks.set_pixels(self.pixels, values)
-        computed_attrs = self.tracks._compute_node_attrs(self.nodes, times)
+
+        self.tracks.set_pixels(self.pixels, values, self.added, self.nodes)
+        mask_list = [self.tracks.graph[n][td.DEFAULT_ATTR_KEYS.MASK] for n in self.nodes]
+        computed_attrs = compute_node_attrs_from_masks(
+            mask_list, self.tracks.ndim, self.tracks.scale
+        )
         positions = np.array(computed_attrs[NodeAttr.POS.value])
         self.tracks.set_positions(self.nodes, positions)
         self.tracks._set_nodes_attr(
@@ -428,38 +410,39 @@ class AddEdges(TracksAction):
 
             edge = list(edge)
 
-            if isinstance(self.tracks.graph, td.graph.GraphView):
-                # Check if edge exists in root
-                edge_in_root = edge in td_graph_edge_list(self.tracks.graph._root)
-                if edge_in_root:
-                    edge_id = self.tracks.graph._root.edge_id(edge[0], edge[1])
-                    # Check if edge is not in solution
-                    edge_in_solution = (
-                        self.tracks.graph._root.edge_attrs()
-                        .filter(pl.col(td.DEFAULT_ATTR_KEYS.EDGE_ID) == edge_id)[
-                            td.DEFAULT_ATTR_KEYS.SOLUTION
-                        ]
-                        .item()
+            edge_in_root = self.tracks.graph._root.has_edge(edge[0], edge[1])
+            if edge_in_root:
+                edge_id = self.tracks.graph._root.edge_id(edge[0], edge[1])
+
+                # Check if edge is not in solution
+                edge_in_solution = (
+                    self.tracks.graph._root.edge_attrs()
+                    .filter(pl.col(td.DEFAULT_ATTR_KEYS.EDGE_ID) == edge_id)[
+                        td.DEFAULT_ATTR_KEYS.SOLUTION
+                    ]
+                    .item()
+                )
+
+                if not edge_in_solution:
+                    # Reactivate edge in root for future usage
+                    self.tracks.graph._root.update_edge_attrs(
+                        edge_ids=[edge_id], attrs={td.DEFAULT_ATTR_KEYS.SOLUTION: [1]}
                     )
-                    if not edge_in_solution:
-                        # Reactivate edge in root
-                        self.tracks.graph._root.update_edge_attrs(
-                            edge_ids=[edge_id], attrs={td.DEFAULT_ATTR_KEYS.SOLUTION: [1]}
-                        )
-                        # TODO: Similar to nodes, we might want to
-                        # validate/merge edge attributes
+            else:
+                edge_id = (
+                    max(self.tracks.graph.edge_ids()) + 1
+                    if len(self.tracks.graph.edge_ids()) > 0
+                    else 0
+                )
 
-                        # Recreate graph view
-                        self.tracks.graph = self.tracks.graph._root.filter(
-                            td.NodeAttr(td.DEFAULT_ATTR_KEYS.SOLUTION) == 1,
-                            td.EdgeAttr(td.DEFAULT_ATTR_KEYS.SOLUTION) == 1,
-                        ).subgraph()
-                        continue
+            edge_attrs = {key: vals[idx] for key, vals in attrs.items()}
+            edge_attrs[td.DEFAULT_ATTR_KEYS.EDGE_ID] = edge_id
 
+            # Create edge attributes for this specific edge
             self.tracks.graph.add_edge(
                 source_id=edge[0],
                 target_id=edge[1],
-                attrs={key: vals[idx] for key, vals in attrs.items()},
+                attrs=edge_attrs,
             )
 
 
@@ -480,21 +463,15 @@ class DeleteEdges(TracksAction):
         - Remove the edges from the graph
         """
         for edge in self.edges:
-            edge = list(edge)
-            if edge in td_graph_edge_list(self.tracks.graph):
-                edge_id = self.tracks.graph.edge_id(edge[0], edge[1])
-                self.tracks.graph.update_edge_attrs(
-                    edge_ids=[edge_id], attrs={td.DEFAULT_ATTR_KEYS.SOLUTION: [0]}
-                )
-            else:
-                raise KeyError(f"Edge {edge} not in the graph, and cannot be removed")
-
-        # refilter the graph to keep only the edges and nodes that are in the solution
-        # necessary because edges have been removed (ie. solution is set to 0)
-        self.tracks.graph = self.tracks.graph.filter(
-            td.NodeAttr(td.DEFAULT_ATTR_KEYS.SOLUTION) == 1,
-            td.EdgeAttr(td.DEFAULT_ATTR_KEYS.SOLUTION) == 1,
-        ).subgraph()
+            edge_id_to_remove = self.tracks.graph.edge_id(edge[0], edge[1])
+            self.tracks.graph.rx_graph.remove_edge(
+                self.tracks.graph._external_to_local[edge[0]],
+                self.tracks.graph._external_to_local[edge[1]],
+            )
+            self.tracks.graph._root.update_edge_attrs(
+                edge_ids=[edge_id_to_remove], attrs={td.DEFAULT_ATTR_KEYS.SOLUTION: [0]}
+            )
+            self.tracks.graph._edge_map_from_root.pop(edge_id_to_remove)
 
 
 class UpdateTrackID(TracksAction):

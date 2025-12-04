@@ -1,8 +1,7 @@
-import tracksdata as td
-
 from funtracks.data_model.action_history import ActionHistory
 from funtracks.data_model.actions import AddNodes
 from funtracks.data_model.tracks import Tracks
+from funtracks.data_model.tracksdata_utils import create_empty_graphview_graph
 
 # https://github.com/zaboople/klonk/blob/master/TheGURQ.md
 
@@ -11,16 +10,7 @@ def test_action_history():
     history = ActionHistory()
 
     # make an empty tracksdata graph with the default attributes
-    kwargs = {
-        "drivername": "sqlite",
-        "database": ":memory:",
-        "overwrite": True,
-    }
-    graph_td = td.graph.SQLGraph(**kwargs)
-    graph_td.add_node_attr_key(key="pos", default_value=None)
-    graph_td.add_node_attr_key(key="solution", default_value=1)
-    graph_td.add_node_attr_key(key="track_id", default_value=0)
-    graph_td.add_edge_attr_key(key="solution", default_value=1)
+    graph_td = create_empty_graphview_graph(database=":memory:", position_attrs=["pos"])
 
     tracks = Tracks(graph_td, ndim=3)
     action1 = AddNodes(

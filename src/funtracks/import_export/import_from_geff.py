@@ -26,6 +26,7 @@ import dask.array as da
 import tracksdata as td
 
 from funtracks.data_model.solution_tracks import SolutionTracks
+from funtracks.data_model.tracksdata_utils import compute_node_attrs_from_pixels
 
 
 def relabel_seg_id_to_node_id(
@@ -284,9 +285,14 @@ def import_from_geff(
     }
     graph = td.graph.SQLGraph.from_other(graph, **kwargs)
 
+    graph_sub = graph.filter(
+        td.NodeAttr(td.DEFAULT_ATTR_KEYS.SOLUTION) == 1,
+        td.EdgeAttr(td.DEFAULT_ATTR_KEYS.SOLUTION) == 1,
+    ).subgraph()
+
     # Relabel track_id attr to NodeAttr.TRACK_ID.value (unless we should recompute)
     if name_map.get(NodeAttr.TRACK_ID.value) is not None and not recompute_track_ids:
-        for data in graph.node_attrs():
+        for data in graph_sub.node_attrs():
             try:
                 data[NodeAttr.TRACK_ID.value] = data.pop(
                     name_map[NodeAttr.TRACK_ID.value]
@@ -301,7 +307,7 @@ def import_from_geff(
 
     # Create the tracks.
     tracks = SolutionTracks(
-        graph=graph,
+        graph=graph_sub,
         segmentation=segmentation,
         pos_attr=position_attr,
         time_attr=time_attr,
@@ -313,7 +319,9 @@ def import_from_geff(
     if tracks.segmentation is not None and extra_features.get("area"):
         nodes = tracks.graph.node_ids()
         times = tracks.get_times(nodes)
-        computed_attrs = tracks._compute_node_attrs(nodes, times)
+        computed_attrs = compute_node_attrs_from_pixels(
+            pixels=tracks.get_pixels(nodes), ndim=tracks.ndim, scale=tracks.scale
+        )
         areas = computed_attrs[NodeAttr.AREA.value]
         tracks._set_nodes_attr(nodes, NodeAttr.AREA.value, areas)
 
