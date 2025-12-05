@@ -279,7 +279,7 @@ class Tracks:
             bool: True if the key is on the first sampled node or there are no nodes,
                 and False if missing from the first node.
         """
-        if self.graph.number_of_nodes() == 0:
+        if self.graph.num_nodes == 0:
             return True
 
         # Get a sample node to check which attributes exist
@@ -323,10 +323,10 @@ class Tracks:
                 self.enable_features([key])
 
     def nodes(self):
-        return np.array(self.graph.nodes())
+        return np.array(self.graph.node_ids())
 
     def edges(self):
-        return np.array(self.graph.edges())
+        return np.array(self.graph.edge_ids())
 
     def in_degree(self, nodes: np.ndarray | None = None) -> np.ndarray:
         if nodes is not None:
@@ -585,9 +585,9 @@ class Tracks:
             node (Node): The node to set the attributes for
             attributes (dict[str, Any]): A mapping from attribute name to value
         """
-        if node in self.graph:
+        if node in self.graph.node_ids():
             for key, value in attributes.items():
-                self.graph.nodes[node][key] = value
+                self.graph.update_node_attrs(attrs={key: value}, node_ids=[node])
         else:
             logger.info("Node %d not found in the graph.", node)
 
@@ -635,19 +635,18 @@ class Tracks:
     def _set_node_attr(self, node: Node, attr: str, value: Any):
         if isinstance(value, np.ndarray):
             value = list(value)
-        self.graph.nodes[node][attr] = value
+        self.graph.update_node_attrs(attrs={attr: [value]}, node_ids=[node])
 
     def _set_nodes_attr(self, nodes: Iterable[Node], attr: str, values: Iterable[Any]):
         for node, value in zip(nodes, values, strict=False):
-            if isinstance(value, np.ndarray):
-                value = list(value)
-            self.graph.nodes[node][attr] = value
+            self.graph.update_node_attrs(attrs={attr: [value]}, node_ids=[node])
 
     def get_node_attr(self, node: Node, attr: str, required: bool = False):
-        if required:
-            return self.graph.nodes[node][attr]
-        else:
-            return self.graph.nodes[node].get(attr, None)
+        if attr not in self.graph.node_attr_keys:
+            if required:
+                raise KeyError(attr)
+            return None
+        return self.graph[int(node)][attr]
 
     def _get_node_attr(self, node, attr, required=False):
         warnings.warn(

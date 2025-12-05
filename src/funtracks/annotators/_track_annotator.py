@@ -110,13 +110,13 @@ class TrackAnnotator(GraphAnnotator):
         self.max_lineage_id = 0
 
         # Initialize tracklet bookkeeping if track IDs already exist in the graph
-        if tracks.graph.number_of_nodes() > 0:
+        if tracks.graph.num_nodes > 0:
             max_id, id_to_nodes = self._get_max_id_and_map(self.tracklet_key)
             self.max_tracklet_id = max_id
             self.tracklet_id_to_nodes = id_to_nodes
 
         # Initialize lineage bookkeeping if lineage IDs already exist
-        if lineage_key is not None and tracks.graph.number_of_nodes() > 0:
+        if lineage_key is not None and tracks.graph.num_nodes > 0:
             max_id, id_to_nodes = self._get_max_id_and_map(self.lineage_key)
             self.max_lineage_id = max_id
             self.lineage_id_to_nodes = id_to_nodes
