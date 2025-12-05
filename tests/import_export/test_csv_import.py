@@ -43,7 +43,7 @@ class TestDataFrameImportBasic:
         tracks = tracks_from_df(simple_df_2d)
 
         assert isinstance(tracks, SolutionTracks)
-        assert tracks.graph.number_of_nodes() == 4
+        assert tracks.graph.num_nodes == 4
         assert tracks.graph.number_of_edges() == 3
         assert tracks.ndim == 3
 
@@ -52,7 +52,7 @@ class TestDataFrameImportBasic:
         tracks = tracks_from_df(df_3d)
 
         assert tracks.ndim == 4
-        assert tracks.graph.number_of_nodes() == 3
+        assert tracks.graph.num_nodes == 3
         # Check z coordinate
         pos = tracks.get_position(1)
         assert len(pos) == 3  # z, y, x
@@ -143,7 +143,7 @@ class TestEdgeCases:
 
         tracks = tracks_from_df(df)
 
-        assert tracks.graph.number_of_nodes() == 1
+        assert tracks.graph.num_nodes == 1
         assert tracks.graph.number_of_edges() == 0
 
     def test_multiple_roots(self):
@@ -160,7 +160,7 @@ class TestEdgeCases:
 
         tracks = tracks_from_df(df)
 
-        assert tracks.graph.number_of_nodes() == 4
+        assert tracks.graph.num_nodes == 4
         assert tracks.graph.number_of_edges() == 2
 
         # Should have two root nodes
@@ -181,7 +181,7 @@ class TestEdgeCases:
 
         tracks = tracks_from_df(df)
 
-        assert tracks.graph.number_of_nodes() == 3
+        assert tracks.graph.num_nodes == 3
         assert tracks.graph.number_of_edges() == 2
 
         # Node 1 should have two children
@@ -203,7 +203,7 @@ class TestEdgeCases:
 
         tracks = tracks_from_df(df)
 
-        assert tracks.graph.number_of_nodes() == 10
+        assert tracks.graph.num_nodes == 10
         assert tracks.graph.number_of_edges() == 9
 
         # Should form a single linear chain
@@ -297,7 +297,7 @@ class TestDuplicateMappings:
         tracks = tracks_from_df(simple_df_2d, node_name_map=name_map)
 
         # Both id and seg_id should be present with same values
-        assert tracks.graph.number_of_nodes() == 4
+        assert tracks.graph.num_nodes == 4
         for node_id in tracks.graph.nodes():
             assert tracks.get_node_attr(node_id, "seg_id") == node_id
 

@@ -244,6 +244,12 @@ def test_set_positions_list(graph_2d_list):
 
 def test_set_node_attributes(graph_2d_with_computed_features, caplog):
     tracks = Tracks(graph_2d_with_computed_features, ndim=3, **track_attrs)
+    tracks.graph.add_node_attr_key("attr_1", default_value=0)
+    tracks.graph.add_node_attr_key("attr_2", default_value="")
+
+    # TODO:
+    # 1) this function is no longer necessary,
+    # 2) what is the intended purpose of attrs here (1 and 6 values, for only 1 node)?
     attrs = {"attr_1": 1, "attr_2": ["a", "b", "c", "d", "e", "f"]}
     tracks._set_node_attributes(1, attrs)
     assert tracks.get_node_attr(1, "attr_1") == 1
