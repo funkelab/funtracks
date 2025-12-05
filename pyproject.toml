@@ -36,6 +36,7 @@ dependencies =[
     "dask>=2025.5.0",
     "pandas>=2.3.3",
     "zarr>=2.18,<4",
+    "numcodecs>=0.13,<0.16",
 ]
 
 [project.urls]
