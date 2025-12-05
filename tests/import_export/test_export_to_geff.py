@@ -80,7 +80,7 @@ def test_export_to_geff(
     file_path = tmp_path / "not_a_dir"
     file_path.write_text("test")
 
-    with pytest.raises((FileExistsError, NotADirectoryError)):
+    with pytest.raises(zarr.errors.FSPathExistNotDir):
         export_to_geff(tracks, file_path)
 
     # Test that saving to a non empty dir with overwrite=True works fine
