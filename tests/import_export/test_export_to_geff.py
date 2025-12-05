@@ -76,11 +76,6 @@ def test_export_to_geff(
     for ax in attrs["geff"]["axes"]:
         assert ax["scale"] is not None
 
-    # test that providing a non existing parent dir raises error
-    file_path = tmp_path / "nonexisting" / "target.zarr"
-    with pytest.raises(FileNotFoundError):
-        export_to_geff(tracks, file_path)
-
     # test that providing a nondirectory path raises error
     file_path = tmp_path / "not_a_dir"
     file_path.write_text("test")

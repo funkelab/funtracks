@@ -44,7 +44,7 @@ def export_to_geff(
         )  # include the ancestors to make sure the graph is valid and has no missing
         # parent nodes.
 
-    # Create parent directory as a zarr group (v2 format for compatibility)
+    # Create directory as a zarr group (v2 format for compatibility)
     # zarr_format argument only exists in zarr-python v3
     # Use mode="w" if overwrite, else mode="w-" to fail if exists
     mode = "w" if overwrite else "w-"
