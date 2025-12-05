@@ -89,13 +89,17 @@ def export_to_geff(
         chunk_size = tuple(list(chunk_size) + [1] * (len(shape) - len(chunk_size)))
         chunk_size = chunk_size[: len(shape)]
 
-        z = zarr.open_array(
-            str(seg_path),
-            mode="w",
-            shape=shape,
-            dtype=dtype,
-            chunks=chunk_size,
-        )
+        # zarr_format argument only exists in zarr-python v3
+        open_array_kwargs: dict = {
+            "mode": "w",
+            "shape": shape,
+            "dtype": dtype,
+            "chunks": chunk_size,
+        }
+        if zarr.__version__.startswith("3"):
+            open_array_kwargs["zarr_format"] = 2
+
+        z = zarr.open_array(str(seg_path), **open_array_kwargs)
 
         if node_ids is not None:
             nodes_to_keep = np.asarray(nodes_to_keep)
