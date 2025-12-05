@@ -44,9 +44,14 @@ def export_to_geff(
         )  # include the ancestors to make sure the graph is valid and has no missing
         # parent nodes.
 
-    # Create directory if it doesn't exist (will raise FileNotFoundError if parent
-    # doesn't exist, or FileExistsError if path is a file)
-    directory.mkdir(exist_ok=True)
+    # Create directory as a zarr group (v2 format for compatibility)
+    # zarr_format argument only exists in zarr-python v3
+    # Use mode="w" if overwrite, else mode="w-" to fail if exists
+    mode = "w" if overwrite else "w-"
+    if zarr.__version__.startswith("3"):
+        zarr.open_group(directory, mode=mode, zarr_format=2)
+    else:
+        zarr.open_group(directory, mode=mode)
 
     # update the graph to split the position into separate attrs, if they are currently
     # together in a list
@@ -77,7 +82,6 @@ def export_to_geff(
     # TODO: helper function in _export_segmentation file
     if tracks.segmentation is not None:
         seg_path = directory / "segmentation"
-        seg_path.mkdir(exist_ok=True)
 
         seg_data = tracks.segmentation
         shape = seg_data.shape
