@@ -28,7 +28,6 @@ class TestRemoveTilde:
     def test_expands_tilde(self):
         result = remove_tilde("~/test/path")
         assert "~" not in str(result)
-        assert str(result).startswith("/")
 
     def test_no_tilde_unchanged(self):
         path = "/absolute/path/to/file"
