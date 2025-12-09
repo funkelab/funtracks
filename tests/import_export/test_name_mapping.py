@@ -151,8 +151,11 @@ class TestMatchDisplayNamesExact:
     def test_exact_display_name_match(self):
         """Test exact matching with display names."""
         available_props = ["Area", "Circularity", "time"]
-        display_name_to_key = {"Area": "area", "Circularity": "circularity"}
-        mapping = {}
+        display_name_to_key = {
+            "Area": ("area", 0),
+            "Circularity": ("circularity", 0),
+        }
+        mapping: dict = {}
 
         remaining = _match_display_names_exact(
             available_props, display_name_to_key, mapping
@@ -164,8 +167,11 @@ class TestMatchDisplayNamesExact:
     def test_no_matches(self):
         """Test when no properties match display names."""
         available_props = ["t", "x", "y"]
-        display_name_to_key = {"Area": "area", "Circularity": "circularity"}
-        mapping = {}
+        display_name_to_key = {
+            "Area": ("area", 0),
+            "Circularity": ("circularity", 0),
+        }
+        mapping: dict = {}
 
         remaining = _match_display_names_exact(
             available_props, display_name_to_key, mapping
@@ -176,7 +182,7 @@ class TestMatchDisplayNamesExact:
 
     def test_empty_inputs(self):
         """Test with empty inputs."""
-        mapping = {}
+        mapping: dict = {}
         remaining = _match_display_names_exact([], {}, mapping)
         assert mapping == {}
         assert remaining == []
@@ -184,8 +190,8 @@ class TestMatchDisplayNamesExact:
     def test_case_sensitive(self):
         """Test that exact matching is case-sensitive."""
         available_props = ["area", "AREA"]
-        display_name_to_key = {"Area": "area"}
-        mapping = {}
+        display_name_to_key = {"Area": ("area", 0)}
+        mapping: dict = {}
 
         remaining = _match_display_names_exact(
             available_props, display_name_to_key, mapping
@@ -194,6 +200,27 @@ class TestMatchDisplayNamesExact:
         assert mapping == {}  # Neither "area" nor "AREA" matches "Area" exactly
         assert set(remaining) == {"area", "AREA"}
 
+    def test_multi_value_feature(self):
+        """Test matching multi-value features by value_names."""
+        available_props = ["major_axis", "minor_axis", "Area"]
+        display_name_to_key = {
+            "Area": ("area", 0),
+            "major_axis": ("ellipsoid_axes", 0),
+            "semi_minor_axis": ("ellipsoid_axes", 1),
+            "minor_axis": ("ellipsoid_axes", 2),
+        }
+        mapping: dict = {}
+
+        remaining = _match_display_names_exact(
+            available_props, display_name_to_key, mapping
+        )
+
+        assert mapping == {
+            "area": "Area",
+            "ellipsoid_axes": ["major_axis", "minor_axis"],  # sorted by index
+        }
+        assert remaining == []
+
 
 class TestMatchDisplayNamesFuzzy:
     """Test fuzzy matching between properties and feature display names."""
@@ -201,8 +228,11 @@ class TestMatchDisplayNamesFuzzy:
     def test_case_insensitive_match(self):
         """Test case-insensitive fuzzy matching."""
         available_props = ["area", "CIRC"]
-        display_name_to_key = {"Area": "area", "Circularity": "circularity"}
-        mapping = {}
+        display_name_to_key = {
+            "Area": ("area", 0),
+            "Circularity": ("circularity", 0),
+        }
+        mapping: dict = {}
 
         _ = _match_display_names_fuzzy(available_props, display_name_to_key, mapping)
 
@@ -213,10 +243,10 @@ class TestMatchDisplayNamesFuzzy:
         """Test matching abbreviations to display names."""
         available_props = ["Circ", "Ecc"]
         display_name_to_key = {
-            "Circularity": "circularity",
-            "Eccentricity": "eccentricity",
+            "Circularity": ("circularity", 0),
+            "Eccentricity": ("eccentricity", 0),
         }
-        mapping = {}
+        mapping: dict = {}
 
         _ = _match_display_names_fuzzy(available_props, display_name_to_key, mapping)
 
@@ -226,8 +256,8 @@ class TestMatchDisplayNamesFuzzy:
     def test_no_matches(self):
         """Test when no fuzzy matches found."""
         available_props = ["xyz", "abc"]
-        display_name_to_key = {"Area": "area"}
-        mapping = {}
+        display_name_to_key = {"Area": ("area", 0)}
+        mapping: dict = {}
 
         remaining = _match_display_names_fuzzy(
             available_props, display_name_to_key, mapping
@@ -238,8 +268,8 @@ class TestMatchDisplayNamesFuzzy:
 
     def test_empty_available_props(self):
         """Test with empty available properties."""
-        mapping = {}
-        remaining = _match_display_names_fuzzy([], {"Area": "area"}, mapping)
+        mapping: dict = {}
+        remaining = _match_display_names_fuzzy([], {"Area": ("area", 0)}, mapping)
 
         assert mapping == {}
         assert remaining == []
@@ -247,21 +277,42 @@ class TestMatchDisplayNamesFuzzy:
     def test_custom_cutoff(self):
         """Test with custom cutoff value."""
         available_props = ["Ar"]
-        display_name_to_key = {"Area": "area"}
+        display_name_to_key = {"Area": ("area", 0)}
 
         # With low cutoff, should match
-        mapping_low = {}
+        mapping_low: dict = {}
         _ = _match_display_names_fuzzy(
             available_props, display_name_to_key, mapping_low, cutoff=0.2
         )
         assert "area" in mapping_low
 
         # With high cutoff, should not match
-        mapping_high = {}
+        mapping_high: dict = {}
         _ = _match_display_names_fuzzy(
             available_props, display_name_to_key, mapping_high, cutoff=0.9
         )
         assert mapping_high == {}
+
+    def test_multi_value_feature(self):
+        """Test fuzzy matching multi-value features by value_names."""
+        available_props = ["Major_Axis", "Minor_Axis", "area"]
+        display_name_to_key = {
+            "Area": ("area", 0),
+            "major_axis": ("ellipsoid_axes", 0),
+            "semi_minor_axis": ("ellipsoid_axes", 1),
+            "minor_axis": ("ellipsoid_axes", 2),
+        }
+        mapping: dict = {}
+
+        remaining = _match_display_names_fuzzy(
+            available_props, display_name_to_key, mapping
+        )
+
+        assert mapping == {
+            "area": "area",
+            "ellipsoid_axes": ["Major_Axis", "Minor_Axis"],  # sorted by index
+        }
+        assert remaining == []
 
 
 class TestMapRemainingToSelf:
@@ -291,70 +342,59 @@ class TestMapRemainingToSelf:
 
 
 class TestBuildStandardFields:
-    """Test building list of standard fields to match."""
+    """Test building list of standard fields to match.
 
-    def test_3d_data(self):
-        """Test standard fields for 3D data (2D + time)."""
+    Position attributes (z, y, x) are NOT included - they are matched via
+    Position feature's value_names to create composite "pos" mapping.
+    """
+
+    def test_basic_required_features(self):
+        """Test standard fields include required features and seg_id."""
         required_features = ["time"]
-        position_attr = ["z", "y", "x"]
-        ndim = 3
 
-        standard_fields = build_standard_fields(required_features, position_attr, ndim)
+        standard_fields = build_standard_fields(required_features)
 
         assert "time" in standard_fields
-        assert "y" in standard_fields
-        assert "x" in standard_fields
-        assert "z" not in standard_fields  # 3D means 2 spatial dims
         # Optional fields
         assert "seg_id" in standard_fields
-
-    def test_4d_data(self):
-        """Test standard fields for 4D data (3D + time)."""
-        required_features = ["time"]
-        position_attr = ["z", "y", "x"]
-        ndim = 4
-
-        standard_fields = build_standard_fields(required_features, position_attr, ndim)
-
-        assert "time" in standard_fields
-        assert "z" in standard_fields
-        assert "y" in standard_fields
-        assert "x" in standard_fields
+        # Position attrs should NOT be in standard fields
+        assert "z" not in standard_fields
+        assert "y" not in standard_fields
+        assert "x" not in standard_fields
 
     def test_multiple_required_features(self):
         """Test with multiple required features (e.g., CSV format)."""
         required_features = ["time", "id", "parent_id"]
-        position_attr = ["z", "y", "x"]
-        ndim = 3
 
-        standard_fields = build_standard_fields(required_features, position_attr, ndim)
+        standard_fields = build_standard_fields(required_features)
 
         assert "time" in standard_fields
         assert "id" in standard_fields
         assert "parent_id" in standard_fields
+        assert "seg_id" in standard_fields
 
 
 class TestBuildDisplayNameMapping:
     """Test building display name to feature key mapping."""
 
     def test_basic_mapping(self):
-        """Test basic display name mapping."""
+        """Test basic display name mapping for single-value features."""
         available_computed_features = {
-            "area": {"display_name": "Area", "other": "data"},
-            "circularity": {"display_name": "Circularity"},
-            "eccentricity": {"display_name": "Eccentricity"},
+            "area": {"display_name": "Area", "num_values": 1},
+            "circularity": {"display_name": "Circularity", "num_values": 1},
+            "eccentricity": {"display_name": "Eccentricity", "num_values": 1},
         }
 
         mapping = build_display_name_mapping(available_computed_features)
 
         assert mapping == {
-            "Area": "area",
-            "Circularity": "circularity",
-            "Eccentricity": "eccentricity",
+            "Area": ("area", 0),
+            "Circularity": ("circularity", 0),
+            "Eccentricity": ("eccentricity", 0),
         }
 
-    def test_skip_multi_value_features(self):
-        """Test that multi-value features are skipped, even if they have display_name."""
+    def test_multi_value_features_use_value_names(self):
+        """Test that multi-value features map each value_name to (key, index)."""
         available_computed_features = {
             "area": {"display_name": "Area", "num_values": 1},
             "position": {
@@ -371,19 +411,25 @@ class TestBuildDisplayNameMapping:
 
         mapping = build_display_name_mapping(available_computed_features)
 
-        # Only single-value features are included
-        assert mapping == {"Area": "area"}
+        assert mapping == {
+            "Area": ("area", 0),
+            "y": ("position", 0),
+            "x": ("position", 1),
+            "major": ("ellipsoid_axes", 0),
+            "semi_minor": ("ellipsoid_axes", 1),
+            "minor": ("ellipsoid_axes", 2),
+        }
 
     def test_missing_display_name(self):
-        """Test features without display_name are skipped."""
+        """Test single-value features without display_name are skipped."""
         available_computed_features = {
-            "area": {"display_name": "Area"},
-            "other": {},  # No display_name
+            "area": {"display_name": "Area", "num_values": 1},
+            "other": {"num_values": 1},  # No display_name
         }
 
         mapping = build_display_name_mapping(available_computed_features)
 
-        assert mapping == {"Area": "area"}
+        assert mapping == {"Area": ("area", 0)}
 
     def test_empty_input(self):
         """Test with empty features dict."""
@@ -392,30 +438,40 @@ class TestBuildDisplayNameMapping:
 
 
 class TestInferNodeNameMapIntegration:
-    """Integration tests for the full infer_node_name_map pipeline."""
+    """Integration tests for the full infer_node_name_map pipeline.
 
-    def test_perfect_exact_matches(self):
-        """Test when all fields have exact matches."""
+    Position columns (z, y, x) are matched via Position feature's value_names,
+    producing composite mapping like {"pos": ["y", "x"]} or {"pos": ["z", "y", "x"]}.
+    """
+
+    def test_perfect_exact_matches_2d(self):
+        """Test when all fields have exact matches (2D data)."""
         importable_props = ["time", "x", "y", "area", "circularity"]
         required_features = ["time"]
-        position_attr = ["z", "y", "x"]
-        ndim = 3
         available_computed_features = {
-            "area": {"feature_type": "node", "display_name": "Area"},
-            "circularity": {"feature_type": "node", "display_name": "Circularity"},
+            "area": {"feature_type": "node", "display_name": "Area", "num_values": 1},
+            "circularity": {
+                "feature_type": "node",
+                "display_name": "Circularity",
+                "num_values": 1,
+            },
+            "pos": {
+                "feature_type": "node",
+                "display_name": "Position",
+                "num_values": 2,
+                "value_names": ["y", "x"],
+            },
         }
 
         mapping = infer_node_name_map(
             importable_props,
             required_features,
-            position_attr,
-            ndim,
             available_computed_features,
         )
 
         assert mapping["time"] == "time"
-        assert mapping["x"] == "x"
-        assert mapping["y"] == "y"
+        # Position should be composite
+        assert mapping["pos"] == ["y", "x"]
         assert mapping["area"] == "area"
         assert mapping["circularity"] == "circularity"
 
@@ -423,24 +479,30 @@ class TestInferNodeNameMapIntegration:
         """Test fuzzy matching with abbreviations."""
         importable_props = ["t", "X", "Y", "Circ"]
         required_features = ["time"]
-        position_attr = ["z", "y", "x"]
-        ndim = 3
         available_computed_features = {
-            "circularity": {"feature_type": "node", "display_name": "Circularity"},
+            "circularity": {
+                "feature_type": "node",
+                "display_name": "Circularity",
+                "num_values": 1,
+            },
+            "pos": {
+                "feature_type": "node",
+                "display_name": "Position",
+                "num_values": 2,
+                "value_names": ["y", "x"],
+            },
         }
 
         mapping = infer_node_name_map(
             importable_props,
             required_features,
-            position_attr,
-            ndim,
             available_computed_features,
         )
 
-        # Should fuzzy match t->time, X->x, Y->y
+        # Should fuzzy match t->time
         assert mapping["time"] == "t"
-        assert mapping["x"] == "X"
-        assert mapping["y"] == "Y"
+        # Should fuzzy match X->x, Y->y via Position value_names
+        assert mapping["pos"] == ["Y", "X"]
         # Should fuzzy match Circ->circularity via display name
         assert mapping["circularity"] == "Circ"
 
@@ -448,15 +510,18 @@ class TestInferNodeNameMapIntegration:
         """Test that unmatched properties map to themselves."""
         importable_props = ["time", "x", "y", "custom_col1", "custom_col2"]
         required_features = ["time"]
-        position_attr = ["z", "y", "x"]
-        ndim = 3
-        available_computed_features = {}
+        available_computed_features = {
+            "pos": {
+                "feature_type": "node",
+                "display_name": "Position",
+                "num_values": 2,
+                "value_names": ["y", "x"],
+            },
+        }
 
         mapping = infer_node_name_map(
             importable_props,
             required_features,
-            position_attr,
-            ndim,
             available_computed_features,
         )
 
@@ -469,17 +534,23 @@ class TestInferNodeNameMapIntegration:
         # Exact standard match should take priority over fuzzy feature match
         importable_props = ["time", "Time", "x", "y"]
         required_features = ["time"]
-        position_attr = ["z", "y", "x"]
-        ndim = 3
         available_computed_features = {
-            "time_feature": {"feature_type": "node", "display_name": "Time"},
+            "time_feature": {
+                "feature_type": "node",
+                "display_name": "Time",
+                "num_values": 1,
+            },
+            "pos": {
+                "feature_type": "node",
+                "display_name": "Position",
+                "num_values": 2,
+                "value_names": ["y", "x"],
+            },
         }
 
         mapping = infer_node_name_map(
             importable_props,
             required_features,
-            position_attr,
-            ndim,
             available_computed_features,
         )
 
@@ -488,42 +559,46 @@ class TestInferNodeNameMapIntegration:
         # "Time" should fuzzy match to feature "time_feature"
         assert mapping["time_feature"] == "Time"
 
-    def test_4d_data(self):
-        """Test inference for 4D data (3D + time)."""
+    def test_3d_position(self):
+        """Test inference for 3D position (z, y, x)."""
         importable_props = ["t", "z", "y", "x"]
         required_features = ["time"]
-        position_attr = ["z", "y", "x"]
-        ndim = 4
-        available_computed_features = {}
+        available_computed_features = {
+            "pos": {
+                "feature_type": "node",
+                "display_name": "Position",
+                "num_values": 3,
+                "value_names": ["z", "y", "x"],
+            },
+        }
 
         mapping = infer_node_name_map(
             importable_props,
             required_features,
-            position_attr,
-            ndim,
             available_computed_features,
         )
 
         # Should fuzzy match t->time
         assert mapping["time"] == "t"
-        # Should exact match z, y, x
-        assert mapping["z"] == "z"
-        assert mapping["y"] == "y"
-        assert mapping["x"] == "x"
+        # Should exact match z, y, x via Position value_names -> composite pos
+        assert mapping["pos"] == ["z", "y", "x"]
 
     def test_optional_fields(self):
-        """Test that optional fields (seg_id, track_id, lineage_id) are matched."""
+        """Test that optional fields (seg_id, track_id) are matched."""
         importable_props = ["time", "x", "y", "seg_id", "track_id"]
         required_features = ["time"]
-        position_attr = ["z", "y", "x"]
-        ndim = 3
-        available_computed_features = {}
+        available_computed_features = {
+            "pos": {
+                "feature_type": "node",
+                "display_name": "Position",
+                "num_values": 2,
+                "value_names": ["y", "x"],
+            },
+        }
 
         mapping = infer_node_name_map(
             importable_props,
             required_features,
-            position_attr,
-            ndim,
             available_computed_features,
         )
 
@@ -534,17 +609,19 @@ class TestInferNodeNameMapIntegration:
         """Test inference for CSV format with id and parent_id."""
         importable_props = ["t", "x", "y", "id", "parent_id", "Area"]
         required_features = ["time", "id", "parent_id"]
-        position_attr = ["z", "y", "x"]
-        ndim = 3
         available_computed_features = {
-            "area": {"feature_type": "node", "display_name": "Area"},
+            "area": {"feature_type": "node", "display_name": "Area", "num_values": 1},
+            "pos": {
+                "feature_type": "node",
+                "display_name": "Position",
+                "num_values": 2,
+                "value_names": ["y", "x"],
+            },
         }
 
         mapping = infer_node_name_map(
             importable_props,
             required_features,
-            position_attr,
-            ndim,
             available_computed_features,
         )
 
@@ -555,6 +632,8 @@ class TestInferNodeNameMapIntegration:
         assert mapping["parent_id"] == "parent_id"
         # Should exact match Area via display name
         assert mapping["area"] == "Area"
+        # Position should be composite
+        assert mapping["pos"] == ["y", "x"]
 
 
 class TestInferEdgeNameMapIntegration:
