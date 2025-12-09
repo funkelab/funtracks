@@ -38,7 +38,8 @@ def Position(axes: Sequence[str]) -> Feature:
         "feature_type": "node",
         "value_type": "float",
         "num_values": len(axes),
-        "display_name": axes,
+        "display_name": "position",
+        "value_names": list(axes),
         "required": True,
         "default_value": None,
     }

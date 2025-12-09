@@ -353,16 +353,25 @@ class TestBuildDisplayNameMapping:
             "Eccentricity": "eccentricity",
         }
 
-    def test_skip_non_string_display_names(self):
-        """Test that non-string display names (tuples, lists) are skipped."""
+    def test_skip_multi_value_features(self):
+        """Test that multi-value features are skipped, even if they have display_name."""
         available_computed_features = {
-            "area": {"display_name": "Area"},
-            "position": {"display_name": ("y", "x")},  # Tuple, should be skipped
-            "color": {"display_name": ["r", "g", "b"]},  # List, should be skipped
+            "area": {"display_name": "Area", "num_values": 1},
+            "position": {
+                "display_name": "Position",
+                "num_values": 2,
+                "value_names": ["y", "x"],
+            },
+            "ellipsoid_axes": {
+                "display_name": "Ellipsoid axis radii",
+                "num_values": 3,
+                "value_names": ["major", "semi_minor", "minor"],
+            },
         }
 
         mapping = build_display_name_mapping(available_computed_features)
 
+        # Only single-value features are included
         assert mapping == {"Area": "area"}
 
     def test_missing_display_name(self):

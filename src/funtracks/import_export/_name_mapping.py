@@ -184,7 +184,12 @@ def build_standard_fields(
 
 def build_display_name_mapping(available_computed_features: dict) -> dict[str, str]:
     """Build reverse mapping from feature display names to feature keys.
-    # TODO: do something about tuples
+
+    Only includes single-value features (num_values == 1). Multi-value features
+    are skipped because a single display_name cannot map to multiple values.
+
+    # TODO: handle value_names to map individual value display names to feature keys
+
     Args:
         available_computed_features: Dict of feature_key -> feature metadata
             (should have "display_name" for each feature)
@@ -195,8 +200,10 @@ def build_display_name_mapping(available_computed_features: dict) -> dict[str, s
     """
     display_name_to_key = {}
     for feature_key, feature in available_computed_features.items():
+        # Skip multi-value features - can't map single display_name to multiple values
+        if feature.get("num_values", 1) > 1:
+            continue
         display_name = feature.get("display_name")
-        # Only map single-string display names (skip tuples/lists)
         if isinstance(display_name, str):
             display_name_to_key[display_name] = feature_key
     return display_name_to_key
