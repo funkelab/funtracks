@@ -181,6 +181,9 @@ class RegionpropsAnnotator(GraphAnnotator):
         spacing = None if self.tracks.scale is None else tuple(self.tracks.scale[1:])
         for region in regionprops_extended(seg_frame, spacing=spacing):
             node = region.label
+            # Skip labels that aren't nodes in the graph (e.g., unselected detections)
+            if node not in self.tracks.graph:
+                continue
             for key in feature_keys:
                 value = getattr(region, self.regionprops_names[key])
                 if isinstance(value, tuple):
