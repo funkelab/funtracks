@@ -63,8 +63,8 @@ class TracksBuilder(ABC):
         self.in_memory_geff: InMemoryGeff | None = None
         self.ndim: int | None = None
         # TODO: how much of the node/edge stuff can we abstract?
-        self.node_name_map: dict[str, str] = {}
-        self.edge_name_map: dict[str, str] | None = None
+        self.node_name_map: dict[str, str | list[str]] = {}
+        self.edge_name_map: dict[str, str | list[str]] | None = None
         self.importable_node_props: list[str] = []
         self.importable_edge_props: list[str] = []
 
@@ -96,15 +96,18 @@ class TracksBuilder(ABC):
             source: Path to data source (zarr store, CSV file, etc.) or DataFrame
         """
 
-    def infer_node_name_map(self) -> dict[str, str]:
+    def infer_node_name_map(self) -> dict[str, str | list[str]]:
         """Infer node_name_map by matching importable node properties to standard keys.
 
         Uses difflib fuzzy matching with the following priority:
-        1. Exact matches to standard keys
+        1. Exact matches to standard keys (time, seg_id, etc.)
         2. Fuzzy matches to standard keys (case-insensitive, 40% similarity cutoff)
-        3. Exact matches to feature display names
+        3. Exact matches to feature display names/value_names (including position z/y/x)
         4. Fuzzy matches to feature display names (case-insensitive, 40% cutoff)
         5. Remaining properties map to themselves (custom properties)
+
+        Position attributes (z, y, x) are matched via Position feature's value_names,
+        resulting in a composite mapping like {"pos": ["z", "y", "x"]}.
 
         Returns:
             Inferred node_name_map (standard_key -> source_property)
@@ -115,12 +118,10 @@ class TracksBuilder(ABC):
         return infer_node_name_map(
             self.importable_node_props,
             self.required_features,
-            self.axis_names,
-            self.ndim,
             self.available_computed_features,
         )
 
-    def infer_edge_name_map(self) -> dict[str, str]:
+    def infer_edge_name_map(self) -> dict[str, str | list[str]]:
         """Infer edge_name_map by matching importable edge properties to standard keys.
 
         Uses difflib fuzzy matching with the following priority:
@@ -147,9 +148,8 @@ class TracksBuilder(ABC):
 
         Checks for nodes:
         - No None values in required mappings
-        - No duplicate values in required mappings
         - All required_features are mapped
-        - All position_attr are mapped (based on ndim, or y/x minimum if ndim is None)
+        - Position ("pos") is mapped to coordinate columns
         - All mapped properties exist in importable_node_props
 
         Checks for edges:
@@ -166,9 +166,20 @@ class TracksBuilder(ABC):
             self.node_name_map,
             self.importable_node_props,
             self.required_features,
-            self.axis_names,
-            self.ndim,
         )
+
+        # Validate pos mapping is consistent with ndim (if ndim is already set)
+        # ndim is set from segmentation in prepare(), so this catches mismatches
+        if self.ndim is not None and "pos" in self.node_name_map:
+            pos_mapping = self.node_name_map["pos"]
+            if isinstance(pos_mapping, list):
+                expect_spatial_dims = self.ndim - 1  # ndim includes time
+                if len(pos_mapping) != expect_spatial_dims:
+                    raise ValueError(
+                        f"Position mapping has {len(pos_mapping)} coordinates "
+                        f"but segmentation has {expect_spatial_dims} spatial dimensions "
+                        f"(ndim={self.ndim}). Position mapping: {pos_mapping}"
+                    )
 
         # Validate edge_name_map if provided
         if self.edge_name_map is not None:
@@ -211,7 +222,7 @@ class TracksBuilder(ABC):
     def load_source(
         self,
         source: Path | pd.DataFrame,
-        node_name_map: dict[str, str],
+        node_name_map: dict[str, str | list[str]],
         node_features: dict[str, bool] | None = None,
     ) -> None:
         """Load data from source file and convert to InMemoryGeff format.
@@ -454,13 +465,21 @@ class TracksBuilder(ABC):
         # 4. Handle segmentation
         segmentation_array, scale = self.handle_segmentation(graph, segmentation, scale)
 
-        # 5. Create SolutionTracks
+        # 5. Infer ndim from position mapping if not already set
+        ndim = self.ndim
+        if ndim is None and "pos" in self.node_name_map:
+            pos_mapping = self.node_name_map["pos"]
+            if isinstance(pos_mapping, list):
+                ndim = len(pos_mapping) + 1  # +1 for time
+
+        # 6. Create SolutionTracks
+        # Use composite "pos" attribute - position columns are combined during loading
         tracks = SolutionTracks(
             graph=graph,
             segmentation=segmentation_array,
-            pos_attr=self.axis_names,
+            pos_attr="pos",
             time_attr=self.TIME_ATTR,
-            ndim=self.ndim,
+            ndim=ndim,
             scale=scale,
         )
 

@@ -61,7 +61,7 @@ class CSVTracksBuilder(TracksBuilder):
     def load_source(
         self,
         source: Path | pd.DataFrame,
-        node_name_map: dict[str, str],
+        node_name_map: dict[str, str | list[str]],
         node_features: dict[str, bool] | None = None,
     ) -> None:
         """Load CSV and convert to InMemoryGeff format.
@@ -98,9 +98,21 @@ class CSVTracksBuilder(TracksBuilder):
         # Build a new DataFrame with standard key names, copying data for each mapping.
         # This handles duplicate mappings (e.g., seg_id -> "node_id", id -> "node_id")
         # by copying the source column data to each standard key.
+        # For multi-value features (list of column names), combine columns into tuples.
         new_df_data = {}
         for std_key, csv_col in extended_name_map.items():
-            if csv_col is not None and csv_col in df.columns:
+            if csv_col is None:
+                continue
+            if isinstance(csv_col, list):
+                # Multi-value feature: combine multiple columns into tuples
+                # Check all columns exist
+                missing_cols = [c for c in csv_col if c not in df.columns]
+                if missing_cols:
+                    continue  # Skip if any columns are missing
+                # Combine columns into list of tuples
+                combined = list(zip(*[df[c] for c in csv_col], strict=True))
+                new_df_data[std_key] = combined
+            elif csv_col in df.columns:
                 new_df_data[std_key] = df[csv_col].copy()
         df = pd.DataFrame(new_df_data)
 
@@ -116,8 +128,14 @@ class CSVTracksBuilder(TracksBuilder):
                     else x
                 )
 
-        # Determine dimensionality (axis_names is derived from ndim as a property)
-        self.ndim = 4 if "z" in df.columns else 3
+        # Determine dimensionality from position mapping
+        # With composite "pos", check how many coordinates are in the pos mapping
+        pos_mapping = node_name_map.get("pos", [])
+        if isinstance(pos_mapping, list):
+            self.ndim = len(pos_mapping) + 1  # +1 for time
+        else:
+            # Fallback for legacy separate position keys
+            self.ndim = 4 if "z" in df.columns else 3
 
         # Convert DataFrame to InMemoryGeff format
         df_dict = df.to_dict(orient="list")
@@ -184,8 +202,8 @@ def tracks_from_df(
     segmentation: np.ndarray | None = None,
     scale: list[float] | None = None,
     features: dict[str, str] | None = None,
-    node_name_map: dict[str, str] | None = None,
-    name_map: dict[str, str] | None = None,  # deprecated
+    node_name_map: dict[str, str | list[str]] | None = None,
+    name_map: dict[str, str | list[str]] | None = None,  # deprecated
 ) -> SolutionTracks:
     """Import tracks from pandas DataFrame (motile_tracker-compatible API).
 

@@ -201,7 +201,6 @@ class Tracks:
                         "feature_type": "node",
                         "value_type": "float",
                         "num_values": 1,
-                        "display_name": None,
                         "required": True,
                         "default_value": None,
                     }

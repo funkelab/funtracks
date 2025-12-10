@@ -120,7 +120,8 @@ class RegionpropsAnnotator(GraphAnnotator):
                 and regionprops attribute name.
         """
         # Derive axis names from ndim (spatial dimensions only, no time)
-        axis_names = ["z", "y", "x"] if ndim == 4 else ["y", "x"]
+        # Default to 3D when ndim is None to enable matching all position columns
+        axis_names = ["z", "y", "x"] if ndim is None or ndim == 4 else ["y", "x"]
 
         return [
             FeatureSpec(DEFAULT_POS_KEY, Position(axes=axis_names), "centroid"),

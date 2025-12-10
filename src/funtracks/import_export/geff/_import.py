@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import numpy as np
 from geff._typing import InMemoryGeff
 from geff.core_io._base_read import read_to_memory
 
@@ -20,8 +21,8 @@ SEG_KEY = "seg_id"
 
 def import_graph_from_geff(
     directory: Path,
-    node_name_map: dict[str, str],
-    edge_name_map: dict[str, str] | None = None,
+    node_name_map: dict[str, str | list[str]],
+    edge_name_map: dict[str, str | list[str]] | None = None,
 ) -> tuple[InMemoryGeff, list[str], int]:
     """Load GEFF data and rename property keys to standard names.
 
@@ -47,12 +48,25 @@ def import_graph_from_geff(
         ValueError: If node_name_map contains None or duplicate values
     """
     # Build filter of which node properties to load from GEFF
-    node_prop_filter: set[str] = {
-        prop for _, prop in node_name_map.items() if prop is not None
-    }
+    # Handle both single string values and lists of strings (multi-value features)
+    node_prop_filter: set[str] = set()
+    for prop in node_name_map.values():
+        if prop is not None:
+            if isinstance(prop, list):
+                node_prop_filter.update(prop)
+            else:
+                node_prop_filter.add(prop)
 
     # Build filter of which edge properties to load from GEFF
-    edge_prop_filter = None if edge_name_map is None else list(edge_name_map.values())
+    # Handle both single string values and lists of strings (multi-value features)
+    edge_prop_filter: list[str] | None = None
+    if edge_name_map is not None:
+        edge_prop_filter = []
+        for prop in edge_name_map.values():
+            if isinstance(prop, list):
+                edge_prop_filter.extend(prop)
+            else:
+                edge_prop_filter.append(prop)
 
     in_memory_geff = read_to_memory(
         directory,
@@ -61,7 +75,15 @@ def import_graph_from_geff(
     )
 
     # Validate spatiotemporal keys (before renaming, checking GEFF keys)
-    spatio_temporal_keys = ["time", "z", "y", "x"]
+    # Handle composite "pos" mapping for position coordinates
+    spatio_temporal_keys = ["time"]
+    if "pos" in node_name_map:
+        # Composite position: "pos" -> ["y", "x"] or ["z", "y", "x"]
+        spatio_temporal_keys.append("pos")
+    else:
+        # Legacy separate position keys (for backward compatibility)
+        spatio_temporal_keys.extend([k for k in ("z", "y", "x") if k in node_name_map])
+
     spatio_temporal_map = {
         key: node_name_map[key] for key in spatio_temporal_keys if key in node_name_map
     }
@@ -74,10 +96,27 @@ def import_graph_from_geff(
     # Rename node property keys from custom (GEFF) to standard using node_name_map
     # Handle duplicate mappings (e.g., seg_id -> "node_id", id -> "node_id") by
     # copying data for each standard key that maps to the same GEFF property.
+    # For multi-value features (list of column names), combine into single property.
     node_props = in_memory_geff["node_props"]
     renamed_node_props = {}
     for std_key, geff_key in node_name_map.items():
-        if geff_key is not None and geff_key in node_props:
+        if geff_key is None:
+            continue
+        # Multi-value features have a list of column names
+        if isinstance(geff_key, list):
+            # Combine multiple columns into a single multi-value property
+            # Check all columns exist
+            missing_cols = [c for c in geff_key if c not in node_props]
+            if missing_cols:
+                continue  # Skip if any columns are missing
+            # Stack column values into 2D array (n_nodes, num_values)
+            col_arrays = [node_props[c]["values"] for c in geff_key]
+            combined = np.column_stack(col_arrays)
+            renamed_node_props[std_key] = {
+                "values": combined,
+                "missing": None,  # TODO: handle missing values properly
+            }
+        elif geff_key in node_props:
             prop_data = node_props[geff_key]
             # Copy values to avoid aliasing when multiple keys map to same source
             renamed_node_props[std_key] = {
@@ -88,11 +127,26 @@ def import_graph_from_geff(
 
     # Rename edge property keys from custom (GEFF) to standard using edge_name_map
     # Handle duplicate mappings by copying data for each standard key.
+    # For multi-value features (list of column names), combine into single property.
     if edge_name_map is not None:
         edge_props = in_memory_geff["edge_props"]
         renamed_edge_props = {}
         for std_key, geff_key in edge_name_map.items():
-            if geff_key is not None and geff_key in edge_props:
+            if geff_key is None:
+                continue
+            # Multi-value features have a list of column names
+            if isinstance(geff_key, list):
+                # Combine multiple columns into a single multi-value property
+                missing_cols = [c for c in geff_key if c not in edge_props]
+                if missing_cols:
+                    continue  # Skip if any columns are missing
+                col_arrays = [edge_props[c]["values"] for c in geff_key]
+                combined = np.column_stack(col_arrays)
+                renamed_edge_props[std_key] = {
+                    "values": combined,
+                    "missing": None,
+                }
+            elif geff_key in edge_props:
                 prop_data = edge_props[geff_key]
                 # Copy values to avoid aliasing when multiple keys map to same source
                 renamed_edge_props[std_key] = {
@@ -101,9 +155,22 @@ def import_graph_from_geff(
                 }
         in_memory_geff["edge_props"] = renamed_edge_props
 
-    # Extract time and position attributes (now using standard keys)
-    position_attr = [k for k in ("z", "y", "x") if k in node_name_map]
-    ndims = len(position_attr) + 1
+    # Extract position and compute dimensions (now using standard keys)
+    # Handle composite "pos" mapping for position coordinates
+    if "pos" in node_name_map:
+        # Composite position: "pos" -> ["y", "x"] or ["z", "y", "x"]
+        pos_mapping = node_name_map["pos"]
+        if isinstance(pos_mapping, list):
+            position_attr = pos_mapping  # e.g., ["y", "x"]
+            ndims = len(pos_mapping) + 1  # +1 for time
+        else:
+            # Single value (shouldn't happen, but fallback)
+            position_attr = [pos_mapping]
+            ndims = 2
+    else:
+        # Legacy separate position keys (for backward compatibility)
+        position_attr = [k for k in ("z", "y", "x") if k in node_name_map]
+        ndims = len(position_attr) + 1
 
     return in_memory_geff, position_attr, ndims
 
@@ -128,7 +195,7 @@ class GeffTracksBuilder(TracksBuilder):
     def load_source(
         self,
         source_path: Path,
-        node_name_map: dict[str, str],
+        node_name_map: dict[str, str | list[str]],
         node_features: dict[str, bool] | None = None,
     ) -> None:
         """Load GEFF data and convert to InMemoryGeff format.
@@ -155,15 +222,15 @@ class GeffTracksBuilder(TracksBuilder):
 
 def import_from_geff(
     directory: Path,
-    node_name_map: dict[str, str] | None = None,
+    node_name_map: dict[str, str | list[str]] | None = None,
     segmentation_path: Path | None = None,
     scale: list[float] | None = None,
     node_features: dict[str, bool] | None = None,
     edge_features: dict[str, bool] | None = None,
     extra_features: dict[str, bool] | None = None,
-    edge_name_map: dict[str, str] | None = None,
+    edge_name_map: dict[str, str | list[str]] | None = None,
     edge_prop_filter: list[str] | None = None,
-    name_map: dict[str, str] | None = None,  # deprecated
+    name_map: dict[str, str | list[str]] | None = None,  # deprecated
 ) -> SolutionTracks:
     """Import tracks from GEFF format.
 

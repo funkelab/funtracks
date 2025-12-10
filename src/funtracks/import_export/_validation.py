@@ -62,11 +62,18 @@ def validate_graph_seg_match(
     seg_id = last_node_data.get(SEG_KEY, last_node_id)
 
     # Get the coordinates for the last node (using standard keys)
+    # Position may be stored as composite "pos" attribute or separate y/x/z attributes
     coord = [int(last_node_data["time"])]
-    if "z" in position_attr:
-        coord.append(last_node_data["z"])
-    coord.append(last_node_data["y"])
-    coord.append(last_node_data["x"])
+    if "pos" in last_node_data:
+        # Composite position: [z, y, x] or [y, x]
+        pos = last_node_data["pos"]
+        coord.extend(pos)
+    else:
+        # Separate position attributes (legacy)
+        if "z" in position_attr:
+            coord.append(last_node_data["z"])
+        coord.append(last_node_data["y"])
+        coord.append(last_node_data["x"])
 
     # Check bounds
     for i, (c, s) in enumerate(zip(coord, segmentation.shape, strict=False)):
@@ -94,67 +101,66 @@ def validate_graph_seg_match(
 
 
 def validate_node_name_map(
-    name_map: dict[str, str],
+    name_map: dict[str, str | list[str]],
     importable_node_props: list[str],
     required_features: list[str],
-    position_attr: list[str],
-    ndim: int | None,
 ) -> None:
     """Validate node name_map contains all required mappings.
 
     Checks:
     - No None values in required mappings
-    - No duplicate values in required mappings
     - All required_features are mapped
-    - All position_attr are mapped (based on ndim)
+    - Position ("pos") is mapped to coordinate columns
     - All mapped properties exist in importable_node_props
 
     Args:
         name_map: Mapping from standard keys to source property names
         importable_node_props: List of property names available in the source
         required_features: List of required feature names (e.g., ["time"])
-        position_attr: List of position attributes (e.g., ["z", "y", "x"])
-        ndim: Number of dimensions (3 for 2D+time, 4 for 3D+time), or None to
-            accept either 2D or 3D
 
     Raises:
         ValueError: If validation fails
     """
-    # Build list of required position attributes
-    # When ndim is None, require y and x at minimum; z is optional
-    if ndim is None:
-        ndim = 3
-    required_pos_attrs = position_attr[-(ndim - 1) :]
-
-    required_fields = required_features + required_pos_attrs
-
-    # Check for None values in required fields
-    none_mappings = [key for key in required_fields if name_map.get(key) is None]
+    # Check for None values in required features
+    none_mappings = [key for key in required_features if name_map.get(key) is None]
     if none_mappings:
         raise ValueError(
             f"The name_map cannot contain None values. "
             f"Fields with None values: {none_mappings}"
         )
 
-    missing_features = []
-
-    # Check required features
-    for feature in required_fields:
-        if feature not in name_map:
-            missing_features.append(feature)
-
+    # Check required features are mapped
+    missing_features = [f for f in required_features if f not in name_map]
     if missing_features:
         raise ValueError(
             f"name_map is missing required mappings: {missing_features}. "
-            f"Required features: {required_features}. "
-            f"Required position attrs: {required_pos_attrs}"
+            f"Required features: {required_features}."
+        )
+
+    # Check position is mapped (should be "pos" -> ["z", "y", "x"] or ["y", "x"])
+    if "pos" not in name_map:
+        raise ValueError(
+            "name_map must contain 'pos' mapping for position coordinates. "
+            "Expected format: {'pos': ['z', 'y', 'x']} or {'pos': ['y', 'x']}"
+        )
+
+    pos_mapping = name_map["pos"]
+    if not isinstance(pos_mapping, list) or len(pos_mapping) < 2:
+        raise ValueError(
+            f"Position mapping must be a list of at least 2 coordinate columns. "
+            f"Got: {pos_mapping}"
         )
 
     # Fail if mapped properties don't exist in importable_node_props
     if importable_node_props:
         invalid_mappings = []
         for std_key, source_prop in name_map.items():
-            if source_prop not in importable_node_props:
+            # Handle multi-value features (list of column names)
+            if isinstance(source_prop, list):
+                for prop in source_prop:
+                    if prop not in importable_node_props:
+                        invalid_mappings.append(f"{std_key} -> '{prop}'")
+            elif source_prop not in importable_node_props:
                 invalid_mappings.append(f"{std_key} -> '{source_prop}'")
 
         if invalid_mappings:
@@ -166,7 +172,7 @@ def validate_node_name_map(
 
 
 def validate_edge_name_map(
-    edge_name_map: dict[str, str],
+    edge_name_map: dict[str, str | list[str]],
     importable_edge_props: list[str],
 ) -> None:
     """Validate edge name_map mappings exist in source.
@@ -186,7 +192,12 @@ def validate_edge_name_map(
 
     invalid_mappings = []
     for std_key, source_prop in edge_name_map.items():
-        if source_prop not in importable_edge_props:
+        # Handle multi-value features (list of column names)
+        if isinstance(source_prop, list):
+            for prop in source_prop:
+                if prop not in importable_edge_props:
+                    invalid_mappings.append(f"{std_key} -> '{prop}'")
+        elif source_prop not in importable_edge_props:
             invalid_mappings.append(f"{std_key} -> '{source_prop}'")
 
     if invalid_mappings:
@@ -198,8 +209,8 @@ def validate_edge_name_map(
 
 
 def validate_feature_key_collisions(
-    name_map: dict[str, str],
-    edge_name_map: dict[str, str] | None,
+    name_map: dict[str, str | list[str]],
+    edge_name_map: dict[str, str | list[str]] | None,
 ) -> None:
     """Validate that node and edge feature keys don't overlap.
 

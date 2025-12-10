@@ -44,21 +44,33 @@ def Intensity() -> Feature:
     }
 
 
-def EllipsoidAxes(ndim: int = 3) -> Feature:
+def EllipsoidAxes(ndim: int | None = 4) -> Feature:
     """A regionprops feature for computing the ellipsoid axis radii.
 
     Args:
-        ndim (int): The number of dimensions of the tracks. Controls the display
-            name.
+        ndim (int | None): The number of dimensions including time.
+            For ndim=3 (2D+time), returns 2 axis values (major, minor).
+            For ndim=4 (3D+time), returns 3 axis values (major, semi-minor, minor).
+            If None, defaults to 4 to include all possible axis names.
 
     Returns:
         Feature: A feature dict representing ellipsoid axes
     """
+    if ndim is None:
+        ndim = 4
+    spatial_dims = ndim - 1
+    if spatial_dims == 2:
+        display_name = "Ellipse axis radii"
+        value_names = ["major_axis", "minor_axis"]
+    else:
+        display_name = "Ellipsoid axis radii"
+        value_names = ["major_axis", "semi_minor_axis", "minor_axis"]
     return {
         "feature_type": "node",
         "value_type": "float",
-        "num_values": 1,
-        "display_name": "Ellipse axis radii" if ndim == 3 else "Ellipsoid axis radii",
+        "num_values": spatial_dims,
+        "display_name": display_name,
+        "value_names": value_names,
         "required": True,
         "default_value": None,
     }

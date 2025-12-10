@@ -278,6 +278,40 @@ class TestFeatureHandling:
         assert tracks.get_node_attr(1, "area") == 25
         assert tracks.get_node_attr(2, "area") == 25
 
+    def test_load_multi_value_feature_from_columns(self):
+        """Test loading a multi-value feature from separate columns."""
+        df = pd.DataFrame(
+            {
+                "time": [0, 1],
+                "y": [10.0, 20.0],
+                "x": [15.0, 25.0],
+                "id": [1, 2],
+                "parent_id": [-1, 1],
+                "major_axis": [5.0, 6.0],
+                "minor_axis": [2.0, 3.0],
+            }
+        )
+
+        # Map ellipsoid_axes to a list of column names
+        # Position uses composite "pos" mapping
+        name_map = {
+            "id": "id",
+            "parent_id": "parent_id",
+            "time": "time",
+            "pos": ["y", "x"],  # Composite position mapping
+            "ellipsoid_axes": ["major_axis", "minor_axis"],
+        }
+
+        tracks = tracks_from_df(df, node_name_map=name_map)
+
+        # The multi-value feature should be loaded as a tuple/array
+        axes_1 = tracks.get_node_attr(1, "ellipsoid_axes")
+        axes_2 = tracks.get_node_attr(2, "ellipsoid_axes")
+
+        # Values should be combined in order (as a list)
+        assert list(axes_1) == [5.0, 2.0]
+        assert list(axes_2) == [6.0, 3.0]
+
 
 class TestDuplicateMappings:
     """Test duplicate value handling in name_map."""
@@ -289,8 +323,7 @@ class TestDuplicateMappings:
             "id": "id",
             "parent_id": "parent_id",
             "time": "time",
-            "y": "y",
-            "x": "x",
+            "pos": ["y", "x"],  # Composite position mapping
             "seg_id": "id",  # seg_id maps to same column as id
         }
 
@@ -307,8 +340,7 @@ class TestDuplicateMappings:
             "id": "id",
             "parent_id": "parent_id",
             "time": "time",
-            "y": "y",
-            "x": "x",
+            "pos": ["y", "x"],  # Composite position mapping
             "seg_id": "id",  # seg_id = id
         }
 
@@ -358,3 +390,38 @@ class TestValidationErrors:
         # tracks_from_df validates required columns
         with pytest.raises(ValueError, match="None values"):
             tracks_from_df(df)
+
+    def test_pos_mapping_dimension_mismatch(self):
+        """Test that pos mapping dimension must match segmentation ndim.
+
+        When the position mapping has more coordinates than the segmentation
+        has spatial dimensions, an error is raised during segmentation handling.
+        """
+        df = pd.DataFrame(
+            {
+                "time": [0, 1],
+                "y": [10.0, 20.0],
+                "x": [15.0, 25.0],
+                "id": [1, 2],
+                "parent_id": [-1, 1],
+                "seg_id": [1, 2],
+            }
+        )
+
+        # 2D segmentation (ndim=3: time + 2 spatial)
+        seg = np.zeros((2, 100, 100), dtype=np.uint16)
+        seg[0, 10, 15] = 1
+        seg[1, 20, 25] = 2
+
+        # But provide 3D position mapping (3 coords but seg is 2D spatial)
+        name_map = {
+            "id": "id",
+            "parent_id": "parent_id",
+            "time": "time",
+            "pos": ["y", "x", "y"],  # 3 coords but seg is 2D
+            "seg_id": "seg_id",
+        }
+
+        # The mismatch is caught when comparing seg dimensions to graph ndim
+        with pytest.raises(ValueError, match="Segmentation has 3 dimensions"):
+            tracks_from_df(df, segmentation=seg, node_name_map=name_map)
