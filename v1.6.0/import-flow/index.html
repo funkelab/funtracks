@@ -1,0 +1,3504 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://funkelab.github.io/funtracks/v1.6.0/import-flow/">
+      
+      
+        <link rel="prev" href="../features/">
+      
+      
+        <link rel="next" href="../reference/funtracks/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/logo.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.0">
+    
+    
+      
+        <title>Import - funtracks</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.618322db.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="purple" data-md-color-accent="purple">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#importing-tracks" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="funtracks" class="md-header__button md-logo" aria-label="funtracks" data-md-component="logo">
+      
+  <img src="../assets/logo.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            funtracks
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Import
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="funtracks" class="md-nav__button md-logo" aria-label="funtracks" data-md-component="logo">
+      
+  <img src="../assets/logo.svg" alt="logo">
+
+    </a>
+    funtracks
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../features/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Features
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Import
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Import
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#tracksbuilder-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TracksBuilder Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#process-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Process Steps
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Process Steps">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#preparation-phase" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Preparation Phase
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Preparation Phase">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#read_headersource_path-format-specific" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        read_header(source_path) Format-specific
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="read_header(source_path) Format-specific">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.import_export._tracks_builder.TracksBuilder.read_header" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;read_header
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#infer_node_name_map-common" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        infer_node_name_map() Common
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="infer_node_name_map() Common">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.import_export._tracks_builder.TracksBuilder.infer_node_name_map" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;infer_node_name_map
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#preparesource_path-common" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        prepare(source_path) Common
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="prepare(source_path) Common">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.import_export._tracks_builder.TracksBuilder.prepare" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;prepare
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.import_export._tracks_builder.TracksBuilder.prepare--optionally-modify-the-inferred-mappings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Optionally modify the inferred mappings
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#build-phase" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build Phase
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Build Phase">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#validate_name_map-common" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        validate_name_map() Common
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="validate_name_map() Common">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.import_export._tracks_builder.TracksBuilder.validate_name_map" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;validate_name_map
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#load_sourcesource_path-name_map-node_features-format-specific" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        load_source(source_path, name_map, node_features) Format-specific
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="load_source(source_path, name_map, node_features) Format-specific">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.import_export._tracks_builder.TracksBuilder.load_source" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;load_source
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validate-common" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        validate() Common
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="validate() Common">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.import_export._tracks_builder.TracksBuilder.validate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;validate
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#construct_graph-common" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        construct_graph() Common
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="construct_graph() Common">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.import_export._tracks_builder.TracksBuilder.construct_graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;construct_graph
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#handle_segmentationsegmentation_path-scale-common" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        handle_segmentation(segmentation_path, scale) Common
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="handle_segmentation(segmentation_path, scale) Common">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.import_export._tracks_builder.TracksBuilder.handle_segmentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;handle_segmentation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#enable_featurestracks-node_features-common" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        enable_features(tracks, node_features) Common
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="enable_features(tracks, node_features) Common">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.import_export._tracks_builder.TracksBuilder.enable_features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;enable_features
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#buildsource-segmentation-common" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        build(source, segmentation, ...) Common
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="build(source, segmentation, ...) Common">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.import_export._tracks_builder.TracksBuilder.build" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;build
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.import_export._tracks_builder.TracksBuilder.build--using-prepare-to-auto-infer-node_name_map" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using prepare() to auto-infer node_name_map
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.import_export._tracks_builder.TracksBuilder.build--or-set-node_name_map-manually" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Or set node_name_map manually
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#format-specific-builders" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Format-Specific Builders
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage-wrapper-functions-vs-builder-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage: Wrapper Functions vs Builder Pattern
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Usage: Wrapper Functions vs Builder Pattern">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#recommended-using-wrapper-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommended: Using Wrapper Functions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#advanced-using-builder-pattern-directly" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Advanced: Using Builder Pattern Directly
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../reference/funtracks/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>funtracks
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_1" id="__nav_3_1_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>funtracks
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1_2" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../reference/funtracks/actions/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>actions
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_1_2" id="__nav_3_1_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_1_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_1_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>actions
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/funtracks/actions/action_history/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>action_history
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/funtracks/actions/add_delete_edge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>add_delete_edge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/funtracks/actions/add_delete_node/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>add_delete_node
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/funtracks/actions/update_node_attrs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>update_node_attrs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/funtracks/actions/update_segmentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>update_segmentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/funtracks/actions/update_track_id/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>update_track_id
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/funtracks/annotators/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>annotators
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1_4" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../reference/funtracks/data_model/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>data_model
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_1_4" id="__nav_3_1_4_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_1_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_1_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>data_model
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/funtracks/data_model/graph_attributes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>graph_attributes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/funtracks/data_model/solution_tracks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>solution_tracks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/funtracks/data_model/tracks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>tracks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/funtracks/data_model/tracks_controller/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>tracks_controller
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/funtracks/exceptions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>exceptions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/funtracks/features/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>features
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1_7" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../reference/funtracks/import_export/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>import_export
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_1_7" id="__nav_3_1_7_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_1_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_1_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>import_export
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/funtracks/import_export/csv/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>csv
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/funtracks/import_export/export_to_geff/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>export_to_geff
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/funtracks/import_export/geff/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>geff
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/funtracks/import_export/import_from_geff/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>import_from_geff
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/funtracks/import_export/internal_format/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>internal_format
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/funtracks/import_export/magic_imread/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>magic_imread
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1_8" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../reference/funtracks/user_actions/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>user_actions
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_1_8" id="__nav_3_1_8_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_1_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_1_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>user_actions
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/funtracks/user_actions/user_add_edge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>user_add_edge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/funtracks/user_actions/user_add_node/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>user_add_node
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/funtracks/user_actions/user_delete_edge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>user_delete_edge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/funtracks/user_actions/user_delete_node/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>user_delete_node
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/funtracks/user_actions/user_update_segmentation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>user_update_segmentation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/funtracks/utils/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>utils
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#tracksbuilder-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TracksBuilder Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#process-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Process Steps
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Process Steps">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#preparation-phase" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Preparation Phase
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Preparation Phase">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#read_headersource_path-format-specific" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        read_header(source_path) Format-specific
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="read_header(source_path) Format-specific">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.import_export._tracks_builder.TracksBuilder.read_header" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;read_header
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#infer_node_name_map-common" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        infer_node_name_map() Common
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="infer_node_name_map() Common">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.import_export._tracks_builder.TracksBuilder.infer_node_name_map" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;infer_node_name_map
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#preparesource_path-common" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        prepare(source_path) Common
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="prepare(source_path) Common">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.import_export._tracks_builder.TracksBuilder.prepare" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;prepare
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.import_export._tracks_builder.TracksBuilder.prepare--optionally-modify-the-inferred-mappings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Optionally modify the inferred mappings
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#build-phase" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build Phase
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Build Phase">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#validate_name_map-common" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        validate_name_map() Common
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="validate_name_map() Common">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.import_export._tracks_builder.TracksBuilder.validate_name_map" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;validate_name_map
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#load_sourcesource_path-name_map-node_features-format-specific" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        load_source(source_path, name_map, node_features) Format-specific
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="load_source(source_path, name_map, node_features) Format-specific">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.import_export._tracks_builder.TracksBuilder.load_source" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;load_source
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validate-common" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        validate() Common
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="validate() Common">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.import_export._tracks_builder.TracksBuilder.validate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;validate
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#construct_graph-common" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        construct_graph() Common
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="construct_graph() Common">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.import_export._tracks_builder.TracksBuilder.construct_graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;construct_graph
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#handle_segmentationsegmentation_path-scale-common" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        handle_segmentation(segmentation_path, scale) Common
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="handle_segmentation(segmentation_path, scale) Common">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.import_export._tracks_builder.TracksBuilder.handle_segmentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;handle_segmentation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#enable_featurestracks-node_features-common" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        enable_features(tracks, node_features) Common
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="enable_features(tracks, node_features) Common">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.import_export._tracks_builder.TracksBuilder.enable_features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;enable_features
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#buildsource-segmentation-common" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        build(source, segmentation, ...) Common
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="build(source, segmentation, ...) Common">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.import_export._tracks_builder.TracksBuilder.build" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;build
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.import_export._tracks_builder.TracksBuilder.build--using-prepare-to-auto-infer-node_name_map" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using prepare() to auto-infer node_name_map
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.import_export._tracks_builder.TracksBuilder.build--or-set-node_name_map-manually" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Or set node_name_map manually
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#format-specific-builders" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Format-Specific Builders
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage-wrapper-functions-vs-builder-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage: Wrapper Functions vs Builder Pattern
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Usage: Wrapper Functions vs Builder Pattern">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#recommended-using-wrapper-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommended: Using Wrapper Functions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#advanced-using-builder-pattern-directly" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Advanced: Using Builder Pattern Directly
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="importing-tracks">Importing Tracks</h1>
+<p>This document describes the code architecture for importing tracking data from various formats into <code>funtracks</code> using the Builder Pattern.</p>
+<h2 id="tracksbuilder-overview">TracksBuilder Overview</h2>
+<p>The builder pattern provides a unified interface for importing tracks from different formats while sharing common validation and construction logic.</p>
+<pre class="mermaid"><code>---
+title: TracksBuilder
+---
+graph LR
+    subgraph Prepare["prepare(source)"]
+        direction TB
+        ReadHeader["read_header&lt;br/&gt;&lt;small&gt;get available properties&lt;/small&gt;"]
+        InferMap["infer_node_name_map&lt;br/&gt;&lt;small&gt;auto-map to standard keys&lt;/small&gt;"]
+        ReadHeader --&gt; InferMap
+    end
+
+    subgraph Build["build(source, seg, ...)"]
+        direction TB
+        ValidateMap["validate_name_map&lt;br/&gt;&lt;small&gt;check required mappings&lt;/small&gt;"]
+        LoadSource["load_source&lt;br/&gt;&lt;small&gt;load into InMemoryGeff&lt;/small&gt;"]
+        Validate["validate&lt;br/&gt;&lt;small&gt;check graph structure&lt;/small&gt;"]
+        ConstructGraph["construct_graph&lt;br/&gt;&lt;small&gt;build NetworkX graph&lt;/small&gt;"]
+        HandleSeg["handle_segmentation&lt;br/&gt;&lt;small&gt;load &amp; relabel if needed&lt;/small&gt;"]
+        CreateTracks[Create SolutionTracks]
+        EnableFeatures["enable_features&lt;br/&gt;&lt;small&gt;register &amp; compute&lt;/small&gt;"]
+
+        ValidateMap --&gt; LoadSource
+        LoadSource --&gt; Validate
+        Validate --&gt; ConstructGraph
+        ConstructGraph --&gt; HandleSeg
+        HandleSeg --&gt; CreateTracks
+        CreateTracks --&gt; EnableFeatures
+    end
+
+    Prepare --&gt; Build
+
+    subgraph Legend["Legend"]
+        direction TB
+        L1[Format-specific]
+        L2[Common]
+
+        L1 ~~~ L2
+    end
+
+    Build ~~~ Legend
+
+    style ReadHeader fill:#b58a2f,color:#fff,stroke:#8a6823
+    style LoadSource fill:#b58a2f,color:#fff,stroke:#8a6823
+    style InferMap fill:#8a2fb5,color:#fff,stroke:#6a2390
+    style ValidateMap fill:#8a2fb5,color:#fff,stroke:#6a2390
+    style Validate fill:#8a2fb5,color:#fff,stroke:#6a2390
+    style ConstructGraph fill:#8a2fb5,color:#fff,stroke:#6a2390
+    style HandleSeg fill:#8a2fb5,color:#fff,stroke:#6a2390
+    style CreateTracks fill:#8a2fb5,color:#fff,stroke:#6a2390
+    style EnableFeatures fill:#8a2fb5,color:#fff,stroke:#6a2390
+    style L1 fill:#b58a2f,color:#fff,stroke:#8a6823
+    style L2 fill:#8a2fb5,color:#fff,stroke:#6a2390</code></pre>
+<h2 id="process-steps">Process Steps</h2>
+<h3 id="preparation-phase">Preparation Phase</h3>
+<h4 id="read_headersource_path-format-specific"><code>read_header(source_path)</code> <span class="badge badge-gold">Format-specific</span></h4>
+<details>
+<summary>Show API documentation</summary>
+
+
+<div class="doc doc-object doc-function">
+
+
+
+<a id="funtracks.import_export._tracks_builder.TracksBuilder.read_header"></a>
+    <div class="doc doc-contents first">
+
+        <p>Read metadata/headers from source without loading data.</p>
+<p>Should populate self.importable_node_props and
+self.importable_edge_props with property/column names.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>source</code>
+            </td>
+            <td>
+                  <code><span title="pathlib.Path">Path</span> | <span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Path to data source (zarr store, CSV file, etc.) or DataFrame</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div></details>
+<h4 id="infer_node_name_map-common"><code>infer_node_name_map()</code> <span class="badge badge-purple">Common</span></h4>
+<details>
+<summary>Show API documentation</summary>
+
+
+<div class="doc doc-object doc-function">
+
+
+
+<a id="funtracks.import_export._tracks_builder.TracksBuilder.infer_node_name_map"></a>
+    <div class="doc doc-contents first">
+
+        <p>Infer node_name_map by matching importable node properties to standard keys.</p>
+<p>Uses difflib fuzzy matching with the following priority:
+1. Exact matches to standard keys
+2. Fuzzy matches to standard keys (case-insensitive, 40% similarity cutoff)
+3. Exact matches to feature display names
+4. Fuzzy matches to feature display names (case-insensitive, 40% cutoff)
+5. Remaining properties map to themselves (custom properties)</p>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="str">str</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Inferred node_name_map (standard_key -&gt; source_property)</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If required features cannot be inferred</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div></details>
+<h4 id="preparesource_path-common"><code>prepare(source_path)</code> <span class="badge badge-purple">Common</span></h4>
+<details>
+<summary>Show API documentation</summary>
+
+
+<div class="doc doc-object doc-function">
+
+
+
+<a id="funtracks.import_export._tracks_builder.TracksBuilder.prepare"></a>
+    <div class="doc doc-contents first">
+
+        <p>Prepare for building by reading headers and inferring name maps.</p>
+<p>This method reads the data source headers/metadata and automatically
+infers both node_name_map and edge_name_map. After calling this, you can
+inspect and modify self.node_name_map and self.edge_name_map before calling
+build().</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>source</code>
+            </td>
+            <td>
+                  <code><span title="pathlib.Path">Path</span> | <span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Path to data source or DataFrame</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>segmentation</code>
+            </td>
+            <td>
+                  <code><span title="pathlib.Path">Path</span> | <span title="numpy.typing.ArrayLike">ArrayLike</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional path to segmentation or array to infer ndim</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <blockquote>
+<blockquote>
+<blockquote>
+<p>builder = CSVTracksBuilder()
+builder.prepare("data.csv")</p>
+<h5 id="funtracks.import_export._tracks_builder.TracksBuilder.prepare--optionally-modify-the-inferred-mappings">Optionally modify the inferred mappings</h5>
+<p>builder.node_name_map["circularity"] = "circ"
+builder.edge_name_map["iou"] = "overlap"
+tracks = builder.build("data.csv", segmentation_path="seg.tif")</p>
+</blockquote>
+</blockquote>
+</blockquote>
+</details>
+
+    </div>
+
+</div></details>
+<h3 id="build-phase">Build Phase</h3>
+<h4 id="validate_name_map-common"><code>validate_name_map()</code> <span class="badge badge-purple">Common</span></h4>
+<details>
+<summary>Show API documentation</summary>
+
+
+<div class="doc doc-object doc-function">
+
+
+
+<a id="funtracks.import_export._tracks_builder.TracksBuilder.validate_name_map"></a>
+    <div class="doc doc-contents first">
+
+        <p>Validate that node_name_map and edge_name_map contain valid mappings.</p>
+<p>Checks for nodes:
+- No None values in required mappings
+- No duplicate values in required mappings
+- All required_features are mapped
+- All position_attr are mapped (based on ndim, or y/x minimum if ndim is None)
+- All mapped properties exist in importable_node_props</p>
+<p>Checks for edges:
+- All mapped edge properties exist in importable_edge_props</p>
+<p>Checks for both:
+- No feature key collisions between node and edge features</p>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If validation fails</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div></details>
+<h4 id="load_sourcesource_path-name_map-node_features-format-specific"><code>load_source(source_path, name_map, node_features)</code> <span class="badge badge-gold">Format-specific</span></h4>
+<p>Loads data from source file and converts to InMemoryGeff format. Implemented differently for each format.</p>
+<details>
+<summary>Show API documentation</summary>
+
+
+<div class="doc doc-object doc-function">
+
+
+
+<a id="funtracks.import_export._tracks_builder.TracksBuilder.load_source"></a>
+    <div class="doc doc-contents first">
+
+        <p>Load data from source file and convert to InMemoryGeff format.</p>
+<p>Should populate self.in_memory_geff with all properties using standard keys.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>source</code>
+            </td>
+            <td>
+                  <code><span title="pathlib.Path">Path</span> | <span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Path to data source (zarr store, CSV file, etc.) or DataFrame</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>node_name_map</code>
+            </td>
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="str">str</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Maps standard keys to source property names</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>node_features</code>
+            </td>
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="bool">bool</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional features dict for backward compatibility</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div></details>
+<h4 id="validate-common"><code>validate()</code> <span class="badge badge-purple">Common</span></h4>
+<details>
+<summary>Show API documentation</summary>
+
+
+<div class="doc doc-object doc-function">
+
+
+
+<a id="funtracks.import_export._tracks_builder.TracksBuilder.validate"></a>
+    <div class="doc doc-contents first">
+
+        <p>Validate the loaded InMemoryGeff data.</p>
+<p>Common validation logic shared across all formats.
+If optional properties (lineage_id, track_id) fail validation,
+they are removed with a warning.</p>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If required validation (graph structure) fails</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div></details>
+<h4 id="construct_graph-common"><code>construct_graph()</code> <span class="badge badge-purple">Common</span></h4>
+<details>
+<summary>Show API documentation</summary>
+
+
+<div class="doc doc-object doc-function">
+
+
+
+<a id="funtracks.import_export._tracks_builder.TracksBuilder.construct_graph"></a>
+    <div class="doc doc-contents first">
+
+        <p>Construct NetworkX graph from validated InMemoryGeff data.</p>
+<p>Common logic shared across all formats.</p>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="networkx.DiGraph">DiGraph</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>NetworkX DiGraph with standard keys</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If data not loaded or validated</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div></details>
+<h4 id="handle_segmentationsegmentation_path-scale-common"><code>handle_segmentation(segmentation_path, scale)</code> <span class="badge badge-purple">Common</span></h4>
+<details>
+<summary>Show API documentation</summary>
+
+
+<div class="doc doc-object doc-function">
+
+
+
+<a id="funtracks.import_export._tracks_builder.TracksBuilder.handle_segmentation"></a>
+    <div class="doc doc-contents first">
+
+        <p>Load, validate, and optionally relabel segmentation.</p>
+<p>Common logic shared across all formats.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>graph</code>
+            </td>
+            <td>
+                  <code><span title="networkx.DiGraph">DiGraph</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Constructed NetworkX graph for validation</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>segmentation</code>
+            </td>
+            <td>
+                  <code><span title="pathlib.Path">Path</span> | <span title="numpy.ndarray">ndarray</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Path to segmentation data or pre-loaded segmentation array</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>scale</code>
+            </td>
+            <td>
+                  <code><span title="list">list</span>[<span title="float">float</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Spatial scale for coordinate transformation</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="tuple">tuple</span>[<span title="numpy.ndarray">ndarray</span> | None, <span title="list">list</span>[<span title="float">float</span>] | None]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Tuple of (segmentation array, scale) or (None, scale)</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If segmentation validation fails</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div></details>
+<h4 id="enable_featurestracks-node_features-common"><code>enable_features(tracks, node_features)</code> <span class="badge badge-purple">Common</span></h4>
+<details>
+<summary>Show API documentation</summary>
+
+
+<div class="doc doc-object doc-function">
+
+
+
+<a id="funtracks.import_export._tracks_builder.TracksBuilder.enable_features"></a>
+    <div class="doc doc-contents first">
+
+        <p>Enable and register features on tracks object.</p>
+<p>Common logic shared across all formats for both node and edge features.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>tracks</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="            SolutionTracks (funtracks.data_model.solution_tracks.SolutionTracks)" href="../reference/funtracks/data_model/solution_tracks/#funtracks.data_model.solution_tracks.SolutionTracks">SolutionTracks</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>SolutionTracks object to add features to</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>features</code>
+            </td>
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="bool">bool</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Dict mapping feature names to recompute flags</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>feature_type</code>
+            </td>
+            <td>
+                  <code><span title="typing.Literal">Literal</span>[&#39;node&#39;, &#39;edge&#39;]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Type of features ("node" or "edge")</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;node&#39;</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div></details>
+<h4 id="buildsource-segmentation-common"><code>build(source, segmentation, ...)</code> <span class="badge badge-purple">Common</span></h4>
+<details>
+<summary>Show API documentation</summary>
+
+
+<div class="doc doc-object doc-function">
+
+
+
+<a id="funtracks.import_export._tracks_builder.TracksBuilder.build"></a>
+    <div class="doc doc-contents first">
+
+        <p>Orchestrate the full construction process.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>source</code>
+            </td>
+            <td>
+                  <code><span title="pathlib.Path">Path</span> | <span title="pandas.DataFrame">DataFrame</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Path to data source or DataFrame</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>segmentation</code>
+            </td>
+            <td>
+                  <code><span title="pathlib.Path">Path</span> | <span title="numpy.ndarray">ndarray</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional path to segmentation or pre-loaded segmentation array</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>scale</code>
+            </td>
+            <td>
+                  <code><span title="list">list</span>[<span title="float">float</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional spatial scale</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>node_features</code>
+            </td>
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="bool">bool</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional node features to enable/load</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>edge_features</code>
+            </td>
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="bool">bool</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional edge features to enable/load</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="            SolutionTracks (funtracks.data_model.solution_tracks.SolutionTracks)" href="../reference/funtracks/data_model/solution_tracks/#funtracks.data_model.solution_tracks.SolutionTracks">SolutionTracks</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Fully constructed SolutionTracks object</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If self.node_name_map is not set or validation fails</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<details class="example" open>
+  <summary>Example</summary>
+  <blockquote>
+<blockquote>
+<blockquote>
+<h5 id="funtracks.import_export._tracks_builder.TracksBuilder.build--using-prepare-to-auto-infer-node_name_map">Using prepare() to auto-infer node_name_map</h5>
+<p>builder = CSVTracksBuilder()
+builder.prepare("data.csv")
+tracks = builder.build("data.csv")</p>
+<h5 id="funtracks.import_export._tracks_builder.TracksBuilder.build--or-set-node_name_map-manually">Or set node_name_map manually</h5>
+<p>builder = CSVTracksBuilder()
+builder.read_header("data.csv")
+builder.node_name_map = {"time": "t", "x": "x", "y": "y", "id": "id"}
+tracks = builder.build("data.csv")</p>
+</blockquote>
+</blockquote>
+</blockquote>
+</details>
+
+    </div>
+
+</div></details>
+<h2 id="format-specific-builders">Format-Specific Builders</h2>
+<table>
+<thead>
+<tr>
+<th>Builder</th>
+<th>Required Properties</th>
+<th>Edge Properties</th>
+<th>API Reference</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>CSVTracksBuilder</strong></td>
+<td><code>time</code>, <code>id</code>, <code>parent_id</code>, <code>[z]</code>, <code>y</code>, <code>x</code></td>
+<td>No</td>
+<td><a href="../reference/funtracks/import_export/csv/#funtracks.import_export.csv.CSVTracksBuilder">API</a></td>
+</tr>
+<tr>
+<td><strong>GeffTracksBuilder</strong></td>
+<td><code>time</code>, <code>[z]</code>, <code>y</code>, <code>x</code></td>
+<td>Yes</td>
+<td><a href="../reference/funtracks/import_export/geff/#funtracks.import_export.geff.GeffTracksBuilder">API</a></td>
+</tr>
+</tbody>
+</table>
+<h2 id="usage-wrapper-functions-vs-builder-pattern">Usage: Wrapper Functions vs Builder Pattern</h2>
+<p>Most users should use the <strong>wrapper functions</strong> which provide a simpler API:</p>
+<h3 id="recommended-using-wrapper-functions">Recommended: Using Wrapper Functions</h3>
+<p><strong>GEFF Import</strong> (auto-infers name_map):
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">funtracks.import_export</span><span class="w"> </span><span class="kn">import</span> <span class="n">import_from_geff</span>
+
+<span class="n">tracks</span> <span class="o">=</span> <span class="n">import_from_geff</span><span class="p">(</span>
+    <span class="n">directory</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;data.zarr&quot;</span><span class="p">),</span>
+    <span class="n">name_map</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>  <span class="c1"># Auto-infer column mappings</span>
+    <span class="n">segmentation_path</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;seg.tif&quot;</span><span class="p">),</span>
+    <span class="n">scale</span><span class="o">=</span><span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span>
+    <span class="n">node_features</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;area&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}</span>
+<span class="p">)</span>
+</code></pre></div></p>
+<p><strong>CSV/DataFrame Import</strong>:
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">funtracks.import_export</span><span class="w"> </span><span class="kn">import</span> <span class="n">tracks_from_df</span>
+
+<span class="c1"># Read CSV into DataFrame</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;tracks.csv&quot;</span><span class="p">)</span>
+
+<span class="c1"># Load segmentation array</span>
+<span class="n">seg</span> <span class="o">=</span> <span class="o">...</span> <span class="c1"># Load your segmentation array (e.g., from tiff, zarr)</span>
+
+<span class="c1"># Import tracks</span>
+<span class="n">tracks</span> <span class="o">=</span> <span class="n">tracks_from_df</span><span class="p">(</span>
+    <span class="n">df</span><span class="o">=</span><span class="n">df</span><span class="p">,</span>
+    <span class="n">segmentation</span><span class="o">=</span><span class="n">seg</span><span class="p">,</span>  <span class="c1"># Pre-loaded segmentation array</span>
+    <span class="n">scale</span><span class="o">=</span><span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span>
+    <span class="n">features</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;Area&quot;</span><span class="p">:</span> <span class="s2">&quot;area&quot;</span><span class="p">}</span>  <span class="c1"># Load area from &#39;area&#39; column</span>
+<span class="p">)</span>
+</code></pre></div></p>
+<h3 id="advanced-using-builder-pattern-directly">Advanced: Using Builder Pattern Directly</h3>
+<p>For advanced use cases where you need to inspect/modify the inferred name_map:</p>
+<p><strong>GEFF Builder</strong>:
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">funtracks.import_export.geff._import</span><span class="w"> </span><span class="kn">import</span> <span class="n">GeffTracksBuilder</span>
+
+<span class="n">builder</span> <span class="o">=</span> <span class="n">GeffTracksBuilder</span><span class="p">()</span>
+<span class="n">builder</span><span class="o">.</span><span class="n">prepare</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;data.zarr&quot;</span><span class="p">))</span>  <span class="c1"># Auto-infer name_map</span>
+
+<span class="c1"># Inspect and optionally modify inferred mappings</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">builder</span><span class="o">.</span><span class="n">name_map</span><span class="p">)</span>
+<span class="n">builder</span><span class="o">.</span><span class="n">name_map</span><span class="p">[</span><span class="s2">&quot;circularity&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;circ&quot;</span>  <span class="c1"># Override a mapping</span>
+
+<span class="n">tracks</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">build</span><span class="p">(</span>
+    <span class="n">source_path</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;data.zarr&quot;</span><span class="p">),</span>
+    <span class="n">segmentation_path</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;seg.tif&quot;</span><span class="p">),</span>
+    <span class="n">scale</span><span class="o">=</span><span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span>
+    <span class="n">node_features</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;area&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">}</span>
+<span class="p">)</span>
+</code></pre></div></p>
+<p><strong>CSV Builder</strong>:
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">funtracks.import_export.csv._import</span><span class="w"> </span><span class="kn">import</span> <span class="n">CSVTracksBuilder</span>
+
+<span class="n">builder</span> <span class="o">=</span> <span class="n">CSVTracksBuilder</span><span class="p">()</span>
+<span class="n">builder</span><span class="o">.</span><span class="n">prepare</span><span class="p">(</span><span class="s2">&quot;data.csv&quot;</span><span class="p">)</span>  <span class="c1"># Auto-infer name_map</span>
+
+<span class="c1"># Inspect and modify</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">builder</span><span class="o">.</span><span class="n">name_map</span><span class="p">)</span>
+<span class="n">builder</span><span class="o">.</span><span class="n">name_map</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;frame_number&quot;</span>
+
+<span class="n">tracks</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">build</span><span class="p">(</span>
+    <span class="n">source_path</span><span class="o">=</span><span class="s2">&quot;data.csv&quot;</span><span class="p">,</span>
+    <span class="n">segmentation_path</span><span class="o">=</span><span class="s2">&quot;seg.tif&quot;</span>
+<span class="p">)</span>
+</code></pre></div></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.indexes", "content.code.copy"], "search": "../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"default": "latest", "provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.e71a0d61.min.js"></script>
+      
+        <script src="https://unpkg.com/mermaid@10/dist/mermaid.min.js"></script>
+      
+    
+  </body>
+</html>
