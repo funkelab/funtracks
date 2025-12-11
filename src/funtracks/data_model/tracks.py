@@ -10,15 +10,17 @@ from typing import (
 )
 from warnings import warn
 
-import networkx as nx
 import numpy as np
 from psygnal import Signal
 from skimage import measure
 
 from funtracks.features import Feature, FeatureDict, Position, Time
+from funtracks.utils.tracksdata_utils import td_get_single_attr_from_edge
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    import tracksdata as td
 
     from funtracks.actions import BasicAction
     from funtracks.annotators import AnnotatorRegistry, GraphAnnotator
@@ -40,7 +42,7 @@ class Tracks:
     position attribute. Edges in the graph represent links across time.
 
     Attributes:
-        graph (nx.DiGraph): A graph with nodes representing detections and
+        graph (td.graph.GraphView): A graph with nodes representing detections and
             and edges representing links across time.
         segmentation (np.ndarray | None): An optional segmentation that
             accompanies the tracking graph. If a segmentation is provided,
@@ -55,7 +57,7 @@ class Tracks:
 
     def __init__(
         self,
-        graph: nx.DiGraph,
+        graph: td.graph.GraphView,
         segmentation: np.ndarray | None = None,
         time_attr: str | None = None,
         pos_attr: str | tuple[str, ...] | list[str] | None = None,
@@ -67,8 +69,8 @@ class Tracks:
         """Initialize a Tracks object.
 
         Args:
-            graph (nx.DiGraph): NetworkX directed graph with nodes as detections and
-                edges as links.
+            graph (td.graph.GraphView): NetworkX directed graph with nodes as detections
+                and edges as links.
             segmentation (np.ndarray | None): Optional segmentation array where labels
                 match node IDs. Required for computing region properties (area, etc.).
             time_attr (str | None): Graph attribute name for time. Defaults to "time"
@@ -283,8 +285,7 @@ class Tracks:
             return True
 
         # Get a sample node to check which attributes exist
-        sample_node = next(iter(self.graph.nodes()))
-        node_attrs = set(self.graph.nodes[sample_node].keys())
+        node_attrs = set(self.graph.node_attr_keys)
         return key in node_attrs
 
     def _setup_core_computed_features(self) -> None:
@@ -407,6 +408,9 @@ class Tracks:
         if self.features.position_key is None:
             raise ValueError("position_key must be set")
 
+        if incl_time:
+            raise ValueError("Cannot set time in tracksdata")
+
         if not isinstance(positions, np.ndarray):
             positions = np.array(positions)
         if incl_time:
@@ -418,11 +422,13 @@ class Tracks:
             for idx, key in enumerate(self.features.position_key):
                 self._set_nodes_attr(nodes, key, positions[:, idx].tolist())
         else:
-            self._set_nodes_attr(nodes, self.features.position_key, positions.tolist())
+            self._set_nodes_attr(nodes, self.features.position_key, positions)
 
     def set_position(
         self, node: Node, position: list | np.ndarray, incl_time: bool = False
     ):
+        if incl_time:
+            raise ValueError("Cannot set time in tracksdata")
         self.set_positions(
             [node], np.expand_dims(np.array(position), axis=0), incl_time=incl_time
         )
@@ -578,37 +584,6 @@ class Tracks:
             raise ValueError("Cannot set pixels when segmentation is None")
         self.segmentation[pixels] = value
 
-    def _set_node_attributes(self, node: Node, attributes: dict[str, Any]) -> None:
-        """Set the attributes for the given node
-
-        Args:
-            node (Node): The node to set the attributes for
-            attributes (dict[str, Any]): A mapping from attribute name to value
-        """
-        if node in self.graph.node_ids():
-            for key, value in attributes.items():
-                self.graph.update_node_attrs(attrs={key: value}, node_ids=[node])
-        else:
-            logger.info("Node %d not found in the graph.", node)
-
-    def _set_edge_attributes(self, edge: Edge, attributes: dict[str, Any]) -> None:
-        """Set the edge attributes for the given edges. Attributes should already exist
-        (although adding will work in current implementation, they cannot currently be
-        removed)
-
-        Args:
-            edges (list[Edge]): A list of edges to set the attributes for
-            attributes (Attributes): A dictionary of attribute name -> numpy array,
-                where the length of the arrays matches the number of edges.
-                Attributes should already exist: this function will only
-                update the values.
-        """
-        if self.graph.has_edge(*edge):
-            for key, value in attributes.items():
-                self.graph.edges[edge][key] = value
-        else:
-            logger.info("Edge %s not found in the graph.", edge)
-
     def _compute_ndim(
         self,
         seg: np.ndarray | None,
@@ -639,7 +614,7 @@ class Tracks:
 
     def _set_nodes_attr(self, nodes: Iterable[Node], attr: str, values: Iterable[Any]):
         for node, value in zip(nodes, values, strict=False):
-            self.graph.update_node_attrs(attrs={attr: [value]}, node_ids=[node])
+            self.graph[node][attr] = [value]
 
     def get_node_attr(self, node: Node, attr: str, required: bool = False):
         if attr not in self.graph.node_attr_keys:
@@ -668,17 +643,20 @@ class Tracks:
         return self.get_nodes_attr(nodes, attr, required=required)
 
     def _set_edge_attr(self, edge: Edge, attr: str, value: Any):
-        self.graph.edges[edge][attr] = value
+        edge_id = self.graph.edge_id(edge[0], edge[1])
+        self.graph.update_edge_attrs(attrs={attr: value}, edge_ids=[edge_id])
 
     def _set_edges_attr(self, edges: Iterable[Edge], attr: str, values: Iterable[Any]):
         for edge, value in zip(edges, values, strict=False):
-            self.graph.edges[edge][attr] = value
+            edge_id = self.graph.edge_id(edge[0], edge[1])
+            self.graph.update_edge_attrs(attrs={attr: value}, edge_ids=[edge_id])
 
     def get_edge_attr(self, edge: Edge, attr: str, required: bool = False):
-        if required:
-            return self.graph.edges[edge][attr]
-        else:
-            return self.graph.edges[edge].get(attr, None)
+        if attr not in self.graph.edge_attr_keys:
+            if required:
+                raise KeyError(attr)
+            return None
+        return td_get_single_attr_from_edge(self.graph, edge=edge, attrs=[attr])
 
     def get_edges_attr(self, edges: Iterable[Edge], attr: str, required: bool = False):
         return [self.get_edge_attr(edge, attr, required=required) for edge in edges]
@@ -748,6 +726,38 @@ class Tracks:
         for key in feature_keys:
             if key in self.features:
                 del self.features[key]
+
+    def add_node_feature(self, key: str, feature: Feature) -> None:
+        """Add a node feature to the features dictionary and perform graph operations.
+
+        This is the preferred way to add new features as it ensures both the
+        features dictionary is updated and any necessary graph operations are performed.
+
+        Args:
+            key: The key for the new feature
+            feature: The Feature object to add
+        """
+        # Add to the features dictionary
+        self.features[key] = feature
+
+        # Perform custom graph operations when a feature is added
+        self.graph.add_node_attr_key(key, default_value=feature["default_value"])
+
+    def add_edge_feature(self, key: str, feature: Feature) -> None:
+        """Add an edge feature to the features dictionary and perform graph operations.
+
+        This is the preferred way to add new features as it ensures both the
+        features dictionary is updated and any necessary graph operations are performed.
+
+        Args:
+            key: The key for the new feature
+            feature: The Feature object to add
+        """
+        # Add to the features dictionary
+        self.features[key] = feature
+
+        # Perform custom graph operations when a feature is added
+        self.graph.add_edge_attr_key(key, default_value=feature["default_value"])
 
     # ========== Persistence ==========
 

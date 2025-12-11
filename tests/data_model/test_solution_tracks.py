@@ -1,20 +1,20 @@
-import networkx as nx
 import numpy as np
 import pytest
 
 from funtracks.actions import AddNode
 from funtracks.data_model import SolutionTracks, Tracks
+from funtracks.utils.tracksdata_utils import create_empty_graphview_graph
 
 track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
 
 
-def test_recompute_track_ids(graph_2d_with_position):
+def test_recompute_track_ids(graph_2d_with_track_id):
     tracks = SolutionTracks(
-        graph_2d_with_position,
+        graph_2d_with_track_id,
         ndim=3,
         **track_attrs,
     )
-    assert tracks.get_next_track_id() == 5
+    assert tracks.get_next_track_id() == 6
 
 
 def test_next_track_id(graph_2d_with_computed_features):
@@ -67,7 +67,7 @@ def test_from_tracks_cls_recompute(graph_2d_with_computed_features):
     )
     # delete track id on one node triggers reassignment of track_ids even when recompute
     # is False.
-    tracks.graph.nodes[1].pop(tracks.features.tracklet_key, None)
+    tracks.graph[1][tracks.features.tracklet_key] = [None]
     solution_tracks = SolutionTracks.from_tracks(tracks)
     # should have reassigned new track_id to node 6
     assert solution_tracks.get_node_attr(6, solution_tracks.features.tracklet_key) == 4
@@ -77,7 +77,9 @@ def test_from_tracks_cls_recompute(graph_2d_with_computed_features):
 
 
 def test_next_track_id_empty():
-    graph = nx.DiGraph()
+    graph = create_empty_graphview_graph(
+        with_pos=True, with_track_id=True, with_area=False, with_iou=False
+    )
     seg = np.zeros(shape=(10, 100, 100, 100), dtype=np.uint64)
     tracks = SolutionTracks(graph, segmentation=seg, **track_attrs)
     assert tracks.get_next_track_id() == 1

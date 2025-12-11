@@ -70,7 +70,7 @@ class UserAddNode(ActionGroup):
             raise InvalidActionError(
                 f"Cannot add node without track id. Please add {track_id_key} attribute"
             )
-        if self.tracks.graph.has_node(node):
+        if node in self.tracks.graph.node_ids():
             raise InvalidActionError(
                 f"Node {node} already exists in the tracks, cannot add."
             )

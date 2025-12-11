@@ -3,15 +3,25 @@ import pytest
 from funtracks.actions import (
     UpdateNodeAttrs,
 )
+from funtracks.features import Feature
 
 
 @pytest.mark.parametrize("ndim", [3, 4])
 def test_update_node_attrs(get_tracks, ndim):
     tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
     node = 1
-    new_attr = {"score": 1.0}
 
-    action = UpdateNodeAttrs(tracks, node, new_attr)
+    new_feature = Feature(
+        feature_type="node",
+        value_type="float",
+        num_values=1,
+        display_name="Score",
+        required=False,
+        default_value=None,
+    )
+    tracks.add_node_feature("score", new_feature)
+
+    action = UpdateNodeAttrs(tracks, node, {"score": 1.0})
     assert tracks.get_node_attr(node, "score") == 1.0
 
     inverse = action.inverse()

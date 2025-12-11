@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 import networkx as nx
 import numpy as np
 
+from funtracks.data_model.graph_attributes import NodeAttr
 from funtracks.features import FeatureDict
 
 from .tracks import Tracks
@@ -110,13 +111,12 @@ class SolutionTracks(Tracks):
     @classmethod
     def from_tracks(cls, tracks: Tracks):
         force_recompute = False
-        if (tracklet_key := tracks.features.tracklet_key) is not None:
-            # Check if all nodes have track_id before trusting existing track IDs
-            # Short circuit on first missing track_id
-            for node in tracks.graph.nodes():
-                if tracks.get_node_attr(node, tracklet_key) is None:
-                    force_recompute = True
-                    break
+        # Check if all nodes have track_id before trusting existing track IDs
+        if tracks.features.tracklet_key is not None and any(
+            value is None
+            for value in tracks.graph.node_attrs(attr_keys=tracks.features.tracklet_key)
+        ):
+            force_recompute = True
         soln_tracks = cls(
             tracks.graph,
             segmentation=tracks.segmentation,
@@ -144,7 +144,8 @@ class SolutionTracks(Tracks):
             DeprecationWarning,
             stacklevel=2,
         )
-        return nx.get_node_attributes(self.graph, self.features.tracklet_key)
+        all_track_ids = self.graph.node_attrs(attr_keys=NodeAttr.TRACK_ID.value)
+        return dict(zip(self.graph.node_ids(), all_track_ids, strict=True))
 
     def get_next_track_id(self) -> int:
         """Return the next available track_id and update max_tracklet_id in TrackAnnotator

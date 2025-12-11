@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from ._base import BasicAction
 
@@ -9,6 +9,8 @@ if TYPE_CHECKING:
 
     from funtracks.data_model import Tracks
     from funtracks.data_model.tracks import Edge
+
+import tracksdata as td
 
 
 class AddEdge(BasicAction):
@@ -47,12 +49,29 @@ class AddEdge(BasicAction):
         """
         # Check that both endpoints exist before computing edge attributes
         for node in self.edge:
-            if not self.tracks.graph.has_node(node):
+            if node not in self.tracks.graph.node_ids():
                 raise ValueError(
                     f"Cannot add edge {self.edge}: endpoint {node} not in graph yet"
                 )
 
-        self.tracks.graph.add_edge(self.edge[0], self.edge[1], **self.attributes)
+        if self.tracks.graph.has_edge(*self.edge):
+            raise ValueError(f"Edge {self.edge} already exists in the graph")
+
+        # Add required solution attribute
+        attrs = self.attributes
+        attrs[td.DEFAULT_ATTR_KEYS.SOLUTION] = 1
+
+        required_attrs = self.tracks.graph.edge_attr_keys
+        for attr in required_attrs:
+            if attr not in attrs:
+                attrs[attr] = None
+
+        # Create edge attributes for this specific edge
+        self.tracks.graph.add_edge(
+            source_id=self.edge[0],
+            target_id=self.edge[1],
+            attrs=attrs,
+        )
 
         # Notify annotators to recompute features (will overwrite computed ones)
         self.tracks.notify_annotators(self)

@@ -7,7 +7,7 @@ from ._base import BasicAction
 if TYPE_CHECKING:
     from typing import Any
 
-    from funtracks.data_model import SolutionTracks
+    from funtracks.data_model.solution_tracks import SolutionTracks
     from funtracks.data_model.tracks import Node, SegMask
 
 import numpy as np

@@ -59,6 +59,7 @@ def _make_graph(
     with_track_id: bool = False,
     with_area: bool = False,
     with_iou: bool = False,
+    database: str | None = None,
 ) -> td.graph.GraphView:
     """Generate a test graph with configurable features.
 
@@ -68,6 +69,7 @@ def _make_graph(
         with_track_id: Include track_id attribute
         with_area: Include area attribute (requires with_pos=True)
         with_iou: Include iou edge attribute (requires with_area=True)
+        database: Database path for SQLGraph (if None, uses default)
 
     Returns:
         A graph with the requested features
@@ -76,8 +78,7 @@ def _make_graph(
         with_pos=with_pos,
         with_track_id=with_track_id,
         with_area=with_area,
-        # with_iou=with_iou,
-        database=":memory:",
+        database=database,
         position_attrs=["pos"],
     )
 
@@ -158,48 +159,65 @@ def _make_graph(
 
 
 @pytest.fixture
-def graph_clean() -> td.graph.GraphView:
+def graph_clean(tmp_path) -> td.graph.GraphView:
     """Base graph with only time - no positions or computed features."""
-    return _make_graph(ndim=3)
+    db_path = str(tmp_path / "graph_clean.db")
+    return _make_graph(ndim=3, database=db_path)
 
 
 @pytest.fixture
-def graph_2d_with_position() -> td.graph.GraphView:
+def graph_2d_with_position(tmp_path) -> td.graph.GraphView:
     """Graph with 2D positions - for Tracks without segmentation."""
-    return _make_graph(ndim=3, with_pos=True)
+    db_path = str(tmp_path / "graph_2d_position.db")
+    return _make_graph(ndim=3, with_pos=True, database=db_path)
 
 
 @pytest.fixture
-def graph_2d_with_track_id() -> td.graph.GraphView:
+def graph_2d_with_track_id(tmp_path) -> td.graph.GraphView:
     """Graph with 2D positions and track_id - for SolutionTracks without segmentation."""
-    return _make_graph(ndim=3, with_pos=True, with_track_id=True)
+    db_path = str(tmp_path / "graph_2d_track_id.db")
+    return _make_graph(ndim=3, with_pos=True, with_track_id=True, database=db_path)
 
 
 @pytest.fixture
-def graph_2d_with_computed_features() -> td.graph.GraphView:
+def graph_2d_with_computed_features(tmp_path) -> td.graph.GraphView:
     """Graph with all computed features - for SolutionTracks with segmentation."""
+    db_path = str(tmp_path / "graph_2d_computed.db")
     return _make_graph(
-        ndim=3, with_pos=True, with_track_id=True, with_area=True, with_iou=True
+        ndim=3,
+        with_pos=True,
+        with_track_id=True,
+        with_area=True,
+        with_iou=True,
+        database=db_path,
     )
 
 
 @pytest.fixture
-def graph_3d_with_position() -> td.graph.GraphView:
+def graph_3d_with_position(tmp_path) -> td.graph.GraphView:
     """Graph with 3D positions - for Tracks without segmentation."""
-    return _make_graph(ndim=4, with_pos=True)
+    db_path = str(tmp_path / "graph_3d_position.db")
+    return _make_graph(ndim=4, with_pos=True, database=db_path)
 
 
 @pytest.fixture
-def graph_3d_with_track_id() -> td.graph.GraphView:
+def graph_3d_with_track_id(tmp_path) -> td.graph.GraphView:
     """Graph with 3D positions and track_id - for SolutionTracks without segmentation."""
-    return _make_graph(ndim=4, with_pos=True, with_track_id=True)
+    db_path = str(tmp_path / "graph_3d_track_id.db")
+    return _make_graph(ndim=4, with_pos=True, with_track_id=True, database=db_path)
 
 
 @pytest.fixture
-def graph_3d_with_computed_features() -> td.graph.GraphView:
+def graph_3d_with_computed_features(tmp_path) -> td.graph.GraphView:
     """Graph with all computed features - for SolutionTracks with segmentation."""
+    db_path = str(tmp_path / "graph_3d_computed.db")
     return _make_graph(
-        ndim=4, with_pos=True, with_track_id=True, with_area=True, with_iou=True
+        ndim=4,
+        with_pos=True,
+        with_track_id=True,
+        with_area=True,
+        with_iou=True,
+        database=db_path,
     )
 
 
@@ -287,9 +305,10 @@ def get_tracks(get_graph, get_segmentation) -> Callable[..., "Tracks | SolutionT
 
 
 @pytest.fixture
-def graph_2d_list() -> td.graph.GraphView:
+def graph_2d_list(tmp_path) -> td.graph.GraphView:
     # graph = nx.DiGraph()
-    graph = create_empty_graphview_graph()
+    db_path = str(tmp_path / "graph_2d_list.db")
+    graph = create_empty_graphview_graph(database=db_path)
 
     nodes = [
         {

@@ -149,7 +149,7 @@ def test_custom_attributes_preserved(get_tracks, ndim, with_seg):
         ),
     }
     for key, feature in custom_features.items():
-        tracks.features[key] = feature
+        tracks.add_node_feature(key, feature)
 
     # Define attributes including custom ones
     custom_attrs = {
@@ -183,22 +183,28 @@ def test_custom_attributes_preserved(get_tracks, ndim, with_seg):
     action = AddNode(tracks, node_id, custom_attrs, pixels=pixels)
 
     # Verify all attributes are present after adding
-    assert tracks.graph.has_node(node_id)
+    assert node_id in tracks.graph.node_ids()
     for key, value in custom_attrs.items():
-        assert tracks.graph.nodes[node_id][key] == value, (
-            f"Attribute {key} not preserved after add"
-        )
+        if key == "pos":
+            assert_array_almost_equal(tracks.graph[node_id][key], np.array(value))
+        else:
+            assert tracks.graph[node_id][key] == value, (
+                f"Attribute {key} not preserved after add"
+            )
 
     # Delete the node
     delete_action = action.inverse()
-    assert not tracks.graph.has_node(node_id)
+    assert node_id not in tracks.graph.node_ids()
 
     # Re-add the node by inverting the delete
     delete_action.inverse()
-    assert tracks.graph.has_node(node_id)
+    assert node_id in tracks.graph.node_ids()
 
     # Verify all custom attributes are still present after re-adding
     for key, value in custom_attrs.items():
-        assert tracks.graph.nodes[node_id][key] == value, (
-            f"Attribute {key} not preserved after delete/re-add cycle"
-        )
+        if key == "pos":
+            assert_array_almost_equal(tracks.graph[node_id][key], np.array(value))
+        else:
+            assert tracks.graph[node_id][key] == value, (
+                f"Attribute {key} not preserved after delete/re-add cycle"
+            )

@@ -150,7 +150,7 @@ classDiagram
     }
 
     class Tracks {
-        +graph: nx.DiGraph
+        +graph: td.graph.GraphView
         +segmentation: ndarray|None
         +features: FeatureDict
         +annotators: AnnotatorRegistry

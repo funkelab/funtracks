@@ -388,7 +388,7 @@ class TracksController:
         ids = [self.node_id_counter + i for i in range(n)]
         self.node_id_counter += n
         for idx, _id in enumerate(ids):
-            while self.tracks.graph.has_node(_id):
+            while _id in self.tracks.graph.node_ids():
                 _id = self.node_id_counter
                 self.node_id_counter += 1
             ids[idx] = _id

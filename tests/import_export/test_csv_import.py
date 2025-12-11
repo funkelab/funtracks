@@ -44,7 +44,7 @@ class TestDataFrameImportBasic:
 
         assert isinstance(tracks, SolutionTracks)
         assert tracks.graph.num_nodes == 4
-        assert tracks.graph.number_of_edges() == 3
+        assert tracks.graph.num_edges == 3
         assert tracks.ndim == 3
 
     def test_import_3d(self, df_3d):
@@ -144,7 +144,7 @@ class TestEdgeCases:
         tracks = tracks_from_df(df)
 
         assert tracks.graph.num_nodes == 1
-        assert tracks.graph.number_of_edges() == 0
+        assert tracks.graph.num_edges == 0
 
     def test_multiple_roots(self):
         """Test multiple independent lineages."""
@@ -161,7 +161,7 @@ class TestEdgeCases:
         tracks = tracks_from_df(df)
 
         assert tracks.graph.num_nodes == 4
-        assert tracks.graph.number_of_edges() == 2
+        assert tracks.graph.num_edges == 2
 
         # Should have two root nodes
         roots = [n for n in tracks.graph.nodes() if tracks.graph.in_degree(n) == 0]
@@ -182,7 +182,7 @@ class TestEdgeCases:
         tracks = tracks_from_df(df)
 
         assert tracks.graph.num_nodes == 3
-        assert tracks.graph.number_of_edges() == 2
+        assert tracks.graph.num_edges == 2
 
         # Node 1 should have two children
         children = list(tracks.graph.successors(1))
@@ -204,7 +204,7 @@ class TestEdgeCases:
         tracks = tracks_from_df(df)
 
         assert tracks.graph.num_nodes == 10
-        assert tracks.graph.number_of_edges() == 9
+        assert tracks.graph.num_edges == 9
 
         # Should form a single linear chain
         roots = [n for n in tracks.graph.nodes() if tracks.graph.in_degree(n) == 0]

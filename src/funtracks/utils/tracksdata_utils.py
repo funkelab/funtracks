@@ -1,9 +1,11 @@
+import tempfile
+import uuid
+from collections.abc import Sequence
 from typing import Any
 
 import numpy as np
-import polars as pl 
+import polars as pl
 import tracksdata as td
-
 from polars.testing import assert_frame_equal
 from skimage import measure
 from tracksdata.nodes._mask import Mask
@@ -14,8 +16,8 @@ def create_empty_graphview_graph(
     with_track_id: bool = False,
     with_area: bool = False,
     with_iou: bool = False,
-    database: str = ":memory:", 
-    position_attrs: list[str] = ["pos"],
+    database: str | None = None,
+    position_attrs: list[str] | None = None,
 ) -> td.graph.GraphView:
     """
     Create an empty tracksdata GraphView with standard node and edge attributes.
@@ -29,16 +31,27 @@ def create_empty_graphview_graph(
         Whether to include area attribute.
     with_iou : bool
         Whether to include IOU attribute.
-    database : str
-        Path to the SQLite database file, e.g. ':memory:' for in-memory database.
-    position_attrs : list[str]
+    database : str | None
+        Path to the SQLite database file. If None, creates a unique temporary file.
+        Use ':memory:' for in-memory database (may cause issues with pickling in pytest).
+    position_attrs : list[str] | None
         List of position attribute names, e.g. ['pos'] or ['x', 'y', 'z'].
+        Defaults to ['pos'] if None.
 
     Returns
     -------
     td.graph.GraphView
         An empty tracksdata GraphView with standard node and edge attributes.
     """
+    if position_attrs is None:
+        position_attrs = ["pos"]
+
+    # Generate unique database path if not specified
+    if database is None:
+        temp_dir = tempfile.gettempdir()
+        unique_id = uuid.uuid4().hex[:8]
+        database = f"{temp_dir}/funtracks_test_{unique_id}.db"
+
     kwargs = {
         "drivername": "sqlite",
         "database": database,
@@ -59,9 +72,9 @@ def create_empty_graphview_graph(
     if with_area:
         graph_sql.add_node_attr_key("area", default_value=0.0)
     if with_track_id:
-         graph_sql.add_node_attr_key("track_id", default_value=0)
+        graph_sql.add_node_attr_key("track_id", default_value=0)
     graph_sql.add_node_attr_key(td.DEFAULT_ATTR_KEYS.SOLUTION, default_value=1)
-    #TODO: segmentation
+    # TODO Teun: segmentation
     # graph_sql.add_node_attr_key(td.DEFAULT_ATTR_KEYS.MASK, default_value=None)
     # graph_sql.add_node_attr_key(td.DEFAULT_ATTR_KEYS.BBOX, default_value=None)
     if with_iou:
@@ -74,7 +87,6 @@ def create_empty_graphview_graph(
     ).subgraph()
 
     return graph_td_sub
-
 
 
 def assert_node_attrs_equal_with_masks(
@@ -97,7 +109,7 @@ def assert_node_attrs_equal_with_masks(
             "Both objects must be either tracksdata graphs or polars DataFrames"
         )
 
-    #TODO Teun: enable this when segmentation/masks are part of node_attrs
+    # TODO Teun: enable this when segmentation/masks are part of node_attrs
     # assert_frame_equal(
     #     node_attrs1.drop("mask"),
     #     node_attrs2.drop("mask"),
@@ -115,6 +127,7 @@ def assert_node_attrs_equal_with_masks(
         check_column_order=check_column_order,
         check_row_order=check_row_order,
     )
+
 
 def compute_node_attrs_from_masks(
     masks: list[Mask], ndim: int, scale: list[float] | None
@@ -240,3 +253,49 @@ def pixels_to_td_mask(
 
     mask = Mask(mask_array, bbox=bbox)
     return mask, area
+
+
+def td_graph_edge_list(graph):
+    """Get list of edges from a tracksdata graph.
+
+    Args:
+        graph: A tracksdata graph
+
+    Returns:
+        list: List of edges: [[source_id, target_id], ...]
+    """
+    existing_edges = (
+        graph.edge_attrs().select(["source_id", "target_id"]).to_numpy().tolist()
+    )
+    return existing_edges
+
+
+def td_get_ancestors(graph, node_id):
+    """Get ancestors of a node in a tracksdata graph.
+
+    Args:
+        graph: A tracksdata graph
+        node_id: Node ID to get ancestors for
+    """
+
+    ancestors = set()
+    to_visit = [node_id]
+
+    while to_visit:
+        current_node = to_visit.pop()
+        predecessors = graph.predecessors(current_node)
+        for pred in predecessors:
+            if pred not in ancestors:
+                ancestors.add(pred)
+                to_visit.append(pred)
+
+    return ancestors
+
+
+def td_get_single_attr_from_edge(graph, edge: tuple[int, int], attrs: Sequence[str]):
+    """Get a single attribute from a edge in a tracksdata graph."""
+
+    # TODO Teun: do graph.edge_id()
+    # TODO Teun: AND do edge_attrs(key) directly to prevent loading all attributes
+    item = graph.filter(node_ids=[edge[0], edge[1]]).edge_attrs()[attrs].item()
+    return item

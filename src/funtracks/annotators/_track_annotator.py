@@ -4,10 +4,14 @@ from collections import defaultdict
 from typing import TYPE_CHECKING
 
 import networkx as nx
+import rustworkx as rx
+import tracksdata as td
 
 from funtracks.actions import AddNode, DeleteNode, UpdateTrackID
 from funtracks.data_model import SolutionTracks
+from funtracks.data_model.graph_attributes import NodeAttr
 from funtracks.features import LineageID, TrackletID
+from funtracks.utils.tracksdata_utils import td_graph_edge_list
 
 from ._graph_annotator import GraphAnnotator
 
@@ -206,19 +210,46 @@ class TrackAnnotator(GraphAnnotator):
         After removing division edges, each connected component will get a unique ID,
         and the relevant class attributes will be updated.
         """
-        graph_copy = self.tracks.graph.copy()
-        parents = [node for node, degree in self.tracks.graph.out_degree() if degree >= 2]
+        graph_copy = td.graph.IndexedRXGraph.from_other(self.tracks.graph)
+
+        parents = [
+            node
+            for node, degree in zip(
+                self.tracks.graph.node_ids(), self.tracks.graph.out_degree(), strict=True
+            )
+            if degree >= 2
+        ]
+        intertrack_edges = []
 
         # Remove all intertrack edges from a copy of the original graph
         for parent in parents:
-            daughters = self.tracks.successors(parent)
-            for daughter in daughters:
-                graph_copy.remove_edge(parent, daughter)
+            all_edges = td_graph_edge_list(self.tracks.graph)
+            daughters = [edge[1] for edge in all_edges if edge[0] == parent]
 
-        tracklets = nx.weakly_connected_components(graph_copy)
-        max_id, ids_to_nodes = self._assign_ids(tracklets, self.tracklet_key)
-        self.max_tracklet_id = max_id
-        self.tracklet_id_to_nodes = ids_to_nodes
+            for daughter in daughters:
+                # remove edge from graph, by setting solution to 0 + subgraphing
+                edge_id = graph_copy.edge_id(parent, daughter)
+                graph_copy.update_edge_attrs(
+                    edge_ids=[edge_id], attrs={td.DEFAULT_ATTR_KEYS.SOLUTION: [0]}
+                )
+                graph_copy = graph_copy.filter(
+                    td.NodeAttr(td.DEFAULT_ATTR_KEYS.SOLUTION) == 1,
+                    td.EdgeAttr(td.DEFAULT_ATTR_KEYS.SOLUTION) == 1,
+                ).subgraph()
+
+                intertrack_edges.append((parent, daughter))
+
+        track_id = 1
+        for tracklet in rx.weakly_connected_components(graph_copy.rx_graph):
+            node_ids_internal = list(tracklet)
+            node_ids_external = [graph_copy.node_ids()[nid] for nid in node_ids_internal]
+            self.tracks.graph.update_node_attrs(
+                attrs={NodeAttr.TRACK_ID.value: [track_id] * len(node_ids_external)},
+                node_ids=node_ids_external,
+            )
+            self.tracks.track_id_to_node[track_id] = node_ids_external
+            track_id += 1
+        self.max_track_id = track_id - 1
 
     def update(self, action: BasicAction) -> None:
         """Update track-level features based on the action.
