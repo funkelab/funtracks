@@ -281,11 +281,11 @@ class Tracks:
             bool: True if the key is on the first sampled node or there are no nodes,
                 and False if missing from the first node.
         """
-        if self.graph.num_nodes == 0:
+        if self.graph.num_nodes() == 0:
             return True
 
         # Get a sample node to check which attributes exist
-        node_attrs = set(self.graph.node_attr_keys)
+        node_attrs = set(self.graph.node_attr_keys())
         return key in node_attrs
 
     def _setup_core_computed_features(self) -> None:
@@ -617,7 +617,7 @@ class Tracks:
             self.graph[node][attr] = [value]
 
     def get_node_attr(self, node: Node, attr: str, required: bool = False):
-        if attr not in self.graph.node_attr_keys:
+        if attr not in self.graph.node_attr_keys():
             if required:
                 raise KeyError(attr)
             return None
@@ -652,7 +652,7 @@ class Tracks:
             self.graph.update_edge_attrs(attrs={attr: value}, edge_ids=[edge_id])
 
     def get_edge_attr(self, edge: Edge, attr: str, required: bool = False):
-        if attr not in self.graph.edge_attr_keys:
+        if attr not in self.graph.edge_attr_keys():
             if required:
                 raise KeyError(attr)
             return None

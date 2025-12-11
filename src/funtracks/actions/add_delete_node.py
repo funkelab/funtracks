@@ -159,7 +159,7 @@ class AddNode(BasicAction):
 
         # Position is already set in attrs above
         # Add nodes to td graph
-        required_attrs = self.tracks.graph.node_attr_keys.copy()
+        required_attrs = self.tracks.graph.node_attr_keys().copy()
         if td.DEFAULT_ATTR_KEYS.NODE_ID in required_attrs:
             required_attrs.remove(td.DEFAULT_ATTR_KEYS.NODE_ID)
         if td.DEFAULT_ATTR_KEYS.SOLUTION not in attrs:

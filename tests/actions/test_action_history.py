@@ -23,7 +23,7 @@ def test_action_history():
     history.add_new_action(action1)
     # undo the action
     assert history.undo()
-    assert tracks.graph.num_nodes == 0
+    assert tracks.graph.num_nodes() == 0
     assert len(history.undo_stack) == 1
     assert len(history.redo_stack) == 1
     assert history._undo_pointer == -1
@@ -33,7 +33,7 @@ def test_action_history():
 
     # redo the action
     assert history.redo()
-    assert tracks.graph.num_nodes == 1
+    assert tracks.graph.num_nodes() == 1
     assert len(history.undo_stack) == 1
     assert len(history.redo_stack) == 0
     assert history._undo_pointer == 0
@@ -45,7 +45,7 @@ def test_action_history():
     assert history.undo()
     action2 = AddNode(tracks, node=10, attributes={"t": 10, "pos": pos, "track_id": 2})
     history.add_new_action(action2)
-    assert tracks.graph.num_nodes == 1
+    assert tracks.graph.num_nodes() == 1
     # there are 3 things on the stack: action1, action1's inverse, and action 2
     assert len(history.undo_stack) == 3
     assert len(history.redo_stack) == 0
@@ -54,7 +54,7 @@ def test_action_history():
     # undo back to after action 1
     assert history.undo()
     assert history.undo()
-    assert tracks.graph.num_nodes == 1
+    assert tracks.graph.num_nodes() == 1
 
     assert len(history.undo_stack) == 3
     assert len(history.redo_stack) == 2

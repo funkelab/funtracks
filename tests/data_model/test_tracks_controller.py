@@ -14,7 +14,7 @@ def test__add_nodes_no_seg(graph_2d_with_computed_features):
     )
     controller = TracksController(tracks)
 
-    num_edges = tracks.graph.num_edges
+    num_edges = tracks.graph.num_edges()
 
     # start a new track with multiple nodes
     attrs = {
@@ -30,7 +30,7 @@ def test__add_nodes_no_seg(graph_2d_with_computed_features):
     assert tracks.get_position(node) == [1, 3]
     assert tracks.get_track_id(node) == 6
 
-    assert tracks.graph.num_edges == num_edges + 1  # one edge added
+    assert tracks.graph.num_edges() == num_edges + 1  # one edge added
 
     # add nodes to end of existing track
     attrs = {
@@ -76,7 +76,7 @@ def test__add_nodes_with_seg(graph_2d_with_computed_features, segmentation_2d):
     )
     controller = TracksController(tracks)
 
-    num_edges = tracks.graph.num_edges
+    num_edges = tracks.graph.num_edges()
 
     new_seg = segmentation_2d.copy()
     time = 0
@@ -112,7 +112,7 @@ def test__add_nodes_with_seg(graph_2d_with_computed_features, segmentation_2d):
     assert tracks.get_track_id(node2) == 6
     assert np.sum(tracks.segmentation != new_seg) == 0
 
-    assert tracks.graph.num_edges == num_edges + 1  # one edge added
+    assert tracks.graph.num_edges() == num_edges + 1  # one edge added
 
     # add nodes to end of existing track
     time = 2
@@ -180,13 +180,13 @@ def test__delete_nodes_no_seg(graph_2d_with_computed_features):
         tracklet_attr="track_id",
     )
     controller = TracksController(tracks)
-    num_edges = tracks.graph.num_edges
+    num_edges = tracks.graph.num_edges()
 
     # delete unconnected node
     node = 6
     action = controller._delete_nodes([node])
     assert node not in tracks.graph.node_ids()
-    assert tracks.graph.num_edges == num_edges
+    assert tracks.graph.num_edges() == num_edges
     action.inverse()
 
     # delete end node
@@ -229,7 +229,7 @@ def test__delete_nodes_with_seg(graph_2d_with_computed_features, segmentation_2d
         tracklet_attr="track_id",
     )
     controller = TracksController(tracks)
-    num_edges = tracks.graph.num_edges
+    num_edges = tracks.graph.num_edges()
 
     # delete unconnected node
     node = 6
@@ -238,7 +238,7 @@ def test__delete_nodes_with_seg(graph_2d_with_computed_features, segmentation_2d
     action = controller._delete_nodes([node])
     assert node not in tracks.graph.node_ids()
     assert track_id not in np.unique(tracks.segmentation[time])
-    assert tracks.graph.num_edges == num_edges
+    assert tracks.graph.num_edges() == num_edges
     action.inverse()
 
     # delete end node
@@ -294,7 +294,7 @@ def test__add_remove_edges_no_seg(graph_2d_with_computed_features):
         tracklet_attr="track_id",
     )
     controller = TracksController(tracks)
-    num_edges = tracks.graph.num_edges
+    num_edges = tracks.graph.num_edges()
 
     # delete continuation edge
     edge = (3, 4)
@@ -302,13 +302,13 @@ def test__add_remove_edges_no_seg(graph_2d_with_computed_features):
     controller._delete_edges([edge])
     assert not tracks.graph.has_edge(*edge)
     assert tracks.get_track_id(edge[1]) != track_id  # relabeled the rest of the track
-    assert tracks.graph.num_edges == num_edges - 1
+    assert tracks.graph.num_edges() == num_edges - 1
 
     # add back in continuation edge
     controller._add_edges([edge])
     assert tracks.graph.has_edge(*edge)
     assert tracks.get_track_id(edge[1]) == track_id  # track id was changed back
-    assert tracks.graph.num_edges == num_edges
+    assert tracks.graph.num_edges() == num_edges
 
     # delete division edge
     edge = (1, 3)
@@ -317,7 +317,7 @@ def test__add_remove_edges_no_seg(graph_2d_with_computed_features):
     assert not tracks.graph.has_edge(*edge)
     assert tracks.get_track_id(edge[1]) == track_id  # dont relabel after removal
     assert tracks.get_track_id(2) == 1  # but do relabel the sibling
-    assert tracks.graph.num_edges == num_edges - 1
+    assert tracks.graph.num_edges() == num_edges - 1
 
     # add back in division edge
     edge = (1, 3)
@@ -326,4 +326,4 @@ def test__add_remove_edges_no_seg(graph_2d_with_computed_features):
     assert tracks.graph.has_edge(*edge)
     assert tracks.get_track_id(edge[1]) == track_id  # dont relabel after removal
     assert tracks.get_track_id(2) != 1  # give sibling new id again (not necessarily 2)
-    assert tracks.graph.num_edges == num_edges
+    assert tracks.graph.num_edges() == num_edges

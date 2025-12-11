@@ -61,7 +61,7 @@ class AddEdge(BasicAction):
         attrs = self.attributes
         attrs[td.DEFAULT_ATTR_KEYS.SOLUTION] = 1
 
-        required_attrs = self.tracks.graph.edge_attr_keys
+        required_attrs = self.tracks.graph.edge_attr_keys()
         for attr in required_attrs:
             if attr not in attrs:
                 attrs[attr] = None
