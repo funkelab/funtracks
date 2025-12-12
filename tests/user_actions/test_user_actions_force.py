@@ -1,6 +1,7 @@
 import pytest
 
 from funtracks.user_actions import UserAddNode
+from funtracks.utils.tracksdata_utils import td_graph_edge_list
 
 
 def test_user_force_add_downstream(get_tracks):
@@ -13,9 +14,9 @@ def test_user_force_add_downstream(get_tracks):
     attrs = {"t": 2, "track_id": 1, "pos": [3, 4]}
     UserAddNode(tracks, node=7, attributes=attrs, force=True)
     assert tracks.get_track_id(7) == 1
-    assert (1, 2) not in tracks.graph.edges
-    assert (1, 3) not in tracks.graph.edges
-    assert (1, 7) in tracks.graph.edges
+    assert [1, 2] not in td_graph_edge_list(tracks.graph)
+    assert [1, 3] not in td_graph_edge_list(tracks.graph)
+    assert [1, 7] in td_graph_edge_list(tracks.graph)
 
 
 def test_user_force_add_upstream(get_tracks):
@@ -28,9 +29,9 @@ def test_user_force_add_upstream(get_tracks):
     attrs = {"t": 0, "track_id": 3, "pos": [3, 4]}
     UserAddNode(tracks, node=7, attributes=attrs, force=True)
     assert tracks.get_track_id(7) == 3
-    assert (1, 2) in tracks.graph.edges  # still there
-    assert (1, 3) not in tracks.graph.edges  # should be removed
-    assert (7, 3) in tracks.graph.edges  # new forced edge
+    assert [1, 2] in td_graph_edge_list(tracks.graph)  # still there
+    assert [1, 3] not in td_graph_edge_list(tracks.graph)  # should be removed
+    assert [7, 3] in td_graph_edge_list(tracks.graph)  # new forced edge
 
 
 def test_auto_assign_new_track_id(get_tracks):
@@ -44,5 +45,5 @@ def test_auto_assign_new_track_id(get_tracks):
         attrs = {"t": 1, "track_id": 2, "pos": [3, 4]}  # combination exists already
         UserAddNode(tracks, node=7, attributes=attrs)
 
-        assert 7 in tracks.graph.nodes
+        assert 7 in tracks.graph.node_ids()
         assert tracks.get_track_id(7) == 6  # new assigned track id

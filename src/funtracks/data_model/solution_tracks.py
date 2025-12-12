@@ -92,13 +92,17 @@ class SolutionTracks(Tracks):
     @classmethod
     def from_tracks(cls, tracks: Tracks):
         force_recompute = False
-        if (tracklet_key := tracks.features.tracklet_key) is not None:
-            # Check if all nodes have track_id before trusting existing track IDs
-            # Short circuit on first missing track_id
-            for node in tracks.graph.nodes():
-                if tracks.get_node_attr(node, tracklet_key) is None:
-                    force_recompute = True
-                    break
+        # Check if all nodes have track_id before trusting existing track IDs
+        if (
+            tracks.features.tracklet_key is not None
+            and tracks.graph.node_attrs(attr_keys=tracks.features.tracklet_key)[
+                tracks.features.tracklet_key
+            ]
+            .is_null()
+            .any()
+        ):
+            force_recompute = True
+
         soln_tracks = cls(
             tracks.graph,
             segmentation=tracks.segmentation,
@@ -168,7 +172,10 @@ class SolutionTracks(Tracks):
             elif self.get_time(cand) > time:
                 succ = cand
                 break
-        return pred, succ
+        return (
+            int(pred) if pred is not None else None,
+            int(succ) if succ is not None else None,
+        )
 
     def has_track_id_at_time(self, track_id: int, time: int) -> bool:
         """Function to check if a node with given track id exists at given time point.

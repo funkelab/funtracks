@@ -93,3 +93,6 @@ pixi.lock
 
 # uv environments
 uv.lock
+
+# Claude
+CLAUDE.md
