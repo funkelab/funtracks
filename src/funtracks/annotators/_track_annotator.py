@@ -243,7 +243,9 @@ class TrackAnnotator(GraphAnnotator):
             node_ids_internal = list(tracklet)
             node_ids_external = [graph_copy.node_ids()[nid] for nid in node_ids_internal]
             self.tracks.graph.update_node_attrs(
-                attrs={self.tracks.features.tracklet_key: [track_id] * len(node_ids_external)},
+                attrs={
+                    self.tracks.features.tracklet_key: [track_id] * len(node_ids_external)
+                },
                 node_ids=node_ids_external,
             )
             self.tracks.track_id_to_node[track_id] = node_ids_external
