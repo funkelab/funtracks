@@ -9,7 +9,6 @@ import tracksdata as td
 
 from funtracks.actions import AddNode, DeleteNode, UpdateTrackID
 from funtracks.data_model import SolutionTracks
-from funtracks.data_model.graph_attributes import NodeAttr
 from funtracks.features import LineageID, TrackletID
 from funtracks.utils.tracksdata_utils import td_graph_edge_list
 
@@ -137,7 +136,7 @@ class TrackAnnotator(GraphAnnotator):
         """
         id_to_nodes = defaultdict(list)
         max_id = 0
-        for node in self.tracks.nodes():
+        for node in self.tracks.graph.node_ids():
             _id: int = self.tracks.get_node_attr(node, key)
             if _id is None:
                 continue
@@ -244,7 +243,7 @@ class TrackAnnotator(GraphAnnotator):
             node_ids_internal = list(tracklet)
             node_ids_external = [graph_copy.node_ids()[nid] for nid in node_ids_internal]
             self.tracks.graph.update_node_attrs(
-                attrs={NodeAttr.TRACK_ID.value: [track_id] * len(node_ids_external)},
+                attrs={self.tracks.features.tracklet_key: [track_id] * len(node_ids_external)},
                 node_ids=node_ids_external,
             )
             self.tracks.track_id_to_node[track_id] = node_ids_external

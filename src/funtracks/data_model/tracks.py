@@ -485,10 +485,11 @@ class Tracks:
             self.graph[node][attr] = [value]
 
     def get_node_attr(self, node: Node, attr: str, required: bool = False):
-        if required:
-            return self.graph.nodes[node][attr]
-        else:
-            return self.graph.nodes[node].get(attr, None)
+        if attr not in self.graph.node_attr_keys():
+            if required:
+                raise KeyError(attr)
+            return None
+        return self.graph[int(node)][attr]
 
     def get_nodes_attr(self, nodes: Iterable[Node], attr: str, required: bool = False):
         return [self.get_node_attr(node, attr, required=required) for node in nodes]

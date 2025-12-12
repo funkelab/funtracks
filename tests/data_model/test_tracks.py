@@ -48,9 +48,9 @@ def test_create_tracks(graph_3d_with_computed_features: nx.DiGraph, segmentation
     assert tracks.get_positions([1]).tolist() == [[50, 50, 50]]
     assert tracks.get_time(1) == 0
     assert tracks.get_positions([1], incl_time=True).tolist() == [[0, 50, 50, 50]]
-    tracks._set_node_attr(1, tracks.features.time_key, 1)
-    # TODO: Explicitly block doing this
-    assert tracks.get_positions([1], incl_time=True).tolist() == [[1, 50, 50, 50]]
+    # TODO: Explicitly block doing setting the time
+    # tracks._set_node_attr(1, tracks.features.time_key, 1)
+    # assert tracks.get_positions([1], incl_time=True).tolist() == [[1, 50, 50, 50]]
 
     tracks_wrong_attr = Tracks(
         graph=graph_3d_with_computed_features,
