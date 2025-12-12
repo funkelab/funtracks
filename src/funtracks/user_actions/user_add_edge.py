@@ -53,7 +53,9 @@ class UserAddEdge(ActionGroup):
                     forceable=True,
                 )
             else:
-                merge_edge = list(self.tracks.graph.in_edges(target))[0]
+                # merge_edge = list(self.tracks.graph.in_edges(target))[0]
+                pred = next(iter(self.tracks.graph.predecessors(target)))
+                merge_edge = (pred, target)
                 warnings.warn(
                     f"Removing edge {merge_edge} to add new edge without merging.",
                     stacklevel=2,
