@@ -107,7 +107,7 @@ def test_export_to_csv(
     with open(temp_file) as f:
         lines = f.readlines()
 
-    assert len(lines) == tracks.graph.num_nodes()
+    assert len(lines) == tracks.graph.num_nodes() + 1  # add header
     # Backward compatible format: t, z, y, x, id, parent_id, track_id
     header = ["t", "z", "y", "x", "id", "parent_id", "track_id"]
     assert lines[0].strip().split(",") == header

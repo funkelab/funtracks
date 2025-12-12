@@ -43,6 +43,7 @@ def _save_graph(tracks: Tracks, directory: Path) -> None:
         tracks (Tracks): the tracks to save the graph of
         directory (Path): The directory in which to save the graph file.
     """
+    # TODO Teun: change to geff!
     graph_file = directory / GRAPH_FILE
     graph_data = nx.node_link_data(tracks.graph, edges="links")
 

@@ -112,11 +112,16 @@ class SolutionTracks(Tracks):
     def from_tracks(cls, tracks: Tracks):
         force_recompute = False
         # Check if all nodes have track_id before trusting existing track IDs
-        if tracks.features.tracklet_key is not None and any(
-            value is None
-            for value in tracks.graph.node_attrs(attr_keys=tracks.features.tracklet_key)
+        if (
+            tracks.features.tracklet_key is not None
+            and tracks.graph.node_attrs(attr_keys=tracks.features.tracklet_key)[
+                tracks.features.tracklet_key
+            ]
+            .is_null()
+            .any()
         ):
             force_recompute = True
+
         soln_tracks = cls(
             tracks.graph,
             segmentation=tracks.segmentation,
@@ -145,7 +150,7 @@ class SolutionTracks(Tracks):
             stacklevel=2,
         )
         all_track_ids = self.graph.node_attrs(attr_keys=NodeAttr.TRACK_ID.value)
-        return dict(zip(self.graph.node_ids(), all_track_ids, strict=True))
+        return dict(zip(self.graph.node_ids(), all_track_ids["track_id"], strict=True))
 
     def get_next_track_id(self) -> int:
         """Return the next available track_id and update max_tracklet_id in TrackAnnotator
@@ -226,7 +231,10 @@ class SolutionTracks(Tracks):
             elif self.get_time(cand) > time:
                 succ = cand
                 break
-        return pred, succ
+        return (
+            int(pred) if pred is not None else None,
+            int(succ) if succ is not None else None,
+        )
 
     def has_track_id_at_time(self, track_id: int, time: int) -> bool:
         """Function to check if a node with given track id exists at given time point.
