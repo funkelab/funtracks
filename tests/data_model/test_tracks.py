@@ -45,7 +45,7 @@ def test_create_tracks(graph_3d_with_computed_features: nx.DiGraph, segmentation
     assert tracks.get_positions([1]).tolist() == [[50, 50, 50]]
     assert tracks.get_time(1) == 0
     assert tracks.get_positions([1], incl_time=True).tolist() == [[0, 50, 50, 50]]
-    tracks.set_time(1, 1)
+    tracks._set_node_attr(1, tracks.time_attr, 1)
     assert tracks.get_positions([1], incl_time=True).tolist() == [[1, 50, 50, 50]]
 
     tracks_wrong_attr = Tracks(
@@ -81,9 +81,6 @@ def test_create_tracks(graph_3d_with_computed_features: nx.DiGraph, segmentation
     assert tracks.get_positions([1]).tolist() == [[50, 50, 50]]
     tracks.set_position(1, [55, 56, 57])
     assert tracks.get_position(1) == [55, 56, 57]
-
-    tracks.set_position(1, [1, 50, 50, 50], incl_time=True)
-    assert tracks.get_time(1) == 1
 
 
 def test_pixels_and_seg_id(graph_3d_with_computed_features, segmentation_3d):

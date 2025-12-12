@@ -391,7 +391,6 @@ class Tracks:
         self,
         nodes: Iterable[Node],
         positions: np.ndarray,
-        incl_time: bool = False,
     ):
         """Set the location of nodes in the graph. Optionally include the
         time frame as the first dimension. Raises an error if any of the nodes
@@ -409,10 +408,6 @@ class Tracks:
 
         if not isinstance(positions, np.ndarray):
             positions = np.array(positions)
-        if incl_time:
-            times = positions[:, 0].tolist()  # we know this is a list of ints
-            self.set_times(nodes, times)  # type: ignore
-            positions = positions[:, 1:]
 
         if isinstance(self.features.position_key, list):
             for idx, key in enumerate(self.features.position_key):
@@ -420,12 +415,8 @@ class Tracks:
         else:
             self._set_nodes_attr(nodes, self.features.position_key, positions.tolist())
 
-    def set_position(
-        self, node: Node, position: list | np.ndarray, incl_time: bool = False
-    ):
-        self.set_positions(
-            [node], np.expand_dims(np.array(position), axis=0), incl_time=incl_time
-        )
+    def set_position(self, node: Node, position: list | np.ndarray):
+        self.set_positions([node], np.expand_dims(np.array(position), axis=0))
 
     def get_times(self, nodes: Iterable[Node]) -> Sequence[int]:
         return self.get_nodes_attr(nodes, self.features.time_key, required=True)
@@ -441,21 +432,6 @@ class Tracks:
             int: The time frame that the node is in
         """
         return int(self.get_times([node])[0])
-
-    def set_times(self, nodes: Iterable[Node], times: Iterable[int]):
-        times = [int(t) for t in times]
-        self._set_nodes_attr(nodes, self.features.time_key, times)
-
-    def set_time(self, node: Any, time: int):
-        """Set the time frame of a given node. Raises an error if the node
-        is not in the graph.
-
-        Args:
-            node (Any): The node id to set the time frame for
-            time (int): The time to set
-
-        """
-        self.set_times([node], [int(time)])
 
     def get_areas(self, nodes: Iterable[Node]) -> Sequence[int | None]:
         """Get the area/volume of a given node. Raises a KeyError if the node
