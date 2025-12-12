@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import warnings
 from typing import TYPE_CHECKING
 
 import networkx as nx
@@ -11,8 +10,6 @@ from funtracks.features import FeatureDict
 from .tracks import Tracks
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from funtracks.annotators import TrackAnnotator
 
     from .tracks import Node
@@ -74,21 +71,6 @@ class SolutionTracks(Tracks):
 
         self.track_annotator = self._get_track_annotator()
 
-    def _initialize_track_ids(self) -> None:
-        """Initialize track IDs for all nodes.
-
-        Deprecated:
-            This method is deprecated and will be removed in funtracks v2.0.
-            Track IDs are now auto-computed during SolutionTracks initialization.
-        """
-        warnings.warn(
-            "`_initialize_track_ids` is deprecated and will be removed in funtracks v2.0."
-            " Track IDs are now auto-computed during SolutionTracks initialization.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self.enable_features([self.features.tracklet_key])  # type: ignore
-
     def _get_track_annotator(self) -> TrackAnnotator:
         """Get the TrackAnnotator instance from the annotator registry.
 
@@ -136,16 +118,6 @@ class SolutionTracks(Tracks):
     def track_id_to_node(self) -> dict[int, list[int]]:
         return self.track_annotator.tracklet_id_to_nodes
 
-    @property
-    def node_id_to_track_id(self) -> dict[Node, int]:
-        warnings.warn(
-            "node_id_to_track_id property will be removed in funtracks v2. "
-            "Use `get_track_id` instead for better performance.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return nx.get_node_attributes(self.graph, self.features.tracklet_key)
-
     def get_next_track_id(self) -> int:
         """Return the next available track_id and update max_tracklet_id in TrackAnnotator
 
@@ -161,35 +133,6 @@ class SolutionTracks(Tracks):
             raise ValueError("Tracklet key not initialized in features")
         track_id = self.get_node_attr(node, self.features.tracklet_key, required=True)
         return track_id
-
-    def export_tracks(
-        self, outfile: Path | str, node_ids: set[int] | None = None
-    ) -> None:
-        """Export the tracks from this run to a csv with the following columns:
-        t,[z],y,x,id,parent_id,track_id
-        Cells without a parent_id will have an empty string for the parent_id.
-        Whether or not to include z is inferred from self.ndim
-
-        Args:
-            outfile (Path): path to output csv file
-            node_ids (set[int], optional): nodes to be included. If provided, only these
-            nodes and their ancestors will be included in the output.
-
-        .. deprecated:: 1.0
-            `SolutionTracks.export_tracks()` is deprecated and will be removed in v2.0.
-            Use :func:`funtracks.import_export.export_to_csv` instead.
-        """
-        warnings.warn(
-            "SolutionTracks.export_tracks() is deprecated and will be removed in v2.0. "
-            "Use funtracks.import_export.export_to_csv() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-
-        # Import here to avoid circular imports
-        from funtracks.import_export.csv._export import export_to_csv
-
-        export_to_csv(self, outfile, node_ids)
 
     def get_track_neighbors(
         self, track_id: int, time: int

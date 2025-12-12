@@ -43,7 +43,7 @@ def test_create_tracks(graph_3d_with_computed_features: nx.DiGraph, segmentation
     assert tracks.get_positions([1]).tolist() == [[50, 50, 50]]
     assert tracks.get_time(1) == 0
     assert tracks.get_positions([1], incl_time=True).tolist() == [[0, 50, 50, 50]]
-    tracks._set_node_attr(1, tracks.time_attr, 1)
+    tracks._set_node_attr(1, tracks.features.time_key, 1)
     assert tracks.get_positions([1], incl_time=True).tolist() == [[1, 50, 50, 50]]
 
     tracks_wrong_attr = Tracks(
@@ -125,21 +125,8 @@ def test_get_set_node_attr(graph_2d_with_computed_features):
     tracks = Tracks(graph_2d_with_computed_features, ndim=3, **track_attrs)
 
     tracks._set_node_attr(1, "a", 42)
-    # test deprecated functions
-    with pytest.warns(
-        DeprecationWarning,
-        match="_get_node_attr deprecated in favor of public method get_node_attr",
-    ):
-        assert tracks._get_node_attr(1, "a") == 42
 
     tracks._set_nodes_attr([1, 2], "b", [7, 8])
-    with pytest.warns(
-        DeprecationWarning,
-        match="_get_nodes_attr deprecated in favor of public method get_nodes_attr",
-    ):
-        assert tracks._get_nodes_attr([1, 2], "b") == [7, 8]
-
-    # test new functions
     assert tracks.get_node_attr(1, "a", required=True) == 42
     assert tracks.get_nodes_attr([1, 2], "b", required=True) == [7, 8]
     assert tracks.get_nodes_attr([1, 2], "b", required=False) == [7, 8]

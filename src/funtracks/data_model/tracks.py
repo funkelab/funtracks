@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import warnings
 from collections.abc import Iterable, Sequence
 from typing import (
     TYPE_CHECKING,
@@ -122,26 +121,6 @@ class Tracks:
             self._activate_features_from_dict()
         else:
             self._setup_core_computed_features()
-
-    @property
-    def time_attr(self):
-        warn(
-            "Deprecating Tracks.time_attr in favor of tracks.features.time_key."
-            " Will be removed in funtracks v2.0.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.features.time_key
-
-    @property
-    def pos_attr(self):
-        warn(
-            "Deprecating Tracks.pos_attr in favor of tracks.features.position_key."
-            " Will be removed in funtracks v2.0.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.features.position_key
 
     def _get_feature_set(
         self,
@@ -503,24 +482,8 @@ class Tracks:
         else:
             return self.graph.nodes[node].get(attr, None)
 
-    def _get_node_attr(self, node, attr, required=False):
-        warnings.warn(
-            "_get_node_attr deprecated in favor of public method get_node_attr",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.get_node_attr(node, attr, required=required)
-
     def get_nodes_attr(self, nodes: Iterable[Node], attr: str, required: bool = False):
         return [self.get_node_attr(node, attr, required=required) for node in nodes]
-
-    def _get_nodes_attr(self, nodes, attr, required=False):
-        warnings.warn(
-            "_get_nodes_attr deprecated in favor of public method get_nodes_attr",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.get_nodes_attr(nodes, attr, required=required)
 
     def _set_edge_attr(self, edge: Edge, attr: str, value: Any):
         self.graph.edges[edge][attr] = value
