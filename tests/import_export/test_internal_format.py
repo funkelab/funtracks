@@ -6,10 +6,10 @@ from networkx.utils import graphs_equal
 from numpy.testing import assert_array_almost_equal
 
 from funtracks.data_model import Tracks
-from funtracks.import_export.internal_format import (
+from funtracks.import_export._v1_format import (
+    _save_v1_tracks,
     delete_tracks,
-    load_tracks,
-    save_tracks,
+    load_v1_tracks,
 )
 
 
@@ -24,9 +24,9 @@ def test_save_load(
     tmp_path,
 ):
     tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=is_solution)
-    save_tracks(tracks, tmp_path)
+    _save_v1_tracks(tracks, tmp_path)
 
-    loaded = load_tracks(tmp_path, solution=is_solution)
+    loaded = load_v1_tracks(tmp_path, solution=is_solution)
     assert loaded.ndim == tracks.ndim
     # Check feature keys and important properties match (allow tuple vs list diff)
     assert loaded.features.time_key == tracks.features.time_key
@@ -86,7 +86,7 @@ def test_delete(
 ):
     tracks_path = tmp_path / "test_tracks"
     tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=is_solution)
-    save_tracks(tracks, tracks_path)
+    _save_v1_tracks(tracks, tracks_path)
     delete_tracks(tracks_path)
     with pytest.raises(StopIteration):
         next(tmp_path.iterdir())
@@ -96,7 +96,7 @@ def test_delete(
 def test_load_without_features(tmp_path, graph_2d_with_computed_features):
     tracks = Tracks(graph_2d_with_computed_features, ndim=3)
     tracks_path = tmp_path / "test_tracks"
-    save_tracks(tracks, tracks_path)
+    _save_v1_tracks(tracks, tracks_path)
     attrs_path = tracks_path / "attrs.json"
     with open(attrs_path) as f:
         attrs = json.load(f)
@@ -107,6 +107,6 @@ def test_load_without_features(tmp_path, graph_2d_with_computed_features):
     with open(attrs_path, "w") as f:
         json.dump(attrs, f)
 
-    imported_tracks = load_tracks(tracks_path)
+    imported_tracks = load_v1_tracks(tracks_path)
     assert imported_tracks.features.time_key == "time"
     assert imported_tracks.features.position_key == "pos"
