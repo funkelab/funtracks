@@ -1,5 +1,4 @@
 import numpy as np
-import pytest
 
 from funtracks.actions import AddNode
 from funtracks.data_model import SolutionTracks, Tracks
@@ -26,15 +25,6 @@ def test_next_track_id(graph_2d_with_computed_features):
         attributes={"t": 3, "pos": [0, 0, 0, 0], "track_id": 10},
     )
     assert tracks.get_next_track_id() == 11
-
-
-def test_node_id_to_track_id(graph_2d_with_computed_features):
-    tracks = SolutionTracks(graph_2d_with_computed_features, ndim=3, **track_attrs)
-    with pytest.warns(
-        DeprecationWarning,
-        match="node_id_to_track_id property will be removed in funtracks v2. ",
-    ):
-        tracks.node_id_to_track_id  # noqa B018
 
 
 def test_from_tracks_cls(graph_2d_with_computed_features):
@@ -83,54 +73,6 @@ def test_next_track_id_empty():
     seg = np.zeros(shape=(10, 100, 100, 100), dtype=np.uint64)
     tracks = SolutionTracks(graph, segmentation=seg, **track_attrs)
     assert tracks.get_next_track_id() == 1
-
-
-def test_export_to_csv(
-    graph_2d_with_computed_features, graph_3d_with_computed_features, tmp_path
-):
-    # Test backward-compatible default format (use_display_names=False)
-    tracks = SolutionTracks(graph_2d_with_computed_features, **track_attrs, ndim=3)
-    temp_file = tmp_path / "test_export_2d.csv"
-    tracks.export_tracks(temp_file)
-    with open(temp_file) as f:
-        lines = f.readlines()
-
-    assert len(lines) == tracks.graph.num_nodes() + 1  # add header
-
-    # Backward compatible format: t, y, x, id, parent_id, track_id
-    header = ["t", "y", "x", "id", "parent_id", "track_id"]
-    assert lines[0].strip().split(",") == header
-
-    tracks = SolutionTracks(graph_3d_with_computed_features, **track_attrs, ndim=4)
-    temp_file = tmp_path / "test_export_3d.csv"
-    tracks.export_tracks(temp_file)
-    with open(temp_file) as f:
-        lines = f.readlines()
-
-    assert len(lines) == tracks.graph.num_nodes() + 1  # add header
-    # Backward compatible format: t, z, y, x, id, parent_id, track_id
-    header = ["t", "z", "y", "x", "id", "parent_id", "track_id"]
-    assert lines[0].strip().split(",") == header
-
-    # Test exporting a selection of nodes. We have 6 nodes in total and we ask to save
-    # node 4 and 6. Because node 1 and 3 are ancestors of node 4, we expect them to be
-    # included as well to maintain a valid graph without missing parents.
-    tracks.export_tracks(temp_file, node_ids=[4, 6])
-    with open(temp_file) as f:
-        lines = f.readlines()
-
-    assert len(lines) == 5  # (4 nodes + 1 header)
-
-    # In backward-compatible format, node ID is 5th column (index 4): t, z, y, x, id, ...
-    node_ids_in_csv = [int(line.split(",")[4]) for line in lines[1:]]
-    expected_node_ids = [1, 3, 4, 6]
-    assert sorted(node_ids_in_csv) == sorted(expected_node_ids), (
-        f"Unexpected nodes in CSV: {node_ids_in_csv}"
-    )
-
-    # Backward compatible format
-    header = ["t", "z", "y", "x", "id", "parent_id", "track_id"]
-    assert lines[0].strip().split(",") == header
 
 
 def test_export_to_csv_with_display_names(

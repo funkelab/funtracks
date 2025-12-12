@@ -48,6 +48,9 @@ def test_create_tracks(graph_3d_with_computed_features: nx.DiGraph, segmentation
     assert tracks.get_positions([1]).tolist() == [[50, 50, 50]]
     assert tracks.get_time(1) == 0
     assert tracks.get_positions([1], incl_time=True).tolist() == [[0, 50, 50, 50]]
+    tracks._set_node_attr(1, tracks.features.time_key, 1)
+    # TODO: Explicitly block doing this
+    assert tracks.get_positions([1], incl_time=True).tolist() == [[1, 50, 50, 50]]
 
     tracks_wrong_attr = Tracks(
         graph=graph_3d_with_computed_features,
@@ -98,31 +101,6 @@ def test_pixels_and_seg_id(graph_3d_with_computed_features, segmentation_3d):
     tracks.set_pixels(pix, new_seg_id)
 
 
-def test_save_load_delete(tmp_path, graph_2d_with_computed_features, segmentation_2d):
-    # TODO Teun: re-enable when Tracks.save/load/delete use geff!
-    pass
-
-    # tracks_dir = tmp_path / "tracks"
-    # tracks = Tracks(graph_2d_with_computed_features, segmentation_2d, **track_attrs)
-    # with pytest.warns(
-    #     DeprecationWarning,
-    #     match="`Tracks.save` is deprecated and will be removed in 2.0",
-    # ):
-    #     tracks.save(tracks_dir)
-    # with pytest.warns(
-    #     DeprecationWarning,
-    #     match="`Tracks.load` is deprecated and will be removed in 2.0",
-    # ):
-    #     loaded = Tracks.load(tracks_dir)
-    #     assert graphs_equal(loaded.graph, tracks.graph)
-    #     assert_array_almost_equal(loaded.segmentation, tracks.segmentation)
-    # with pytest.warns(
-    #     DeprecationWarning,
-    #     match="`Tracks.delete` is deprecated and will be removed in 2.0",
-    # ):
-    #     Tracks.delete(tracks_dir)
-
-
 def test_nodes_edges(graph_2d_with_computed_features):
     tracks = Tracks(graph_2d_with_computed_features, ndim=3, **track_attrs)
     assert set(tracks.nodes()) == {1, 2, 3, 4, 5, 6}
@@ -155,38 +133,12 @@ def test_predecessors_successors(graph_2d_with_computed_features):
     assert tracks.successors(2) == []
 
 
-def test_area_methods(graph_2d_with_computed_features):
-    tracks = Tracks(graph_2d_with_computed_features, ndim=3, **track_attrs)
-    assert tracks.get_area(1) == 1245
-    assert tracks.get_areas([1, 2]) == [1245, 305]
-
-
-def test_iou_methods(graph_2d_with_computed_features):
-    tracks = Tracks(graph_2d_with_computed_features, ndim=3, **track_attrs)
-    assert tracks.get_iou((1, 2)) == 0.0
-    assert tracks.get_ious([(1, 2)]) == [0.0]
-    assert tracks.get_ious([(1, 2), (1, 3)]) == [0.0, 0.395]
-
-
 def test_get_set_node_attr(graph_2d_with_computed_features):
     tracks = Tracks(graph_2d_with_computed_features, ndim=3, **track_attrs)
 
     tracks._set_node_attr(1, "area", 42)
-    # test deprecated functions
-    with pytest.warns(
-        DeprecationWarning,
-        match="_get_node_attr deprecated in favor of public method get_node_attr",
-    ):
-        assert tracks._get_node_attr(1, "area") == 42
 
     tracks._set_nodes_attr([1, 2], "track_id", [7, 8])
-    with pytest.warns(
-        DeprecationWarning,
-        match="_get_nodes_attr deprecated in favor of public method get_nodes_attr",
-    ):
-        assert tracks._get_nodes_attr([1, 2], "track_id") == [7, 8]
-
-    # test new functions
     assert tracks.get_node_attr(1, "area", required=True) == 42
     assert tracks.get_nodes_attr([1, 2], "track_id", required=True) == [7, 8]
     assert tracks.get_nodes_attr([1, 2], "track_id", required=False) == [7, 8]

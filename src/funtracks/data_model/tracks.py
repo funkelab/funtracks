@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import warnings
 from collections.abc import Iterable, Sequence
 from typing import (
     TYPE_CHECKING,
@@ -12,14 +11,11 @@ from warnings import warn
 
 import numpy as np
 from psygnal import Signal
-from skimage import measure
 
 from funtracks.features import Feature, FeatureDict, Position, Time
 from funtracks.utils.tracksdata_utils import td_get_single_attr_from_edge
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     import tracksdata as td
 
     from funtracks.actions import BasicAction
@@ -127,26 +123,6 @@ class Tracks:
             self._activate_features_from_dict()
         else:
             self._setup_core_computed_features()
-
-    @property
-    def time_attr(self):
-        warn(
-            "Deprecating Tracks.time_attr in favor of tracks.features.time_key."
-            " Will be removed in funtracks v2.0.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.features.time_key
-
-    @property
-    def pos_attr(self):
-        warn(
-            "Deprecating Tracks.pos_attr in favor of tracks.features.position_key."
-            " Will be removed in funtracks v2.0.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.features.position_key
 
     def _get_feature_set(
         self,
@@ -401,7 +377,6 @@ class Tracks:
         self,
         nodes: Iterable[Node],
         positions: np.ndarray,
-        incl_time: bool = False,
     ):
         """Set the location of nodes in the graph. Optionally include the
         time frame as the first dimension. Raises an error if any of the nodes
@@ -417,15 +392,8 @@ class Tracks:
         if self.features.position_key is None:
             raise ValueError("position_key must be set")
 
-        if incl_time:
-            raise ValueError("Cannot set time in tracksdata")
-
         if not isinstance(positions, np.ndarray):
             positions = np.array(positions)
-        if incl_time:
-            times = positions[:, 0].tolist()  # we know this is a list of ints
-            self.set_times(nodes, times)  # type: ignore
-            positions = positions[:, 1:]
 
         if isinstance(self.features.position_key, list):
             for idx, key in enumerate(self.features.position_key):
@@ -433,14 +401,8 @@ class Tracks:
         else:
             self._set_nodes_attr(nodes, self.features.position_key, positions)
 
-    def set_position(
-        self, node: Node, position: list | np.ndarray, incl_time: bool = False
-    ):
-        if incl_time:
-            raise ValueError("Cannot set time in tracksdata")
-        self.set_positions(
-            [node], np.expand_dims(np.array(position), axis=0), incl_time=incl_time
-        )
+    def set_position(self, node: Node, position: list | np.ndarray):
+        self.set_positions([node], np.expand_dims(np.array(position), axis=0))
 
     def get_times(self, nodes: Iterable[Node]) -> Sequence[int]:
         return self.get_nodes_attr(nodes, self.features.time_key, required=True)
@@ -456,109 +418,6 @@ class Tracks:
             int: The time frame that the node is in
         """
         return int(self.get_times([node])[0])
-
-    def set_times(self, nodes: Iterable[Node], times: Iterable[int]):
-        times = [int(t) for t in times]
-        self._set_nodes_attr(nodes, self.features.time_key, times)
-
-    def set_time(self, node: Any, time: int):
-        """Set the time frame of a given node. Raises an error if the node
-        is not in the graph.
-
-        Args:
-            node (Any): The node id to set the time frame for
-            time (int): The time to set
-
-        """
-        self.set_times([node], [int(time)])
-
-    def get_areas(self, nodes: Iterable[Node]) -> Sequence[int | None]:
-        """Get the area/volume of a given node. Raises a KeyError if the node
-        is not in the graph. Returns None if the given node does not have an Area
-        attribute.
-
-        .. deprecated:: 1.0
-            `get_areas` will be removed in funtracks v2.0.
-            Use `get_nodes_attr(nodes, "area")` instead.
-
-        Args:
-            node (Node): The node id to get the area/volume for
-
-        Returns:
-            int: The area/volume of the node
-        """
-        warnings.warn(
-            "`get_areas` is deprecated and will be removed in funtracks v2.0. "
-            "Use `get_nodes_attr(nodes, 'area')` instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.get_nodes_attr(nodes, "area")
-
-    def get_area(self, node: Node) -> int | None:
-        """Get the area/volume of a given node. Raises a KeyError if the node
-        is not in the graph. Returns None if the given node does not have an Area
-        attribute.
-
-        .. deprecated:: 1.0
-            `get_area` will be removed in funtracks v2.0.
-            Use `get_node_attr(node, "area")` instead.
-
-        Args:
-            node (Node): The node id to get the area/volume for
-
-        Returns:
-            int: The area/volume of the node
-        """
-        warnings.warn(
-            "`get_area` is deprecated and will be removed in funtracks v2.0. "
-            "Use `get_node_attr(node, 'area')` instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.get_areas([node])[0]
-
-    def get_ious(self, edges: Iterable[Edge]):
-        """Get the IoU values for the given edges.
-
-        .. deprecated:: 1.0
-            `get_ious` will be removed in funtracks v2.0.
-            Use `get_edges_attr(edges, "iou")` instead.
-
-        Args:
-            edges: An iterable of edges to get IoU values for.
-
-        Returns:
-            The IoU values for the edges.
-        """
-        warnings.warn(
-            "`get_ious` is deprecated and will be removed in funtracks v2.0. "
-            "Use `get_edges_attr(edges, 'iou')` instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.get_edges_attr(edges, "iou")
-
-    def get_iou(self, edge: Edge):
-        """Get the IoU value for the given edge.
-
-        .. deprecated:: 1.0
-            `get_iou` will be removed in funtracks v2.0.
-            Use `get_edge_attr(edge, "iou")` instead.
-
-        Args:
-            edge: An edge to get the IoU value for.
-
-        Returns:
-            The IoU value for the edge.
-        """
-        warnings.warn(
-            "`get_iou` is deprecated and will be removed in funtracks v2.0. "
-            "Use `get_edge_attr(edge, 'iou')` instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.get_edge_attr(edge, "iou")
 
     def get_pixels(self, node: Node) -> tuple[np.ndarray, ...] | None:
         """Get the pixels corresponding to each node in the nodes list.
@@ -626,30 +485,13 @@ class Tracks:
             self.graph[node][attr] = [value]
 
     def get_node_attr(self, node: Node, attr: str, required: bool = False):
-        if attr not in self.graph.node_attr_keys():
-            if required:
-                raise KeyError(attr)
-            return None
-        return self.graph[int(node)][attr]
-
-    def _get_node_attr(self, node, attr, required=False):
-        warnings.warn(
-            "_get_node_attr deprecated in favor of public method get_node_attr",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.get_node_attr(node, attr, required=required)
+        if required:
+            return self.graph.nodes[node][attr]
+        else:
+            return self.graph.nodes[node].get(attr, None)
 
     def get_nodes_attr(self, nodes: Iterable[Node], attr: str, required: bool = False):
         return [self.get_node_attr(node, attr, required=required) for node in nodes]
-
-    def _get_nodes_attr(self, nodes, attr, required=False):
-        warnings.warn(
-            "_get_nodes_attr deprecated in favor of public method get_nodes_attr",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.get_nodes_attr(nodes, attr, required=required)
 
     def _set_edge_attr(self, edge: Edge, attr: str, value: Any):
         edge_id = self.graph.edge_id(edge[0], edge[1])
@@ -739,6 +581,8 @@ class Tracks:
     def add_node_feature(self, key: str, feature: Feature) -> None:
         """Add a node feature to the features dictionary and perform graph operations.
 
+        TODO Teun: add_feature and auto-detect node or edge from Feature dict
+
         This is the preferred way to add new features as it ensures both the
         features dictionary is updated and any necessary graph operations are performed.
 
@@ -767,111 +611,3 @@ class Tracks:
 
         # Perform custom graph operations when a feature is added
         self.graph.add_edge_attr_key(key, default_value=feature["default_value"])
-
-    # ========== Persistence ==========
-
-    def save(self, directory: Path):
-        """Save the tracks to the given directory.
-        Currently, saves the graph as a json file in networkx node link data format,
-        saves the segmentation as a numpy npz file, and saves the time and position
-        attributes and scale information in an attributes json file.
-        Args:
-            directory (Path): The directory to save the tracks in.
-        """
-        warn(
-            "`Tracks.save` is deprecated and will be removed in 2.0, use "
-            "`funtracks.import_export.internal_format.save` instead",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        from ..import_export.internal_format import save_tracks
-
-        save_tracks(self, directory)
-
-    @classmethod
-    def load(cls, directory: Path, seg_required=False, solution=False) -> Tracks:
-        """Load a Tracks object from the given directory. Looks for files
-        in the format generated by Tracks.save.
-        Args:
-            directory (Path): The directory containing tracks to load
-            seg_required (bool, optional): If true, raises a FileNotFoundError if the
-                segmentation file is not present in the directory. Defaults to False.
-        Returns:
-            Tracks: A tracks object loaded from the given directory
-        """
-        warn(
-            "`Tracks.load` is deprecated and will be removed in 2.0, use "
-            "`funtracks.import_export.internal_format.load` instead",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        from ..import_export.internal_format import load_tracks
-
-        return load_tracks(directory, seg_required=seg_required, solution=solution)
-
-    @classmethod
-    def delete(cls, directory: Path):
-        """Delete the tracks in the given directory. Also deletes the directory.
-
-        Args:
-            directory (Path): Directory containing tracks to be deleted
-        """
-        warn(
-            "`Tracks.delete` is deprecated and will be removed in 2.0, use "
-            "`funtracks.import_export.internal_format.delete` instead",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        from ..import_export.internal_format import delete_tracks
-
-        delete_tracks(directory)
-
-    def _compute_node_attrs(self, node: Node, time: int) -> dict[str, Any]:
-        """Get the segmentation controlled node attributes (area and position)
-        from the segmentation with label based on the node id in the given time point.
-
-        Args:
-            node (int): The node id to query the current segmentation for
-            time (int): The time frame of the current segmentation to query
-
-        Returns:
-            dict[str, int]: A dictionary containing the attributes that could be
-                determined from the segmentation. It will be empty if self.segmentation
-                is None. If self.segmentation exists but node id is not present in time,
-                area will be 0 and position will be None. If self.segmentation
-                exists and node id is present in time, area and position will be included.
-
-        Deprecated:
-            This method is deprecated and will be removed in funtracks v2.0.
-            Use the annotator system (enable_features) to compute node attributes instead.
-        """
-        warn(
-            "`_compute_node_attrs` is deprecated and will be removed in funtracks v2.0. "
-            "Use the annotator system (enable_features) to compute node attributes "
-            "instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        if self.segmentation is None:
-            return {}
-
-        attrs: dict[str, Any] = {}
-        seg = self.segmentation[time] == node
-        pos_scale = self.scale[1:] if self.scale is not None else None
-        area = np.sum(seg)
-        if pos_scale is not None:
-            area *= np.prod(pos_scale)
-        # only include the position if the segmentation was actually there
-        pos = (
-            measure.centroid(seg, spacing=pos_scale)  # type: ignore
-            if area > 0
-            else np.array(
-                [
-                    None,
-                ]
-                * (self.ndim - 1)
-            )
-        )
-        attrs["area"] = area
-        attrs["pos"] = pos
-        return attrs

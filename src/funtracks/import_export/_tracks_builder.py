@@ -20,7 +20,6 @@ if TYPE_CHECKING:
     import pandas as pd
     from numpy.typing import ArrayLike
 
-from funtracks.data_model.graph_attributes import NodeAttr
 from funtracks.data_model.solution_tracks import SolutionTracks
 from funtracks.features import Feature
 from funtracks.import_export._import_segmentation import (
@@ -315,7 +314,8 @@ class TracksBuilder(ABC):
             return seg_array.compute(), scale
 
         # Relabel segmentation: seg_id -> node_id
-        time_values = node_props[NodeAttr.TIME.value]["values"]
+        time_attr = "time"
+        time_values = node_props[time_attr]["values"]
         new_segmentation = relabel_segmentation(
             seg_array, graph, node_ids, seg_ids, time_values
         )
