@@ -1,8 +1,6 @@
 import networkx as nx
 import numpy as np
 import pytest
-from networkx.utils import graphs_equal
-from numpy.testing import assert_array_almost_equal
 
 from funtracks.data_model import Tracks
 
@@ -95,28 +93,6 @@ def test_pixels_and_seg_id(graph_3d_with_computed_features, segmentation_3d):
     tracks.set_pixels(pix, new_seg_id)
 
 
-def test_save_load_delete(tmp_path, graph_2d_with_computed_features, segmentation_2d):
-    tracks_dir = tmp_path / "tracks"
-    tracks = Tracks(graph_2d_with_computed_features, segmentation_2d, **track_attrs)
-    with pytest.warns(
-        DeprecationWarning,
-        match="`Tracks.save` is deprecated and will be removed in 2.0",
-    ):
-        tracks.save(tracks_dir)
-    with pytest.warns(
-        DeprecationWarning,
-        match="`Tracks.load` is deprecated and will be removed in 2.0",
-    ):
-        loaded = Tracks.load(tracks_dir)
-        assert graphs_equal(loaded.graph, tracks.graph)
-        assert_array_almost_equal(loaded.segmentation, tracks.segmentation)
-    with pytest.warns(
-        DeprecationWarning,
-        match="`Tracks.delete` is deprecated and will be removed in 2.0",
-    ):
-        Tracks.delete(tracks_dir)
-
-
 def test_nodes_edges(graph_2d_with_computed_features):
     tracks = Tracks(graph_2d_with_computed_features, ndim=3, **track_attrs)
     assert set(tracks.nodes()) == {1, 2, 3, 4, 5, 6}
@@ -143,19 +119,6 @@ def test_predecessors_successors(graph_2d_with_computed_features):
     assert tracks.successors(1) == [2, 3]
     assert tracks.predecessors(1) == []
     assert tracks.successors(2) == []
-
-
-def test_area_methods(graph_2d_with_computed_features):
-    tracks = Tracks(graph_2d_with_computed_features, ndim=3, **track_attrs)
-    assert tracks.get_area(1) == 1245
-    assert tracks.get_areas([1, 2]) == [1245, 305]
-
-
-def test_iou_methods(graph_2d_with_computed_features):
-    tracks = Tracks(graph_2d_with_computed_features, ndim=3, **track_attrs)
-    assert tracks.get_iou((1, 2)) == 0.0
-    assert tracks.get_ious([(1, 2)]) == [0.0]
-    assert tracks.get_ious([(1, 2), (1, 3)]) == [0.0, 0.395]
 
 
 def test_get_set_node_attr(graph_2d_with_computed_features):
@@ -236,30 +199,6 @@ def test_set_positions_list(graph_2d_list):
     )
     assert np.array_equal(
         tracks.get_positions((1, 2), incl_time=True), np.array([[0, 1, 2], [1, 3, 4]])
-    )
-
-
-def test_set_node_attributes(graph_2d_with_computed_features, caplog):
-    tracks = Tracks(graph_2d_with_computed_features, ndim=3, **track_attrs)
-    attrs = {"attr_1": 1, "attr_2": ["a", "b", "c", "d", "e", "f"]}
-    tracks._set_node_attributes(1, attrs)
-    assert tracks.get_node_attr(1, "attr_1") == 1
-    assert tracks.get_node_attr(1, "attr_2") == ["a", "b", "c", "d", "e", "f"]
-    with caplog.at_level("INFO"):
-        tracks._set_node_attributes(7, attrs)
-    assert any("Node 7 not found in the graph." in message for message in caplog.messages)
-
-
-def test_set_edge_attributes(graph_2d_with_computed_features, caplog):
-    tracks = Tracks(graph_2d_with_computed_features, ndim=3, **track_attrs)
-    attrs = {"attr_1": 1, "attr_2": ["a", "b", "c", "d"]}
-    tracks._set_edge_attributes((1, 2), attrs)
-    assert tracks.get_edge_attr((1, 2), "attr_1") == 1
-    assert tracks.get_edge_attr((1, 2), "attr_2") == ["a", "b", "c", "d"]
-    with caplog.at_level("INFO"):
-        tracks._set_edge_attributes((4, 6), attrs)
-    assert any(
-        "Edge (4, 6) not found in the graph." in message for message in caplog.messages
     )
 
 

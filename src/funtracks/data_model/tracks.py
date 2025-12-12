@@ -430,94 +430,6 @@ class Tracks:
         """
         return int(self.get_times([node])[0])
 
-    def get_areas(self, nodes: Iterable[Node]) -> Sequence[int | None]:
-        """Get the area/volume of a given node. Raises a KeyError if the node
-        is not in the graph. Returns None if the given node does not have an Area
-        attribute.
-
-        .. deprecated:: 1.0
-            `get_areas` will be removed in funtracks v2.0.
-            Use `get_nodes_attr(nodes, "area")` instead.
-
-        Args:
-            node (Node): The node id to get the area/volume for
-
-        Returns:
-            int: The area/volume of the node
-        """
-        warnings.warn(
-            "`get_areas` is deprecated and will be removed in funtracks v2.0. "
-            "Use `get_nodes_attr(nodes, 'area')` instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.get_nodes_attr(nodes, "area")
-
-    def get_area(self, node: Node) -> int | None:
-        """Get the area/volume of a given node. Raises a KeyError if the node
-        is not in the graph. Returns None if the given node does not have an Area
-        attribute.
-
-        .. deprecated:: 1.0
-            `get_area` will be removed in funtracks v2.0.
-            Use `get_node_attr(node, "area")` instead.
-
-        Args:
-            node (Node): The node id to get the area/volume for
-
-        Returns:
-            int: The area/volume of the node
-        """
-        warnings.warn(
-            "`get_area` is deprecated and will be removed in funtracks v2.0. "
-            "Use `get_node_attr(node, 'area')` instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.get_areas([node])[0]
-
-    def get_ious(self, edges: Iterable[Edge]):
-        """Get the IoU values for the given edges.
-
-        .. deprecated:: 1.0
-            `get_ious` will be removed in funtracks v2.0.
-            Use `get_edges_attr(edges, "iou")` instead.
-
-        Args:
-            edges: An iterable of edges to get IoU values for.
-
-        Returns:
-            The IoU values for the edges.
-        """
-        warnings.warn(
-            "`get_ious` is deprecated and will be removed in funtracks v2.0. "
-            "Use `get_edges_attr(edges, 'iou')` instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.get_edges_attr(edges, "iou")
-
-    def get_iou(self, edge: Edge):
-        """Get the IoU value for the given edge.
-
-        .. deprecated:: 1.0
-            `get_iou` will be removed in funtracks v2.0.
-            Use `get_edge_attr(edge, "iou")` instead.
-
-        Args:
-            edge: An edge to get the IoU value for.
-
-        Returns:
-            The IoU value for the edge.
-        """
-        warnings.warn(
-            "`get_iou` is deprecated and will be removed in funtracks v2.0. "
-            "Use `get_edge_attr(edge, 'iou')` instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.get_edge_attr(edge, "iou")
-
     def get_pixels(self, node: Node) -> tuple[np.ndarray, ...] | None:
         """Get the pixels corresponding to each node in the nodes list.
 
@@ -550,37 +462,6 @@ class Tracks:
         if self.segmentation is None:
             raise ValueError("Cannot set pixels when segmentation is None")
         self.segmentation[pixels] = value
-
-    def _set_node_attributes(self, node: Node, attributes: dict[str, Any]) -> None:
-        """Set the attributes for the given node
-
-        Args:
-            node (Node): The node to set the attributes for
-            attributes (dict[str, Any]): A mapping from attribute name to value
-        """
-        if node in self.graph:
-            for key, value in attributes.items():
-                self.graph.nodes[node][key] = value
-        else:
-            logger.info("Node %d not found in the graph.", node)
-
-    def _set_edge_attributes(self, edge: Edge, attributes: dict[str, Any]) -> None:
-        """Set the edge attributes for the given edges. Attributes should already exist
-        (although adding will work in current implementation, they cannot currently be
-        removed)
-
-        Args:
-            edges (list[Edge]): A list of edges to set the attributes for
-            attributes (Attributes): A dictionary of attribute name -> numpy array,
-                where the length of the arrays matches the number of edges.
-                Attributes should already exist: this function will only
-                update the values.
-        """
-        if self.graph.has_edge(*edge):
-            for key, value in attributes.items():
-                self.graph.edges[edge][key] = value
-        else:
-            logger.info("Edge %s not found in the graph.", edge)
 
     def _compute_ndim(
         self,
