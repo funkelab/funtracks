@@ -30,6 +30,9 @@ class Feature(TypedDict):
             to have this feature.
         default_value (Any): If required is False, this value is returned
             whenever the feature value is missing on the graph.
+        spatial_dims (bool): Optional. If True, num_values must match the number
+            of spatial dimensions (e.g., 2 for 2D, 3 for 3D). Used for features
+            like Position and EllipsoidAxes.
     """
 
     feature_type: Literal["node", "edge"]
@@ -39,3 +42,4 @@ class Feature(TypedDict):
     value_names: NotRequired[Sequence[str]]
     required: bool
     default_value: Any
+    spatial_dims: NotRequired[bool]

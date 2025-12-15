@@ -42,4 +42,5 @@ def Position(axes: Sequence[str]) -> Feature:
         "value_names": list(axes),
         "required": True,
         "default_value": None,
+        "spatial_dims": True,
     }

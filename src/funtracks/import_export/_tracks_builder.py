@@ -151,6 +151,7 @@ class TracksBuilder(ABC):
         - All required_features are mapped
         - Position ("pos") is mapped to coordinate columns
         - All mapped properties exist in importable_node_props
+        - Features with spatial_dims=True have correct number of values
 
         Checks for edges:
         - All mapped edge properties exist in importable_edge_props
@@ -168,17 +169,36 @@ class TracksBuilder(ABC):
             self.required_features,
         )
 
-        # Validate pos mapping is consistent with ndim (if ndim is already set)
-        # ndim is set from segmentation in prepare(), so this catches mismatches
-        if self.ndim is not None and "pos" in self.node_name_map:
+        # Validate spatial_dims features have consistent number of values
+        # Use ndim from segmentation if available, otherwise use position mapping
+        expect_spatial_dims: int | None = None
+        spatial_dims_source: str = ""
+        if self.ndim is not None:
+            expect_spatial_dims = self.ndim - 1  # ndim includes time
+            spatial_dims_source = "segmentation"
+        elif "pos" in self.node_name_map:
             pos_mapping = self.node_name_map["pos"]
             if isinstance(pos_mapping, list):
-                expect_spatial_dims = self.ndim - 1  # ndim includes time
-                if len(pos_mapping) != expect_spatial_dims:
+                expect_spatial_dims = len(pos_mapping)
+                spatial_dims_source = "position mapping"
+
+        if expect_spatial_dims is not None:
+            for key, mapping in self.node_name_map.items():
+                if key == "pos" and spatial_dims_source == "position mapping":
+                    # Don't validate pos against itself
+                    continue
+                feature = self.available_computed_features.get(key)
+                if feature is None or not isinstance(feature, dict):
+                    continue
+                if not feature.get("spatial_dims", False):
+                    continue
+                # This feature should match spatial dimensions
+                if isinstance(mapping, list) and len(mapping) != expect_spatial_dims:
+                    display_name = feature.get("display_name", key)
                     raise ValueError(
-                        f"Position mapping has {len(pos_mapping)} coordinates "
-                        f"but segmentation has {expect_spatial_dims} spatial dimensions "
-                        f"(ndim={self.ndim}). Position mapping: {pos_mapping}"
+                        f"Feature '{key}' ({display_name}) has {len(mapping)} values "
+                        f"but {spatial_dims_source} has {expect_spatial_dims} spatial "
+                        f"dimensions. Mapping: {mapping}"
                     )
 
         # Validate edge_name_map if provided
@@ -448,6 +468,14 @@ class TracksBuilder(ABC):
             raise ValueError(
                 "self.node_name_map must be set before calling build(). "
                 "Call prepare() to auto-infer or set manually."
+            )
+
+        # Set ndim from segmentation if provided (needed for validation)
+        if segmentation is not None and self.ndim is None:
+            self.ndim = read_dims(segmentation)
+            # Regenerate available_computed_features with correct ndim
+            self.available_computed_features = get_default_key_to_feature_mapping(
+                self.ndim, display_name=False
             )
 
         # Validate node_name_map is complete and valid

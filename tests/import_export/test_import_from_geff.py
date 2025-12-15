@@ -280,12 +280,11 @@ def test_segmentation_axes_mismatch(valid_geff, tmp_path):
         import_from_geff(store, name_map, segmentation_path=seg_path)
 
     # Provide a segmentation with a different number of dimensions than the graph.
+    # The error is caught during validation because pos has spatial_dims=True
     wrong_seg = np.zeros((2, 20, 200, 200), dtype=np.uint16)
     seg_path = tmp_path / "wrong_seg2.npy"
     tifffile.imwrite(seg_path, wrong_seg)
-    with pytest.raises(
-        ValueError, match="Segmentation has 4 dimensions but graph has 3 dimensions"
-    ):
+    with pytest.raises(ValueError, match="pos.*has 2 values.*3 spatial dimensions"):
         import_from_geff(store, name_map, segmentation_path=seg_path)
 
 

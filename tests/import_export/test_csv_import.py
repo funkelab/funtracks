@@ -395,7 +395,7 @@ class TestValidationErrors:
         """Test that pos mapping dimension must match segmentation ndim.
 
         When the position mapping has more coordinates than the segmentation
-        has spatial dimensions, an error is raised during segmentation handling.
+        has spatial dimensions, an error is raised during validation.
         """
         df = pd.DataFrame(
             {
@@ -422,6 +422,178 @@ class TestValidationErrors:
             "seg_id": "seg_id",
         }
 
-        # The mismatch is caught when comparing seg dimensions to graph ndim
-        with pytest.raises(ValueError, match="Segmentation has 3 dimensions"):
+        # The mismatch is caught during validation (pos has spatial_dims=True)
+        with pytest.raises(ValueError, match="pos.*has 3 values.*2 spatial dimensions"):
             tracks_from_df(df, segmentation=seg, node_name_map=name_map)
+
+
+class TestSpatialDimsValidation:
+    """Test validation of features with spatial_dims=True."""
+
+    def test_ellipse_axis_radii_dimension_mismatch_with_segmentation(self):
+        """Test that ellipse_axis_radii with wrong number of values raises error.
+
+        When segmentation is provided, features with spatial_dims=True must
+        have num_values matching the number of spatial dimensions.
+        """
+        df = pd.DataFrame(
+            {
+                "time": [0, 1],
+                "y": [10.0, 20.0],
+                "x": [15.0, 25.0],
+                "id": [1, 2],
+                "parent_id": [-1, 1],
+                "seg_id": [1, 2],
+                "major_axis": [5.0, 6.0],
+                "semi_minor_axis": [3.0, 4.0],
+                "minor_axis": [2.0, 3.0],
+            }
+        )
+
+        # 2D segmentation (ndim=3: time + 2 spatial dims)
+        seg = np.zeros((2, 100, 100), dtype=np.uint16)
+        seg[0, 10, 15] = 1
+        seg[1, 20, 25] = 2
+
+        # Provide 3D ellipse_axis_radii mapping (3 values but seg is 2D spatial)
+        name_map = {
+            "id": "id",
+            "parent_id": "parent_id",
+            "time": "time",
+            "pos": ["y", "x"],
+            "seg_id": "seg_id",
+            "ellipse_axis_radii": ["major_axis", "semi_minor_axis", "minor_axis"],
+        }
+
+        with pytest.raises(ValueError, match="ellipse_axis_radii.*has 3 values"):
+            tracks_from_df(df, segmentation=seg, node_name_map=name_map)
+
+    def test_ellipse_axis_radii_correct_dimensions(self):
+        """Test that ellipse_axis_radii with correct dimensions passes validation."""
+        df = pd.DataFrame(
+            {
+                "time": [0, 1],
+                "y": [10.0, 20.0],
+                "x": [15.0, 25.0],
+                "id": [1, 2],
+                "parent_id": [-1, 1],
+                "seg_id": [1, 2],
+                "major_axis": [5.0, 6.0],
+                "minor_axis": [2.0, 3.0],
+            }
+        )
+
+        # 2D segmentation (ndim=3: time + 2 spatial dims)
+        seg = np.zeros((2, 100, 100), dtype=np.uint16)
+        seg[0, 10, 15] = 1
+        seg[1, 20, 25] = 2
+
+        # Provide 2D ellipse_axis_radii mapping (2 values matching 2D spatial)
+        name_map = {
+            "id": "id",
+            "parent_id": "parent_id",
+            "time": "time",
+            "pos": ["y", "x"],
+            "seg_id": "seg_id",
+            "ellipse_axis_radii": ["major_axis", "minor_axis"],
+        }
+
+        # Should not raise
+        tracks = tracks_from_df(df, segmentation=seg, node_name_map=name_map)
+        assert tracks.ndim == 3
+
+    def test_pos_spatial_dims_mismatch_with_segmentation(self):
+        """Test that position with wrong number of values raises error.
+
+        Position has spatial_dims=True, so the validation catches mismatches
+        between pos mapping and segmentation dimensions.
+        """
+        df = pd.DataFrame(
+            {
+                "time": [0, 1],
+                "z": [5.0, 10.0],
+                "y": [10.0, 20.0],
+                "x": [15.0, 25.0],
+                "id": [1, 2],
+                "parent_id": [-1, 1],
+                "seg_id": [1, 2],
+            }
+        )
+
+        # 2D segmentation (ndim=3: time + 2 spatial dims)
+        seg = np.zeros((2, 100, 100), dtype=np.uint16)
+        seg[0, 10, 15] = 1
+        seg[1, 20, 25] = 2
+
+        # Provide 3D position mapping (3 coords but seg is 2D spatial)
+        name_map = {
+            "id": "id",
+            "parent_id": "parent_id",
+            "time": "time",
+            "pos": ["z", "y", "x"],  # 3 coords but seg is 2D
+            "seg_id": "seg_id",
+        }
+
+        with pytest.raises(ValueError, match="pos.*has 3 values"):
+            tracks_from_df(df, segmentation=seg, node_name_map=name_map)
+
+    def test_spatial_dims_mismatch_without_segmentation(self):
+        """Test that spatial_dims validation uses position as fallback.
+
+        When no segmentation is provided, position mapping is used as the
+        source of truth for spatial dimensions.
+        """
+        df = pd.DataFrame(
+            {
+                "time": [0, 1],
+                "y": [10.0, 20.0],
+                "x": [15.0, 25.0],
+                "id": [1, 2],
+                "parent_id": [-1, 1],
+                "major_axis": [5.0, 6.0],
+                "semi_minor_axis": [3.0, 4.0],
+                "minor_axis": [2.0, 3.0],
+            }
+        )
+
+        # Provide 3D ellipse_axis_radii but 2D position (no segmentation)
+        name_map = {
+            "id": "id",
+            "parent_id": "parent_id",
+            "time": "time",
+            "pos": ["y", "x"],  # 2D position
+            "ellipse_axis_radii": ["major_axis", "semi_minor_axis", "minor_axis"],  # 3D
+        }
+
+        # Should raise - ellipse_axis_radii has 3 values but pos has 2
+        with pytest.raises(
+            ValueError, match="ellipse_axis_radii.*has 3 values.*position mapping.*2"
+        ):
+            tracks_from_df(df, node_name_map=name_map)
+
+    def test_spatial_dims_consistent_without_segmentation(self):
+        """Test that consistent spatial_dims features pass without segmentation."""
+        df = pd.DataFrame(
+            {
+                "time": [0, 1],
+                "y": [10.0, 20.0],
+                "x": [15.0, 25.0],
+                "id": [1, 2],
+                "parent_id": [-1, 1],
+                "major_axis": [5.0, 6.0],
+                "minor_axis": [2.0, 3.0],
+            }
+        )
+
+        # Both pos and ellipse_axis_radii have 2 values (consistent)
+        name_map = {
+            "id": "id",
+            "parent_id": "parent_id",
+            "time": "time",
+            "pos": ["y", "x"],
+            "ellipse_axis_radii": ["major_axis", "minor_axis"],
+        }
+
+        # Should not raise - dimensions are consistent
+        tracks = tracks_from_df(df, node_name_map=name_map)
+        assert tracks is not None

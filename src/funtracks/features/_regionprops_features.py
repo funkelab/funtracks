@@ -58,8 +58,8 @@ def EllipsoidAxes(ndim: int | None = 4) -> Feature:
     """
     if ndim is None:
         ndim = 4
-    spatial_dims = ndim - 1
-    if spatial_dims == 2:
+    num_spatial_dims = ndim - 1
+    if num_spatial_dims == 2:
         display_name = "Ellipse axis radii"
         value_names = ["major_axis", "minor_axis"]
     else:
@@ -68,11 +68,12 @@ def EllipsoidAxes(ndim: int | None = 4) -> Feature:
     return {
         "feature_type": "node",
         "value_type": "float",
-        "num_values": spatial_dims,
+        "num_values": num_spatial_dims,
         "display_name": display_name,
         "value_names": value_names,
         "required": True,
         "default_value": None,
+        "spatial_dims": True,
     }
 
 
