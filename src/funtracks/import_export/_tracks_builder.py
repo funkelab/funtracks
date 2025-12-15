@@ -16,10 +16,6 @@ import networkx as nx
 import numpy as np
 from geff._typing import InMemoryGeff
 
-if TYPE_CHECKING:
-    import pandas as pd
-    from numpy.typing import ArrayLike
-
 from funtracks.data_model.graph_attributes import NodeAttr
 from funtracks.data_model.solution_tracks import SolutionTracks
 from funtracks.features import Feature
@@ -41,7 +37,42 @@ from funtracks.import_export._validation import (
     validate_feature_key_collisions,
     validate_in_memory_geff,
     validate_node_name_map,
+    validate_spatial_dims,
 )
+
+if TYPE_CHECKING:
+    import pandas as pd
+    from numpy.typing import ArrayLike
+
+
+def flatten_name_map(
+    name_map: dict[str, str | list[str]],
+) -> list[tuple[str, str]]:
+    """Flatten a name_map to a list of (target_key, source_key) tuples.
+
+    For single-value mappings like {"time": "t"}, returns [("time", "t")] (renaming).
+    For multi-value mappings like {"pos": ["y", "x"]}, returns [("y", "y"), ("x", "x")]
+    (keep original names for later combining by TracksBuilder._combine_multi_value_props).
+
+    Args:
+        name_map: Mapping from standard keys to source property names
+
+    Returns:
+        List of (target_key, source_key) tuples
+    """
+    result = []
+    for std_key, source in name_map.items():
+        if source is None:
+            continue
+        if isinstance(source, list):
+            # Multi-value: keep original column names (combining happens later)
+            for col in source:
+                result.append((col, col))
+        else:
+            # Single-value: rename from source to standard key
+            result.append((std_key, source))
+    return result
+
 
 # defining constants here because they are only used in the context of import
 TRACK_KEY = "track_id"
@@ -62,9 +93,15 @@ class TracksBuilder(ABC):
         # State transferred between steps
         self.in_memory_geff: InMemoryGeff | None = None
         self.ndim: int | None = None
-        # TODO: how much of the node/edge stuff can we abstract?
-        self.node_name_map: dict[str, str] = {}
-        self.edge_name_map: dict[str, str] | None = None
+
+        # Name maps: {standard_key -> source_property_name(s)}
+        # Keys are standard funtracks attribute names (e.g., "time", "pos", "seg_id")
+        # Values are property names from the source data (e.g., "t", ["y", "x"], "label")
+        # For multi-value features like position, the value is a list of source columns
+        self.node_name_map: dict[str, str | list[str]] = {}
+        self.edge_name_map: dict[str, str | list[str]] | None = None
+
+        # Available properties in the source data (populated by read_header)
         self.importable_node_props: list[str] = []
         self.importable_edge_props: list[str] = []
 
@@ -96,18 +133,28 @@ class TracksBuilder(ABC):
             source: Path to data source (zarr store, CSV file, etc.) or DataFrame
         """
 
-    def infer_node_name_map(self) -> dict[str, str]:
-        """Infer node_name_map by matching importable node properties to standard keys.
+    def infer_node_name_map(self) -> dict[str, str | list[str]]:
+        """Infer node_name_map by matching source properties to standard keys.
+
+        The node_name_map maps standard funtracks keys to source property names:
+            {standard_key: source_property_name}
+
+        For example: {"time": "t", "pos": ["y", "x"], "seg_id": "label"}
+        - "time", "pos", "seg_id" are standard funtracks keys
+        - "t", "y", "x", "label" are property names from the source data
 
         Uses difflib fuzzy matching with the following priority:
-        1. Exact matches to standard keys
+        1. Exact matches to standard keys (time, seg_id, etc.)
         2. Fuzzy matches to standard keys (case-insensitive, 40% similarity cutoff)
-        3. Exact matches to feature display names
+        3. Exact matches to feature display names/value_names (including position z/y/x)
         4. Fuzzy matches to feature display names (case-insensitive, 40% cutoff)
         5. Remaining properties map to themselves (custom properties)
 
+        Position attributes (z, y, x) are matched via Position feature's value_names,
+        resulting in a composite mapping like {"pos": ["z", "y", "x"]}.
+
         Returns:
-            Inferred node_name_map (standard_key -> source_property)
+            Inferred node_name_map mapping standard keys to source property names
 
         Raises:
             ValueError: If required features cannot be inferred
@@ -115,13 +162,18 @@ class TracksBuilder(ABC):
         return infer_node_name_map(
             self.importable_node_props,
             self.required_features,
-            self.axis_names,
-            self.ndim,
             self.available_computed_features,
         )
 
-    def infer_edge_name_map(self) -> dict[str, str]:
-        """Infer edge_name_map by matching importable edge properties to standard keys.
+    def infer_edge_name_map(self) -> dict[str, str | list[str]]:
+        """Infer edge_name_map by matching source properties to standard keys.
+
+        The edge_name_map maps standard funtracks keys to source property names:
+            {standard_key: source_property_name}
+
+        For example: {"iou": "overlap"}
+        - "iou" is the standard funtracks key
+        - "overlap" is the property name from the source data
 
         Uses difflib fuzzy matching with the following priority:
         1. Exact matches to edge feature default keys
@@ -133,7 +185,7 @@ class TracksBuilder(ABC):
         5. Remaining properties map to themselves (custom properties)
 
         Returns:
-            Inferred edge_name_map (standard_key -> source_property)
+            Inferred edge_name_map mapping standard keys to source property names
         """
         if not self.importable_edge_props:
             return {}
@@ -142,15 +194,38 @@ class TracksBuilder(ABC):
             self.importable_edge_props, self.available_computed_features
         )
 
-    def validate_name_map(self) -> None:
+    def _preprocess_name_map(self) -> None:
+        """Preprocess name maps to remove empty lists and None values.
+
+        Empty lists and None values have no semantic meaning and should be
+        treated the same as being absent from the mapping.
+
+        Modifies self.node_name_map and self.edge_name_map in place.
+        """
+        # Remove empty lists and None values from node_name_map
+        keys_to_remove = [
+            k for k, v in self.node_name_map.items() if v is None or v == []
+        ]
+        for k in keys_to_remove:
+            del self.node_name_map[k]
+
+        # Remove empty lists and None values from edge_name_map
+        if self.edge_name_map is not None:
+            keys_to_remove = [
+                k for k, v in self.edge_name_map.items() if v is None or v == []
+            ]
+            for k in keys_to_remove:
+                del self.edge_name_map[k]
+
+    def validate_name_map(self, has_segmentation: bool = False) -> None:
         """Validate that node_name_map and edge_name_map contain valid mappings.
 
         Checks for nodes:
         - No None values in required mappings
-        - No duplicate values in required mappings
         - All required_features are mapped
-        - All position_attr are mapped (based on ndim, or y/x minimum if ndim is None)
+        - Position ("pos") is mapped to coordinate columns (unless segmentation provided)
         - All mapped properties exist in importable_node_props
+        - Features with spatial_dims=True have correct number of list elements
 
         Checks for edges:
         - All mapped edge properties exist in importable_edge_props
@@ -158,21 +233,37 @@ class TracksBuilder(ABC):
         Checks for both:
         - No feature key collisions between node and edge features
 
+        Note: Array shapes for spatial_dims features are validated after loading
+        via validate_spatial_dims().
+
+        Args:
+            has_segmentation: If True, position can be computed from segmentation
+                and is not required in name_map
+
         Raises:
             ValueError: If validation fails
         """
-        # Validate node_name_map
+        # Preprocess: remove empty lists from name maps
+        self._preprocess_name_map()
+
+        # Validate node_name_map (includes spatial_dims validation for list mappings)
         validate_node_name_map(
             self.node_name_map,
             self.importable_node_props,
             self.required_features,
-            self.axis_names,
-            self.ndim,
+            available_features=self.available_computed_features,
+            ndim=self.ndim,
+            has_segmentation=has_segmentation,
         )
 
-        # Validate edge_name_map if provided
+        # Validate edge_name_map if provided (includes spatial_dims validation)
         if self.edge_name_map is not None:
-            validate_edge_name_map(self.edge_name_map, self.importable_edge_props)
+            validate_edge_name_map(
+                self.edge_name_map,
+                self.importable_edge_props,
+                available_features=self.available_computed_features,
+                ndim=self.ndim,
+            )
 
         # Check for feature key collisions between nodes and edges
         validate_feature_key_collisions(self.node_name_map, self.edge_name_map)
@@ -211,7 +302,7 @@ class TracksBuilder(ABC):
     def load_source(
         self,
         source: Path | pd.DataFrame,
-        node_name_map: dict[str, str],
+        node_name_map: dict[str, str | list[str]],
         node_features: dict[str, bool] | None = None,
     ) -> None:
         """Load data from source file and convert to InMemoryGeff format.
@@ -224,19 +315,73 @@ class TracksBuilder(ABC):
             node_features: Optional features dict for backward compatibility
         """
 
+    def _combine_multi_value_props(
+        self,
+        props: dict,
+        name_map: dict[str, str | list[str]],
+    ) -> None:
+        """Combine multi-value feature columns into single properties.
+
+        For features mapped to a list of columns (e.g., "pos": ["y", "x"]),
+        combines those columns into a single property with stacked values.
+
+        Args:
+            props: Property dict from InMemoryGeff (node_props or edge_props)
+            name_map: Mapping from standard keys to source property names
+
+        Modifies props in place.
+        """
+        for std_key, source_cols in name_map.items():
+            if not isinstance(source_cols, list) or len(source_cols) == 0:
+                continue
+            # Check all source columns exist
+            missing_cols = [c for c in source_cols if c not in props]
+            if missing_cols:
+                continue  # Skip if any columns are missing
+            # Stack column values into 2D array
+            col_arrays = [props[c]["values"] for c in source_cols]
+            combined = np.column_stack(col_arrays)
+            # Combine missing arrays with OR (missing if any component is missing)
+            missing_arrays = [props[c].get("missing") for c in source_cols]
+            if any(m is not None for m in missing_arrays):
+                combined_missing = np.zeros(len(combined), dtype=np.bool_)
+                for m in missing_arrays:
+                    if m is not None:
+                        combined_missing |= m
+            else:
+                combined_missing = None
+            props[std_key] = {
+                "values": combined,
+                "missing": combined_missing,
+            }
+            # Remove the individual source columns
+            for c in source_cols:
+                if c in props and c != std_key:
+                    del props[c]
+
     def validate(self) -> None:
         """Validate the loaded InMemoryGeff data.
 
         Common validation logic shared across all formats.
-        If optional properties (lineage_id, track_id) fail validation,
-        they are removed with a warning.
+        Validates:
+        - Graph structure (unique nodes, valid edges, etc.)
+        - Spatial_dims features have correct array shapes
+        - Optional properties (lineage_id, track_id) - removed with warning if invalid
 
         Raises:
-            ValueError: If required validation (graph structure) fails
+            ValueError: If required validation fails
         """
         if self.in_memory_geff is None:
             raise ValueError("No data loaded. Call load_source() first.")
 
+        # Validate spatial_dims features have correct array shapes
+        validate_spatial_dims(
+            self.in_memory_geff,
+            self.available_computed_features,
+            ndim=self.ndim,
+        )
+
+        # Validate graph structure and optional properties
         validate_in_memory_geff(self.in_memory_geff)
 
     def construct_graph(self) -> nx.DiGraph:
@@ -295,10 +440,14 @@ class TracksBuilder(ABC):
         if scale is None:
             scale = [1.0] * self.ndim
 
-        # Validate segmentation matches graph
-        from funtracks.import_export._validation import validate_graph_seg_match
+        # Validate segmentation matches graph (only if position is loaded)
+        # If position is not in graph, it will be computed from segmentation
+        sample_node = next(iter(graph.nodes()))
+        has_position = "pos" in graph.nodes[sample_node]
+        if has_position:
+            from funtracks.import_export._validation import validate_graph_seg_match
 
-        validate_graph_seg_match(graph, seg_array, scale, self.axis_names)
+            validate_graph_seg_match(graph, seg_array, scale, self.axis_names)
 
         # Check if relabeling is needed (seg_id != node_id)
         node_props = self.in_memory_geff["node_props"]
@@ -439,32 +588,59 @@ class TracksBuilder(ABC):
                 "Call prepare() to auto-infer or set manually."
             )
 
+        # Set ndim early - from segmentation if provided, otherwise from position mapping
+        # This value is used for all subsequent validation and should not change
+        if self.ndim is None:
+            if segmentation is not None:
+                self.ndim = read_dims(segmentation)
+            elif "pos" in self.node_name_map:
+                pos_mapping = self.node_name_map["pos"]
+                if isinstance(pos_mapping, list):
+                    self.ndim = len(pos_mapping) + 1  # +1 for time
+
+            # Regenerate available_computed_features with correct ndim
+            if self.ndim is not None:
+                self.available_computed_features = get_default_key_to_feature_mapping(
+                    self.ndim, display_name=False
+                )
+
         # Validate node_name_map is complete and valid
-        self.validate_name_map()
+        self.validate_name_map(has_segmentation=segmentation is not None)
 
         # 1. Load source data to InMemoryGeff
         self.load_source(source, self.node_name_map, node_features)
+        if self.in_memory_geff is None:
+            raise ValueError("load_source() must populate self.in_memory_geff")
 
-        # 2. Validate InMemoryGeff
+        # 2. Combine multi-value feature columns
+        self._combine_multi_value_props(
+            self.in_memory_geff["node_props"], self.node_name_map
+        )
+        if self.edge_name_map is not None:
+            self._combine_multi_value_props(
+                self.in_memory_geff["edge_props"], self.edge_name_map
+            )
+
+        # 3. Validate InMemoryGeff (includes spatial_dims array shape validation)
         self.validate()
 
-        # 3. Construct graph
+        # 4. Construct graph
         graph = self.construct_graph()
 
-        # 4. Handle segmentation
+        # 5. Handle segmentation
         segmentation_array, scale = self.handle_segmentation(graph, segmentation, scale)
 
-        # 5. Create SolutionTracks
+        # 6. Create SolutionTracks
         tracks = SolutionTracks(
             graph=graph,
             segmentation=segmentation_array,
-            pos_attr=self.axis_names,
+            pos_attr="pos",
             time_attr=self.TIME_ATTR,
             ndim=self.ndim,
             scale=scale,
         )
 
-        # 6. Enable and register features
+        # 7. Enable and register features
         if node_features is not None:
             self.enable_features(tracks, node_features, feature_type="node")
         if edge_features is not None:
