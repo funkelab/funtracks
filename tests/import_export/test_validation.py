@@ -14,85 +14,82 @@ class TestValidateNodeNameMap:
 
     def test_valid_node_name_map(self):
         """Test that a valid node name_map passes validation."""
-        name_map = {"time": "t", "x": "x_coord", "y": "y_coord"}
+        name_map = {"time": "t", "pos": ["y_coord", "x_coord"]}
         importable_props = ["t", "x_coord", "y_coord", "area"]
         required_features = ["time"]
-        position_attr = ["z", "y", "x"]
-        ndim = 3  # 2D + time
 
         # Should not raise
-        validate_node_name_map(
-            name_map, importable_props, required_features, position_attr, ndim
-        )
+        validate_node_name_map(name_map, importable_props, required_features)
 
     def test_missing_required_feature(self):
-        """Test that missing required features raise ValueError."""
-        name_map = {"x": "x_coord", "y": "y_coord"}  # Missing "time"
+        """Test that missing required features raise ValueError.
+
+        When a required feature like "time" is missing from name_map,
+        the None values check catches it first.
+        """
+        name_map = {"pos": ["y_coord", "x_coord"]}  # Missing "time"
         importable_props = ["t", "x_coord", "y_coord"]
         required_features = ["time"]
-        position_attr = ["z", "y", "x"]
-        ndim = 3
 
-        with pytest.raises(ValueError, match="None values"):
-            validate_node_name_map(
-                name_map, importable_props, required_features, position_attr, ndim
-            )
+        with pytest.raises(ValueError, match="cannot contain None values"):
+            validate_node_name_map(name_map, importable_props, required_features)
 
-    def test_missing_position_attr(self):
-        """Test that missing position attributes raise ValueError."""
-        name_map = {"time": "t", "x": "x_coord"}  # Missing "y"
+    def test_missing_position(self):
+        """Test that missing position mapping raises ValueError."""
+        name_map = {"time": "t"}  # Missing "pos"
         importable_props = ["t", "x_coord", "y_coord"]
         required_features = ["time"]
-        position_attr = ["z", "y", "x"]
-        ndim = 3
 
-        with pytest.raises(ValueError, match="None values"):
-            validate_node_name_map(
-                name_map, importable_props, required_features, position_attr, ndim
-            )
+        with pytest.raises(ValueError, match="must contain 'pos' mapping"):
+            validate_node_name_map(name_map, importable_props, required_features)
+
+    def test_invalid_position_format(self):
+        """Test that position list with < 2 elements raises ValueError."""
+        name_map = {"time": "t", "pos": ["x_coord"]}  # pos list needs at least 2
+        importable_props = ["t", "x_coord", "y_coord"]
+        required_features = ["time"]
+
+        with pytest.raises(ValueError, match="at least 2 coordinate"):
+            validate_node_name_map(name_map, importable_props, required_features)
+
+    def test_position_as_single_string(self):
+        """Test that position can be a single string (pre-stacked attribute)."""
+        name_map = {"time": "t", "pos": "position"}  # pos as single stacked attr
+        importable_props = ["t", "position"]
+        required_features = ["time"]
+
+        # Should not raise - single string is valid for pre-stacked position
+        validate_node_name_map(name_map, importable_props, required_features)
 
     def test_none_value_in_required_field(self):
         """Test that None values in required fields raise ValueError."""
-        name_map = {"time": "t", "x": None, "y": "y_coord"}
-        importable_props = ["t", "y_coord"]
+        name_map = {"time": None, "pos": ["y_coord", "x_coord"]}
+        importable_props = ["t", "y_coord", "x_coord"]
         required_features = ["time"]
-        position_attr = ["z", "y", "x"]
-        ndim = 3
 
         with pytest.raises(ValueError, match="cannot contain None values"):
-            validate_node_name_map(
-                name_map, importable_props, required_features, position_attr, ndim
-            )
+            validate_node_name_map(name_map, importable_props, required_features)
 
-    def test_duplicate_values_in_required_fields(self):
-        """Test that duplicate values in required fields are allowed.
+    def test_duplicate_values_in_position(self):
+        """Test that duplicate values in position are allowed.
 
-        Multiple standard keys can map to the same source property.
-        This is useful for cases like seg_id mapping to the same column as id.
+        Multiple position coords can map to the same source property (edge case).
         """
-        name_map = {"time": "t", "x": "coord", "y": "coord"}  # Duplicate "coord"
+        name_map = {"time": "t", "pos": ["coord", "coord"]}  # Duplicate "coord"
         importable_props = ["t", "coord"]
         required_features = ["time"]
-        position_attr = ["z", "y", "x"]
-        ndim = 3
 
         # Should not raise - duplicates are allowed
-        validate_node_name_map(
-            name_map, importable_props, required_features, position_attr, ndim
-        )
+        validate_node_name_map(name_map, importable_props, required_features)
 
     def test_nonexistent_property(self):
         """Test that mapping to non-existent properties raises ValueError."""
-        name_map = {"time": "t", "x": "x_coord", "y": "y_coord"}
+        name_map = {"time": "t", "pos": ["y_coord", "x_coord"]}
         importable_props = ["t", "x_coord"]  # "y_coord" doesn't exist
         required_features = ["time"]
-        position_attr = ["z", "y", "x"]
-        ndim = 3
 
         with pytest.raises(ValueError, match="non-existent properties"):
-            validate_node_name_map(
-                name_map, importable_props, required_features, position_attr, ndim
-            )
+            validate_node_name_map(name_map, importable_props, required_features)
 
 
 class TestValidateEdgeNameMap:
