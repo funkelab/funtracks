@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import polars as pl
@@ -70,11 +70,20 @@ def export_to_csv(
     if use_display_names:
         for feature_name, feature_dict in tracks.features.items():
             feature_names.append(feature_name)
-            col_name = feature_dict["display_name"]
-            if isinstance(col_name, (list, tuple)):
-                header.extend(col_name)
+            num_values = feature_dict.get("num_values", 1)
+            if num_values > 1:
+                # Multi-value feature: use value_names if available
+                value_names = feature_dict.get("value_names")
+                if value_names is not None:
+                    header.extend(value_names)
+                else:
+                    # Fall back to display_name or feature_name with index suffix
+                    base_name = feature_dict.get("display_name", feature_name)
+                    header.extend([f"{base_name}_{i}" for i in range(num_values)])
             else:
-                header.append(cast(str, col_name))
+                # Single-value feature: use display_name or feature_name
+                col_name = feature_dict.get("display_name", feature_name)
+                header.append(col_name)
 
     # Determine which nodes to export
     if node_ids is None:

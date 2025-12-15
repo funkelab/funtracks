@@ -62,11 +62,18 @@ def validate_graph_seg_match(
     seg_id = last_node_data.get(SEG_KEY, last_node_id)
 
     # Get the coordinates for the last node (using standard keys)
+    # Position may be stored as composite "pos" attribute or separate y/x/z attributes
     coord = [int(last_node_data["time"])]
-    if "z" in position_attr:
-        coord.append(last_node_data["z"])
-    coord.append(last_node_data["y"])
-    coord.append(last_node_data["x"])
+    if "pos" in last_node_data:
+        # Composite position: [z, y, x] or [y, x]
+        pos = last_node_data["pos"]
+        coord.extend(pos)
+    else:
+        # Separate position attributes (legacy)
+        if "z" in position_attr:
+            coord.append(last_node_data["z"])
+        coord.append(last_node_data["y"])
+        coord.append(last_node_data["x"])
 
     # Check bounds
     for i, (c, s) in enumerate(zip(coord, segmentation.shape, strict=False)):
@@ -94,67 +101,80 @@ def validate_graph_seg_match(
 
 
 def validate_node_name_map(
-    name_map: dict[str, str],
+    name_map: dict[str, str | list[str]],
     importable_node_props: list[str],
     required_features: list[str],
-    position_attr: list[str],
-    ndim: int | None,
+    available_features: dict | None = None,
+    ndim: int | None = None,
+    has_segmentation: bool = False,
 ) -> None:
     """Validate node name_map contains all required mappings.
 
     Checks:
     - No None values in required mappings
-    - No duplicate values in required mappings
     - All required_features are mapped
-    - All position_attr are mapped (based on ndim)
+    - Position ("pos") is mapped to coordinate columns (unless segmentation provided)
     - All mapped properties exist in importable_node_props
+    - Features with spatial_dims=True have correct number of list elements
 
     Args:
         name_map: Mapping from standard keys to source property names
         importable_node_props: List of property names available in the source
         required_features: List of required feature names (e.g., ["time"])
-        position_attr: List of position attributes (e.g., ["z", "y", "x"])
-        ndim: Number of dimensions (3 for 2D+time, 4 for 3D+time), or None to
-            accept either 2D or 3D
+        available_features: Optional dict of feature_key -> feature metadata
+            for spatial_dims validation
+        ndim: Optional number of dimensions including time for spatial_dims validation
+        has_segmentation: If True, position can be computed from segmentation
+            and is not required in name_map
 
     Raises:
         ValueError: If validation fails
     """
-    # Build list of required position attributes
-    # When ndim is None, require y and x at minimum; z is optional
-    if ndim is None:
-        ndim = 3
-    required_pos_attrs = position_attr[-(ndim - 1) :]
-
-    required_fields = required_features + required_pos_attrs
-
-    # Check for None values in required fields
-    none_mappings = [key for key in required_fields if name_map.get(key) is None]
+    # Check for None values in required features
+    none_mappings = [key for key in required_features if name_map.get(key) is None]
     if none_mappings:
         raise ValueError(
             f"The name_map cannot contain None values. "
             f"Fields with None values: {none_mappings}"
         )
 
-    missing_features = []
-
-    # Check required features
-    for feature in required_fields:
-        if feature not in name_map:
-            missing_features.append(feature)
-
+    # Check required features are mapped
+    missing_features = [f for f in required_features if f not in name_map]
     if missing_features:
         raise ValueError(
             f"name_map is missing required mappings: {missing_features}. "
-            f"Required features: {required_features}. "
-            f"Required position attrs: {required_pos_attrs}"
+            f"Required features: {required_features}."
+        )
+
+    # Check position mapping if provided
+    if "pos" in name_map:
+        pos_mapping = name_map["pos"]
+        # Position can be either:
+        # - A list of coordinate columns to combine (e.g., ["y", "x"])
+        # - A single string for an already-stacked position attribute (e.g., "pos")
+        if isinstance(pos_mapping, list) and len(pos_mapping) < 2:
+            raise ValueError(
+                f"Position mapping as list must have at least 2 coordinate columns. "
+                f"Got: {pos_mapping}"
+            )
+    elif not has_segmentation:
+        # Position is required if no segmentation to compute it from
+        raise ValueError(
+            "name_map must contain 'pos' mapping for position coordinates "
+            "(or provide segmentation to compute position). "
+            "Expected format: {'pos': ['y', 'x']} or {'pos': 'pos'}"
         )
 
     # Fail if mapped properties don't exist in importable_node_props
     if importable_node_props:
         invalid_mappings = []
         for std_key, source_prop in name_map.items():
-            if source_prop not in importable_node_props:
+            # Handle multi-value features (list of column names)
+            if isinstance(source_prop, list):
+                for prop in source_prop:
+                    if prop not in importable_node_props:
+                        invalid_mappings.append(f"{std_key} -> '{prop}'")
+            elif source_prop not in importable_node_props:
                 invalid_mappings.append(f"{std_key} -> '{source_prop}'")
 
         if invalid_mappings:
@@ -164,42 +184,113 @@ def validate_node_name_map(
                 f"Importable node properties: {importable_node_props}"
             )
 
+    # Validate spatial_dims features have correct number of list elements
+    if available_features is not None:
+        validate_spatial_dims_in_name_map(name_map, available_features, ndim)
+
+
+def validate_spatial_dims_in_name_map(
+    name_map: dict[str, str | list[str]],
+    available_features: dict,
+    ndim: int | None = None,
+) -> None:
+    """Validate that spatial_dims features have correct number of list elements.
+
+    For features with spatial_dims=True, validates that list mappings have the
+    correct number of elements matching the expected spatial dimensions.
+
+    Args:
+        name_map: Mapping from standard keys to source property names
+        available_features: Dict of feature_key -> feature metadata
+            (should have "spatial_dims" for features that need validation)
+        ndim: Number of dimensions including time. If None, inferred from
+            position mapping length.
+
+    Raises:
+        ValueError: If any spatial_dims feature has wrong number of list elements
+    """
+    # Determine expected spatial dimensions
+    expect_spatial_dims: int | None = None
+    ndim_from_pos = False
+    if ndim is not None:
+        expect_spatial_dims = ndim - 1  # ndim includes time
+    elif "pos" in name_map:
+        pos_mapping = name_map["pos"]
+        if isinstance(pos_mapping, list):
+            expect_spatial_dims = len(pos_mapping)
+            ndim_from_pos = True
+
+    if expect_spatial_dims is None:
+        return  # Cannot validate without knowing dimensions
+
+    for key, mapping in name_map.items():
+        if key == "pos" and ndim_from_pos:
+            # Don't validate pos against itself when it defines dimensions
+            continue
+        feature = available_features.get(key)
+        if feature is None or not isinstance(feature, dict):
+            continue
+        if not feature.get("spatial_dims", False):
+            continue
+        # Only validate list mappings here; array shapes are validated
+        # after loading via validate_spatial_dims()
+        if isinstance(mapping, list) and len(mapping) != expect_spatial_dims:
+            display_name = feature.get("display_name", key)
+            raise ValueError(
+                f"Feature '{key}' ({display_name}) has {len(mapping)} values "
+                f"but expected {expect_spatial_dims} spatial dimensions. "
+                f"Mapping: {mapping}"
+            )
+
 
 def validate_edge_name_map(
-    edge_name_map: dict[str, str],
+    edge_name_map: dict[str, str | list[str]],
     importable_edge_props: list[str],
+    available_features: dict | None = None,
+    ndim: int | None = None,
 ) -> None:
     """Validate edge name_map mappings exist in source.
 
     Checks:
     - All mapped edge properties exist in importable_edge_props
+    - Features with spatial_dims=True have correct number of list elements
 
     Args:
         edge_name_map: Mapping from standard keys to edge property names
         importable_edge_props: List of edge property names available in the source
+        available_features: Optional dict of feature_key -> feature metadata
+            for spatial_dims validation
+        ndim: Optional number of dimensions including time for spatial_dims validation
 
     Raises:
         ValueError: If validation fails
     """
-    if not importable_edge_props:
-        return
+    if importable_edge_props:
+        invalid_mappings = []
+        for std_key, source_prop in edge_name_map.items():
+            # Handle multi-value features (list of column names)
+            if isinstance(source_prop, list):
+                for prop in source_prop:
+                    if prop not in importable_edge_props:
+                        invalid_mappings.append(f"{std_key} -> '{prop}'")
+            elif source_prop not in importable_edge_props:
+                invalid_mappings.append(f"{std_key} -> '{source_prop}'")
 
-    invalid_mappings = []
-    for std_key, source_prop in edge_name_map.items():
-        if source_prop not in importable_edge_props:
-            invalid_mappings.append(f"{std_key} -> '{source_prop}'")
+        if invalid_mappings:
+            raise ValueError(
+                f"edge_name_map contains mappings to non-existent properties: "
+                f"{invalid_mappings}. "
+                f"Importable edge properties: {importable_edge_props}"
+            )
 
-    if invalid_mappings:
-        raise ValueError(
-            f"edge_name_map contains mappings to non-existent properties: "
-            f"{invalid_mappings}. "
-            f"Importable edge properties: {importable_edge_props}"
-        )
+    # Validate spatial_dims features have correct number of list elements
+    if available_features is not None:
+        validate_spatial_dims_in_name_map(edge_name_map, available_features, ndim)
 
 
 def validate_feature_key_collisions(
-    name_map: dict[str, str],
-    edge_name_map: dict[str, str] | None,
+    name_map: dict[str, str | list[str]],
+    edge_name_map: dict[str, str | list[str]] | None,
 ) -> None:
     """Validate that node and edge feature keys don't overlap.
 
@@ -229,6 +320,51 @@ def validate_feature_key_collisions(
             f"Colliding keys: {sorted(colliding_keys)}. "
             f"Please use unique keys for node and edge features."
         )
+
+
+def validate_spatial_dims(
+    in_memory_geff: InMemoryGeff,
+    available_features: dict,
+    ndim: int | None = None,
+) -> None:
+    """Validate that spatial_dims features have correct number of values.
+
+    Validates that all features with spatial_dims=True have array shapes
+    matching the expected number of spatial dimensions.
+
+    Args:
+        in_memory_geff: Loaded InMemoryGeff data with node properties
+        available_features: Dict of feature_key -> feature metadata
+            (should have "spatial_dims" for features that need validation)
+        ndim: Number of dimensions including time. If None, validation is skipped.
+
+    Raises:
+        ValueError: If any spatial_dims feature has wrong number of values
+    """
+    if ndim is None:
+        return  # Cannot validate without knowing dimensions
+
+    node_props = in_memory_geff["node_props"]
+    expect_spatial_dims = ndim - 1  # ndim includes time
+
+    # Validate each feature with spatial_dims=True
+    for key, prop_data in node_props.items():
+        feature = available_features.get(key)
+        if feature is None or not isinstance(feature, dict):
+            continue
+        if not feature.get("spatial_dims", False):
+            continue
+
+        # Check the actual array shape
+        values = prop_data["values"]
+        actual_dims = values.shape[1] if values.ndim == 2 else 1
+
+        if actual_dims != expect_spatial_dims:
+            display_name = feature.get("display_name", key)
+            raise ValueError(
+                f"Feature '{key}' ({display_name}) has {actual_dims} values "
+                f"but expected {expect_spatial_dims} spatial dimensions."
+            )
 
 
 def validate_in_memory_geff(in_memory_geff: InMemoryGeff) -> None:

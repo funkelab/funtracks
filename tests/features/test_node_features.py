@@ -25,7 +25,8 @@ def test_position_feature():
     assert feat["feature_type"] == "node"
     assert feat["value_type"] == "float"
     assert feat["num_values"] == 2
-    assert feat["display_name"] == ["y", "x"]
+    assert feat["display_name"] == "position"
+    assert feat["value_names"] == ["y", "x"]
     assert feat["required"] is True
     assert feat["default_value"] is None
 
@@ -46,15 +47,19 @@ def test_area_feature():
 
 def test_ellipsoid_axes_feature():
     """Test that EllipsoidAxes() returns a valid Feature TypedDict"""
+    # ndim=3 means 2D+time -> 2 spatial dimensions
     feat = EllipsoidAxes(ndim=3)
     assert feat["feature_type"] == "node"
     assert feat["value_type"] == "float"
-    assert feat["num_values"] == 1
+    assert feat["num_values"] == 2
     assert feat["display_name"] == "Ellipse axis radii"
+    assert feat["value_names"] == ["major_axis", "minor_axis"]
 
+    # ndim=4 means 3D+time -> 3 spatial dimensions
     feat = EllipsoidAxes(ndim=4)
-    assert feat["num_values"] == 1
+    assert feat["num_values"] == 3
     assert feat["display_name"] == "Ellipsoid axis radii"
+    assert feat["value_names"] == ["major_axis", "semi_minor_axis", "minor_axis"]
 
 
 def test_circularity_feature():
