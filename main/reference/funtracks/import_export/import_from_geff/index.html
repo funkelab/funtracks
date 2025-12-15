@@ -1703,15 +1703,15 @@ Use: from funtracks.import_export import import_from_geff</p>
 </h2>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">import_from_geff</span><span class="p">(</span>
     <span class="n">directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
-    <span class="n">node_name_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">node_name_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">segmentation_path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">scale</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">node_features</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">edge_features</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">extra_features</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">edge_name_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">edge_name_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">edge_prop_filter</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">name_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">name_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SolutionTracks</span>
 </code></pre></div>
 
@@ -1752,11 +1752,17 @@ Use: from funtracks.import_export import import_from_geff</p>
                 <code>node_name_map</code>
             </td>
             <td>
-                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="str">str</span>] | None</code>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="str">str</span> | <span title="list">list</span>[<span title="str">str</span>]] | None</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Maps standard keys to GEFF property names</p>
+                <p>Optional mapping from standard funtracks keys to GEFF
+property names: {standard_key: geff_property_name}.
+For example: {"time": "t", "pos": ["y", "x"], "seg_id": "label"}
+- Keys are standard funtracks attribute names (e.g., "time", "pos")
+- Values are property names from the GEFF store (e.g., "t", "label")
+- For multi-value features like position, use a list: {"pos": ["y", "x"]}
+If None, property names are auto-inferred using fuzzy matching.</p>
               </div>
             </td>
             <td>
@@ -1849,11 +1855,12 @@ backward compatibility.</p>
                 <code>edge_name_map</code>
             </td>
             <td>
-                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="str">str</span>] | None</code>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="str">str</span> | <span title="list">list</span>[<span title="str">str</span>]] | None</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Optional mapping for edge property names</p>
+                <p>Optional mapping from standard funtracks keys to GEFF
+edge property names. Example: {"iou": "overlap"}</p>
               </div>
             </td>
             <td>
@@ -1882,7 +1889,7 @@ backward compatibility.</p>
                 <code>name_map</code>
             </td>
             <td>
-                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="str">str</span>] | None</code>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="str">str</span> | <span title="list">list</span>[<span title="str">str</span>]] | None</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -1957,8 +1964,8 @@ backward compatibility.</p>
 </h2>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">import_graph_from_geff</span><span class="p">(</span>
     <span class="n">directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
-    <span class="n">node_name_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span>
-    <span class="n">edge_name_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">node_name_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
+    <span class="n">edge_name_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">InMemoryGeff</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="nb">int</span><span class="p">]</span>
 </code></pre></div>
 
@@ -2000,14 +2007,18 @@ backward compatibility.</p>
                 <code>node_name_map</code>
             </td>
             <td>
-                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="str">str</span>]</code>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="str">str</span> | <span title="list">list</span>[<span title="str">str</span>]]</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Maps standard keys to GEFF node property names.
-Required: "time", "y", "x" (and "z" for 3D)
-Optional: "track_id", "seg_id", "lineage_id", custom features
-Example: {"time": "t", "circularity": "circ"}.
+                <p>Mapping from standard funtracks keys to GEFF property names:
+{standard_key: geff_property_name}.
+For example: {"time": "t", "pos": ["y", "x"], "seg_id": "label"}
+- Keys are standard funtracks attribute names (e.g., "time", "pos")
+- Values are property names from the GEFF store (e.g., "t", "label")
+- For multi-value features like position, use a list: {"pos": ["y", "x"]}
+Required keys: "time", "pos" (with spatial coordinates)
+Optional: "seg_id", "tracklet_id", "lineage_id", custom features
 Only properties included here will be loaded.</p>
               </div>
             </td>
@@ -2020,11 +2031,11 @@ Only properties included here will be loaded.</p>
                 <code>edge_name_map</code>
             </td>
             <td>
-                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="str">str</span>] | None</code>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="str">str</span> | <span title="list">list</span>[<span title="str">str</span>]] | None</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Maps standard keys to GEFF edge property names.
+                <p>Mapping from standard funtracks keys to GEFF edge property names.
 If None, all edge properties loaded with original names.
 If provided, only specified properties loaded and renamed.
 Example: {"iou": "overlap"}</p>

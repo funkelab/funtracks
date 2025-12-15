@@ -3069,12 +3069,24 @@ the feature applies to.</p>
           <tr class="doc-section-item">
             <td><code><span title="funtracks.features.Feature.display_name">display_name</span></code></td>
             <td>
-                  <code><span title="str">str</span> | <span title="collections.abc.Sequence">Sequence</span>[<span title="str">str</span>] | None</code>
+                  <code><span title="str">str</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The name to use to display the
-feature.</p>
+                <p>Optional. A display name for the feature.
+If not provided, the feature key is used.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="funtracks.features.Feature.value_names">value_names</span></code></td>
+            <td>
+                  <code><span title="collections.abc.Sequence">Sequence</span>[<span title="str">str</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional. Individual display names for each
+value when num_values &gt; 1. Length should match num_values.</p>
               </div>
             </td>
           </tr>
@@ -3099,6 +3111,19 @@ to have this feature.</p>
               <div class="doc-md-description">
                 <p>If required is False, this value is returned
 whenever the feature value is missing on the graph.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code><span title="funtracks.features.Feature.spatial_dims">spatial_dims</span></code></td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional. If True, num_values must match the number
+of spatial dimensions (e.g., 2 for 2D, 3 for 3D). Used for features
+like Position and EllipsoidAxes.</p>
               </div>
             </td>
           </tr>

@@ -1991,7 +1991,7 @@
 </h3>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">load_source</span><span class="p">(</span>
     <span class="n">source</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">DataFrame</span><span class="p">,</span>
-    <span class="n">node_name_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span>
+    <span class="n">node_name_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
     <span class="n">node_features</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre></div>
@@ -2033,7 +2033,7 @@
                 <code>node_name_map</code>
             </td>
             <td>
-                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="str">str</span>]</code>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="str">str</span> | <span title="list">list</span>[<span title="str">str</span>]]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -2178,7 +2178,7 @@
 </h3>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">load_source</span><span class="p">(</span>
     <span class="n">source_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
-    <span class="n">node_name_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span>
+    <span class="n">node_name_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
     <span class="n">node_features</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre></div>
@@ -2220,7 +2220,7 @@
                 <code>node_name_map</code>
             </td>
             <td>
-                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="str">str</span>]</code>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="str">str</span> | <span title="list">list</span>[<span title="str">str</span>]]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -2864,12 +2864,20 @@ tracks = builder.build("data.csv")</p>
 
 
 </h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">infer_edge_name_map</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">infer_edge_name_map</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Infer edge_name_map by matching importable edge properties to standard keys.</p>
+        <p>Infer edge_name_map by matching source properties to standard keys.</p>
+
+
+<details class="the-edge_name_map-maps-standard-funtracks-keys-to-source-property-names" open>
+  <summary>The edge_name_map maps standard funtracks keys to source property names</summary>
+  <p>{standard_key: source_property_name}</p>
+</details>        <p>For example: {"iou": "overlap"}
+- "iou" is the standard funtracks key
+- "overlap" is the property name from the source data</p>
 <p>Uses difflib fuzzy matching with the following priority:
 1. Exact matches to edge feature default keys
 2. Fuzzy matches to edge feature default keys (case-insensitive, 40%
@@ -2891,11 +2899,11 @@ tracks = builder.build("data.csv")</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="str">str</span>]</code>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="str">str</span> | <span title="list">list</span>[<span title="str">str</span>]]</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Inferred edge_name_map (standard_key -&gt; source_property)</p>
+                <p>Inferred edge_name_map mapping standard keys to source property names</p>
               </div>
             </td>
           </tr>
@@ -2915,18 +2923,28 @@ tracks = builder.build("data.csv")</p>
 
 
 </h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">infer_node_name_map</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">infer_node_name_map</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Infer node_name_map by matching importable node properties to standard keys.</p>
+        <p>Infer node_name_map by matching source properties to standard keys.</p>
+
+
+<details class="the-node_name_map-maps-standard-funtracks-keys-to-source-property-names" open>
+  <summary>The node_name_map maps standard funtracks keys to source property names</summary>
+  <p>{standard_key: source_property_name}</p>
+</details>        <p>For example: {"time": "t", "pos": ["y", "x"], "seg_id": "label"}
+- "time", "pos", "seg_id" are standard funtracks keys
+- "t", "y", "x", "label" are property names from the source data</p>
 <p>Uses difflib fuzzy matching with the following priority:
-1. Exact matches to standard keys
+1. Exact matches to standard keys (time, seg_id, etc.)
 2. Fuzzy matches to standard keys (case-insensitive, 40% similarity cutoff)
-3. Exact matches to feature display names
+3. Exact matches to feature display names/value_names (including position z/y/x)
 4. Fuzzy matches to feature display names (case-insensitive, 40% cutoff)
 5. Remaining properties map to themselves (custom properties)</p>
+<p>Position attributes (z, y, x) are matched via Position feature's value_names,
+resulting in a composite mapping like {"pos": ["z", "y", "x"]}.</p>
 
 
     <p><span class="doc-section-title">Returns:</span></p>
@@ -2940,11 +2958,11 @@ tracks = builder.build("data.csv")</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="str">str</span>]</code>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="str">str</span> | <span title="list">list</span>[<span title="str">str</span>]]</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Inferred node_name_map (standard_key -&gt; source_property)</p>
+                <p>Inferred node_name_map mapping standard keys to source property names</p>
               </div>
             </td>
           </tr>
@@ -2989,7 +3007,7 @@ tracks = builder.build("data.csv")</p>
 </h3>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">load_source</span><span class="p">(</span>
     <span class="n">source</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">DataFrame</span><span class="p">,</span>
-    <span class="n">node_name_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span>
+    <span class="n">node_name_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
     <span class="n">node_features</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre></div>
@@ -3032,7 +3050,7 @@ tracks = builder.build("data.csv")</p>
                 <code>node_name_map</code>
             </td>
             <td>
-                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="str">str</span>]</code>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="str">str</span> | <span title="list">list</span>[<span title="str">str</span>]]</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -3225,8 +3243,10 @@ self.importable_edge_props with property/column names.</p>
 
         <p>Validate the loaded InMemoryGeff data.</p>
 <p>Common validation logic shared across all formats.
-If optional properties (lineage_id, track_id) fail validation,
-they are removed with a warning.</p>
+Validates:
+- Graph structure (unique nodes, valid edges, etc.)
+- Spatial_dims features have correct array shapes
+- Optional properties (lineage_id, track_id) - removed with warning if invalid</p>
 
 
 <p><span class="doc-section-title">Raises:</span></p>
@@ -3244,7 +3264,7 @@ they are removed with a warning.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>If required validation (graph structure) fails</p>
+                <p>If required validation fails</p>
               </div>
             </td>
           </tr>
@@ -3264,7 +3284,7 @@ they are removed with a warning.</p>
 
 
 </h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">validate_name_map</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">validate_name_map</span><span class="p">(</span><span class="n">has_segmentation</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -3272,14 +3292,48 @@ they are removed with a warning.</p>
         <p>Validate that node_name_map and edge_name_map contain valid mappings.</p>
 <p>Checks for nodes:
 - No None values in required mappings
-- No duplicate values in required mappings
 - All required_features are mapped
-- All position_attr are mapped (based on ndim, or y/x minimum if ndim is None)
-- All mapped properties exist in importable_node_props</p>
+- Position ("pos") is mapped to coordinate columns (unless segmentation provided)
+- All mapped properties exist in importable_node_props
+- Features with spatial_dims=True have correct number of list elements</p>
 <p>Checks for edges:
 - All mapped edge properties exist in importable_edge_props</p>
 <p>Checks for both:
 - No feature key collisions between node and edge features</p>
+<p>Note: Array shapes for spatial_dims features are validated after loading
+via validate_spatial_dims().</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>has_segmentation</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If True, position can be computed from segmentation
+and is not required in name_map</p>
+              </div>
+            </td>
+            <td>
+                  <code>False</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
 <p><span class="doc-section-title">Raises:</span></p>
@@ -3641,8 +3695,8 @@ Will make the directory if it doesn't exist.</p>
     <span class="n">segmentation</span><span class="p">:</span> <span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">scale</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">features</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">node_name_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">name_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">node_name_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">name_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SolutionTracks</span>
 </code></pre></div>
 
@@ -3747,13 +3801,17 @@ Defaults to None.</p>
                 <code>node_name_map</code>
             </td>
             <td>
-                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="str">str</span>] | None</code>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="str">str</span> | <span title="list">list</span>[<span title="str">str</span>]] | None</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Optional mapping from standard field names to DataFrame column
-names. Standard keys include: "id", "parent_id", "time", "y", "x", "z",
-"seg_id". If None, column names are auto-inferred using fuzzy matching.</p>
+                <p>Optional mapping from standard funtracks keys to DataFrame
+column names: {standard_key: column_name}.
+For example: {"time": "t", "pos": ["y", "x"], "seg_id": "label"}
+- Keys are standard funtracks attribute names (e.g., "time", "pos", "seg_id")
+- Values are column names from the DataFrame (e.g., "t", "label")
+- For multi-value features like position, use a list: {"pos": ["y", "x"]}
+If None, column names are auto-inferred using fuzzy matching.</p>
               </div>
             </td>
             <td>
@@ -3765,7 +3823,7 @@ names. Standard keys include: "id", "parent_id", "time", "y", "x", "z",
                 <code>name_map</code>
             </td>
             <td>
-                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="str">str</span>] | None</code>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="str">str</span> | <span title="list">list</span>[<span title="str">str</span>]] | None</code>
             </td>
             <td>
               <div class="doc-md-description">
