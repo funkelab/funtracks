@@ -16,10 +16,6 @@ import networkx as nx
 import numpy as np
 from geff._typing import InMemoryGeff
 
-if TYPE_CHECKING:
-    import pandas as pd
-    from numpy.typing import ArrayLike
-
 from funtracks.data_model.graph_attributes import NodeAttr
 from funtracks.data_model.solution_tracks import SolutionTracks
 from funtracks.features import Feature
@@ -43,6 +39,40 @@ from funtracks.import_export._validation import (
     validate_node_name_map,
 )
 
+if TYPE_CHECKING:
+    import pandas as pd
+    from numpy.typing import ArrayLike
+
+
+def flatten_name_map(
+    name_map: dict[str, str | list[str]],
+) -> list[tuple[str, str]]:
+    """Flatten a name_map to a list of (target_key, source_key) tuples.
+
+    For single-value mappings like {"time": "t"}, returns [("time", "t")] (renaming).
+    For multi-value mappings like {"pos": ["y", "x"]}, returns [("y", "y"), ("x", "x")]
+    (keep original names for later combining by TracksBuilder._combine_multi_value_props).
+
+    Args:
+        name_map: Mapping from standard keys to source property names
+
+    Returns:
+        List of (target_key, source_key) tuples
+    """
+    result = []
+    for std_key, source in name_map.items():
+        if source is None:
+            continue
+        if isinstance(source, list):
+            # Multi-value: keep original column names (combining happens later)
+            for col in source:
+                result.append((col, col))
+        else:
+            # Single-value: rename from source to standard key
+            result.append((std_key, source))
+    return result
+
+
 # defining constants here because they are only used in the context of import
 TRACK_KEY = "track_id"
 SEG_KEY = "seg_id"
@@ -62,9 +92,15 @@ class TracksBuilder(ABC):
         # State transferred between steps
         self.in_memory_geff: InMemoryGeff | None = None
         self.ndim: int | None = None
-        # TODO: how much of the node/edge stuff can we abstract?
+
+        # Name maps: {standard_key -> source_property_name(s)}
+        # Keys are standard funtracks attribute names (e.g., "time", "pos", "seg_id")
+        # Values are property names from the source data (e.g., "t", ["y", "x"], "label")
+        # For multi-value features like position, the value is a list of source columns
         self.node_name_map: dict[str, str | list[str]] = {}
         self.edge_name_map: dict[str, str | list[str]] | None = None
+
+        # Available properties in the source data (populated by read_header)
         self.importable_node_props: list[str] = []
         self.importable_edge_props: list[str] = []
 
@@ -97,7 +133,14 @@ class TracksBuilder(ABC):
         """
 
     def infer_node_name_map(self) -> dict[str, str | list[str]]:
-        """Infer node_name_map by matching importable node properties to standard keys.
+        """Infer node_name_map by matching source properties to standard keys.
+
+        The node_name_map maps standard funtracks keys to source property names:
+            {standard_key: source_property_name}
+
+        For example: {"time": "t", "pos": ["y", "x"], "seg_id": "label"}
+        - "time", "pos", "seg_id" are standard funtracks keys
+        - "t", "y", "x", "label" are property names from the source data
 
         Uses difflib fuzzy matching with the following priority:
         1. Exact matches to standard keys (time, seg_id, etc.)
@@ -110,7 +153,7 @@ class TracksBuilder(ABC):
         resulting in a composite mapping like {"pos": ["z", "y", "x"]}.
 
         Returns:
-            Inferred node_name_map (standard_key -> source_property)
+            Inferred node_name_map mapping standard keys to source property names
 
         Raises:
             ValueError: If required features cannot be inferred
@@ -122,7 +165,14 @@ class TracksBuilder(ABC):
         )
 
     def infer_edge_name_map(self) -> dict[str, str | list[str]]:
-        """Infer edge_name_map by matching importable edge properties to standard keys.
+        """Infer edge_name_map by matching source properties to standard keys.
+
+        The edge_name_map maps standard funtracks keys to source property names:
+            {standard_key: source_property_name}
+
+        For example: {"iou": "overlap"}
+        - "iou" is the standard funtracks key
+        - "overlap" is the property name from the source data
 
         Uses difflib fuzzy matching with the following priority:
         1. Exact matches to edge feature default keys
@@ -134,7 +184,7 @@ class TracksBuilder(ABC):
         5. Remaining properties map to themselves (custom properties)
 
         Returns:
-            Inferred edge_name_map (standard_key -> source_property)
+            Inferred edge_name_map mapping standard keys to source property names
         """
         if not self.importable_edge_props:
             return {}

@@ -13,7 +13,7 @@ from geff_spec.utils import (
     create_props_metadata,
 )
 
-from .._tracks_builder import TracksBuilder
+from .._tracks_builder import TracksBuilder, flatten_name_map
 
 if TYPE_CHECKING:
     from funtracks.data_model.solution_tracks import SolutionTracks
@@ -96,22 +96,11 @@ class CSVTracksBuilder(TracksBuilder):
                     extended_name_map[feature_key] = feature_key
 
         # Build a new DataFrame with standard key names, copying data for each mapping.
-        # This handles duplicate mappings (e.g., seg_id -> "node_id", id -> "node_id")
-        # by copying the source column data to each standard key.
-        # Multi-value features (list of column names) are loaded as individual columns
-        # and combined later by TracksBuilder._combine_multi_value_props().
+        # Multi-value features keep original names (combining happens in TracksBuilder)
         new_df_data = {}
-        for std_key, csv_col in extended_name_map.items():
-            if csv_col is None:
-                continue
-            if isinstance(csv_col, list):
-                # Multi-value feature: load each column individually
-                # (combining happens in TracksBuilder._combine_multi_value_props)
-                for col in csv_col:
-                    if col in df.columns and col not in new_df_data:
-                        new_df_data[col] = df[col].copy()
-            elif csv_col in df.columns:
-                new_df_data[std_key] = df[csv_col].copy()
+        for target_key, source_col in flatten_name_map(extended_name_map):
+            if source_col in df.columns and target_key not in new_df_data:
+                new_df_data[target_key] = df[source_col].copy()
         df = pd.DataFrame(new_df_data)
 
         # Convert NaN to None
@@ -126,14 +115,14 @@ class CSVTracksBuilder(TracksBuilder):
                     else x
                 )
 
-        # Determine dimensionality from position mapping
-        # With composite "pos", check how many coordinates are in the pos mapping
-        pos_mapping = node_name_map.get("pos", [])
-        if isinstance(pos_mapping, list):
-            self.ndim = len(pos_mapping) + 1  # +1 for time
-        else:
-            # Fallback for legacy separate position keys
-            self.ndim = 4 if "z" in df.columns else 3
+        # Determine dimensionality from position mapping (if not already set)
+        if self.ndim is None:
+            pos_mapping = node_name_map.get("pos", [])
+            if isinstance(pos_mapping, list):
+                self.ndim = len(pos_mapping) + 1  # +1 for time
+            else:
+                # Fallback for legacy separate position keys
+                self.ndim = 4 if "z" in df.columns else 3
 
         # Convert DataFrame to InMemoryGeff format
         df_dict = df.to_dict(orient="list")
@@ -225,9 +214,13 @@ def tracks_from_df(
             Example: {"Area": "area"} loads from column "area"
                      {"Area": "Recompute"} recomputes from segmentation
             Defaults to None.
-        node_name_map: Optional mapping from standard field names to DataFrame column
-            names. Standard keys include: "id", "parent_id", "time", "y", "x", "z",
-            "seg_id". If None, column names are auto-inferred using fuzzy matching.
+        node_name_map: Optional mapping from standard funtracks keys to DataFrame
+            column names: {standard_key: column_name}.
+            For example: {"time": "t", "pos": ["y", "x"], "seg_id": "label"}
+            - Keys are standard funtracks attribute names (e.g., "time", "pos", "seg_id")
+            - Values are column names from the DataFrame (e.g., "t", "label")
+            - For multi-value features like position, use a list: {"pos": ["y", "x"]}
+            If None, column names are auto-inferred using fuzzy matching.
         name_map: Deprecated. Use node_name_map instead.
 
     Returns:

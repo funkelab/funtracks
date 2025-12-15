@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from geff._typing import InMemoryGeff
 from geff.core_io._base_read import read_to_memory
 
-from .._tracks_builder import TracksBuilder
+from .._tracks_builder import TracksBuilder, flatten_name_map
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -29,12 +29,16 @@ def import_graph_from_geff(
 
     Args:
         directory: Path to GEFF data directory or zarr store
-        node_name_map: Maps standard keys to GEFF node property names.
-            Required: "time", "y", "x" (and "z" for 3D)
-            Optional: "track_id", "seg_id", "lineage_id", custom features
-            Example: {"time": "t", "circularity": "circ"}.
+        node_name_map: Mapping from standard funtracks keys to GEFF property names:
+            {standard_key: geff_property_name}.
+            For example: {"time": "t", "pos": ["y", "x"], "seg_id": "label"}
+            - Keys are standard funtracks attribute names (e.g., "time", "pos")
+            - Values are property names from the GEFF store (e.g., "t", "label")
+            - For multi-value features like position, use a list: {"pos": ["y", "x"]}
+            Required keys: "time", "pos" (with spatial coordinates)
+            Optional: "seg_id", "tracklet_id", "lineage_id", custom features
             Only properties included here will be loaded.
-        edge_name_map: Maps standard keys to GEFF edge property names.
+        edge_name_map: Mapping from standard funtracks keys to GEFF edge property names.
             If None, all edge properties loaded with original names.
             If provided, only specified properties loaded and renamed.
             Example: {"iou": "overlap"}
@@ -92,59 +96,27 @@ def import_graph_from_geff(
             "mapping for all required fields."
         )
 
-    # Rename node property keys from custom (GEFF) to standard using node_name_map
-    # Handle duplicate mappings (e.g., seg_id -> "node_id", id -> "node_id") by
-    # copying data for each standard key that maps to the same GEFF property.
-    # Multi-value features (list of column names) are kept as individual columns
-    # and combined later by TracksBuilder._combine_multi_value_props().
+    # Rename node properties: copy from source keys to target keys
+    # Multi-value features keep original names (combining happens in TracksBuilder)
     node_props = in_memory_geff["node_props"]
     renamed_node_props = {}
-    for std_key, geff_key in node_name_map.items():
-        if geff_key is None:
-            continue
-        # Multi-value features have a list of column names - keep them individual
-        if isinstance(geff_key, list):
-            # Copy each column individually (combining happens in TracksBuilder)
-            for col in geff_key:
-                if col in node_props and col not in renamed_node_props:
-                    prop_data = node_props[col]
-                    renamed_node_props[col] = {
-                        "values": prop_data["values"].copy(),
-                        "missing": prop_data.get("missing"),
-                    }
-        elif geff_key in node_props:
-            prop_data = node_props[geff_key]
-            # Copy values to avoid aliasing when multiple keys map to same source
-            renamed_node_props[std_key] = {
+    for target_key, source_key in flatten_name_map(node_name_map):
+        if source_key in node_props and target_key not in renamed_node_props:
+            prop_data = node_props[source_key]
+            renamed_node_props[target_key] = {
                 "values": prop_data["values"].copy(),
                 "missing": prop_data.get("missing"),
             }
     in_memory_geff["node_props"] = renamed_node_props
 
-    # Rename edge property keys from custom (GEFF) to standard using edge_name_map
-    # Handle duplicate mappings by copying data for each standard key.
-    # Multi-value features (list of column names) are kept as individual columns
-    # and combined later by TracksBuilder._combine_multi_value_props().
+    # Rename edge properties similarly
     if edge_name_map is not None:
         edge_props = in_memory_geff["edge_props"]
         renamed_edge_props = {}
-        for std_key, geff_key in edge_name_map.items():
-            if geff_key is None:
-                continue
-            # Multi-value features have a list of column names - keep them individual
-            if isinstance(geff_key, list):
-                # Copy each column individually (combining happens in TracksBuilder)
-                for col in geff_key:
-                    if col in edge_props and col not in renamed_edge_props:
-                        prop_data = edge_props[col]
-                        renamed_edge_props[col] = {
-                            "values": prop_data["values"].copy(),
-                            "missing": prop_data.get("missing"),
-                        }
-            elif geff_key in edge_props:
-                prop_data = edge_props[geff_key]
-                # Copy values to avoid aliasing when multiple keys map to same source
-                renamed_edge_props[std_key] = {
+        for target_key, source_key in flatten_name_map(edge_name_map):
+            if source_key in edge_props and target_key not in renamed_edge_props:
+                prop_data = edge_props[source_key]
+                renamed_edge_props[target_key] = {
                     "values": prop_data["values"].copy(),
                     "missing": prop_data.get("missing"),
                 }
@@ -210,9 +182,12 @@ class GeffTracksBuilder(TracksBuilder):
                     extended_name_map[feature_key] = feature_key
 
         # Load GEFF data with renamed properties (returns InMemoryGeff with standard keys)
-        self.in_memory_geff, self.position_attr, self.ndim = import_graph_from_geff(
+        self.in_memory_geff, self.position_attr, ndim = import_graph_from_geff(
             source_path, extended_name_map, edge_name_map=self.edge_name_map
         )
+        # Only set ndim if not already set from segmentation
+        if self.ndim is None:
+            self.ndim = ndim
 
 
 def import_from_geff(
@@ -231,14 +206,21 @@ def import_from_geff(
 
     Args:
         directory: Path to GEFF zarr store
-        node_name_map: Maps standard keys to GEFF property names
+        node_name_map: Optional mapping from standard funtracks keys to GEFF
+            property names: {standard_key: geff_property_name}.
+            For example: {"time": "t", "pos": ["y", "x"], "seg_id": "label"}
+            - Keys are standard funtracks attribute names (e.g., "time", "pos")
+            - Values are property names from the GEFF store (e.g., "t", "label")
+            - For multi-value features like position, use a list: {"pos": ["y", "x"]}
+            If None, property names are auto-inferred using fuzzy matching.
         segmentation_path: Optional path to segmentation data
         scale: Optional spatial scale
         node_features: Optional node features to enable/load
         edge_features: Optional edge features to enable/load
         extra_features: (Deprecated) Use node_features instead. Kept for
             backward compatibility.
-        edge_name_map: Optional mapping for edge property names
+        edge_name_map: Optional mapping from standard funtracks keys to GEFF
+            edge property names. Example: {"iou": "overlap"}
         edge_prop_filter: (Deprecated) Use edge_name_map instead. Kept for
             backward compatibility.
         name_map: Deprecated. Use node_name_map instead.
