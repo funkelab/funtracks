@@ -624,3 +624,59 @@ class TestSpatialDimsValidation:
         assert tracks is not None
         # The empty mapping should not result in a feature being added
         assert not tracks.graph.nodes[1].get("ellipse_axis_radii")
+
+    def test_import_without_position_with_segmentation(self):
+        """Test that position can be omitted when segmentation is provided.
+
+        When segmentation is provided, position can be computed from centroids,
+        so it's not required in the name_map.
+        """
+        # Create a simple 2D+T segmentation with two labeled regions
+        segmentation = np.zeros((2, 10, 10), dtype=np.int32)
+        segmentation[0, 2:5, 2:5] = 1  # Label 1 at t=0
+        segmentation[1, 4:7, 4:7] = 2  # Label 2 at t=1
+
+        df = pd.DataFrame(
+            {
+                "time": [0, 1],
+                "id": [1, 2],
+                "parent_id": [-1, 1],
+            }
+        )
+
+        # No position in name_map - should be computed from segmentation
+        name_map = {
+            "id": "id",
+            "parent_id": "parent_id",
+            "time": "time",
+            # No "pos" mapping
+        }
+
+        tracks = tracks_from_df(df, node_name_map=name_map, segmentation=segmentation)
+        assert tracks is not None
+
+        # Position should be computed from segmentation centroids
+        assert "pos" in tracks.graph.nodes[1]
+        pos_1 = tracks.graph.nodes[1]["pos"]
+        # Centroid of 3x3 region at [2:5, 2:5] is approximately [3, 3]
+        np.testing.assert_array_almost_equal(pos_1, [3.0, 3.0], decimal=0)
+
+    def test_import_without_position_without_segmentation_fails(self):
+        """Test that position is required when no segmentation is provided."""
+        df = pd.DataFrame(
+            {
+                "time": [0, 1],
+                "id": [1, 2],
+                "parent_id": [-1, 1],
+            }
+        )
+
+        # No position in name_map and no segmentation
+        name_map = {
+            "id": "id",
+            "parent_id": "parent_id",
+            "time": "time",
+        }
+
+        with pytest.raises(ValueError, match="pos.*mapping.*segmentation"):
+            tracks_from_df(df, node_name_map=name_map)

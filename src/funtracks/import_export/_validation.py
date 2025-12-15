@@ -106,13 +106,14 @@ def validate_node_name_map(
     required_features: list[str],
     available_features: dict | None = None,
     ndim: int | None = None,
+    has_segmentation: bool = False,
 ) -> None:
     """Validate node name_map contains all required mappings.
 
     Checks:
     - No None values in required mappings
     - All required_features are mapped
-    - Position ("pos") is mapped to coordinate columns
+    - Position ("pos") is mapped to coordinate columns (unless segmentation provided)
     - All mapped properties exist in importable_node_props
     - Features with spatial_dims=True have correct number of list elements
 
@@ -123,6 +124,8 @@ def validate_node_name_map(
         available_features: Optional dict of feature_key -> feature metadata
             for spatial_dims validation
         ndim: Optional number of dimensions including time for spatial_dims validation
+        has_segmentation: If True, position can be computed from segmentation
+            and is not required in name_map
 
     Raises:
         ValueError: If validation fails
@@ -143,18 +146,23 @@ def validate_node_name_map(
             f"Required features: {required_features}."
         )
 
-    # Check position is mapped (should be "pos" -> ["z", "y", "x"] or ["y", "x"])
-    if "pos" not in name_map:
+    # Check position mapping if provided
+    if "pos" in name_map:
+        pos_mapping = name_map["pos"]
+        # Position can be either:
+        # - A list of coordinate columns to combine (e.g., ["y", "x"])
+        # - A single string for an already-stacked position attribute (e.g., "pos")
+        if isinstance(pos_mapping, list) and len(pos_mapping) < 2:
+            raise ValueError(
+                f"Position mapping as list must have at least 2 coordinate columns. "
+                f"Got: {pos_mapping}"
+            )
+    elif not has_segmentation:
+        # Position is required if no segmentation to compute it from
         raise ValueError(
-            "name_map must contain 'pos' mapping for position coordinates. "
-            "Expected format: {'pos': ['z', 'y', 'x']} or {'pos': ['y', 'x']}"
-        )
-
-    pos_mapping = name_map["pos"]
-    if not isinstance(pos_mapping, list) or len(pos_mapping) < 2:
-        raise ValueError(
-            f"Position mapping must be a list of at least 2 coordinate columns. "
-            f"Got: {pos_mapping}"
+            "name_map must contain 'pos' mapping for position coordinates "
+            "(or provide segmentation to compute position). "
+            "Expected format: {'pos': ['y', 'x']} or {'pos': 'pos'}"
         )
 
     # Fail if mapped properties don't exist in importable_node_props

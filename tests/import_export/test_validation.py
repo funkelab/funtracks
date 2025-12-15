@@ -44,13 +44,22 @@ class TestValidateNodeNameMap:
             validate_node_name_map(name_map, importable_props, required_features)
 
     def test_invalid_position_format(self):
-        """Test that invalid position format raises ValueError."""
-        name_map = {"time": "t", "pos": "x_coord"}  # pos should be a list
+        """Test that position list with < 2 elements raises ValueError."""
+        name_map = {"time": "t", "pos": ["x_coord"]}  # pos list needs at least 2
         importable_props = ["t", "x_coord", "y_coord"]
         required_features = ["time"]
 
-        with pytest.raises(ValueError, match="must be a list"):
+        with pytest.raises(ValueError, match="at least 2 coordinate"):
             validate_node_name_map(name_map, importable_props, required_features)
+
+    def test_position_as_single_string(self):
+        """Test that position can be a single string (pre-stacked attribute)."""
+        name_map = {"time": "t", "pos": "position"}  # pos as single stacked attr
+        importable_props = ["t", "position"]
+        required_features = ["time"]
+
+        # Should not raise - single string is valid for pre-stacked position
+        validate_node_name_map(name_map, importable_props, required_features)
 
     def test_none_value_in_required_field(self):
         """Test that None values in required fields raise ValueError."""

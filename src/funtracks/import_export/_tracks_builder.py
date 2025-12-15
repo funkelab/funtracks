@@ -217,13 +217,13 @@ class TracksBuilder(ABC):
             for k in keys_to_remove:
                 del self.edge_name_map[k]
 
-    def validate_name_map(self) -> None:
+    def validate_name_map(self, has_segmentation: bool = False) -> None:
         """Validate that node_name_map and edge_name_map contain valid mappings.
 
         Checks for nodes:
         - No None values in required mappings
         - All required_features are mapped
-        - Position ("pos") is mapped to coordinate columns
+        - Position ("pos") is mapped to coordinate columns (unless segmentation provided)
         - All mapped properties exist in importable_node_props
         - Features with spatial_dims=True have correct number of list elements
 
@@ -235,6 +235,10 @@ class TracksBuilder(ABC):
 
         Note: Array shapes for spatial_dims features are validated after loading
         via validate_spatial_dims().
+
+        Args:
+            has_segmentation: If True, position can be computed from segmentation
+                and is not required in name_map
 
         Raises:
             ValueError: If validation fails
@@ -249,6 +253,7 @@ class TracksBuilder(ABC):
             self.required_features,
             available_features=self.available_computed_features,
             ndim=self.ndim,
+            has_segmentation=has_segmentation,
         )
 
         # Validate edge_name_map if provided (includes spatial_dims validation)
@@ -435,10 +440,14 @@ class TracksBuilder(ABC):
         if scale is None:
             scale = [1.0] * self.ndim
 
-        # Validate segmentation matches graph
-        from funtracks.import_export._validation import validate_graph_seg_match
+        # Validate segmentation matches graph (only if position is loaded)
+        # If position is not in graph, it will be computed from segmentation
+        sample_node = next(iter(graph.nodes()))
+        has_position = "pos" in graph.nodes[sample_node]
+        if has_position:
+            from funtracks.import_export._validation import validate_graph_seg_match
 
-        validate_graph_seg_match(graph, seg_array, scale, self.axis_names)
+            validate_graph_seg_match(graph, seg_array, scale, self.axis_names)
 
         # Check if relabeling is needed (seg_id != node_id)
         node_props = self.in_memory_geff["node_props"]
@@ -596,7 +605,7 @@ class TracksBuilder(ABC):
                 )
 
         # Validate node_name_map is complete and valid
-        self.validate_name_map()
+        self.validate_name_map(has_segmentation=segmentation is not None)
 
         # 1. Load source data to InMemoryGeff
         self.load_source(source, self.node_name_map, node_features)
