@@ -325,19 +325,44 @@ class TracksBuilder(ABC):
             raise ValueError("No data loaded. Call load_source() first.")
 
         # Process node properties
-        node_props = self.in_memory_geff["node_props"]
-        for std_key, source_cols in self.node_name_map.items():
+        self._combine_props_from_name_map(
+            self.in_memory_geff["node_props"], self.node_name_map
+        )
+
+        # Process edge properties
+        if self.edge_name_map is not None:
+            self._combine_props_from_name_map(
+                self.in_memory_geff["edge_props"], self.edge_name_map
+            )
+
+    def _combine_props_from_name_map(
+        self,
+        props: dict,
+        name_map: dict[str, str | list[str]],
+    ) -> None:
+        """Combine multi-value feature columns into single properties.
+
+        For features mapped to a list of columns (e.g., "pos": ["y", "x"]),
+        combines those columns into a single property with stacked values.
+
+        Args:
+            props: Property dict from InMemoryGeff (node_props or edge_props)
+            name_map: Mapping from standard keys to source property names
+
+        Modifies props in place.
+        """
+        for std_key, source_cols in name_map.items():
             if not isinstance(source_cols, list) or len(source_cols) == 0:
                 continue
             # Check all source columns exist
-            missing_cols = [c for c in source_cols if c not in node_props]
+            missing_cols = [c for c in source_cols if c not in props]
             if missing_cols:
                 continue  # Skip if any columns are missing
-            # Stack column values into 2D array (n_nodes, num_values)
-            col_arrays = [node_props[c]["values"] for c in source_cols]
+            # Stack column values into 2D array
+            col_arrays = [props[c]["values"] for c in source_cols]
             combined = np.column_stack(col_arrays)
             # Combine missing arrays with OR (missing if any component is missing)
-            missing_arrays = [node_props[c].get("missing") for c in source_cols]
+            missing_arrays = [props[c].get("missing") for c in source_cols]
             if any(m is not None for m in missing_arrays):
                 combined_missing = np.zeros(len(combined), dtype=np.bool_)
                 for m in missing_arrays:
@@ -345,45 +370,14 @@ class TracksBuilder(ABC):
                         combined_missing |= m
             else:
                 combined_missing = None
-            node_props[std_key] = {
+            props[std_key] = {
                 "values": combined,
                 "missing": combined_missing,
             }
             # Remove the individual source columns
             for c in source_cols:
-                if c in node_props and c != std_key:
-                    del node_props[c]
-
-        # Process edge properties
-        if self.edge_name_map is not None:
-            edge_props = self.in_memory_geff["edge_props"]
-            for std_key, source_cols in self.edge_name_map.items():
-                if not isinstance(source_cols, list) or len(source_cols) == 0:
-                    continue
-                # Check all source columns exist
-                missing_cols = [c for c in source_cols if c not in edge_props]
-                if missing_cols:
-                    continue  # Skip if any columns are missing
-                # Stack column values into 2D array (n_edges, num_values)
-                col_arrays = [edge_props[c]["values"] for c in source_cols]
-                combined = np.column_stack(col_arrays)
-                # Combine missing arrays with OR (missing if any component is missing)
-                missing_arrays = [edge_props[c].get("missing") for c in source_cols]
-                if any(m is not None for m in missing_arrays):
-                    combined_missing = np.zeros(len(combined), dtype=np.bool_)
-                    for m in missing_arrays:
-                        if m is not None:
-                            combined_missing |= m
-                else:
-                    combined_missing = None
-                edge_props[std_key] = {
-                    "values": combined,
-                    "missing": combined_missing,
-                }
-                # Remove the individual source columns
-                for c in source_cols:
-                    if c in edge_props and c != std_key:
-                        del edge_props[c]
+                if c in props and c != std_key:
+                    del props[c]
 
     def validate(self) -> None:
         """Validate the loaded InMemoryGeff data.
