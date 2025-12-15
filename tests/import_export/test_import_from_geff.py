@@ -243,7 +243,7 @@ def test_none_in_name_map(valid_geff):
 
     store, _ = valid_geff
     # None value for required field should raise error
-    name_map = {"time": None, "y": "y", "x": "x"}
+    name_map = {"time": None, "pos": ["y", "x"]}
     with pytest.raises(ValueError, match="None values"):
         import_from_geff(store, name_map)
 
@@ -253,7 +253,7 @@ def test_duplicate_values_in_name_map(valid_geff):
     store, _ = valid_geff
 
     # Duplicate values should be allowed - each standard key gets a copy of the data
-    name_map = {"time": "t", "y": "y", "x": "x", "seg_id": "t"}
+    name_map = {"time": "t", "pos": ["y", "x"], "seg_id": "t"}
 
     # Should not raise - seg_id maps to same source as time
     tracks = import_from_geff(store, name_map)
@@ -270,7 +270,7 @@ def test_segmentation_axes_mismatch(valid_geff, tmp_path):
     bounds."""
 
     store, _ = valid_geff
-    name_map = {"time": "t", "y": "y", "x": "x", "seg_id": "seg_id"}
+    name_map = {"time": "t", "pos": ["y", "x"], "seg_id": "seg_id"}
 
     # Provide a segmentation with wrong shape
     wrong_seg = np.zeros((2, 20, 200), dtype=np.uint16)
@@ -280,12 +280,11 @@ def test_segmentation_axes_mismatch(valid_geff, tmp_path):
         import_from_geff(store, name_map, segmentation_path=seg_path)
 
     # Provide a segmentation with a different number of dimensions than the graph.
+    # The error is caught during validation because pos has spatial_dims=True
     wrong_seg = np.zeros((2, 20, 200, 200), dtype=np.uint16)
     seg_path = tmp_path / "wrong_seg2.npy"
     tifffile.imwrite(seg_path, wrong_seg)
-    with pytest.raises(
-        ValueError, match="Segmentation has 4 dimensions but graph has 3 dimensions"
-    ):
+    with pytest.raises(ValueError, match="pos.*has 2 values.*3 spatial dimensions"):
         import_from_geff(store, name_map, segmentation_path=seg_path)
 
 
@@ -293,7 +292,7 @@ def test_tracks_with_segmentation(valid_geff, invalid_geff, valid_segmentation, 
     """Test relabeling of the segmentation from seg_id to node_id."""
 
     store, _ = valid_geff
-    name_map = {"time": "t", "y": "y", "x": "x", "seg_id": "seg_id"}
+    name_map = {"time": "t", "pos": ["y", "x"], "seg_id": "seg_id"}
     valid_segmentation_path = tmp_path / "segmentation.tif"
     tifffile.imwrite(valid_segmentation_path, valid_segmentation)
 
@@ -315,10 +314,12 @@ def test_tracks_with_segmentation(valid_geff, invalid_geff, valid_segmentation, 
     assert tracks.segmentation.shape == valid_segmentation.shape
     # Get last node by ID (don't rely on iteration order)
     last_node = max(tracks.graph.nodes())
+    # With composite pos, position is stored as an array
+    pos = tracks.graph.nodes[last_node]["pos"]
     coords = [
         tracks.graph.nodes[last_node]["time"],
-        tracks.graph.nodes[last_node]["y"],
-        tracks.graph.nodes[last_node]["x"],
+        pos[0],  # y
+        pos[1],  # x
     ]
     coords = tuple(int(c * 1 / s) for c, s in zip(coords, scale, strict=True))
     assert (
@@ -370,7 +371,7 @@ def test_segmentation_loading_formats(
 ):
     """Test loading segmentation from different formats using magic_imread."""
     store, _ = valid_geff
-    name_map = {"time": "t", "y": "y", "x": "x", "seg_id": "seg_id"}
+    name_map = {"time": "t", "pos": ["y", "x"], "seg_id": "seg_id"}
     scale = [1, 1, 1 / 100]
     seg = valid_segmentation
 
@@ -418,8 +419,7 @@ def test_node_features_compute_vs_load(valid_geff, valid_segmentation, tmp_path)
     store, _ = valid_geff
     name_map = {
         "time": "t",
-        "y": "y",
-        "x": "x",
+        "pos": ["y", "x"],  # Composite position mapping
         "seg_id": "seg_id",
         "circularity": "circ",  # Map standard key to GEFF property name
     }
@@ -468,7 +468,7 @@ def test_node_features_compute_vs_load(valid_geff, valid_segmentation, tmp_path)
 def test_node_features_unknown(valid_geff, valid_segmentation, tmp_path):
     """Test that providing an unknown feature raises a KeyError."""
     store, _ = valid_geff
-    name_map = {"time": "t", "y": "y", "x": "x", "seg_id": "seg_id"}
+    name_map = {"time": "t", "pos": ["y", "x"], "seg_id": "seg_id"}
     scale = [1, 1, 1 / 100]
     valid_segmentation_path = tmp_path / "segmentation.tif"
     tifffile.imwrite(valid_segmentation_path, valid_segmentation)
@@ -494,7 +494,7 @@ def test_node_features_unknown(valid_geff, valid_segmentation, tmp_path):
 def test_compute_features_without_segmentation(valid_geff):
     """Test that computing regionprops features without segmentation raises an error."""
     store, _ = valid_geff
-    name_map = {"time": "t", "y": "y", "x": "x"}
+    name_map = {"time": "t", "pos": ["y", "x"]}
     scale = [1, 1, 1 / 100]
 
     # Try to compute area feature without providing segmentation
