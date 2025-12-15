@@ -6,7 +6,7 @@ from funtracks.import_export.csv._import import CSVTracksBuilder
 
 
 class TestCombineMultiValueProps:
-    """Test _combine_multi_value_props method."""
+    """Test _combine_props_from_name_map method."""
 
     def test_combine_missing_arrays_with_or(self):
         """Test that missing arrays are combined with OR logic.
@@ -17,7 +17,6 @@ class TestCombineMultiValueProps:
         # Create a builder and set up minimal state
         builder = CSVTracksBuilder()
         builder.node_name_map = {"pos": ["y", "x"]}
-        builder.edge_name_map = None
 
         # Create in_memory_geff with missing arrays
         # y is missing for nodes 0, 2 (indices where missing_y is True)
@@ -41,7 +40,9 @@ class TestCombineMultiValueProps:
         }
 
         # Call the method
-        builder._combine_multi_value_props()
+        builder._combine_multi_value_props(
+            builder.in_memory_geff["node_props"], builder.node_name_map
+        )
 
         # Check that pos was created with combined values
         assert "pos" in builder.in_memory_geff["node_props"]
@@ -67,7 +68,6 @@ class TestCombineMultiValueProps:
         """Test combining when no component has missing arrays."""
         builder = CSVTracksBuilder()
         builder.node_name_map = {"pos": ["y", "x"]}
-        builder.edge_name_map = None
 
         builder.in_memory_geff = {
             "metadata": None,
@@ -80,7 +80,9 @@ class TestCombineMultiValueProps:
             "edge_props": {},
         }
 
-        builder._combine_multi_value_props()
+        builder._combine_multi_value_props(
+            builder.in_memory_geff["node_props"], builder.node_name_map
+        )
 
         pos_prop = builder.in_memory_geff["node_props"]["pos"]
         assert pos_prop["missing"] is None
@@ -89,7 +91,6 @@ class TestCombineMultiValueProps:
         """Test combining when only some components have missing arrays."""
         builder = CSVTracksBuilder()
         builder.node_name_map = {"pos": ["y", "x"]}
-        builder.edge_name_map = None
 
         # Only y has a missing array, x does not
         builder.in_memory_geff = {
@@ -106,7 +107,9 @@ class TestCombineMultiValueProps:
             "edge_props": {},
         }
 
-        builder._combine_multi_value_props()
+        builder._combine_multi_value_props(
+            builder.in_memory_geff["node_props"], builder.node_name_map
+        )
 
         pos_prop = builder.in_memory_geff["node_props"]["pos"]
         # Should use the missing array from y (the only one with missing)
@@ -116,7 +119,6 @@ class TestCombineMultiValueProps:
     def test_combine_edge_props_with_missing(self):
         """Test combining edge properties with missing arrays."""
         builder = CSVTracksBuilder()
-        builder.node_name_map = {}
         builder.edge_name_map = {"multi_edge_feat": ["a", "b"]}
 
         builder.in_memory_geff = {
@@ -136,7 +138,9 @@ class TestCombineMultiValueProps:
             },
         }
 
-        builder._combine_multi_value_props()
+        builder._combine_multi_value_props(
+            builder.in_memory_geff["edge_props"], builder.edge_name_map
+        )
 
         edge_prop = builder.in_memory_geff["edge_props"]["multi_edge_feat"]
         expected_values = np.array([[1.0, 10.0], [2.0, 20.0]])

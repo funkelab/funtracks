@@ -310,32 +310,7 @@ class TracksBuilder(ABC):
             node_features: Optional features dict for backward compatibility
         """
 
-    def _combine_multi_value_props(self) -> None:
-        """Combine multi-value feature columns into single properties.
-
-        For features mapped to a list of columns (e.g., "pos": ["y", "x"]),
-        combines those columns into a single property with stacked values.
-
-        This handles both node and edge properties based on node_name_map
-        and edge_name_map respectively.
-
-        Modifies self.in_memory_geff in place.
-        """
-        if self.in_memory_geff is None:
-            raise ValueError("No data loaded. Call load_source() first.")
-
-        # Process node properties
-        self._combine_props_from_name_map(
-            self.in_memory_geff["node_props"], self.node_name_map
-        )
-
-        # Process edge properties
-        if self.edge_name_map is not None:
-            self._combine_props_from_name_map(
-                self.in_memory_geff["edge_props"], self.edge_name_map
-            )
-
-    def _combine_props_from_name_map(
+    def _combine_multi_value_props(
         self,
         props: dict,
         name_map: dict[str, str | list[str]],
@@ -625,9 +600,17 @@ class TracksBuilder(ABC):
 
         # 1. Load source data to InMemoryGeff
         self.load_source(source, self.node_name_map, node_features)
+        if self.in_memory_geff is None:
+            raise ValueError("load_source() must populate self.in_memory_geff")
 
         # 2. Combine multi-value feature columns
-        self._combine_multi_value_props()
+        self._combine_multi_value_props(
+            self.in_memory_geff["node_props"], self.node_name_map
+        )
+        if self.edge_name_map is not None:
+            self._combine_multi_value_props(
+                self.in_memory_geff["edge_props"], self.edge_name_map
+            )
 
         # 3. Validate InMemoryGeff (includes spatial_dims array shape validation)
         self.validate()
