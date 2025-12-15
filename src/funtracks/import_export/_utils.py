@@ -109,7 +109,7 @@ def rename_feature(tracks: Tracks, old_key: str, new_key: str) -> None:
     # Register it to the feature dictionary, removing old key if necessary
     if old_key in tracks.features:
         tracks.features.pop(old_key)
-    tracks.add_node_feature(new_key, feature_dict)
+    tracks.add_feature(new_key, feature_dict)
 
     # Update FeatureDict special key attributes if we renamed position or tracklet
     if tracks.features.position_key == old_key:

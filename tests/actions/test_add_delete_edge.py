@@ -131,7 +131,7 @@ def test_custom_edge_attributes_preserved(get_tracks, ndim, with_seg):
         ),
     }
     for key, feature in custom_features.items():
-        tracks.add_edge_feature(key, feature)
+        tracks.add_feature(key, feature)
 
     # Define custom edge attributes
     custom_attrs = {

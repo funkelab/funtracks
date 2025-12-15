@@ -91,7 +91,10 @@ class EdgeAnnotator(GraphAnnotator):
 
             for t in range(seg.shape[0] - 1):
                 nodes_in_t = nodes_by_frame[t]
-                edges = list(self.tracks.graph.out_edges(nodes_in_t))
+                edges = []
+                for node in nodes_in_t:
+                    for succ in self.tracks.graph.successors(node):
+                        edges.append((node, succ))
                 self._iou_update(edges, seg[t], seg[t + 1])
 
     def _iou_update(

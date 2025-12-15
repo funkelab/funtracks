@@ -293,7 +293,7 @@ class Tracks:
                 # Add to FeatureDict if not already there
                 if key not in self.features:
                     feature, _ = self.annotators.all_features[key]
-                    self.features[key] = feature
+                    self.add_feature(key, feature)
                 self.annotators.activate_features([key])
             else:
                 # enable it (compute it)
@@ -554,7 +554,7 @@ class Tracks:
         for key in feature_keys:
             if key not in self.features:
                 feature, _ = self.annotators.all_features[key]
-                self.features[key] = feature
+                self.add_feature(key, feature)
 
         # Compute the features if requested
         if recompute:
@@ -579,10 +579,8 @@ class Tracks:
             if key in self.features:
                 del self.features[key]
 
-    def add_node_feature(self, key: str, feature: Feature) -> None:
-        """Add a node feature to the features dictionary and perform graph operations.
-
-        TODO Teun: add_feature and auto-detect node or edge from Feature dict
+    def add_feature(self, key: str, feature: Feature) -> None:
+        """Add a feature to the features dictionary and perform graph operations.
 
         This is the preferred way to add new features as it ensures both the
         features dictionary is updated and any necessary graph operations are performed.
@@ -595,20 +593,7 @@ class Tracks:
         self.features[key] = feature
 
         # Perform custom graph operations when a feature is added
-        self.graph.add_node_attr_key(key, default_value=feature["default_value"])
-
-    def add_edge_feature(self, key: str, feature: Feature) -> None:
-        """Add an edge feature to the features dictionary and perform graph operations.
-
-        This is the preferred way to add new features as it ensures both the
-        features dictionary is updated and any necessary graph operations are performed.
-
-        Args:
-            key: The key for the new feature
-            feature: The Feature object to add
-        """
-        # Add to the features dictionary
-        self.features[key] = feature
-
-        # Perform custom graph operations when a feature is added
-        self.graph.add_edge_attr_key(key, default_value=feature["default_value"])
+        if feature["feature_type"] == "node":
+            self.graph.add_node_attr_key(key, default_value=feature["default_value"])
+        elif feature["feature_type"] == "edge":
+            self.graph.add_edge_attr_key(key, default_value=feature["default_value"])

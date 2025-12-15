@@ -6,10 +6,17 @@ from funtracks.data_model import SolutionTracks, Tracks
 track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
 
 
-def test_annotator_registry_init_with_segmentation(graph_clean, segmentation_2d):
+def test_annotator_registry_init_with_segmentation(
+    graph_2d_with_computed_features, segmentation_2d
+):
     """Test AnnotatorRegistry initializes regionprops and edge annotators with
     segmentation."""
-    tracks = Tracks(graph_clean, segmentation=segmentation_2d, ndim=3, **track_attrs)
+    tracks = Tracks(
+        graph_2d_with_computed_features,
+        segmentation=segmentation_2d,
+        ndim=3,
+        **track_attrs,
+    )
 
     annotator_types = [type(ann) for ann in tracks.annotators]
     assert RegionpropsAnnotator in annotator_types
@@ -27,11 +34,16 @@ def test_annotator_registry_init_without_segmentation(graph_2d_with_position):
     assert TrackAnnotator not in annotator_types
 
 
-def test_annotator_registry_init_solution_tracks(graph_clean, segmentation_2d):
+def test_annotator_registry_init_solution_tracks(
+    graph_2d_with_computed_features, segmentation_2d
+):
     """Test AnnotatorRegistry creates all annotators for SolutionTracks with
     segmentation."""
     tracks = SolutionTracks(
-        graph_clean, segmentation=segmentation_2d, ndim=3, **track_attrs
+        graph_2d_with_computed_features,
+        segmentation=segmentation_2d,
+        ndim=3,
+        **track_attrs,
     )
 
     annotator_types = [type(ann) for ann in tracks.annotators]
@@ -40,18 +52,23 @@ def test_annotator_registry_init_solution_tracks(graph_clean, segmentation_2d):
     assert TrackAnnotator in annotator_types
 
 
-def test_enable_disable_features(graph_clean, segmentation_2d):
-    tracks = Tracks(graph_clean, segmentation=segmentation_2d, ndim=3, **track_attrs)
+def test_enable_disable_features(graph_2d_with_computed_features, segmentation_2d):
+    tracks = Tracks(
+        graph_2d_with_computed_features,
+        segmentation=segmentation_2d,
+        ndim=3,
+        **track_attrs,
+    )
 
-    nodes = list(tracks.graph.nodes())
-    edges = list(tracks.graph.edges())
+    nodes = list(tracks.graph.node_ids())
+    edges = list(tracks.graph.edge_ids())
 
     # Core features (time, pos, area) should be in tracks.features and computed
     assert "pos" in tracks.features
     assert "t" in tracks.features
     assert "area" in tracks.features  # Core feature for backward compatibility
-    assert tracks.graph.nodes[nodes[0]].get("pos") is not None
-    assert tracks.graph.nodes[nodes[0]].get("area") is not None
+    assert tracks.graph[nodes[0]]["pos"] is not None
+    assert tracks.graph[nodes[0]]["area"] is not None
 
     # Other features should NOT be in tracks.features initially
     assert "iou" not in tracks.features
@@ -65,9 +82,9 @@ def test_enable_disable_features(graph_clean, segmentation_2d):
     assert "circularity" in tracks.features
 
     # Verify values are actually computed on the graph
-    assert tracks.graph.nodes[nodes[0]].get("circularity") is not None
+    assert tracks.graph[nodes[0]]["circularity"] is not None
     if edges:
-        assert tracks.graph.edges[edges[0]].get("iou") is not None
+        assert None not in tracks.graph.edge_attrs()["iou"].to_list()
 
     # Disable one feature
     tracks.disable_features(["area"])
@@ -79,7 +96,7 @@ def test_enable_disable_features(graph_clean, segmentation_2d):
     assert "circularity" in tracks.features
 
     # Values still exist on the graph (disabling doesn't erase computed values)
-    assert tracks.graph.nodes[nodes[0]].get("area") is not None
+    assert tracks.graph[1]["area"] is not None
 
     # Disable the remaining enabled features
     tracks.disable_features(["pos", "iou", "circularity"])
@@ -88,10 +105,13 @@ def test_enable_disable_features(graph_clean, segmentation_2d):
     assert "circularity" not in tracks.features
 
 
-def test_get_available_features(graph_clean, segmentation_2d):
+def test_get_available_features(graph_2d_with_computed_features, segmentation_2d):
     """Test get_available_features returns all features from all annotators."""
     tracks = SolutionTracks(
-        graph_clean, segmentation=segmentation_2d, ndim=3, **track_attrs
+        graph_2d_with_computed_features,
+        segmentation=segmentation_2d,
+        ndim=3,
+        **track_attrs,
     )
 
     available = tracks.get_available_features()

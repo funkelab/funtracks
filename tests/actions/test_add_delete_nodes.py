@@ -149,7 +149,7 @@ def test_custom_attributes_preserved(get_tracks, ndim, with_seg):
         ),
     }
     for key, feature in custom_features.items():
-        tracks.add_node_feature(key, feature)
+        tracks.add_feature(key, feature)
 
     # Define attributes including custom ones
     custom_attrs = {

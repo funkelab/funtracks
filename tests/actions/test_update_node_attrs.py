@@ -19,7 +19,7 @@ def test_update_node_attrs(get_tracks, ndim):
         required=False,
         default_value=None,
     )
-    tracks.add_node_feature("score", new_feature)
+    tracks.add_feature("score", new_feature)
 
     action = UpdateNodeAttrs(tracks, node, {"score": 1.0})
     assert tracks.get_node_attr(node, "score") == 1.0
