@@ -131,9 +131,11 @@ def import_graph_from_geff(
             position_attr = pos_mapping  # e.g., ["y", "x"]
             ndims = len(pos_mapping) + 1  # +1 for time
         else:
-            # Single value (shouldn't happen, but fallback)
+            # Single value: pos is stored as ndarray property in GEFF
+            # Infer spatial dims from the array shape
             position_attr = [pos_mapping]
-            ndims = 2
+            pos_array = renamed_node_props["pos"]["values"]
+            ndims = pos_array.shape[1] + 1 if pos_array.ndim == 2 else 2
     else:
         # Legacy separate position keys (for backward compatibility)
         position_attr = [k for k in ("z", "y", "x") if k in node_name_map]
