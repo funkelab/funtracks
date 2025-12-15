@@ -37,6 +37,7 @@ from funtracks.import_export._validation import (
     validate_feature_key_collisions,
     validate_in_memory_geff,
     validate_node_name_map,
+    validate_spatial_dims,
 )
 
 if TYPE_CHECKING:
@@ -224,7 +225,7 @@ class TracksBuilder(ABC):
         - All required_features are mapped
         - Position ("pos") is mapped to coordinate columns
         - All mapped properties exist in importable_node_props
-        - Features with spatial_dims=True have correct number of values
+        - Features with spatial_dims=True have correct number of list elements
 
         Checks for edges:
         - All mapped edge properties exist in importable_edge_props
@@ -232,57 +233,32 @@ class TracksBuilder(ABC):
         Checks for both:
         - No feature key collisions between node and edge features
 
+        Note: Array shapes for spatial_dims features are validated after loading
+        via validate_spatial_dims().
+
         Raises:
             ValueError: If validation fails
         """
         # Preprocess: remove empty lists from name maps
         self._preprocess_name_map()
 
-        # Validate node_name_map
+        # Validate node_name_map (includes spatial_dims validation for list mappings)
         validate_node_name_map(
             self.node_name_map,
             self.importable_node_props,
             self.required_features,
+            available_features=self.available_computed_features,
+            ndim=self.ndim,
         )
 
-        # Validate spatial_dims features have consistent number of values
-        # Use ndim from segmentation if available, otherwise use position mapping
-        expect_spatial_dims: int | None = None
-        spatial_dims_source: str = ""
-        if self.ndim is not None:
-            expect_spatial_dims = self.ndim - 1  # ndim includes time
-            spatial_dims_source = "segmentation"
-        elif "pos" in self.node_name_map:
-            pos_mapping = self.node_name_map["pos"]
-            if isinstance(pos_mapping, list):
-                expect_spatial_dims = len(pos_mapping)
-                spatial_dims_source = "position mapping"
-
-        if expect_spatial_dims is not None:
-            for key, mapping in self.node_name_map.items():
-                if key == "pos" and spatial_dims_source == "position mapping":
-                    # Don't validate pos against itself
-                    continue
-                feature = self.available_computed_features.get(key)
-                if feature is None or not isinstance(feature, dict):
-                    continue
-                if not feature.get("spatial_dims", False):
-                    continue
-                # This feature should match spatial dimensions
-                # Note: This only validates list mappings.
-                # Single-value mappings (e.g., GEFF with ndarray properties) are not
-                # validated here - the array shape is not checked against spatial dims.
-                if isinstance(mapping, list) and len(mapping) != expect_spatial_dims:
-                    display_name = feature.get("display_name", key)
-                    raise ValueError(
-                        f"Feature '{key}' ({display_name}) has {len(mapping)} values "
-                        f"but {spatial_dims_source} has {expect_spatial_dims} spatial "
-                        f"dimensions. Mapping: {mapping}"
-                    )
-
-        # Validate edge_name_map if provided
+        # Validate edge_name_map if provided (includes spatial_dims validation)
         if self.edge_name_map is not None:
-            validate_edge_name_map(self.edge_name_map, self.importable_edge_props)
+            validate_edge_name_map(
+                self.edge_name_map,
+                self.importable_edge_props,
+                available_features=self.available_computed_features,
+                ndim=self.ndim,
+            )
 
         # Check for feature key collisions between nodes and edges
         validate_feature_key_collisions(self.node_name_map, self.edge_name_map)
@@ -413,15 +389,25 @@ class TracksBuilder(ABC):
         """Validate the loaded InMemoryGeff data.
 
         Common validation logic shared across all formats.
-        If optional properties (lineage_id, track_id) fail validation,
-        they are removed with a warning.
+        Validates:
+        - Graph structure (unique nodes, valid edges, etc.)
+        - Spatial_dims features have correct array shapes
+        - Optional properties (lineage_id, track_id) - removed with warning if invalid
 
         Raises:
-            ValueError: If required validation (graph structure) fails
+            ValueError: If required validation fails
         """
         if self.in_memory_geff is None:
             raise ValueError("No data loaded. Call load_source() first.")
 
+        # Validate spatial_dims features have correct array shapes
+        validate_spatial_dims(
+            self.in_memory_geff,
+            self.available_computed_features,
+            ndim=self.ndim,
+        )
+
+        # Validate graph structure and optional properties
         validate_in_memory_geff(self.in_memory_geff)
 
     def construct_graph(self) -> nx.DiGraph:
@@ -624,13 +610,21 @@ class TracksBuilder(ABC):
                 "Call prepare() to auto-infer or set manually."
             )
 
-        # Set ndim from segmentation if provided (needed for validation)
-        if segmentation is not None and self.ndim is None:
-            self.ndim = read_dims(segmentation)
+        # Set ndim early - from segmentation if provided, otherwise from position mapping
+        # This value is used for all subsequent validation and should not change
+        if self.ndim is None:
+            if segmentation is not None:
+                self.ndim = read_dims(segmentation)
+            elif "pos" in self.node_name_map:
+                pos_mapping = self.node_name_map["pos"]
+                if isinstance(pos_mapping, list):
+                    self.ndim = len(pos_mapping) + 1  # +1 for time
+
             # Regenerate available_computed_features with correct ndim
-            self.available_computed_features = get_default_key_to_feature_mapping(
-                self.ndim, display_name=False
-            )
+            if self.ndim is not None:
+                self.available_computed_features = get_default_key_to_feature_mapping(
+                    self.ndim, display_name=False
+                )
 
         # Validate node_name_map is complete and valid
         self.validate_name_map()
@@ -641,7 +635,7 @@ class TracksBuilder(ABC):
         # 2. Combine multi-value feature columns
         self._combine_multi_value_props()
 
-        # 3. Validate InMemoryGeff
+        # 3. Validate InMemoryGeff (includes spatial_dims array shape validation)
         self.validate()
 
         # 4. Construct graph
@@ -650,24 +644,17 @@ class TracksBuilder(ABC):
         # 5. Handle segmentation
         segmentation_array, scale = self.handle_segmentation(graph, segmentation, scale)
 
-        # 6. Infer ndim from position mapping if not already set
-        ndim = self.ndim
-        if ndim is None and "pos" in self.node_name_map:
-            pos_mapping = self.node_name_map["pos"]
-            if isinstance(pos_mapping, list):
-                ndim = len(pos_mapping) + 1  # +1 for time
-
-        # 7. Create SolutionTracks
+        # 6. Create SolutionTracks
         tracks = SolutionTracks(
             graph=graph,
             segmentation=segmentation_array,
             pos_attr="pos",
             time_attr=self.TIME_ATTR,
-            ndim=ndim,
+            ndim=self.ndim,
             scale=scale,
         )
 
-        # 8. Enable and register features
+        # 7. Enable and register features
         if node_features is not None:
             self.enable_features(tracks, node_features, feature_type="node")
         if edge_features is not None:

@@ -565,9 +565,9 @@ class TestSpatialDimsValidation:
             "ellipse_axis_radii": ["major_axis", "semi_minor_axis", "minor_axis"],  # 3D
         }
 
-        # Should raise - ellipse_axis_radii has 3 values but pos has 2
+        # Should raise - ellipse_axis_radii has 3 values but expected 2
         with pytest.raises(
-            ValueError, match="ellipse_axis_radii.*has 3 values.*position mapping.*2"
+            ValueError, match="ellipse_axis_radii.*has 3 values.*expected 2"
         ):
             tracks_from_df(df, node_name_map=name_map)
 
