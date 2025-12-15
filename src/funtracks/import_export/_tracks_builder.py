@@ -269,6 +269,9 @@ class TracksBuilder(ABC):
                 if not feature.get("spatial_dims", False):
                     continue
                 # This feature should match spatial dimensions
+                # Note: This only validates list mappings.
+                # Single-value mappings (e.g., GEFF with ndarray properties) are not
+                # validated here - the array shape is not checked against spatial dims.
                 if isinstance(mapping, list) and len(mapping) != expect_spatial_dims:
                     display_name = feature.get("display_name", key)
                     raise ValueError(
