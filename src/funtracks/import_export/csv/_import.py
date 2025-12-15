@@ -98,20 +98,18 @@ class CSVTracksBuilder(TracksBuilder):
         # Build a new DataFrame with standard key names, copying data for each mapping.
         # This handles duplicate mappings (e.g., seg_id -> "node_id", id -> "node_id")
         # by copying the source column data to each standard key.
-        # For multi-value features (list of column names), combine columns into tuples.
+        # Multi-value features (list of column names) are loaded as individual columns
+        # and combined later by TracksBuilder._combine_multi_value_props().
         new_df_data = {}
         for std_key, csv_col in extended_name_map.items():
             if csv_col is None:
                 continue
             if isinstance(csv_col, list):
-                # Multi-value feature: combine multiple columns into tuples
-                # Check all columns exist
-                missing_cols = [c for c in csv_col if c not in df.columns]
-                if missing_cols:
-                    continue  # Skip if any columns are missing
-                # Combine columns into list of tuples
-                combined = list(zip(*[df[c] for c in csv_col], strict=True))
-                new_df_data[std_key] = combined
+                # Multi-value feature: load each column individually
+                # (combining happens in TracksBuilder._combine_multi_value_props)
+                for col in csv_col:
+                    if col in df.columns and col not in new_df_data:
+                        new_df_data[col] = df[col].copy()
             elif csv_col in df.columns:
                 new_df_data[std_key] = df[csv_col].copy()
         df = pd.DataFrame(new_df_data)

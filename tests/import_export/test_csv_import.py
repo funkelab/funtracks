@@ -597,3 +597,30 @@ class TestSpatialDimsValidation:
         # Should not raise - dimensions are consistent
         tracks = tracks_from_df(df, node_name_map=name_map)
         assert tracks is not None
+
+    def test_empty_list_in_name_map_removed(self):
+        """Test that empty lists in name_map are removed during preprocessing."""
+        df = pd.DataFrame(
+            {
+                "time": [0, 1],
+                "y": [10.0, 20.0],
+                "x": [15.0, 25.0],
+                "id": [1, 2],
+                "parent_id": [-1, 1],
+            }
+        )
+
+        # Include an empty list for ellipse_axis_radii
+        name_map = {
+            "id": "id",
+            "parent_id": "parent_id",
+            "time": "time",
+            "pos": ["y", "x"],
+            "ellipse_axis_radii": [],  # Empty list - should be removed
+        }
+
+        # Should not raise - empty list is removed during preprocessing
+        tracks = tracks_from_df(df, node_name_map=name_map)
+        assert tracks is not None
+        # The empty mapping should not result in a feature being added
+        assert not tracks.graph.nodes[1].get("ellipse_axis_radii")

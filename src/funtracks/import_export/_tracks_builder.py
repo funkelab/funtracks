@@ -143,6 +143,29 @@ class TracksBuilder(ABC):
             self.importable_edge_props, self.available_computed_features
         )
 
+    def _preprocess_name_map(self) -> None:
+        """Preprocess name maps to remove empty lists and None values.
+
+        Empty lists and None values have no semantic meaning and should be
+        treated the same as being absent from the mapping.
+
+        Modifies self.node_name_map and self.edge_name_map in place.
+        """
+        # Remove empty lists and None values from node_name_map
+        keys_to_remove = [
+            k for k, v in self.node_name_map.items() if v is None or v == []
+        ]
+        for k in keys_to_remove:
+            del self.node_name_map[k]
+
+        # Remove empty lists and None values from edge_name_map
+        if self.edge_name_map is not None:
+            keys_to_remove = [
+                k for k, v in self.edge_name_map.items() if v is None or v == []
+            ]
+            for k in keys_to_remove:
+                del self.edge_name_map[k]
+
     def validate_name_map(self) -> None:
         """Validate that node_name_map and edge_name_map contain valid mappings.
 
@@ -162,6 +185,9 @@ class TracksBuilder(ABC):
         Raises:
             ValueError: If validation fails
         """
+        # Preprocess: remove empty lists from name maps
+        self._preprocess_name_map()
+
         # Validate node_name_map
         validate_node_name_map(
             self.node_name_map,
@@ -254,6 +280,81 @@ class TracksBuilder(ABC):
             node_name_map: Maps standard keys to source property names
             node_features: Optional features dict for backward compatibility
         """
+
+    def _combine_multi_value_props(self) -> None:
+        """Combine multi-value feature columns into single properties.
+
+        For features mapped to a list of columns (e.g., "pos": ["y", "x"]),
+        combines those columns into a single property with stacked values.
+
+        This handles both node and edge properties based on node_name_map
+        and edge_name_map respectively.
+
+        Modifies self.in_memory_geff in place.
+        """
+        if self.in_memory_geff is None:
+            raise ValueError("No data loaded. Call load_source() first.")
+
+        # Process node properties
+        node_props = self.in_memory_geff["node_props"]
+        for std_key, source_cols in self.node_name_map.items():
+            if not isinstance(source_cols, list) or len(source_cols) == 0:
+                continue
+            # Check all source columns exist
+            missing_cols = [c for c in source_cols if c not in node_props]
+            if missing_cols:
+                continue  # Skip if any columns are missing
+            # Stack column values into 2D array (n_nodes, num_values)
+            col_arrays = [node_props[c]["values"] for c in source_cols]
+            combined = np.column_stack(col_arrays)
+            # Combine missing arrays with OR (missing if any component is missing)
+            missing_arrays = [node_props[c].get("missing") for c in source_cols]
+            if any(m is not None for m in missing_arrays):
+                combined_missing = np.zeros(len(combined), dtype=np.bool_)
+                for m in missing_arrays:
+                    if m is not None:
+                        combined_missing |= m
+            else:
+                combined_missing = None
+            node_props[std_key] = {
+                "values": combined,
+                "missing": combined_missing,
+            }
+            # Remove the individual source columns
+            for c in source_cols:
+                if c in node_props and c != std_key:
+                    del node_props[c]
+
+        # Process edge properties
+        if self.edge_name_map is not None:
+            edge_props = self.in_memory_geff["edge_props"]
+            for std_key, source_cols in self.edge_name_map.items():
+                if not isinstance(source_cols, list) or len(source_cols) == 0:
+                    continue
+                # Check all source columns exist
+                missing_cols = [c for c in source_cols if c not in edge_props]
+                if missing_cols:
+                    continue  # Skip if any columns are missing
+                # Stack column values into 2D array (n_edges, num_values)
+                col_arrays = [edge_props[c]["values"] for c in source_cols]
+                combined = np.column_stack(col_arrays)
+                # Combine missing arrays with OR (missing if any component is missing)
+                missing_arrays = [edge_props[c].get("missing") for c in source_cols]
+                if any(m is not None for m in missing_arrays):
+                    combined_missing = np.zeros(len(combined), dtype=np.bool_)
+                    for m in missing_arrays:
+                        if m is not None:
+                            combined_missing |= m
+                else:
+                    combined_missing = None
+                edge_props[std_key] = {
+                    "values": combined,
+                    "missing": combined_missing,
+                }
+                # Remove the individual source columns
+                for c in source_cols:
+                    if c in edge_props and c != std_key:
+                        del edge_props[c]
 
     def validate(self) -> None:
         """Validate the loaded InMemoryGeff data.
@@ -484,24 +585,26 @@ class TracksBuilder(ABC):
         # 1. Load source data to InMemoryGeff
         self.load_source(source, self.node_name_map, node_features)
 
-        # 2. Validate InMemoryGeff
+        # 2. Combine multi-value feature columns
+        self._combine_multi_value_props()
+
+        # 3. Validate InMemoryGeff
         self.validate()
 
-        # 3. Construct graph
+        # 4. Construct graph
         graph = self.construct_graph()
 
-        # 4. Handle segmentation
+        # 5. Handle segmentation
         segmentation_array, scale = self.handle_segmentation(graph, segmentation, scale)
 
-        # 5. Infer ndim from position mapping if not already set
+        # 6. Infer ndim from position mapping if not already set
         ndim = self.ndim
         if ndim is None and "pos" in self.node_name_map:
             pos_mapping = self.node_name_map["pos"]
             if isinstance(pos_mapping, list):
                 ndim = len(pos_mapping) + 1  # +1 for time
 
-        # 6. Create SolutionTracks
-        # Use composite "pos" attribute - position columns are combined during loading
+        # 7. Create SolutionTracks
         tracks = SolutionTracks(
             graph=graph,
             segmentation=segmentation_array,
@@ -511,7 +614,7 @@ class TracksBuilder(ABC):
             scale=scale,
         )
 
-        # 6. Enable and register features
+        # 8. Enable and register features
         if node_features is not None:
             self.enable_features(tracks, node_features, feature_type="node")
         if edge_features is not None:

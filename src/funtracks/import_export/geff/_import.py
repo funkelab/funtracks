@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import numpy as np
 from geff._typing import InMemoryGeff
 from geff.core_io._base_read import read_to_memory
 
@@ -96,26 +95,23 @@ def import_graph_from_geff(
     # Rename node property keys from custom (GEFF) to standard using node_name_map
     # Handle duplicate mappings (e.g., seg_id -> "node_id", id -> "node_id") by
     # copying data for each standard key that maps to the same GEFF property.
-    # For multi-value features (list of column names), combine into single property.
+    # Multi-value features (list of column names) are kept as individual columns
+    # and combined later by TracksBuilder._combine_multi_value_props().
     node_props = in_memory_geff["node_props"]
     renamed_node_props = {}
     for std_key, geff_key in node_name_map.items():
         if geff_key is None:
             continue
-        # Multi-value features have a list of column names
+        # Multi-value features have a list of column names - keep them individual
         if isinstance(geff_key, list):
-            # Combine multiple columns into a single multi-value property
-            # Check all columns exist
-            missing_cols = [c for c in geff_key if c not in node_props]
-            if missing_cols:
-                continue  # Skip if any columns are missing
-            # Stack column values into 2D array (n_nodes, num_values)
-            col_arrays = [node_props[c]["values"] for c in geff_key]
-            combined = np.column_stack(col_arrays)
-            renamed_node_props[std_key] = {
-                "values": combined,
-                "missing": None,  # TODO: handle missing values properly
-            }
+            # Copy each column individually (combining happens in TracksBuilder)
+            for col in geff_key:
+                if col in node_props and col not in renamed_node_props:
+                    prop_data = node_props[col]
+                    renamed_node_props[col] = {
+                        "values": prop_data["values"].copy(),
+                        "missing": prop_data.get("missing"),
+                    }
         elif geff_key in node_props:
             prop_data = node_props[geff_key]
             # Copy values to avoid aliasing when multiple keys map to same source
@@ -127,25 +123,24 @@ def import_graph_from_geff(
 
     # Rename edge property keys from custom (GEFF) to standard using edge_name_map
     # Handle duplicate mappings by copying data for each standard key.
-    # For multi-value features (list of column names), combine into single property.
+    # Multi-value features (list of column names) are kept as individual columns
+    # and combined later by TracksBuilder._combine_multi_value_props().
     if edge_name_map is not None:
         edge_props = in_memory_geff["edge_props"]
         renamed_edge_props = {}
         for std_key, geff_key in edge_name_map.items():
             if geff_key is None:
                 continue
-            # Multi-value features have a list of column names
+            # Multi-value features have a list of column names - keep them individual
             if isinstance(geff_key, list):
-                # Combine multiple columns into a single multi-value property
-                missing_cols = [c for c in geff_key if c not in edge_props]
-                if missing_cols:
-                    continue  # Skip if any columns are missing
-                col_arrays = [edge_props[c]["values"] for c in geff_key]
-                combined = np.column_stack(col_arrays)
-                renamed_edge_props[std_key] = {
-                    "values": combined,
-                    "missing": None,
-                }
+                # Copy each column individually (combining happens in TracksBuilder)
+                for col in geff_key:
+                    if col in edge_props and col not in renamed_edge_props:
+                        prop_data = edge_props[col]
+                        renamed_edge_props[col] = {
+                            "values": prop_data["values"].copy(),
+                            "missing": prop_data.get("missing"),
+                        }
             elif geff_key in edge_props:
                 prop_data = edge_props[geff_key]
                 # Copy values to avoid aliasing when multiple keys map to same source
