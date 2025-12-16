@@ -11,9 +11,9 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
-import geff
 import networkx as nx
 import numpy as np
+import tracksdata as td
 from geff._typing import InMemoryGeff
 
 from funtracks.data_model.solution_tracks import SolutionTracks
@@ -37,6 +37,9 @@ from funtracks.import_export._validation import (
     validate_in_memory_geff,
     validate_node_name_map,
     validate_spatial_dims,
+)
+from funtracks.utils.tracksdata_utils import (
+    create_empty_graphview_graph,
 )
 
 if TYPE_CHECKING:
@@ -396,7 +399,45 @@ class TracksBuilder(ABC):
         """
         if self.in_memory_geff is None:
             raise ValueError("No data loaded. Call load_source() first.")
-        return geff.construct(**self.in_memory_geff)
+
+        graph = create_empty_graphview_graph(
+            with_pos=True,
+            with_area="seg_id" in self.in_memory_geff["node_props"],
+            with_iou="iou" in self.in_memory_geff["edge_props"],
+            database=":memory:",
+        )
+
+        node_ids = [int(i) for i in self.in_memory_geff["node_ids"]]
+        node_attrs = []
+        for idx in range(len(self.in_memory_geff["node_ids"])):
+            node_attr = {}
+            node_attr[td.DEFAULT_ATTR_KEYS.SOLUTION] = 1  # Default solution value
+            for key, prop in self.in_memory_geff["node_props"].items():
+                if key == self.TIME_ATTR:
+                    key = "t"
+                value = prop["values"][idx]
+                if prop.get("missing") is not None and prop["missing"][idx]:
+                    value = None
+                node_attr[key] = value
+            node_attrs.append(node_attr)
+
+        edge_attrs = []
+        for idx in range(len(self.in_memory_geff["edge_ids"])):
+            edge_attr = {}
+            edge_attr["source_id"] = int(self.in_memory_geff["edge_ids"][idx][0])
+            edge_attr["target_id"] = int(self.in_memory_geff["edge_ids"][idx][1])
+            edge_attr[td.DEFAULT_ATTR_KEYS.SOLUTION] = 1  # Default solution value
+            for key, prop in self.in_memory_geff["edge_props"].items():
+                value = prop["values"][idx]
+                if prop.get("missing") is not None and prop["missing"][idx]:
+                    value = None
+                edge_attr[key] = value
+            edge_attrs.append(edge_attr)
+
+        graph.bulk_add_nodes(nodes=node_attrs, indices=node_ids)
+        graph.bulk_add_edges(edge_attrs)
+
+        return graph
 
     def handle_segmentation(
         self,
@@ -463,8 +504,7 @@ class TracksBuilder(ABC):
             return seg_array.compute(), scale
 
         # Relabel segmentation: seg_id -> node_id
-        time_attr = "time"
-        time_values = node_props[time_attr]["values"]
+        time_values = node_props[self.TIME_ATTR]["values"]
         new_segmentation = relabel_segmentation(
             seg_array, graph, node_ids, seg_ids, time_values
         )
