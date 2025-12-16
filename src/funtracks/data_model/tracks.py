@@ -292,7 +292,7 @@ class Tracks:
                 # Add to FeatureDict if not already there
                 if key not in self.features:
                     feature, _ = self.annotators.all_features[key]
-                    self.add_feature(key, feature)
+                    self.features[key] = feature
                 self.annotators.activate_features([key])
             else:
                 # enable it (compute it)
@@ -592,7 +592,7 @@ class Tracks:
         self.features[key] = feature
 
         # Perform custom graph operations when a feature is added
-        if feature["feature_type"] == "node":
+        if feature["feature_type"] == "node" and key not in self.graph.node_attr_keys():
             self.graph.add_node_attr_key(key, default_value=feature["default_value"])
-        elif feature["feature_type"] == "edge":
+        elif feature["feature_type"] == "edge" and key not in self.graph.edge_attr_keys():
             self.graph.add_edge_attr_key(key, default_value=feature["default_value"])
