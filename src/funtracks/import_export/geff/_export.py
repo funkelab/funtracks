@@ -6,7 +6,6 @@ from typing import (
     Literal,
 )
 
-import geff
 import geff_spec
 import networkx as nx
 import numpy as np
@@ -71,11 +70,23 @@ def export_to_geff(
     if tracks.scale is None:
         tracks.scale = (1.0,) * tracks.ndim
 
+    # Create axes metadata
+    axes = []
+    for name, axis_type, scale in zip(axis_names, axis_types, tracks.scale, strict=True):
+        axes.append(
+            {
+                "name": name,
+                "type": axis_type,
+                "scale": scale,
+            }
+        )
+
     metadata = GeffMetadata(
         geff_version=geff_spec.__version__,
         directed=isinstance(graph, nx.DiGraph),
         node_props_metadata={},
         edge_props_metadata={},
+        axes=axes,
     )
 
     # Save segmentation if present
@@ -135,20 +146,11 @@ def export_to_geff(
 
     # Filter the graph if node_ids is provided
     if node_ids is not None:
-        graph = graph.subgraph(nodes_to_keep).copy()
+        graph = graph.filter(node_ids=nodes_to_keep).subgraph()
 
     # Save the graph in a 'tracks' folder
     tracks_path = directory / "tracks"
-    geff.write(
-        graph=graph,
-        store=tracks_path,
-        metadata=metadata,
-        axis_names=axis_names,
-        axis_types=axis_types,
-        axis_scales=tracks.scale,
-        overwrite=overwrite,
-        zarr_format=zarr_format,
-    )
+    graph.to_geff(geff_store=tracks_path, geff_metadata=metadata, zarr_format=zarr_format)
 
 
 def split_position_attr(tracks: Tracks) -> tuple[nx.DiGraph, list[str] | None]:
@@ -169,15 +171,35 @@ def split_position_attr(tracks: Tracks) -> tuple[nx.DiGraph, list[str] | None]:
 
     if isinstance(pos_key, str):
         # Position is stored as a single attribute, need to split
-        new_graph = tracks.graph.copy()
-        new_keys = ["y", "x"]
-        if tracks.ndim == 4:
-            new_keys.insert(0, "z")
-        for _, attrs in new_graph.nodes(data=True):
-            pos = attrs.pop(pos_key)
-            for i in range(len(new_keys)):
-                attrs[new_keys[i]] = pos[i]
+        new_graph = tracks.graph.detach()
+        new_graph = new_graph.filter().subgraph()
 
+        # Register new attribute keys
+        new_graph.add_node_attr_key("x", default_value=0.0)
+        new_graph.add_node_attr_key("y", default_value=0.0)
+
+        # Get all position values at once
+        pos_values = new_graph.node_attrs()["pos"].to_numpy()
+        ndim = pos_values.shape[1]
+
+        if ndim == 2:
+            new_keys = ["y", "x"]
+            new_graph.update_node_attrs(
+                attrs={"x": pos_values[:, 1], "y": pos_values[:, 0]},
+                node_ids=new_graph.node_ids(),
+            )
+        elif ndim == 3:
+            new_keys = ["z", "y", "x"]
+            new_graph.add_node_attr_key("z", default_value=0.0)
+            new_graph.update_node_attrs(
+                attrs={
+                    "x": pos_values[:, 2],
+                    "y": pos_values[:, 1],
+                    "z": pos_values[:, 0],
+                },
+                node_ids=new_graph.node_ids(),
+            )
+        new_graph.remove_node_attr_key(pos_key)
         return new_graph, new_keys
     elif pos_key is not None:
         # Position is already split into separate attributes

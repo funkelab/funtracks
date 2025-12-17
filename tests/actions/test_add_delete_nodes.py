@@ -24,8 +24,15 @@ def test_add_delete_nodes(get_tracks, ndim, with_seg):
     reference_seg = copy.deepcopy(tracks.segmentation)
 
     # Start with an empty Tracks
+    node_attributes = [
+        tracks.features.time_key,
+        tracks.features.tracklet_key,
+        tracks.features.position_key,
+    ]
+    edge_attributes = ["iou"] if with_seg else []
     empty_graph = create_empty_graphview_graph(
-        with_pos=True, with_track_id=True, with_area=with_seg, with_iou=with_seg
+        node_attributes=node_attributes + (["area"] if with_seg else []),
+        edge_attributes=edge_attributes,
     )
     empty_seg = np.zeros_like(tracks.segmentation) if with_seg else None
     tracks.graph = empty_graph

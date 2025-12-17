@@ -68,7 +68,8 @@ def test_from_tracks_cls_recompute(graph_2d_with_computed_features):
 
 def test_next_track_id_empty():
     graph = create_empty_graphview_graph(
-        with_pos=True, with_track_id=True, with_area=False, with_iou=False
+        node_attributes=["pos", "track_id"],
+        edge_attributes=[],
     )
     seg = np.zeros(shape=(10, 100, 100, 100), dtype=np.uint64)
     tracks = SolutionTracks(graph, segmentation=seg, **track_attrs)

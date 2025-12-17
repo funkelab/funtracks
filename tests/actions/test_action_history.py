@@ -9,7 +9,8 @@ from funtracks.utils.tracksdata_utils import create_empty_graphview_graph
 def test_action_history():
     history = ActionHistory()
     empty_graph = create_empty_graphview_graph(
-        with_pos=True, with_track_id=True, with_area=False, with_iou=False
+        node_attributes=["track_id", "pos"],
+        edge_attributes=[],
     )
     tracks = SolutionTracks(empty_graph, ndim=3, tracklet_attr="track_id", time_attr="t")
     pos = [0, 1]

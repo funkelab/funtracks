@@ -248,9 +248,9 @@ class TrackAnnotator(GraphAnnotator):
                 },
                 node_ids=node_ids_external,
             )
-            self.tracks.track_id_to_node[track_id] = node_ids_external
+            self.tracklet_id_to_nodes[track_id] = node_ids_external
             track_id += 1
-        self.max_track_id = track_id - 1
+        self.max_tracklet_id = track_id - 1
 
     def update(self, action: BasicAction) -> None:
         """Update track-level features based on the action.

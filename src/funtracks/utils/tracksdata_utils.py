@@ -12,10 +12,10 @@ from tracksdata.nodes._mask import Mask
 
 
 def create_empty_graphview_graph(
-    with_pos: bool = False,
-    with_track_id: bool = False,
-    with_area: bool = False,
-    with_iou: bool = False,
+    node_attributes: list[str] | None = None,
+    edge_attributes: list[str] | None = None,
+    node_default_values: list[Any] | None = None,
+    edge_default_values: list[Any] | None = None,
     database: str | None = None,
     position_attrs: list[str] | None = None,
 ) -> td.graph.GraphView:
@@ -23,14 +23,16 @@ def create_empty_graphview_graph(
     Create an empty tracksdata GraphView with standard node and edge attributes.
     Parameters
     ----------
-    with_pos : bool
-        Whether to include position attributes.
-    with_track_id : bool
-        Whether to include track ID attribute.
-    with_area : bool
-        Whether to include area attribute.
-    with_iou : bool
-        Whether to include IOU attribute.
+    node_attributes : list[str] | None
+        List of node attribute names to include. (providing time attribute not necessary)
+    edge_attributes : list[str] | None
+        List of edge attribute names to include.
+    node_default_values : list[Any] | None
+        List of default values for each node attribute.
+        Must match length of node_attributes.
+    edge_default_values : list[Any] | None
+        List of default values for each edge attribute.
+        Must match length of edge_attributes.
     database : str | None
         Path to the SQLite database file. If None, creates a unique temporary file.
         Use ':memory:' for in-memory database (may cause issues with pickling in pytest).
@@ -52,6 +54,20 @@ def create_empty_graphview_graph(
         unique_id = uuid.uuid4().hex[:8]
         database = f"{temp_dir}/funtracks_test_{unique_id}.db"
 
+    if node_default_values is not None:
+        assert len(node_default_values) == len(node_attributes or []), (
+            "Length of node_default_values must match length of node_attributes"
+        )
+    else:
+        node_default_values = [0.0] * len(node_attributes or [])
+
+    if edge_default_values is not None:
+        assert len(edge_default_values) == len(edge_attributes or []), (
+            "Length of edge_default_values must match length of edge_attributes"
+        )
+    else:
+        edge_default_values = [0.0] * len(edge_attributes or [])
+
     kwargs = {
         "drivername": "sqlite",
         "database": database,
@@ -59,27 +75,39 @@ def create_empty_graphview_graph(
     }
     graph_sql = td.graph.SQLGraph(**kwargs)
 
-    if with_pos:
+    # Add standard node and edge attributes
+    if "pos" in (node_attributes or []) or any(
+        attr in (node_attributes or []) for attr in position_attrs
+    ):
         if "pos" in position_attrs:
             graph_sql.add_node_attr_key("pos", default_value=None)
         else:
             if "x" in position_attrs:
-                graph_sql.add_node_attr_key("x", default_value=0)
+                graph_sql.add_node_attr_key("x", default_value=0.0)
             if "y" in position_attrs:
-                graph_sql.add_node_attr_key("y", default_value=0)
+                graph_sql.add_node_attr_key("y", default_value=0.0)
             if "z" in position_attrs:
-                graph_sql.add_node_attr_key("z", default_value=0)
-    if with_area:
-        graph_sql.add_node_attr_key("area", default_value=0.0)
-    if with_track_id:
-        graph_sql.add_node_attr_key("track_id", default_value=0)
+                graph_sql.add_node_attr_key("z", default_value=0.0)
+
+    for attr in node_attributes or []:
+        if attr not in graph_sql.node_attr_keys():
+            graph_sql.add_node_attr_key(
+                attr,
+                default_value=node_default_values[(node_attributes or []).index(attr)],
+            )
+
+    for attr in edge_attributes or []:
+        if attr not in graph_sql.edge_attr_keys():
+            graph_sql.add_edge_attr_key(
+                attr,
+                default_value=edge_default_values[(edge_attributes or []).index(attr)],
+            )
     graph_sql.add_node_attr_key(td.DEFAULT_ATTR_KEYS.SOLUTION, default_value=1)
+    graph_sql.add_edge_attr_key(td.DEFAULT_ATTR_KEYS.SOLUTION, default_value=1)
+
     # TODO Teun: segmentation
     # graph_sql.add_node_attr_key(td.DEFAULT_ATTR_KEYS.MASK, default_value=None)
     # graph_sql.add_node_attr_key(td.DEFAULT_ATTR_KEYS.BBOX, default_value=None)
-    if with_iou:
-        graph_sql.add_edge_attr_key("iou", default_value=0)
-    graph_sql.add_edge_attr_key(td.DEFAULT_ATTR_KEYS.SOLUTION, default_value=1)
 
     graph_td_sub = graph_sql.filter(
         td.NodeAttr(td.DEFAULT_ATTR_KEYS.SOLUTION) == 1,
@@ -299,3 +327,108 @@ def td_get_single_attr_from_edge(graph, edge: tuple[int, int], attrs: Sequence[s
     # TODO Teun: AND do edge_attrs(key) directly to prevent loading all attributes
     item = graph.filter(node_ids=[edge[0], edge[1]]).edge_attrs()[attrs].item()
     return item
+
+
+def td_relabel_nodes(graph, mapping: dict[int, int]) -> td.graph.SQLGraph:
+    """Relabel nodes in a tracksdata graph according to a mapping.
+
+    Args:
+        graph: A tracksdata graph
+        mapping: Dictionary mapping old node IDs to new node IDs
+
+    Returns:
+        A new SQLGraph with relabeled nodes
+    """
+
+    # For IndexedRXGraph or SQLGraph
+    old_graph = graph
+
+    kwargs = {
+        "drivername": "sqlite",
+        "database": ":memory:",
+        "overwrite": True,
+    }
+    new_graph = td.graph.SQLGraph(**kwargs)
+
+    # Copy attribute key registrations with defaults
+    node_defaults = get_node_attr_defaults(graph)
+    for key, default_val in node_defaults.items():
+        new_graph.add_node_attr_key(key, default_value=default_val)
+
+    edge_defaults = get_edge_attr_defaults(graph)
+    for key, default_val in edge_defaults.items():
+        new_graph.add_edge_attr_key(key, default_value=default_val)
+
+    # Get all data
+    old_nodes = old_graph.node_attrs()
+    old_edges = old_graph.edge_attrs()
+
+    # Use the provided mapping
+    id_mapping = mapping
+
+    # Add nodes with new IDs
+    for row in old_nodes.iter_rows(named=True):
+        old_id = row.pop("node_id")
+        new_id = id_mapping[old_id]
+        new_graph.add_node(row, index=new_id)
+
+    # Add edges with remapped IDs
+    for row in old_edges.iter_rows(named=True):
+        source_id = id_mapping[row["source_id"]]
+        target_id = id_mapping[row["target_id"]]
+        attrs = {
+            k: v for k, v in row.items() if k not in ["edge_id", "source_id", "target_id"]
+        }
+        new_graph.add_edge(source_id, target_id, attrs)
+
+    return new_graph
+
+
+def get_node_attr_defaults(graph) -> dict[str, Any]:
+    """Get node attribute keys and their default values from SQLGraph."""
+    # Unwrap GraphView if needed
+    actual_graph = graph._root if hasattr(graph, "_root") else graph
+
+    defaults = {}
+    for col in actual_graph.Node.__table__.columns:
+        col_name = col.name
+        # Skip system columns
+        if col_name in ["node_id", "t"]:
+            continue
+
+        # Extract default value from SQLAlchemy column
+        default_val = None
+        if (
+            hasattr(col, "default")
+            and col.default is not None
+            and hasattr(col.default, "arg")
+        ):
+            default_val = col.default.arg
+
+        defaults[col_name] = default_val
+    return defaults
+
+
+def get_edge_attr_defaults(graph) -> dict[str, Any]:
+    """Get edge attribute keys and their default values from SQLGraph."""
+    # Unwrap GraphView if needed
+    actual_graph = graph._root if hasattr(graph, "_root") else graph
+
+    defaults = {}
+    for col in actual_graph.Edge.__table__.columns:
+        col_name = col.name
+        # Skip system columns
+        if col_name in ["edge_id", "source_id", "target_id"]:
+            continue
+
+        # Extract default value
+        default_val = None
+        if (
+            hasattr(col, "default")
+            and col.default is not None
+            and hasattr(col.default, "arg")
+        ):
+            default_val = col.default.arg
+
+        defaults[col_name] = default_val
+    return defaults

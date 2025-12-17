@@ -39,11 +39,14 @@ def test_export_to_geff(
         # Determine position attribute keys based on dimensions
         pos_keys = ["y", "x"] if ndim == 3 else ["z", "y", "x"]
         # Split the composite position attribute into separate attributes
-        for node in graph.nodes():
-            pos = graph.nodes[node]["pos"]
+        for key in pos_keys:
+            graph.add_node_attr_key(key, default_value=0.0)
+        for node in graph.node_ids():
+            pos = graph[node]["pos"]
             for i, key in enumerate(pos_keys):
-                graph.nodes[node][key] = pos[i]
-            del graph.nodes[node]["pos"]
+                graph[node][key] = pos[i]
+            # del graph.nodes[node]["pos"]
+        graph.remove_node_attr_key("pos")
         # Create Tracks with split position attributes
         # Features like area, track_id will be auto-detected from the graph
         tracks_cls = SolutionTracks if is_solution else Tracks
@@ -58,13 +61,17 @@ def test_export_to_geff(
     else:
         # Use get_tracks fixture for the simple case
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=is_solution)
-    export_to_geff(tracks, tmp_path)
-    z = zarr.open((tmp_path / "tracks").as_posix(), mode="r")
+
+    # Export to subdirectory to avoid conflicts with database files in tmp_path
+    export_dir = tmp_path / "export"
+    export_dir.mkdir()
+    export_to_geff(tracks, export_dir)
+    z = zarr.open((export_dir / "tracks").as_posix(), mode="r")
     assert isinstance(z, zarr.Group)
 
     # Check that segmentation was saved (only when using segmentation)
     if with_seg:
-        seg_path = tmp_path / "segmentation"
+        seg_path = export_dir / "segmentation"
         seg_zarr = zarr.open(str(seg_path), mode="r")
         assert isinstance(seg_zarr, zarr.Array)
         np.testing.assert_array_equal(seg_zarr[:], tracks.segmentation)

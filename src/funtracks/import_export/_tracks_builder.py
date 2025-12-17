@@ -386,7 +386,9 @@ class TracksBuilder(ABC):
         # Validate graph structure and optional properties
         validate_in_memory_geff(self.in_memory_geff)
 
-    def construct_graph(self) -> nx.DiGraph:
+    def construct_graph(
+        self, node_name_map: dict[str, str | list[str]] | None = None
+    ) -> td.graph.GraphView:
         """Construct NetworkX graph from validated InMemoryGeff data.
 
         Common logic shared across all formats.
@@ -400,10 +402,20 @@ class TracksBuilder(ABC):
         if self.in_memory_geff is None:
             raise ValueError("No data loaded. Call load_source() first.")
 
+        if node_name_map is not None:
+            node_attributes = list(self.in_memory_geff["node_props"].keys())
+            node_default_values = [
+                0.0
+                if key in node_name_map and isinstance(node_name_map[key], str)
+                else None
+                for key in node_attributes
+            ]
         graph = create_empty_graphview_graph(
-            with_pos=True,
-            with_area="seg_id" in self.in_memory_geff["node_props"],
-            with_iou="iou" in self.in_memory_geff["edge_props"],
+            node_attributes=list(self.in_memory_geff["node_props"].keys()),
+            edge_attributes=list(self.in_memory_geff["edge_props"].keys()),
+            node_default_values=node_default_values
+            if node_name_map is not None
+            else None,
             database=":memory:",
         )
 
@@ -411,14 +423,19 @@ class TracksBuilder(ABC):
         node_attrs = []
         for idx in range(len(self.in_memory_geff["node_ids"])):
             node_attr = {}
-            node_attr[td.DEFAULT_ATTR_KEYS.SOLUTION] = 1  # Default solution value
+            node_attr[td.DEFAULT_ATTR_KEYS.SOLUTION] = 1  # Add default solution value
             for key, prop in self.in_memory_geff["node_props"].items():
+                # force time key to be "t" in graph
                 if key == self.TIME_ATTR:
                     key = "t"
                 value = prop["values"][idx]
+                # set missing attribute to None
                 if prop.get("missing") is not None and prop["missing"][idx]:
                     value = None
                 node_attr[key] = value
+            for key in graph.node_attr_keys():
+                if key not in node_attr:
+                    node_attr[key] = None  # type: ignore[assignment]
             node_attrs.append(node_attr)
 
         edge_attrs = []
@@ -432,10 +449,16 @@ class TracksBuilder(ABC):
                 if prop.get("missing") is not None and prop["missing"][idx]:
                     value = None
                 edge_attr[key] = value
+            for key in graph.edge_attr_keys():
+                if key not in edge_attr:
+                    edge_attr[key] = None  # type: ignore[assignment]
             edge_attrs.append(edge_attr)
 
         graph.bulk_add_nodes(nodes=node_attrs, indices=node_ids)
         graph.bulk_add_edges(edge_attrs)
+
+        if self.TIME_ATTR != "t":
+            graph.remove_node_attr_key(self.TIME_ATTR)
 
         return graph
 
@@ -444,7 +467,7 @@ class TracksBuilder(ABC):
         graph: nx.DiGraph,
         segmentation: Path | np.ndarray | None,
         scale: list[float] | None,
-    ) -> tuple[np.ndarray | None, list[float] | None]:
+    ) -> tuple[np.ndarray | None, list[float] | None, nx.DiGraph]:
         """Load, validate, and optionally relabel segmentation.
 
         Common logic shared across all formats.
@@ -455,13 +478,14 @@ class TracksBuilder(ABC):
             scale: Spatial scale for coordinate transformation
 
         Returns:
-            Tuple of (segmentation array, scale) or (None, scale)
+            Tuple of (segmentation array, scale, graph). The graph may be relabeled
+            if node_id 0 exists in the original graph.
 
         Raises:
             ValueError: If segmentation validation fails
         """
         if segmentation is None:
-            return None, scale
+            return None, scale, graph
 
         if self.in_memory_geff is None:
             raise ValueError("No data loaded. Call load_source() first.")
@@ -482,8 +506,8 @@ class TracksBuilder(ABC):
 
         # Validate segmentation matches graph (only if position is loaded)
         # If position is not in graph, it will be computed from segmentation
-        sample_node = next(iter(graph.nodes()))
-        has_position = "pos" in graph.nodes[sample_node]
+        # sample_node = next(iter(graph.node_ids()))
+        has_position = "pos" in graph.node_attr_keys()
         if has_position:
             from funtracks.import_export._validation import validate_graph_seg_match
 
@@ -493,7 +517,7 @@ class TracksBuilder(ABC):
         node_props = self.in_memory_geff["node_props"]
         if "seg_id" not in node_props:
             # No seg_id property, assume segmentation labels match node IDs
-            return seg_array.compute(), scale
+            return seg_array.compute(), scale, graph
 
         node_ids = self.in_memory_geff["node_ids"]
         seg_ids = node_props["seg_id"]["values"]
@@ -501,15 +525,15 @@ class TracksBuilder(ABC):
         # Check if any seg_id differs from node_id
         if np.array_equal(seg_ids, node_ids):
             # No relabeling needed
-            return seg_array.compute(), scale
+            return seg_array.compute(), scale, graph
 
         # Relabel segmentation: seg_id -> node_id
         time_values = node_props[self.TIME_ATTR]["values"]
-        new_segmentation = relabel_segmentation(
+        new_segmentation, graph = relabel_segmentation(
             seg_array, graph, node_ids, seg_ids, time_values
         )
 
-        return new_segmentation, scale
+        return new_segmentation, scale, graph
 
     def enable_features(
         self,
@@ -593,6 +617,7 @@ class TracksBuilder(ABC):
         scale: list[float] | None = None,
         node_features: dict[str, bool] | None = None,
         edge_features: dict[str, bool] | None = None,
+        node_name_map: dict[str, str | list[str]] | None = None,
     ) -> SolutionTracks:
         """Orchestrate the full construction process.
 
@@ -602,6 +627,7 @@ class TracksBuilder(ABC):
             scale: Optional spatial scale
             node_features: Optional node features to enable/load
             edge_features: Optional edge features to enable/load
+            node_name_map: Optional node_name_map to override self.node_name_map
 
         Returns:
             Fully constructed SolutionTracks object
@@ -665,10 +691,12 @@ class TracksBuilder(ABC):
         self.validate()
 
         # 4. Construct graph
-        graph = self.construct_graph()
+        graph = self.construct_graph(node_name_map)
 
         # 5. Handle segmentation
-        segmentation_array, scale = self.handle_segmentation(graph, segmentation, scale)
+        segmentation_array, scale, graph = self.handle_segmentation(
+            graph, segmentation, scale
+        )
 
         # 6. Create SolutionTracks
         tracks = SolutionTracks(

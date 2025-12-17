@@ -74,12 +74,23 @@ def _make_graph(
     Returns:
         A graph with the requested features
     """
+
+    node_attributes = []
+    edge_attributes = []
+    if with_pos:
+        node_attributes.append("pos")
+    if with_track_id:
+        node_attributes.append("track_id")
+    if with_area:
+        node_attributes.append("area")
+    if with_iou:
+        edge_attributes.append("iou")
+
     graph = create_empty_graphview_graph(
-        with_pos=with_pos,
-        with_track_id=with_track_id,
-        with_area=with_area,
+        node_attributes=node_attributes,
+        edge_attributes=edge_attributes,
         database=database,
-        position_attrs=["pos"],
+        position_attrs=["pos"] if with_pos else None,
     )
 
     # Base node data (always has time)
@@ -149,7 +160,6 @@ def _make_graph(
 
     # Add IOUs to edges if requested
     if with_iou:
-        graph.add_edge_attr_key("iou", default_value=0.0)
         for edge, iou in ious.items():
             if graph.has_edge(edge[0], edge[1]):
                 edge_id = graph.edge_id(edge[0], edge[1])
