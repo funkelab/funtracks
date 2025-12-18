@@ -39,7 +39,7 @@ dependencies =[
     "pandas>=2.3.3",
     "zarr>=2.18,<4",
     "numcodecs>=0.13,<0.16",
-    "tracksdata@git+https://github.com/royerlab/tracksdata@daba10830826b3652ed5ee296c3fd83cac52b27a",
+    "tracksdata@git+https://github.com/royerlab/tracksdata@b35a0f111f8d39baec00245a457d65941222174b",
 ]
 
 [project.urls]

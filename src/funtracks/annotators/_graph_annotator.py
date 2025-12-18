@@ -66,6 +66,22 @@ class GraphAnnotator:
                 feat, _ = self.all_features[key]
                 self.all_features[key] = (feat, True)
 
+                # Ensure attribute key exists in graph schema
+                if (
+                    feat["feature_type"] == "node"
+                    and key not in self.tracks.graph.node_attr_keys()
+                ):
+                    self.tracks.graph.add_node_attr_key(
+                        key, default_value=feat["default_value"]
+                    )
+                elif (
+                    feat["feature_type"] == "edge"
+                    and key not in self.tracks.graph.edge_attr_keys()
+                ):
+                    self.tracks.graph.add_edge_attr_key(
+                        key, default_value=feat["default_value"]
+                    )
+
     def deactivate_features(self, keys: list[str]) -> None:
         """Deactivate computation of the given features in the annotation process.
 

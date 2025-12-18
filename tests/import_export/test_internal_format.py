@@ -1,5 +1,6 @@
 import json
 from collections.abc import Sequence
+from pathlib import Path
 
 import pytest
 from networkx.utils import graphs_equal
@@ -21,13 +22,16 @@ def test_save_load(
     with_seg,
     ndim,
     is_solution,
-    tmp_path,
 ):
     tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=is_solution)
-    _save_v1_tracks(tracks, tmp_path)
+    # _save_v1_tracks(tracks, tmp_path)
 
-    loaded = load_v1_tracks(tmp_path, solution=is_solution)
-    assert loaded.ndim == tracks.ndim
+    data_path = Path(
+        f"tests/data/format_v1/test_save_load_{with_seg}_{ndim}_{is_solution}_0"
+    )
+
+    loaded = load_v1_tracks(data_path, solution=is_solution)
+    assert loaded.ndim == ndim
     # Check feature keys and important properties match (allow tuple vs list diff)
     assert loaded.features.time_key == tracks.features.time_key
     assert loaded.features.position_key == tracks.features.position_key

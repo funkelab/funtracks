@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import TYPE_CHECKING
 
-import networkx as nx
 import rustworkx as rx
 import tracksdata as td
 
@@ -198,8 +197,16 @@ class TrackAnnotator(GraphAnnotator):
         Each connected component will get a unique id, and the relevant class
         attributes will be updated.
         """
-        lineages = nx.weakly_connected_components(self.tracks.graph)
-        max_id, ids_to_nodes = self._assign_ids(lineages, self.lineage_key)
+        lineages_internal = rx.weakly_connected_components(self.tracks.graph.rx_graph)
+        lineages_external = []
+        for lin in lineages_internal:
+            node_ids_internal = list(lin)
+            node_ids_external = [
+                self.tracks.graph.node_ids()[nid] for nid in node_ids_internal
+            ]
+            lineages_external.append(node_ids_external)
+
+        max_id, ids_to_nodes = self._assign_ids(lineages_external, self.lineage_key)
         self.max_lineage_id = max_id
         self.lineage_id_to_nodes = ids_to_nodes
 

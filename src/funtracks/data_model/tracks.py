@@ -292,7 +292,7 @@ class Tracks:
                 # Add to FeatureDict if not already there
                 if key not in self.features:
                     feature, _ = self.annotators.all_features[key]
-                    self.features[key] = feature
+                    self.add_feature(key, feature)
                 self.annotators.activate_features([key])
             else:
                 # enable it (compute it)
@@ -577,6 +577,7 @@ class Tracks:
         for key in feature_keys:
             if key in self.features:
                 del self.features[key]
+                # TODO Teun: do we need to remove feature here from graph as well?
 
     def add_feature(self, key: str, feature: Feature) -> None:
         """Add a feature to the features dictionary and perform graph operations.
