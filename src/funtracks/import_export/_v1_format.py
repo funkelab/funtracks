@@ -9,6 +9,7 @@ import networkx as nx
 import numpy as np
 
 from funtracks.features import FeatureDict
+from funtracks.utils.tracksdata_utils import convert_graph_nx_to_td
 
 if TYPE_CHECKING:
     from ..data_model import SolutionTracks, Tracks
@@ -16,24 +17,6 @@ if TYPE_CHECKING:
 GRAPH_FILE = "graph.json"
 SEG_FILE = "seg.npy"
 ATTRS_FILE = "attrs.json"
-
-
-def _save_v1_tracks(tracks: Tracks, directory: Path) -> None:
-    """Only used for testing backward compatibility!
-
-    Currently, saves the graph as a json file in networkx node link data format,
-    saves the segmentation as a numpy npz file, and saves the time and position
-    attributes and scale information in an attributes json file.
-    Will make the directory if it doesn't exist.
-
-    Args:
-        tracks (Tracks): the tracks to save
-        directory (Path): The directory to save the tracks in.
-    """
-    directory.mkdir(exist_ok=True, parents=True)
-    _save_graph(tracks, directory)
-    _save_seg(tracks, directory)
-    _save_attrs(tracks, directory)
 
 
 def _save_graph(tracks: Tracks, directory: Path) -> None:
@@ -120,13 +103,15 @@ def load_v1_tracks(
         Tracks: A tracks object loaded from the given directory
     """
     graph_file = directory / GRAPH_FILE
-    graph = _load_graph(graph_file)
+    graph_nx = _load_graph(graph_file)
 
     seg_file = directory / SEG_FILE
     seg = _load_seg(seg_file, seg_required=seg_required)
 
     attrs_file = directory / ATTRS_FILE
     attrs = _load_attrs(attrs_file)
+
+    graph_td = convert_graph_nx_to_td(graph_nx)
 
     # filtering the warnings because the default values of time_attr and pos_attr are
     # not None. Therefore, new style Tracks attrs that have features instead of
@@ -142,9 +127,9 @@ def load_v1_tracks(
         )
         tracks: Tracks
         if solution:
-            tracks = SolutionTracks(graph, seg, **attrs)
+            tracks = SolutionTracks(graph_td, seg, **attrs)
         else:
-            tracks = Tracks(graph, seg, **attrs)
+            tracks = Tracks(graph_td, seg, **attrs)
     return tracks
 
 

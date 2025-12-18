@@ -3,6 +3,7 @@ import uuid
 from collections.abc import Sequence
 from typing import Any
 
+import networkx as nx
 import numpy as np
 import polars as pl
 import tracksdata as td
@@ -395,3 +396,69 @@ def get_edge_attr_defaults(graph) -> dict[str, Any]:
 
         defaults[col_name] = default_val
     return defaults
+
+
+def convert_graph_nx_to_td(graph_nx: nx.DiGraph) -> td.graph.GraphView:
+    """Convert a NetworkX DiGraph to a tracksdata SQLGraph.
+
+    Args:
+        graph_nx: The NetworkX DiGraph to convert.
+
+    Returns:
+        A tracksdata SQLGraph representing the same graph.
+    """
+
+    # Initialize an empty tracksdata SQLGraph
+    kwargs = {
+        "drivername": "sqlite",
+        "database": ":memory:",
+        "overwrite": True,
+    }
+    graph_td = td.graph.SQLGraph(**kwargs)
+
+    # Get all nodes and edges with attributes
+    all_nodes = list(graph_nx.nodes(data=True))
+    all_edges = list(graph_nx.edges(data=True))
+
+    # Add node attribute keys to tracksdata graph
+    for attr, value in all_nodes[0][1].items():
+        if attr not in graph_td.node_attr_keys():
+            default_value = None if isinstance(value, list) else 0.0
+            graph_td.add_node_attr_key(attr, default_value=default_value)
+        else:
+            if attr != "t":
+                raise Warning(
+                    f"Node attribute '{attr}' already exists in "
+                    f"tracksdata graph. Skipping addition."
+                )
+    graph_td.add_node_attr_key(td.DEFAULT_ATTR_KEYS.SOLUTION, default_value=1)
+
+    # Add edge attribute keys to tracksdata graph
+    for attr, value in all_edges[0][2].items():
+        if attr not in graph_td.edge_attr_keys():
+            default_value = None if isinstance(value, list) else 0.0
+            graph_td.add_edge_attr_key(attr, default_value=default_value)
+        else:
+            raise Warning(
+                f"Edge attribute '{attr}' already exists in tracksdata graph. "
+                f"Skipping addition."
+            )
+    graph_td.add_edge_attr_key(td.DEFAULT_ATTR_KEYS.SOLUTION, default_value=1)
+
+    # Add node attributes
+    for node_id, attrs in all_nodes:
+        attrs[td.DEFAULT_ATTR_KEYS.SOLUTION] = 1
+        graph_td.add_node(attrs, index=node_id)
+
+    # Add edges
+    for source_id, target_id, attrs in all_edges:
+        attrs[td.DEFAULT_ATTR_KEYS.SOLUTION] = 1
+        graph_td.add_edge(source_id, target_id, attrs)
+
+    # Create subgraph (GraphView) with only solution nodes and edges
+    graph_td_sub = graph_td.filter(
+        td.NodeAttr(td.DEFAULT_ATTR_KEYS.SOLUTION) == 1,
+        td.EdgeAttr(td.DEFAULT_ATTR_KEYS.SOLUTION) == 1,
+    ).subgraph()
+
+    return graph_td_sub
