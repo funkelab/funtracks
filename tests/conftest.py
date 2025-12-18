@@ -1,4 +1,3 @@
-import copy
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
@@ -316,7 +315,6 @@ def get_tracks(get_graph, get_segmentation) -> Callable[..., "Tracks | SolutionT
 
 @pytest.fixture
 def graph_2d_list(tmp_path) -> td.graph.GraphView:
-    # graph = nx.DiGraph()
     db_path = str(tmp_path / "graph_2d_list.db")
     graph = create_empty_graphview_graph(database=db_path)
 
@@ -421,8 +419,8 @@ def get_graph(request) -> Callable[..., td.graph.GraphView]:
                 f"got {with_features}"
             )
 
-        # Return a deep copy to avoid fixture pollution
-        return copy.deepcopy(graph)
+        # Deepcopy alternative for tracksdata graph
+        return graph.detach().filter().subgraph()
 
     return _get_graph
 

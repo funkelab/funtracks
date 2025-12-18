@@ -204,6 +204,7 @@ These features are **automatically checked** during initialization:
 **Scenario 1: Loading tracks from CSV with pre-computed features**
 ```python
 # CSV has columns: id, time, y, x, area, track_id
+# TODO: load_graph_from_csv no longer exists!
 graph = load_graph_from_csv(df)  # Nodes already have area, track_id
 tracks = SolutionTracks(graph, segmentation=seg)
 # Auto-detection: pos, area, track_id exist → activate without recomputing
@@ -212,8 +213,9 @@ tracks = SolutionTracks(graph, segmentation=seg)
 **Scenario 2: Creating tracks from raw segmentation**
 ```python
 # Graph has no features yet
-graph = nx.DiGraph()
-graph.add_node(1, time=0)
+#TODO: test these examples with the new tracksdata api
+graph = create_empty_graphview_graph()
+graph.add_node(index=1, attrs={"t": 0, "solution": 1})
 tracks = Tracks(graph, segmentation=seg)
 # Auto-detection: pos, area don't exist → compute them
 ```

@@ -122,7 +122,7 @@ class EdgeAnnotator(GraphAnnotator):
 
         # anything left has IOU of 0
         for edge in edges:
-            self.tracks._set_edge_attr(edge, self.iou_key, 0)
+            self.tracks._set_edge_attr(edge, self.iou_key, 0.0)
 
     def update(self, action: BasicAction):
         """Update the edge features based on the action.

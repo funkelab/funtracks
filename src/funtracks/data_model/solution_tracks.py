@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import networkx as nx
 import numpy as np
+import tracksdata as td
 
 from funtracks.features import FeatureDict
 
@@ -20,7 +20,7 @@ class SolutionTracks(Tracks):
 
     def __init__(
         self,
-        graph: nx.DiGraph,
+        graph: td.graph.GraphView,
         segmentation: np.ndarray | None = None,
         time_attr: str | None = None,
         pos_attr: str | tuple[str] | list[str] | None = None,
@@ -35,8 +35,8 @@ class SolutionTracks(Tracks):
         TrackAnnotator is automatically added to manage track IDs.
 
         Args:
-            graph (nx.DiGraph): NetworkX directed graph with nodes as detections and
-                edges as links.
+            graph (td.graph.GraphView): NetworkX directed graph with nodes as detections
+                and edges as links.
             segmentation (np.ndarray | None): Optional segmentation array where labels
                 match node IDs. Required for computing region properties (area, etc.).
             time_attr (str | None): Graph attribute name for time. Defaults to "time"

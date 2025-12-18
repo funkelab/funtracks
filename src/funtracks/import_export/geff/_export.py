@@ -7,8 +7,8 @@ from typing import (
 )
 
 import geff_spec
-import networkx as nx
 import numpy as np
+import tracksdata as td
 from geff_spec import GeffMetadata
 
 from funtracks.utils import remove_tilde, setup_zarr_array, setup_zarr_group
@@ -28,7 +28,7 @@ def export_to_geff(
     node_ids: set[int] | None = None,
     zarr_format: Literal[2, 3] = 2,
 ):
-    """Export the Tracks nxgraph to geff.
+    """Export the Tracks graph to geff.
 
     Args:
         tracks (Tracks): Tracks object containing a graph to save.
@@ -83,7 +83,7 @@ def export_to_geff(
 
     metadata = GeffMetadata(
         geff_version=geff_spec.__version__,
-        directed=isinstance(graph, nx.DiGraph),
+        directed=True,
         node_props_metadata={},
         edge_props_metadata={},
         axes=axes,
@@ -153,7 +153,7 @@ def export_to_geff(
     graph.to_geff(geff_store=tracks_path, geff_metadata=metadata, zarr_format=zarr_format)
 
 
-def split_position_attr(tracks: Tracks) -> tuple[nx.DiGraph, list[str] | None]:
+def split_position_attr(tracks: Tracks) -> tuple[td.graph.GraphView, list[str] | None]:
     # TODO: this exists in unsqueeze in geff somehow?
     """Spread the spatial coordinates to separate node attrs in order to export to geff
     format.
@@ -163,8 +163,9 @@ def split_position_attr(tracks: Tracks) -> tuple[nx.DiGraph, list[str] | None]:
           converted.
 
     Returns:
-        tuple[nx.DiGraph, list[str]]: graph with a separate positional attribute for each
-            coordinate, and the axis names used to store the separate attributes
+        tuple[td.graph.GraphView, list[str] | None]: graph with a separate positional
+            attribute for each coordinate, and the axis names used to store the
+            separate attributes
 
     """
     pos_key = tracks.features.position_key

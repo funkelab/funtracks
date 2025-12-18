@@ -576,12 +576,7 @@ class Tracks:
         # Remove from FeatureDict
         for key in feature_keys:
             if key in self.features:
-                del self.features[key]
-                # TODO Teun: do we need to remove feature here from graph as well?
-                # Currently the tests want to maintain the values on the graph,
-                # but this might become a problem when you want to add a node later,
-                # and you NEED to add all existing attributes, sooo conclusion:
-                # we will remove all the features from the graph, so change the tests!
+                self.delete_feature(key)
 
     def add_feature(self, key: str, feature: Feature) -> None:
         """Add a feature to the features dictionary and perform graph operations.
@@ -601,3 +596,23 @@ class Tracks:
             self.graph.add_node_attr_key(key, default_value=feature["default_value"])
         elif feature["feature_type"] == "edge" and key not in self.graph.edge_attr_keys():
             self.graph.add_edge_attr_key(key, default_value=feature["default_value"])
+
+    def delete_feature(self, key: str) -> None:
+        """Delete a feature from the features dictionary and perform graph operations.
+
+        This is the preferred way to delete features as it ensures both the
+        features dictionary is updated and any necessary graph operations are performed.
+
+        Args:
+            key: The key for the feature to delete
+        """
+        # Remove from the features dictionary
+        del self.features[key]
+
+        # Perform custom graph operations when a feature is deleted
+        if feature := self.annotators.all_features.get(key):
+            feature_type = feature[0]["feature_type"]
+            if feature_type == "node" and key in self.graph.node_attr_keys():
+                self.graph.remove_node_attr_key(key)
+            elif feature_type == "edge" and key in self.graph.edge_attr_keys():
+                self.graph.remove_edge_attr_key(key)

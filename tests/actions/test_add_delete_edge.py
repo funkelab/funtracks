@@ -1,8 +1,8 @@
 import copy
 
-import polars as pl
 import pytest
 from numpy.testing import assert_array_almost_equal
+from polars.testing import assert_frame_equal
 
 from funtracks.actions import (
     ActionGroup,
@@ -37,18 +37,13 @@ def test_add_delete_edges(get_tracks, ndim, with_seg):
     # TODO: What if adding an edge that already exists?
     # TODO: test all the edge cases, invalid operations, etc. for all actions
     assert set(tracks.graph.node_ids()) == set(reference_graph.node_ids())
+    assert_frame_equal(
+        tracks.graph.edge_attrs(),
+        reference_graph.edge_attrs(),
+        check_row_order=False,
+        check_column_order=False,
+    )
     if with_seg:
-        for edge in tracks.graph.edge_list():
-            edge_id_tracks = tracks.graph.edge_id(edge[0], edge[1])
-            edge_id_graph = reference_graph.edge_id(edge[0], edge[1])
-            assert tracks.graph.edge_attrs().filter(pl.col("edge_id") == edge_id_tracks)[
-                iou_key
-            ].item() == pytest.approx(
-                reference_graph.edge_attrs()
-                .filter(pl.col("edge_id") == edge_id_graph)[iou_key]
-                .item(),
-                abs=0.01,
-            )
         assert_array_almost_equal(tracks.segmentation, reference_seg)
 
     # TODO Teun: the next line fails:
@@ -62,19 +57,13 @@ def test_add_delete_edges(get_tracks, ndim, with_seg):
     assert set(tracks.graph.node_ids()) == set(reference_graph.node_ids())
     assert set(tracks.graph.edge_ids()) == set(reference_graph.edge_ids())
     assert sorted(tracks.graph.edge_list()) == sorted(reference_graph.edge_list())
+    assert_frame_equal(
+        tracks.graph.edge_attrs(),
+        reference_graph.edge_attrs(),
+        check_row_order=False,
+        check_column_order=False,
+    )
     if with_seg:
-        for edge in tracks.graph.edge_list():
-            edge_id_tracks = tracks.graph.edge_id(edge[0], edge[1])
-            edge_id_graph = reference_graph.edge_id(edge[0], edge[1])
-
-            assert tracks.graph.edge_attrs().filter(pl.col("edge_id") == edge_id_tracks)[
-                iou_key
-            ].item() == pytest.approx(
-                reference_graph.edge_attrs()
-                .filter(pl.col("edge_id") == edge_id_graph)[iou_key]
-                .item(),
-                abs=0.01,
-            )
         assert_array_almost_equal(tracks.segmentation, reference_seg)
 
 

@@ -1,9 +1,7 @@
-import copy
-
 import numpy as np
 import pytest
 from numpy.testing import assert_array_almost_equal
-from polars.testing import assert_series_not_equal
+from polars.testing import assert_series_equal
 
 from funtracks.actions import (
     UpdateNodeSeg,
@@ -14,7 +12,7 @@ from funtracks.actions import (
 def test_update_node_segs(get_tracks, ndim):
     # Get tracks with segmentation
     tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
-    reference_graph = copy.deepcopy(tracks.graph)
+    reference_graph = tracks.graph.detach().filter().subgraph()
 
     original_seg = tracks.segmentation.copy()
     original_area = tracks.graph[1]["area"]
@@ -38,7 +36,7 @@ def test_update_node_segs(get_tracks, ndim):
 
     inverse = action.inverse()
     assert set(tracks.graph.node_ids()) == set(reference_graph.node_ids())
-    assert_series_not_equal(
+    assert_series_equal(
         reference_graph[1]["pos"],
         tracks.graph[1]["pos"],
     )

@@ -73,12 +73,13 @@ def test_save_load(
         assert loaded.segmentation is None
 
     # graphs_equal doesn't exist for TracksData, so we check properties
-    assert loaded.graph.node_attr_keys() == tracks.graph.node_attr_keys()
-    assert loaded.graph.edge_attr_keys() == tracks.graph.edge_attr_keys()
+    assert set(loaded.graph.node_attr_keys()) == set(tracks.graph.node_attr_keys())
+    assert set(loaded.graph.edge_attr_keys()) == set(tracks.graph.edge_attr_keys())
     assert loaded.graph.num_nodes() == tracks.graph.num_nodes()
     assert loaded.graph.num_edges() == tracks.graph.num_edges()
-    assert loaded.graph.node_ids() == tracks.graph.node_ids()
-    assert loaded.graph.edge_ids() == tracks.graph.edge_ids()
+    assert set(loaded.graph.node_ids()) == set(tracks.graph.node_ids())
+    # edge_ids dont matter, only the actual edges:
+    assert sorted(loaded.graph.edge_list()) == sorted(tracks.graph.edge_list())
 
 
 @pytest.mark.parametrize("with_seg", [True, False])

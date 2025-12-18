@@ -11,7 +11,6 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
-import networkx as nx
 import numpy as np
 import tracksdata as td
 from geff._typing import InMemoryGeff
@@ -464,10 +463,10 @@ class TracksBuilder(ABC):
 
     def handle_segmentation(
         self,
-        graph: nx.DiGraph,
+        graph: td.graph.GraphView,
         segmentation: Path | np.ndarray | None,
         scale: list[float] | None,
-    ) -> tuple[np.ndarray | None, list[float] | None, nx.DiGraph]:
+    ) -> tuple[np.ndarray | None, list[float] | None, td.graph.GraphView]:
         """Load, validate, and optionally relabel segmentation.
 
         Common logic shared across all formats.

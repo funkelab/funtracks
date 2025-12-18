@@ -1,6 +1,6 @@
-import networkx as nx
 import numpy as np
 import pytest
+import tracksdata as td
 
 from funtracks.data_model import Tracks
 from funtracks.utils.tracksdata_utils import (
@@ -10,7 +10,9 @@ from funtracks.utils.tracksdata_utils import (
 track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
 
 
-def test_create_tracks(graph_3d_with_computed_features: nx.DiGraph, segmentation_3d):
+def test_create_tracks(
+    graph_3d_with_computed_features: td.graph.GraphView, segmentation_3d
+):
     # create empty tracks
     empty_graph = create_empty_graphview_graph()
     tracks = Tracks(graph=empty_graph, ndim=3, **track_attrs)  # type: ignore[arg-type]
@@ -227,8 +229,9 @@ def test_set_pixels_no_segmentation(graph_2d_with_computed_features):
 
 
 def test_compute_ndim_errors():
-    g = nx.DiGraph()
-    g.add_node(1, time=0, pos=[0, 0, 0])
+    g = create_empty_graphview_graph()
+    g.add_node_attr_key("pos", default_value=None)
+    g.add_node(index=1, attrs={"t": 0, "pos": [0, 0, 0], "solution": True})
     # seg ndim = 3, scale ndim = 2, provided ndim = 4 -> mismatch
     seg = np.zeros((2, 2, 2))
     with pytest.raises(ValueError, match="Dimensions from segmentation"):

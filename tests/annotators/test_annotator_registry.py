@@ -95,8 +95,8 @@ def test_enable_disable_features(graph_2d_with_computed_features, segmentation_2
     assert "iou" in tracks.features
     assert "circularity" in tracks.features
 
-    # Values still exist on the graph (disabling doesn't erase computed values)
-    assert tracks.graph[1]["area"] is not None
+    # Values no longer exist in the graph for tracksdata
+    # assert tracks.graph[1]["area"] is not None
 
     # Disable the remaining enabled features
     tracks.disable_features(["pos", "iou", "circularity"])

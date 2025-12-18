@@ -4,7 +4,6 @@ from collections import defaultdict
 from typing import TYPE_CHECKING
 
 import rustworkx as rx
-import tracksdata as td
 
 from funtracks.actions import AddNode, DeleteNode, UpdateTrackID
 from funtracks.data_model import SolutionTracks
@@ -215,7 +214,7 @@ class TrackAnnotator(GraphAnnotator):
         After removing division edges, each connected component will get a unique ID,
         and the relevant class attributes will be updated.
         """
-        graph_copy = td.graph.IndexedRXGraph.from_other(self.tracks.graph)
+        graph_copy = self.tracks.graph.detach().filter().subgraph()
 
         parents = [
             node
@@ -224,7 +223,6 @@ class TrackAnnotator(GraphAnnotator):
             )
             if degree >= 2
         ]
-        intertrack_edges = []
 
         # Remove all intertrack edges from a copy of the original graph
         for parent in parents:
@@ -233,16 +231,7 @@ class TrackAnnotator(GraphAnnotator):
 
             for daughter in daughters:
                 # remove edge from graph, by setting solution to 0 + subgraphing
-                edge_id = graph_copy.edge_id(parent, daughter)
-                graph_copy.update_edge_attrs(
-                    edge_ids=[edge_id], attrs={td.DEFAULT_ATTR_KEYS.SOLUTION: [0]}
-                )
-                graph_copy = graph_copy.filter(
-                    td.NodeAttr(td.DEFAULT_ATTR_KEYS.SOLUTION) == 1,
-                    td.EdgeAttr(td.DEFAULT_ATTR_KEYS.SOLUTION) == 1,
-                ).subgraph()
-
-                intertrack_edges.append((parent, daughter))
+                graph_copy.remove_edge(parent, daughter)
 
         track_id = 1
         for tracklet in rx.weakly_connected_components(graph_copy.rx_graph):

@@ -345,7 +345,11 @@ def td_relabel_nodes(graph, mapping: dict[int, int]) -> td.graph.SQLGraph:
         }
         new_graph.add_edge(source_id, target_id, attrs)
 
-    return new_graph
+    new_graph_sub = new_graph.filter(
+        td.NodeAttr(td.DEFAULT_ATTR_KEYS.SOLUTION) == 1,
+        td.EdgeAttr(td.DEFAULT_ATTR_KEYS.SOLUTION) == 1,
+    ).subgraph()
+    return new_graph_sub
 
 
 def get_node_attr_defaults(graph) -> dict[str, Any]:
