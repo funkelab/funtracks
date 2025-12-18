@@ -174,10 +174,10 @@ class EdgeAnnotator(GraphAnnotator):
                     f"in frame {end_time}: updating edge IOU value to 0",
                     stacklevel=2,
                 )
-                self.tracks._set_edge_attr(edge, self.iou_key, 0)
+                self.tracks._set_edge_attr(edge, self.iou_key, 0.0)
             else:
                 iou_list = _compute_ious(masked_start, masked_end)
-                iou = 0 if len(iou_list) == 0 else iou_list[0][2]
+                iou = 0.0 if len(iou_list) == 0 else iou_list[0][2]
                 self.tracks._set_edge_attr(edge, self.iou_key, iou)
 
     def change_key(self, old_key: str, new_key: str) -> None:
