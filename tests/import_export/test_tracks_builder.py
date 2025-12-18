@@ -185,3 +185,79 @@ class TestPreprocessNameMap:
         builder._preprocess_name_map()
 
         assert "empty_feat" not in builder.node_name_map
+
+    def test_legacy_separate_coordinates_2d(self):
+        """Test backward compatibility for separate x, y coordinate mappings."""
+        builder = CSVTracksBuilder()
+        builder.node_name_map = {
+            "time": "t",
+            "x": "x_coord",
+            "y": "y_coord",
+        }
+        builder.edge_name_map = None
+
+        builder._preprocess_name_map()
+
+        # x and y should be converted to pos
+        assert "x" not in builder.node_name_map
+        assert "y" not in builder.node_name_map
+        assert "pos" in builder.node_name_map
+        # Order should be y, x (spatial order)
+        assert builder.node_name_map["pos"] == ["y_coord", "x_coord"]
+
+    def test_legacy_separate_coordinates_3d(self):
+        """Test backward compatibility for separate x, y, z coordinate mappings."""
+        builder = CSVTracksBuilder()
+        builder.node_name_map = {
+            "time": "t",
+            "x": "x_col",
+            "y": "y_col",
+            "z": "z_col",
+        }
+        builder.edge_name_map = None
+
+        builder._preprocess_name_map()
+
+        # x, y, z should be converted to pos
+        assert "x" not in builder.node_name_map
+        assert "y" not in builder.node_name_map
+        assert "z" not in builder.node_name_map
+        assert "pos" in builder.node_name_map
+        # Order should be z, y, x (spatial order)
+        assert builder.node_name_map["pos"] == ["z_col", "y_col", "x_col"]
+
+    def test_legacy_coordinates_not_converted_if_pos_exists(self):
+        """Test that legacy coordinates are not converted if pos already exists."""
+        builder = CSVTracksBuilder()
+        builder.node_name_map = {
+            "time": "t",
+            "pos": ["existing_y", "existing_x"],
+            "x": "x_coord",  # Should be ignored
+            "y": "y_coord",  # Should be ignored
+        }
+        builder.edge_name_map = None
+
+        builder._preprocess_name_map()
+
+        # pos should remain unchanged, x and y should be kept as-is
+        assert builder.node_name_map["pos"] == ["existing_y", "existing_x"]
+        # x and y are NOT removed when pos already exists
+        assert "x" in builder.node_name_map
+        assert "y" in builder.node_name_map
+
+    def test_legacy_coordinates_with_none_values(self):
+        """Test that None coordinate values are handled correctly."""
+        builder = CSVTracksBuilder()
+        builder.node_name_map = {
+            "time": "t",
+            "x": "x_coord",
+            "y": "y_coord",
+            "z": None,  # z is None, should be skipped
+        }
+        builder.edge_name_map = None
+
+        builder._preprocess_name_map()
+
+        # Only y and x should be in pos (z was None)
+        assert builder.node_name_map["pos"] == ["y_coord", "x_coord"]
+        assert "z" not in builder.node_name_map
