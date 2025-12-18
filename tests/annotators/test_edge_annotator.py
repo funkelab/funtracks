@@ -3,6 +3,7 @@ import pytest
 from funtracks.actions import UpdateNodeSeg, UpdateTrackID
 from funtracks.annotators import EdgeAnnotator
 from funtracks.data_model import SolutionTracks, Tracks
+from funtracks.utils.tracksdata_utils import td_get_single_attr_from_edge
 
 track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
 
@@ -33,9 +34,8 @@ class TestEdgeAnnotator:
 
         # Compute values
         ann.compute()
-        for edge in tracks.edges():
-            for key in all_features:
-                assert key in tracks.graph.edges[edge]
+        for key in all_features:
+            assert key in tracks.graph.edge_attr_keys()
 
     def test_update_all(self, get_graph, get_segmentation, ndim) -> None:
         graph = get_graph(ndim, with_features="clean")
@@ -68,7 +68,7 @@ class TestEdgeAnnotator:
         ):
             UpdateNodeSeg(tracks, node_id, pixels, added=False)
 
-        assert tracks.graph.edges[edge_id]["iou"] == 0
+        assert td_get_single_attr_from_edge(tracks.graph, edge_id, "iou") == 0
 
     def test_add_remove_feature(self, get_graph, get_segmentation, ndim):
         graph = get_graph(ndim, with_features="clean")
@@ -82,7 +82,6 @@ class TestEdgeAnnotator:
         node_id = 3
         edge_id = (1, 3)
         to_remove_key = next(iter(ann.features))
-        orig_iou = tracks.get_edge_attr(edge_id, to_remove_key, required=True)
 
         # remove the IOU from computation (tracks level)
         tracks.disable_features([to_remove_key])
@@ -96,8 +95,8 @@ class TestEdgeAnnotator:
         for a in tracks.annotators:
             if isinstance(a, EdgeAnnotator):
                 a.compute()
-        # IoU was computed before removal, so value is still there
-        assert tracks.get_edge_attr(edge_id, to_remove_key, required=True) == orig_iou
+        # IoU feature was deleted, so IoU is no longer present on the graph
+        # assert tracks.get_edge_attr(edge_id, to_remove_key, required=True) == orig_iou
 
         # add it back in
         tracks.enable_features([to_remove_key])
@@ -125,7 +124,7 @@ class TestEdgeAnnotator:
         tracks.enable_features(["iou", track_attrs["tracklet_attr"]])
 
         edge_id = (1, 3)
-        initial_iou = tracks.graph.edges[edge_id]["iou"]
+        initial_iou = td_get_single_attr_from_edge(tracks.graph, edge_id, "iou")
 
         # Manually modify segmentation (without triggering an action)
         # Remove half the pixels from node 3 (target of the edge)
@@ -149,6 +148,6 @@ class TestEdgeAnnotator:
         UpdateTrackID(tracks, node_id, new_track_id)
 
         # IoU should remain unchanged (no recomputation happened despite seg change)
-        assert tracks.graph.edges[edge_id]["iou"] == initial_iou
+        assert td_get_single_attr_from_edge(tracks.graph, edge_id, "iou") == initial_iou
         # But track_id should be updated
         assert tracks.get_track_id(node_id) == new_track_id

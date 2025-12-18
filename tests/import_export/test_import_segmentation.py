@@ -1,6 +1,5 @@
 """Tests for _import_segmentation module."""
 
-import networkx as nx
 import numpy as np
 import tifffile
 
@@ -8,6 +7,7 @@ from funtracks.import_export._import_segmentation import (
     load_segmentation,
     relabel_segmentation,
 )
+from funtracks.utils.tracksdata_utils import create_empty_graphview_graph
 
 
 class TestLoadSegmentation:
@@ -46,15 +46,15 @@ class TestRelabelSegmentation:
         seg[1, 2, 2] = 20  # seg_id 20 at t=1
 
         # Create graph with node_ids 1, 2
-        graph = nx.DiGraph()
-        graph.add_node(1)
-        graph.add_node(2)
+        graph = create_empty_graphview_graph()
+        graph.add_node(index=1, attrs={"t": 0, "solution": 1})
+        graph.add_node(index=2, attrs={"t": 1, "solution": 1})
 
         node_ids = np.array([1, 2])
         seg_ids = np.array([10, 20])
         time_values = np.array([0, 1])
 
-        result = relabel_segmentation(seg, graph, node_ids, seg_ids, time_values)
+        result, graph = relabel_segmentation(seg, graph, node_ids, seg_ids, time_values)
 
         # seg_id 10 -> node_id 1, seg_id 20 -> node_id 2
         assert result[0, 1, 1] == 1
@@ -70,15 +70,15 @@ class TestRelabelSegmentation:
         seg[1, 2, 2] = 20  # seg_id 20 at t=1
 
         # Create graph with node_ids 0, 1 (includes 0!)
-        graph = nx.DiGraph()
-        graph.add_node(0)
-        graph.add_node(1)
+        graph = create_empty_graphview_graph()
+        graph.add_node(index=0, attrs={"t": 0, "solution": 1})
+        graph.add_node(index=1, attrs={"t": 1, "solution": 1})
 
         node_ids = np.array([0, 1])
         seg_ids = np.array([10, 20])
         time_values = np.array([0, 1])
 
-        result = relabel_segmentation(seg, graph, node_ids, seg_ids, time_values)
+        result, graph = relabel_segmentation(seg, graph, node_ids, seg_ids, time_values)
 
         # node_ids should be offset by 1: 0->1, 1->2
         # seg_id 10 -> node_id 1 (was 0), seg_id 20 -> node_id 2 (was 1)
@@ -86,9 +86,9 @@ class TestRelabelSegmentation:
         assert result[1, 2, 2] == 2
 
         # Graph should also be relabeled
-        assert 1 in graph.nodes()
-        assert 2 in graph.nodes()
-        assert 0 not in graph.nodes()
+        assert 1 in graph.node_ids()
+        assert 2 in graph.node_ids()
+        assert 0 not in graph.node_ids()
 
     def test_no_relabeling_needed_same_ids(self):
         """Test when seg_ids equal node_ids (relabeling still applies mapping)."""
@@ -97,15 +97,15 @@ class TestRelabelSegmentation:
         seg[0, 1, 1] = 1
         seg[1, 2, 2] = 2
 
-        graph = nx.DiGraph()
-        graph.add_node(1)
-        graph.add_node(2)
+        graph = create_empty_graphview_graph()
+        graph.add_node(index=1, attrs={"t": 0, "solution": 1})
+        graph.add_node(index=2, attrs={"t": 1, "solution": 1})
 
         node_ids = np.array([1, 2])
         seg_ids = np.array([1, 2])  # Same as node_ids
         time_values = np.array([0, 1])
 
-        result = relabel_segmentation(seg, graph, node_ids, seg_ids, time_values)
+        result, graph = relabel_segmentation(seg, graph, node_ids, seg_ids, time_values)
 
         # Should still produce valid output (identity mapping)
         assert result[0, 1, 1] == 1
@@ -119,14 +119,16 @@ class TestRelabelSegmentation:
         seg[0, 2, 2] = 20
         seg[0, 3, 3] = 30
 
-        graph = nx.DiGraph()
-        graph.add_nodes_from([1, 2, 3])
+        graph = create_empty_graphview_graph()
+        graph.add_node(index=1, attrs={"t": 0, "solution": 1})
+        graph.add_node(index=2, attrs={"t": 0, "solution": 1})
+        graph.add_node(index=3, attrs={"t": 0, "solution": 1})
 
         node_ids = np.array([1, 2, 3])
         seg_ids = np.array([10, 20, 30])
         time_values = np.array([0, 0, 0])
 
-        result = relabel_segmentation(seg, graph, node_ids, seg_ids, time_values)
+        result, graph = relabel_segmentation(seg, graph, node_ids, seg_ids, time_values)
 
         assert result[0, 1, 1] == 1
         assert result[0, 2, 2] == 2

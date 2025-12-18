@@ -86,12 +86,15 @@ class EdgeAnnotator(GraphAnnotator):
         # TODO: add skip edges
         if self.iou_key in keys_to_compute:
             nodes_by_frame = defaultdict(list)
-            for n in self.tracks.nodes():
+            for n in self.tracks.graph.node_ids():
                 nodes_by_frame[self.tracks.get_time(n)].append(n)
 
             for t in range(seg.shape[0] - 1):
                 nodes_in_t = nodes_by_frame[t]
-                edges = list(self.tracks.graph.out_edges(nodes_in_t))
+                edges = []
+                for node in nodes_in_t:
+                    for succ in self.tracks.graph.successors(node):
+                        edges.append((node, succ))
                 self._iou_update(edges, seg[t], seg[t + 1])
 
     def _iou_update(
@@ -119,7 +122,7 @@ class EdgeAnnotator(GraphAnnotator):
 
         # anything left has IOU of 0
         for edge in edges:
-            self.tracks._set_edge_attr(edge, self.iou_key, 0)
+            self.tracks._set_edge_attr(edge, self.iou_key, 0.0)
 
     def update(self, action: BasicAction):
         """Update the edge features based on the action.
@@ -146,9 +149,15 @@ class EdgeAnnotator(GraphAnnotator):
         else:  # UpdateNodeSeg
             # Get all incident edges to the modified node
             node = action.node
-            edges_to_update = list(self.tracks.graph.in_edges(node)) + list(
-                self.tracks.graph.out_edges(node)
-            )
+
+            edges_to_update = []
+            for node in self.tracks.graph.node_ids():
+                # Add edges from predecessors
+                for pred in self.tracks.graph.predecessors(node):
+                    edges_to_update.append((pred, node))
+                # Add edges from successors
+                for succ in self.tracks.graph.successors(node):
+                    edges_to_update.append((node, succ))
 
         # Update IoU for each edge
         for edge in edges_to_update:

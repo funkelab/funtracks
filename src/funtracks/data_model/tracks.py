@@ -9,13 +9,15 @@ from typing import (
 )
 from warnings import warn
 
-import networkx as nx
 import numpy as np
 from psygnal import Signal
 
 from funtracks.features import Feature, FeatureDict, Position, Time
+from funtracks.utils.tracksdata_utils import td_get_single_attr_from_edge
 
 if TYPE_CHECKING:
+    import tracksdata as td
+
     from funtracks.actions import BasicAction
     from funtracks.annotators import AnnotatorRegistry, GraphAnnotator
 
@@ -36,7 +38,7 @@ class Tracks:
     position attribute. Edges in the graph represent links across time.
 
     Attributes:
-        graph (nx.DiGraph): A graph with nodes representing detections and
+        graph (td.graph.GraphView): A graph with nodes representing detections and
             and edges representing links across time.
         segmentation (np.ndarray | None): An optional segmentation that
             accompanies the tracking graph. If a segmentation is provided,
@@ -51,7 +53,7 @@ class Tracks:
 
     def __init__(
         self,
-        graph: nx.DiGraph,
+        graph: td.graph.GraphView,
         segmentation: np.ndarray | None = None,
         time_attr: str | None = None,
         pos_attr: str | tuple[str, ...] | list[str] | None = None,
@@ -63,8 +65,8 @@ class Tracks:
         """Initialize a Tracks object.
 
         Args:
-            graph (nx.DiGraph): NetworkX directed graph with nodes as detections and
-                edges as links.
+            graph (td.graph.GraphView): NetworkX directed graph with nodes as detections
+                and edges as links.
             segmentation (np.ndarray | None): Optional segmentation array where labels
                 match node IDs. Required for computing region properties (area, etc.).
             time_attr (str | None): Graph attribute name for time. Defaults to "time"
@@ -254,12 +256,11 @@ class Tracks:
             bool: True if the key is on the first sampled node or there are no nodes,
                 and False if missing from the first node.
         """
-        if self.graph.number_of_nodes() == 0:
+        if self.graph.num_nodes() == 0:
             return True
 
         # Get a sample node to check which attributes exist
-        sample_node = next(iter(self.graph.nodes()))
-        node_attrs = set(self.graph.nodes[sample_node].keys())
+        node_attrs = set(self.graph.node_attr_keys())
         return key in node_attrs
 
     def _setup_core_computed_features(self) -> None:
@@ -291,26 +292,35 @@ class Tracks:
                 # Add to FeatureDict if not already there
                 if key not in self.features:
                     feature, _ = self.annotators.all_features[key]
-                    self.features[key] = feature
+                    self.add_feature(key, feature)
                 self.annotators.activate_features([key])
             else:
                 # enable it (compute it)
                 self.enable_features([key])
 
     def nodes(self):
-        return np.array(self.graph.nodes())
+        return np.array(self.graph.node_ids())
 
     def edges(self):
-        return np.array(self.graph.edges())
+        return np.array(self.graph.edge_ids())
 
     def in_degree(self, nodes: np.ndarray | None = None) -> np.ndarray:
+        """Get the in-degree edge_ids of the nodes in the graph."""
         if nodes is not None:
+            # make sure nodes is a numpy array
+            if not isinstance(nodes, np.ndarray):
+                nodes = np.array(nodes)
+
             return np.array([self.graph.in_degree(node.item()) for node in nodes])
         else:
             return np.array(self.graph.in_degree())
 
     def out_degree(self, nodes: np.ndarray | None = None) -> np.ndarray:
         if nodes is not None:
+            # make sure nodes is a numpy array
+            if not isinstance(nodes, np.ndarray):
+                nodes = np.array(nodes)
+
             return np.array([self.graph.out_degree(node.item()) for node in nodes])
         else:
             return np.array(self.graph.out_degree())
@@ -388,7 +398,7 @@ class Tracks:
             for idx, key in enumerate(self.features.position_key):
                 self._set_nodes_attr(nodes, key, positions[:, idx].tolist())
         else:
-            self._set_nodes_attr(nodes, self.features.position_key, positions.tolist())
+            self._set_nodes_attr(nodes, self.features.position_key, positions)
 
     def set_position(self, node: Node, position: list | np.ndarray):
         self.set_positions([node], np.expand_dims(np.array(position), axis=0))
@@ -467,35 +477,37 @@ class Tracks:
     def _set_node_attr(self, node: Node, attr: str, value: Any):
         if isinstance(value, np.ndarray):
             value = list(value)
-        self.graph.nodes[node][attr] = value
+        self.graph.update_node_attrs(attrs={attr: [value]}, node_ids=[node])
 
     def _set_nodes_attr(self, nodes: Iterable[Node], attr: str, values: Iterable[Any]):
         for node, value in zip(nodes, values, strict=False):
-            if isinstance(value, np.ndarray):
-                value = list(value)
-            self.graph.nodes[node][attr] = value
+            self.graph[node][attr] = [value]
 
     def get_node_attr(self, node: Node, attr: str, required: bool = False):
-        if required:
-            return self.graph.nodes[node][attr]
-        else:
-            return self.graph.nodes[node].get(attr, None)
+        if attr not in self.graph.node_attr_keys():
+            if required:
+                raise KeyError(attr)
+            return None
+        return self.graph[int(node)][attr]
 
     def get_nodes_attr(self, nodes: Iterable[Node], attr: str, required: bool = False):
         return [self.get_node_attr(node, attr, required=required) for node in nodes]
 
     def _set_edge_attr(self, edge: Edge, attr: str, value: Any):
-        self.graph.edges[edge][attr] = value
+        edge_id = self.graph.edge_id(edge[0], edge[1])
+        self.graph.update_edge_attrs(attrs={attr: value}, edge_ids=[edge_id])
 
     def _set_edges_attr(self, edges: Iterable[Edge], attr: str, values: Iterable[Any]):
         for edge, value in zip(edges, values, strict=False):
-            self.graph.edges[edge][attr] = value
+            edge_id = self.graph.edge_id(edge[0], edge[1])
+            self.graph.update_edge_attrs(attrs={attr: value}, edge_ids=[edge_id])
 
     def get_edge_attr(self, edge: Edge, attr: str, required: bool = False):
-        if required:
-            return self.graph.edges[edge][attr]
-        else:
-            return self.graph.edges[edge].get(attr, None)
+        if attr not in self.graph.edge_attr_keys():
+            if required:
+                raise KeyError(attr)
+            return None
+        return td_get_single_attr_from_edge(self.graph, edge=edge, attrs=[attr])
 
     def get_edges_attr(self, edges: Iterable[Edge], attr: str, required: bool = False):
         return [self.get_edge_attr(edge, attr, required=required) for edge in edges]
@@ -541,7 +553,7 @@ class Tracks:
         for key in feature_keys:
             if key not in self.features:
                 feature, _ = self.annotators.all_features[key]
-                self.features[key] = feature
+                self.add_feature(key, feature)
 
         # Compute the features if requested
         if recompute:
@@ -564,4 +576,43 @@ class Tracks:
         # Remove from FeatureDict
         for key in feature_keys:
             if key in self.features:
-                del self.features[key]
+                self.delete_feature(key)
+
+    def add_feature(self, key: str, feature: Feature) -> None:
+        """Add a feature to the features dictionary and perform graph operations.
+
+        This is the preferred way to add new features as it ensures both the
+        features dictionary is updated and any necessary graph operations are performed.
+
+        Args:
+            key: The key for the new feature
+            feature: The Feature object to add
+        """
+        # Add to the features dictionary
+        self.features[key] = feature
+
+        # Perform custom graph operations when a feature is added
+        if feature["feature_type"] == "node" and key not in self.graph.node_attr_keys():
+            self.graph.add_node_attr_key(key, default_value=feature["default_value"])
+        elif feature["feature_type"] == "edge" and key not in self.graph.edge_attr_keys():
+            self.graph.add_edge_attr_key(key, default_value=feature["default_value"])
+
+    def delete_feature(self, key: str) -> None:
+        """Delete a feature from the features dictionary and perform graph operations.
+
+        This is the preferred way to delete features as it ensures both the
+        features dictionary is updated and any necessary graph operations are performed.
+
+        Args:
+            key: The key for the feature to delete
+        """
+        # Remove from the features dictionary
+        del self.features[key]
+
+        # Perform custom graph operations when a feature is deleted
+        if feature := self.annotators.all_features.get(key):
+            feature_type = feature[0]["feature_type"]
+            if feature_type == "node" and key in self.graph.node_attr_keys():
+                self.graph.remove_node_attr_key(key)
+            elif feature_type == "edge" and key in self.graph.edge_attr_keys():
+                self.graph.remove_edge_attr_key(key)

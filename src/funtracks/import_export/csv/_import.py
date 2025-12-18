@@ -273,4 +273,5 @@ def tracks_from_df(
         segmentation,
         scale=scale,
         node_features=node_features,
+        node_name_map=builder.node_name_map,
     )

@@ -65,7 +65,7 @@ class UserUpdateSegmentation(ActionGroup):
                 "Can only update one time point at a time"
             )
             time = all_pixels[0][0]
-            if self.tracks.graph.has_node(new_value):
+            if new_value in self.tracks.graph.node_ids():
                 self.actions.append(
                     UpdateNodeSeg(tracks, new_value, all_pixels, added=True)
                 )

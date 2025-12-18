@@ -33,11 +33,11 @@ class UserAddEdge(ActionGroup):
         super().__init__(tracks, actions=[])
         self.tracks: SolutionTracks  # Narrow type from base class
         source, target = edge
-        if not tracks.graph.has_node(source):
+        if source not in tracks.graph.node_ids():
             raise InvalidActionError(
                 f"Source node {source} not in solution yet - must be added before edge"
             )
-        if not tracks.graph.has_node(target):
+        if target not in tracks.graph.node_ids():
             raise InvalidActionError(
                 f"Target node {target} not in solution yet - must be added before edge"
             )
@@ -53,7 +53,8 @@ class UserAddEdge(ActionGroup):
                     forceable=True,
                 )
             else:
-                merge_edge = list(self.tracks.graph.in_edges(target))[0]
+                pred = next(iter(self.tracks.graph.predecessors(target)))
+                merge_edge = (pred, target)
                 warnings.warn(
                     f"Removing edge {merge_edge} to add new edge without merging.",
                     stacklevel=2,

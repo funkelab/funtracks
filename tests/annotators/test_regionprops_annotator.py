@@ -33,9 +33,11 @@ class TestRegionpropsAnnotator:
 
         # Compute values
         rp_ann.compute()
-        for node in tracks.nodes():
-            for key in rp_ann.features:
-                assert key in tracks.graph.nodes[node]
+        for key in rp_ann.features:
+            assert key in tracks.graph.node_attr_keys()
+            for node_id in tracks.graph.node_ids():
+                value = tracks.graph[node_id][key]
+                assert value is not None
 
     def test_update_all(self, get_graph, get_segmentation, ndim):
         graph = get_graph(ndim, with_features="clean")
@@ -59,7 +61,7 @@ class TestRegionpropsAnnotator:
         UpdateNodeSeg(tracks, node_id, pixels_to_remove, added=False)
         assert tracks.get_node_attr(node_id, "area") == expected_area
         for key in rp_ann.features:
-            assert key in tracks.graph.nodes[node_id]
+            assert key in tracks.graph.node_attr_keys()
 
         # segmentation is fully erased and you try to update
         node_id = 1
@@ -70,7 +72,7 @@ class TestRegionpropsAnnotator:
             UpdateNodeSeg(tracks, node_id, pixels, added=False)
 
         for key in rp_ann.features:
-            assert tracks.graph.nodes[node_id][key] is None
+            assert tracks.graph[node_id][key] is None
 
     def test_add_remove_feature(self, get_graph, get_segmentation, ndim):
         graph = get_graph(ndim, with_features="clean")
@@ -85,13 +87,10 @@ class TestRegionpropsAnnotator:
         rp_ann.deactivate_features([to_remove_key])
 
         # Clear existing area attributes from graph (from fixture)
-        for node in tracks.nodes():
-            if to_remove_key in tracks.graph.nodes[node]:
-                del tracks.graph.nodes[node][to_remove_key]
+        graph.remove_node_attr_key(to_remove_key)
 
         rp_ann.compute()
-        for node in tracks.nodes():
-            assert to_remove_key not in tracks.graph.nodes[node]
+        assert to_remove_key not in tracks.graph.node_attr_keys()
 
         # add it back in
         rp_ann.activate_features([to_remove_key])

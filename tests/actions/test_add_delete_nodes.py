@@ -1,13 +1,17 @@
 import copy
 
-import networkx as nx
 import numpy as np
 import pytest
 from numpy.testing import assert_array_almost_equal
+from polars.testing import assert_frame_equal
 
 from funtracks.actions import (
     ActionGroup,
     AddNode,
+)
+from funtracks.utils.tracksdata_utils import (
+    assert_node_attrs_equal_with_masks,
+    create_empty_graphview_graph,
 )
 
 
@@ -20,42 +24,80 @@ def test_add_delete_nodes(get_tracks, ndim, with_seg):
     reference_seg = copy.deepcopy(tracks.segmentation)
 
     # Start with an empty Tracks
-    empty_graph = nx.DiGraph()
+    node_attributes = [
+        tracks.features.time_key,
+        tracks.features.tracklet_key,
+        tracks.features.position_key,
+    ]
+    edge_attributes = ["iou"] if with_seg else []
+    empty_graph = create_empty_graphview_graph(
+        node_attributes=node_attributes + (["area"] if with_seg else []),
+        edge_attributes=edge_attributes,
+    )
     empty_seg = np.zeros_like(tracks.segmentation) if with_seg else None
     tracks.graph = empty_graph
     if with_seg:
         tracks.segmentation = empty_seg
 
-    nodes = list(reference_graph.nodes())
+    # add all the nodes from graph_2d/seg_2d
+    nodes = list(reference_graph.node_ids())
+
     actions = []
     for node in nodes:
         pixels = np.nonzero(reference_seg == node) if with_seg else None
-        actions.append(
-            AddNode(tracks, node, dict(reference_graph.nodes[node]), pixels=pixels)
-        )
+
+        attrs = {}
+        attrs[tracks.features.time_key] = reference_graph[node][tracks.features.time_key]
+        if tracks.features.position_key == "pos":
+            attrs[tracks.features.position_key] = reference_graph[node][
+                tracks.features.position_key
+            ].to_list()
+        else:
+            attrs[tracks.features.position_key] = reference_graph[node][
+                tracks.features.position_key
+            ]
+        attrs[tracks.features.tracklet_key] = reference_graph[node][
+            tracks.features.tracklet_key
+        ]
+
+        actions.append(AddNode(tracks, node, attributes=attrs, pixels=pixels))
     action = ActionGroup(tracks=tracks, actions=actions)
 
-    assert set(tracks.graph.nodes()) == set(reference_graph.nodes())
-    for node, data in tracks.graph.nodes(data=True):
-        reference_data = reference_graph.nodes[node]
-        assert data == reference_data
+    assert set(tracks.graph.node_ids()) == set(reference_graph.node_ids())
+    data_tracks = tracks.graph.node_attrs()
+    data_reference = reference_graph.node_attrs()
     if with_seg:
         assert_array_almost_equal(tracks.segmentation, reference_seg)
+        assert_node_attrs_equal_with_masks(data_tracks, data_reference)
+    else:
+        assert_frame_equal(
+            data_reference,  # .drop(["mask", "bbox", "area"]),
+            data_tracks,  # .drop(["mask", "bbox", "area"]),
+            check_column_order=False,
+            check_row_order=False,
+        )
 
     # Invert the action to delete all the nodes
     del_nodes = action.inverse()
-    assert set(tracks.graph.nodes()) == set(empty_graph.nodes())
+    assert set(tracks.graph.node_ids()) == set(empty_graph.node_ids())
     if with_seg:
         assert_array_almost_equal(tracks.segmentation, empty_seg)
 
     # Re-invert the action to add back all the nodes and their attributes
     del_nodes.inverse()
-    assert set(tracks.graph.nodes()) == set(reference_graph.nodes())
-    for node, data in tracks.graph.nodes(data=True):
-        reference_data = copy.deepcopy(reference_graph.nodes[node])
-        assert data == reference_data
+    assert set(tracks.graph.node_ids()) == set(reference_graph.node_ids())
+    data_tracks = tracks.graph.node_attrs()
+    data_reference = reference_graph.node_attrs()
     if with_seg:
         assert_array_almost_equal(tracks.segmentation, reference_seg)
+        assert_node_attrs_equal_with_masks(data_tracks, data_reference)
+    else:
+        assert_frame_equal(
+            data_reference,  # .drop(["mask", "bbox", "area"]),
+            data_tracks,  # .drop(["mask", "bbox", "area"]),
+            check_column_order=False,
+            check_row_order=False,
+        )
 
 
 def test_add_node_missing_time(get_tracks):
@@ -114,7 +156,7 @@ def test_custom_attributes_preserved(get_tracks, ndim, with_seg):
         ),
     }
     for key, feature in custom_features.items():
-        tracks.features[key] = feature
+        tracks.add_feature(key, feature)
 
     # Define attributes including custom ones
     custom_attrs = {
@@ -148,22 +190,28 @@ def test_custom_attributes_preserved(get_tracks, ndim, with_seg):
     action = AddNode(tracks, node_id, custom_attrs, pixels=pixels)
 
     # Verify all attributes are present after adding
-    assert tracks.graph.has_node(node_id)
+    assert node_id in tracks.graph.node_ids()
     for key, value in custom_attrs.items():
-        assert tracks.graph.nodes[node_id][key] == value, (
-            f"Attribute {key} not preserved after add"
-        )
+        if key == "pos":
+            assert_array_almost_equal(tracks.graph[node_id][key], np.array(value))
+        else:
+            assert tracks.graph[node_id][key] == value, (
+                f"Attribute {key} not preserved after add"
+            )
 
     # Delete the node
     delete_action = action.inverse()
-    assert not tracks.graph.has_node(node_id)
+    assert node_id not in tracks.graph.node_ids()
 
     # Re-add the node by inverting the delete
     delete_action.inverse()
-    assert tracks.graph.has_node(node_id)
+    assert node_id in tracks.graph.node_ids()
 
     # Verify all custom attributes are still present after re-adding
     for key, value in custom_attrs.items():
-        assert tracks.graph.nodes[node_id][key] == value, (
-            f"Attribute {key} not preserved after delete/re-add cycle"
-        )
+        if key == "pos":
+            assert_array_almost_equal(tracks.graph[node_id][key], np.array(value))
+        else:
+            assert tracks.graph[node_id][key] == value, (
+                f"Attribute {key} not preserved after delete/re-add cycle"
+            )

@@ -31,5 +31,5 @@ def _compute_ious(frame1: np.ndarray, frame2: np.ndarray) -> list[tuple[int, int
         intersection = counts[index]
         id1, id2 = pair
         union = frame1_label_sizes[id1] + frame2_label_sizes[id2] - intersection
-        ious.append((id1, id2, intersection / union))
+        ious.append((int(id1), int(id2), intersection / union))
     return ious
