@@ -6,7 +6,6 @@ import networkx as nx
 import numpy as np
 
 from funtracks.data_model.tracks import Tracks
-from funtracks.utils.tracksdata_utils import td_get_ancestors
 
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike
@@ -83,10 +82,16 @@ def filter_graph_with_ancestors(graph: nx.DiGraph, nodes_to_keep: set[int]) -> l
         in `nodes_to_keep` and their ancestors.
     """
     all_nodes_to_keep = set(nodes_to_keep)
+    import rustworkx as rx
 
     for node in nodes_to_keep:
-        ancestors = td_get_ancestors(graph, node)
-        all_nodes_to_keep.update(ancestors)
+        # Map external node ID to internal RustWorkX index
+        internal_node = graph._external_to_local[node]
+        # Get ancestors using internal indices
+        ancestors = rx.ancestors(graph.rx_graph, internal_node)
+        # Convert ancestor indices back to external node IDs
+        ancestors_external = [graph._local_to_external[nid] for nid in ancestors]
+        all_nodes_to_keep.update(ancestors_external)
 
     return list(all_nodes_to_keep)
 

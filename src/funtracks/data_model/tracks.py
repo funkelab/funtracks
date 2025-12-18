@@ -578,6 +578,10 @@ class Tracks:
             if key in self.features:
                 del self.features[key]
                 # TODO Teun: do we need to remove feature here from graph as well?
+                # Currently the tests want to maintain the values on the graph,
+                # but this might become a problem when you want to add a node later,
+                # and you NEED to add all existing attributes, sooo conclusion:
+                # we will remove all the features from the graph, so change the tests!
 
     def add_feature(self, key: str, feature: Feature) -> None:
         """Add a feature to the features dictionary and perform graph operations.

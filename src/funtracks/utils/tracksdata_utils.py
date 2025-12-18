@@ -283,28 +283,6 @@ def pixels_to_td_mask(
     return mask, area
 
 
-def td_get_ancestors(graph, node_id):
-    """Get ancestors of a node in a tracksdata graph.
-
-    Args:
-        graph: A tracksdata graph
-        node_id: Node ID to get ancestors for
-    """
-
-    ancestors = set()
-    to_visit = [node_id]
-
-    while to_visit:
-        current_node = to_visit.pop()
-        predecessors = graph.predecessors(current_node)
-        for pred in predecessors:
-            if pred not in ancestors:
-                ancestors.add(pred)
-                to_visit.append(pred)
-
-    return ancestors
-
-
 def td_get_single_attr_from_edge(graph, edge: tuple[int, int], attrs: Sequence[str]):
     """Get a single attribute from a edge in a tracksdata graph."""
 
