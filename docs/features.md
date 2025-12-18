@@ -272,9 +272,9 @@ tracks.disable_features(["area"])
         def compute(self, feature_keys=None):
             # Compute feature values in bulk
             if "custom" in self.features:
-                for node in self.tracks.graph.nodes():
+                for node in self.tracks.graph.node_ids():
                     value = self._compute_custom(node)
-                    self.tracks.graph.nodes[node]["custom"] = value
+                    self.tracks.graph[node]["custom"] = value
 
         def update(self, action):
             # Incremental update when graph changes

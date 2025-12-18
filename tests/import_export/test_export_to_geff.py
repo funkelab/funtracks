@@ -45,7 +45,6 @@ def test_export_to_geff(
             pos = graph[node]["pos"]
             for i, key in enumerate(pos_keys):
                 graph[node][key] = pos[i]
-            # del graph.nodes[node]["pos"]
         graph.remove_node_attr_key("pos")
         # Create Tracks with split position attributes
         # Features like area, track_id will be auto-detected from the graph

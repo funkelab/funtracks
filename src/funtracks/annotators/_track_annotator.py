@@ -9,7 +9,6 @@ import tracksdata as td
 from funtracks.actions import AddNode, DeleteNode, UpdateTrackID
 from funtracks.data_model import SolutionTracks
 from funtracks.features import LineageID, TrackletID
-from funtracks.utils.tracksdata_utils import td_graph_edge_list
 
 from ._graph_annotator import GraphAnnotator
 
@@ -229,7 +228,7 @@ class TrackAnnotator(GraphAnnotator):
 
         # Remove all intertrack edges from a copy of the original graph
         for parent in parents:
-            all_edges = td_graph_edge_list(self.tracks.graph)
+            all_edges = self.tracks.graph.edge_list()
             daughters = [edge[1] for edge in all_edges if edge[0] == parent]
 
             for daughter in daughters:

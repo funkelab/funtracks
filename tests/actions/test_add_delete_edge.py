@@ -11,7 +11,6 @@ from funtracks.actions import (
 )
 from funtracks.utils.tracksdata_utils import (
     td_get_single_attr_from_edge,
-    td_graph_edge_list,
 )
 
 iou_key = "iou"
@@ -25,7 +24,7 @@ def test_add_delete_edges(get_tracks, ndim, with_seg):
     reference_seg = copy.deepcopy(tracks.segmentation)
 
     # Create an empty tracks with just nodes (no edges)
-    for edge in td_graph_edge_list(tracks.graph):
+    for edge in tracks.graph.edge_list():
         tracks.graph.remove_edge(*edge)
 
     edges = [(1, 2), (1, 3), (3, 4), (4, 5)]
@@ -39,7 +38,7 @@ def test_add_delete_edges(get_tracks, ndim, with_seg):
     # TODO: test all the edge cases, invalid operations, etc. for all actions
     assert set(tracks.graph.node_ids()) == set(reference_graph.node_ids())
     if with_seg:
-        for edge in td_graph_edge_list(tracks.graph):
+        for edge in tracks.graph.edge_list():
             edge_id_tracks = tracks.graph.edge_id(edge[0], edge[1])
             edge_id_graph = reference_graph.edge_id(edge[0], edge[1])
             assert tracks.graph.edge_attrs().filter(pl.col("edge_id") == edge_id_tracks)[
@@ -62,11 +61,9 @@ def test_add_delete_edges(get_tracks, ndim, with_seg):
     inverse.inverse()
     assert set(tracks.graph.node_ids()) == set(reference_graph.node_ids())
     assert set(tracks.graph.edge_ids()) == set(reference_graph.edge_ids())
-    assert sorted(td_graph_edge_list(tracks.graph)) == sorted(
-        td_graph_edge_list(reference_graph)
-    )
+    assert sorted(tracks.graph.edge_list()) == sorted(reference_graph.edge_list())
     if with_seg:
-        for edge in td_graph_edge_list(tracks.graph):
+        for edge in tracks.graph.edge_list():
             edge_id_tracks = tracks.graph.edge_id(edge[0], edge[1])
             edge_id_graph = reference_graph.edge_id(edge[0], edge[1])
 

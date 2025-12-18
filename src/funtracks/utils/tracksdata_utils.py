@@ -283,21 +283,6 @@ def pixels_to_td_mask(
     return mask, area
 
 
-def td_graph_edge_list(graph):
-    """Get list of edges from a tracksdata graph.
-
-    Args:
-        graph: A tracksdata graph
-
-    Returns:
-        list: List of edges: [[source_id, target_id], ...]
-    """
-    existing_edges = (
-        graph.edge_attrs().select(["source_id", "target_id"]).to_numpy().tolist()
-    )
-    return existing_edges
-
-
 def td_get_ancestors(graph, node_id):
     """Get ancestors of a node in a tracksdata graph.
 

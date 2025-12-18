@@ -5,7 +5,6 @@ import pytest
 from funtracks.data_model import Tracks
 from funtracks.utils.tracksdata_utils import (
     create_empty_graphview_graph,
-    td_graph_edge_list,
 )
 
 track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
@@ -105,7 +104,7 @@ def test_nodes_edges(graph_2d_with_computed_features):
     tracks = Tracks(graph_2d_with_computed_features, ndim=3, **track_attrs)
     assert set(tracks.nodes()) == {1, 2, 3, 4, 5, 6}
     assert set(tracks.edges()) == {1, 2, 3, 4}
-    assert set(map(tuple, td_graph_edge_list(tracks.graph))) == {
+    assert set(map(tuple, tracks.graph.edge_list())) == {
         (1, 2),
         (1, 3),
         (3, 4),
