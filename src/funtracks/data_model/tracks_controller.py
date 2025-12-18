@@ -15,6 +15,7 @@ from ..user_actions import (
     UserAddNode,
     UserDeleteEdge,
     UserDeleteNode,
+    UserSwapNodes,
     UserUpdateSegmentation,
 )
 from .solution_tracks import SolutionTracks
@@ -163,37 +164,13 @@ class TracksController:
         return ActionGroup(self.tracks, actions)
 
     def swap_nodes(self, nodes: tuple[Node, Node]) -> None:
-        """'Swaps' nodes by swapping the incoming edges of two horizontal nodes.
-
-        Args:
-            nodes (tuple[Node, Node]): A tuple with two nodes at the same time point.
-        """
+        """Swap the incoming edges of two horizontal nodes."""
 
         if not self.is_valid_swap(nodes):
             return
 
-        edges_to_make = []
-        edges_to_break = []
-
-        node1, node2 = nodes[0], nodes[1]
-        pred1 = next(self.tracks.graph.predecessors(node1), None)
-        pred2 = next(self.tracks.graph.predecessors(node2), None)
-
-        if pred1 is not None:
-            edges_to_break.append((pred1, node1))
-            edges_to_make.append((pred1, node2))
-
-        if pred2 is not None:
-            edges_to_break.append((pred2, node2))
-            edges_to_make.append((pred2, node1))
-
-        actions: list[Action] = []
-        if len(edges_to_break) > 0:
-            actions.append(self._delete_edges(edges_to_break))
-        if len(edges_to_make) > 0:
-            actions.append(self._add_edges(edges_to_make))
-
-        self.action_history.add_new_action(ActionGroup(self.tracks, actions))
+        action = UserSwapNodes(self.tracks, nodes)
+        self.action_history.add_new_action(action)
         self.tracks.refresh.emit()
 
     def add_edges(self, edges: Iterable[Edge], force: bool = False) -> None:
