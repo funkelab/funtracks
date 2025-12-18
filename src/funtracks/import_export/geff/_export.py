@@ -3,14 +3,16 @@ from __future__ import annotations
 import itertools
 from typing import (
     TYPE_CHECKING,
+    Literal,
 )
 
 import geff
 import geff_spec
 import networkx as nx
 import numpy as np
-import zarr
 from geff_spec import GeffMetadata
+
+from funtracks.utils import remove_tilde, setup_zarr_array, setup_zarr_group
 
 from .._utils import filter_graph_with_ancestors
 
@@ -25,6 +27,7 @@ def export_to_geff(
     directory: Path,
     overwrite: bool = False,
     node_ids: set[int] | None = None,
+    zarr_format: Literal[2, 3] = 2,
 ):
     """Export the Tracks nxgraph to geff.
 
@@ -35,7 +38,10 @@ def export_to_geff(
         node_ids (set[int], optional): A set of nodes that should be saved. If
             provided, a valid graph will be constructed that also includes the ancestors
             of the given nodes. All other nodes will NOT be saved.
+        zarr_format (Literal[2, 3]): Zarr format version to use. Defaults to 2
+            for maximum compatibility.
     """
+    directory = remove_tilde(directory)
     directory = directory.resolve(strict=False)
 
     if node_ids is not None:
@@ -44,9 +50,9 @@ def export_to_geff(
         )  # include the ancestors to make sure the graph is valid and has no missing
         # parent nodes.
 
-    # Create directory if it doesn't exist (will raise FileNotFoundError if parent
-    # doesn't exist, or FileExistsError if path is a file)
-    directory.mkdir(exist_ok=True)
+    # Create directory as a zarr group
+    mode: Literal["w", "w-"] = "w" if overwrite else "w-"
+    setup_zarr_group(directory, zarr_format=zarr_format, mode=mode)
 
     # update the graph to split the position into separate attrs, if they are currently
     # together in a list
@@ -77,7 +83,6 @@ def export_to_geff(
     # TODO: helper function in _export_segmentation file
     if tracks.segmentation is not None:
         seg_path = directory / "segmentation"
-        seg_path.mkdir(exist_ok=True)
 
         seg_data = tracks.segmentation
         shape = seg_data.shape
@@ -89,9 +94,9 @@ def export_to_geff(
         chunk_size = tuple(list(chunk_size) + [1] * (len(shape) - len(chunk_size)))
         chunk_size = chunk_size[: len(shape)]
 
-        z = zarr.open_array(
-            str(seg_path),
-            mode="w",
+        z = setup_zarr_array(
+            seg_path,
+            zarr_format=zarr_format,
             shape=shape,
             dtype=dtype,
             chunks=chunk_size,
@@ -142,6 +147,7 @@ def export_to_geff(
         axis_types=axis_types,
         axis_scales=tracks.scale,
         overwrite=overwrite,
+        zarr_format=zarr_format,
     )
 
 

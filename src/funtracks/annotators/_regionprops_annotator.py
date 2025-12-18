@@ -120,7 +120,8 @@ class RegionpropsAnnotator(GraphAnnotator):
                 and regionprops attribute name.
         """
         # Derive axis names from ndim (spatial dimensions only, no time)
-        axis_names = ["z", "y", "x"] if ndim == 4 else ["y", "x"]
+        # Default to 3D when ndim is None to enable matching all position columns
+        axis_names = ["z", "y", "x"] if ndim is None or ndim == 4 else ["y", "x"]
 
         return [
             FeatureSpec(DEFAULT_POS_KEY, Position(axes=axis_names), "centroid"),
@@ -180,6 +181,9 @@ class RegionpropsAnnotator(GraphAnnotator):
         spacing = None if self.tracks.scale is None else tuple(self.tracks.scale[1:])
         for region in regionprops_extended(seg_frame, spacing=spacing):
             node = region.label
+            # Skip labels that aren't nodes in the graph (e.g., unselected detections)
+            if node not in self.tracks.graph:
+                continue
             for key in feature_keys:
                 value = getattr(region, self.regionprops_names[key])
                 if isinstance(value, tuple):
