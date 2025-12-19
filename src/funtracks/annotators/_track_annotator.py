@@ -335,7 +335,9 @@ class TrackAnnotator(GraphAnnotator):
         # Add to new lineage
         if new_lineage_id not in self.lineage_id_to_nodes:
             self.lineage_id_to_nodes[new_lineage_id] = []
-        self.lineage_id_to_nodes[new_lineage_id].extend(component_nodes)
+        for node in component_nodes:  # or can we just make this a set?
+            if node not in self.lineage_id_to_nodes[new_lineage_id]:
+                self.lineage_id_to_nodes[new_lineage_id].append(node)
 
         # Update max lineage id
         if new_lineage_id > self.max_lineage_id:
