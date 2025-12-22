@@ -7,7 +7,7 @@ import numpy as np
 from ..actions._base import ActionGroup
 from ..actions.add_delete_edge import AddEdge, DeleteEdge
 from ..actions.add_delete_node import DeleteNode
-from ..actions.update_track_id import UpdateTrackID
+from ..actions.update_track_id import UpdateTrackIDs
 
 if TYPE_CHECKING:
     from funtracks.data_model import SolutionTracks
@@ -30,8 +30,9 @@ class UserDeleteNode(ActionGroup):
             if len(siblings) == 2:
                 siblings.remove(node)
                 sib = siblings[0]
+                # sibling gets parent's track id (lineage stays the same)
                 new_track_id = self.tracks.get_track_id(pred)
-                self.actions.append(UpdateTrackID(tracks, sib, new_track_id))
+                self.actions.append(UpdateTrackIDs(tracks, sib, new_track_id))
             self.actions.append(DeleteEdge(tracks, (pred, node)))
         for succ in self.tracks.successors(node):
             self.actions.append(DeleteEdge(tracks, (node, succ)))

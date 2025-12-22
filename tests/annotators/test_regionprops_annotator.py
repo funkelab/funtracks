@@ -1,6 +1,6 @@
 import pytest
 
-from funtracks.actions import UpdateNodeSeg, UpdateTrackID
+from funtracks.actions import UpdateNodeSeg, UpdateTrackIDs
 from funtracks.annotators import RegionpropsAnnotator
 from funtracks.data_model import SolutionTracks, Tracks
 
@@ -149,8 +149,8 @@ class TestRegionpropsAnnotator:
         original_track_id = tracks.get_track_id(node_id)
         new_track_id = original_track_id + 100
 
-        # Perform UpdateTrackID action
-        UpdateTrackID(tracks, node_id, new_track_id)
+        # Perform UpdateTrackIDs action
+        UpdateTrackIDs(tracks, node_id, new_track_id)
 
         # Area should remain unchanged (no recomputation happened despite seg change)
         assert tracks.get_node_attr(node_id, "area") == initial_area

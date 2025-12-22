@@ -7,7 +7,7 @@ from funtracks.exceptions import InvalidActionError
 
 from ..actions._base import ActionGroup
 from ..actions.add_delete_edge import AddEdge
-from ..actions.update_track_id import UpdateTrackID
+from ..actions.update_track_id import UpdateTrackIDs
 from .user_delete_edge import UserDeleteEdge
 
 if TYPE_CHECKING:
@@ -63,15 +63,18 @@ class UserAddEdge(ActionGroup):
         # update track ids if needed
         out_degree_source = self.tracks.graph.out_degree(source)
         if out_degree_source == 0:  # joining two segments
-            # assign the track id of the source node to the target and all out
-            # edges until end of track
+            # assign the track id and lineage id of the source node to the target
+            # and all downstream nodes
             new_track_id = self.tracks.get_track_id(source)
-            self.actions.append(UpdateTrackID(self.tracks, edge[1], new_track_id))
+            new_lineage_id = self.tracks.get_lineage_id(source)
+            self.actions.append(
+                UpdateTrackIDs(self.tracks, target, new_track_id, new_lineage_id)
+            )
         elif out_degree_source == 1:  # creating a division
-            # assign a new track id to existing child
+            # assign a new track id to existing child (lineage stays the same)
             successor = next(iter(self.tracks.graph.successors(source)))
             self.actions.append(
-                UpdateTrackID(self.tracks, successor, self.tracks.get_next_track_id())
+                UpdateTrackIDs(self.tracks, successor, self.tracks.get_next_track_id())
             )
         else:
             raise InvalidActionError(

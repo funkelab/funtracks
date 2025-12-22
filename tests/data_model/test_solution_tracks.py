@@ -147,8 +147,8 @@ def test_export_to_csv_with_display_names(
 
     assert len(lines) == tracks.graph.number_of_nodes() + 1  # add header
 
-    # With display names: ID, Parent ID, Time, y, x, Tracklet ID
-    header = ["ID", "Parent ID", "Time", "y", "x", "Tracklet ID"]
+    # With display names: ID, Parent ID, Time, y, x, Tracklet ID, Lineage ID
+    header = ["ID", "Parent ID", "Time", "y", "x", "Tracklet ID", "Lineage ID"]
     assert lines[0].strip().split(",") == header
 
     # Test 3D with display names
@@ -160,6 +160,6 @@ def test_export_to_csv_with_display_names(
 
     assert len(lines) == tracks.graph.number_of_nodes() + 1  # add header
 
-    # With display names: ID, Parent ID, Time, z, y, x, Tracklet ID
-    header = ["ID", "Parent ID", "Time", "z", "y", "x", "Tracklet ID"]
+    # With display names: ID, Parent ID, Time, z, y, x, Tracklet ID, Lineage ID
+    header = ["ID", "Parent ID", "Time", "z", "y", "x", "Tracklet ID", "Lineage ID"]
     assert lines[0].strip().split(",") == header

@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 import networkx as nx
 
-from funtracks.actions import AddEdge, AddNode, DeleteEdge, DeleteNode, UpdateTrackID
+from funtracks.actions import AddNode, DeleteNode, UpdateTrackIDs
 from funtracks.data_model import SolutionTracks
 from funtracks.features import LineageID, TrackletID
 
@@ -223,7 +223,7 @@ class TrackAnnotator(GraphAnnotator):
     def update(self, action: BasicAction) -> None:
         """Update track-level features based on the action.
 
-        Handles incremental updates for UpdateTrackID, AddNode, and DeleteNode actions.
+        Handles incremental updates for UpdateTrackIDs, AddNode, and DeleteNode actions.
         Other actions are ignored.
 
         Args:
@@ -234,196 +234,156 @@ class TrackAnnotator(GraphAnnotator):
         if self.tracklet_key not in self.features:
             return
 
-        if isinstance(action, UpdateTrackID):
-            self._handle_update_track_id(action)
+        if isinstance(action, UpdateTrackIDs):
+            self._handle_update_track_ids(action)
         elif isinstance(action, AddNode):
             self._handle_add_node(action)
         elif isinstance(action, DeleteNode):
             self._handle_delete_node(action)
-        elif (
-            isinstance(action, AddEdge | DeleteEdge) and self.lineage_key in self.features
-        ):
-            self._handle_update_lineage_id(action)
 
-    def _handle_update_track_id(self, action: UpdateTrackID) -> None:
-        """Handle UpdateTrackID action to change track ids and update bookkeeping.
+    def _handle_update_track_ids(self, action: UpdateTrackIDs) -> None:
+        """Handle UpdateTrackIDs action to update tracklet and/or lineage IDs.
+
+        Traverses downstream from start_node, updating:
+        - Tracklet IDs: for the linear segment (until tracklet_id changes)
+        - Lineage IDs: for all downstream nodes (continues through divisions)
 
         Args:
-            action: The UpdateTrackID action
+            action: The UpdateTrackIDs action
         """
-        # Get the parameters from the action
         start_node = action.start_node
-        new_track_id = action.new_track_id
-        old_track_id = action.old_track_id
+        old_tracklet_id = action.old_tracklet_id
+        new_tracklet_id = action.new_tracklet_id
+        new_lineage_id = action.new_lineage_id
+        old_lineage_id = action.old_lineage_id
+        update_lineage = new_lineage_id is not None and self.lineage_key in self.features
 
-        # Walk the track and update all nodes with old_track_id to new_track_id
-        curr_node = start_node
-        updated_nodes = []
-        while self.tracks.get_track_id(curr_node) == old_track_id:
-            # Update the track id
-            self.tracks._set_node_attr(curr_node, self.tracklet_key, new_track_id)
-            updated_nodes.append(curr_node)
+        # Single traversal from start_node following all successors
+        # - Tracklet: update while tracklet_id matches old_tracklet_id
+        # - Lineage: update all downstream nodes
+        tracklet_nodes = []
+        lineage_nodes = []
+        still_in_tracklet = True
 
-            # Get the next node (picks first successor if there are multiple)
-            successors = list(self.tracks.graph.successors(curr_node))
-            if len(successors) == 0:
-                break
-            curr_node = successors[0]
+        curr_nodes = [start_node]
+        while curr_nodes:
+            next_nodes = []
+            for node in curr_nodes:
+                # Lineage updates all downstream nodes
+                if update_lineage:
+                    self.tracks._set_node_attr(node, self.lineage_key, new_lineage_id)
+                    lineage_nodes.append(node)
 
-        # Update internal bookkeeping: tracklet_id_to_nodes
-        # Remove nodes from old track_id list
-        if old_track_id in self.tracklet_id_to_nodes:
-            for node in updated_nodes:
-                if node in self.tracklet_id_to_nodes[old_track_id]:
-                    self.tracklet_id_to_nodes[old_track_id].remove(node)
-            # Clean up empty list
-            if not self.tracklet_id_to_nodes[old_track_id]:
-                del self.tracklet_id_to_nodes[old_track_id]
+                # Tracklet only updates while ID matches old_tracklet_id
+                if still_in_tracklet:
+                    if self.tracks.get_track_id(node) == old_tracklet_id:
+                        self.tracks._set_node_attr(
+                            node, self.tracklet_key, new_tracklet_id
+                        )
+                        tracklet_nodes.append(node)
+                    else:
+                        still_in_tracklet = False
 
-        # Add nodes to new track_id list
-        if new_track_id not in self.tracklet_id_to_nodes:
-            self.tracklet_id_to_nodes[new_track_id] = []
-        self.tracklet_id_to_nodes[new_track_id].extend(updated_nodes)
+                # Continue to all successors
+                next_nodes.extend(self.tracks.graph.successors(node))
 
-        # Update max_tracklet_id if needed
-        if new_track_id > self.max_tracklet_id:
-            self.max_tracklet_id = new_track_id
+            curr_nodes = next_nodes
 
-    def _handle_update_lineage_id(self, action: AddEdge | DeleteEdge) -> None:
-        """Handle AddEdge and DeleteEdge actions to change lineage ids and update
-        bookkeeping.
-
-        The update applies to the entire weakly connected component
-        containing the target node.
-        """
-
-        start_node = action.edge[0]
-        target_node = action.edge[1]
-        old_lineage_id = self.tracks.get_node_attr(target_node, self.lineage_key)
-
-        if isinstance(action, AddEdge):
-            # target node component should get lineage id of source component
-            new_lineage_id = self.tracks.get_node_attr(start_node, self.lineage_key)
-        else:
-            # target node should get new lineage id
-            new_lineage_id = self.max_lineage_id + 1
-
-        component_nodes = None
-        for component in nx.weakly_connected_components(self.tracks.graph):
-            if target_node in component:
-                component_nodes = list(component)
-                break
-
-        if component_nodes is None:
-            return
-
-        # Update node attributes
-        self.tracks._set_nodes_attr(
-            component_nodes,
-            self.lineage_key,
-            [new_lineage_id] * len(component_nodes),
+        # Update bookkeeping
+        self._update_tracklet_bookkeeping(
+            tracklet_nodes, old_tracklet_id, new_tracklet_id
         )
+        if update_lineage:
+            assert new_lineage_id is not None  # Ensured by update_lineage check
+            self._update_lineage_bookkeeping(
+                lineage_nodes, old_lineage_id, new_lineage_id
+            )
 
-        # Remove from old lineage
-        if old_lineage_id in self.lineage_id_to_nodes:
-            for node in component_nodes:
-                if node in self.lineage_id_to_nodes[old_lineage_id]:
-                    self.lineage_id_to_nodes[old_lineage_id].remove(node)
-            if not self.lineage_id_to_nodes[old_lineage_id]:
-                del self.lineage_id_to_nodes[old_lineage_id]
+    def _add_to_tracklet_bookkeeping(self, nodes: list[int], tracklet_id: int) -> None:
+        """Add nodes to tracklet bookkeeping."""
+        if tracklet_id not in self.tracklet_id_to_nodes:
+            self.tracklet_id_to_nodes[tracklet_id] = []
+        self.tracklet_id_to_nodes[tracklet_id].extend(nodes)
+        if tracklet_id > self.max_tracklet_id:
+            self.max_tracklet_id = tracklet_id
 
-        # Add to new lineage
-        if new_lineage_id not in self.lineage_id_to_nodes:
-            self.lineage_id_to_nodes[new_lineage_id] = []
-        for node in component_nodes:  # or can we just make this a set?
-            if node not in self.lineage_id_to_nodes[new_lineage_id]:
-                self.lineage_id_to_nodes[new_lineage_id].append(node)
+    def _remove_from_tracklet_bookkeeping(
+        self, nodes: list[int], tracklet_id: int
+    ) -> None:
+        """Remove nodes from tracklet bookkeeping."""
+        if tracklet_id not in self.tracklet_id_to_nodes:
+            return
+        for node in nodes:
+            if node in self.tracklet_id_to_nodes[tracklet_id]:
+                self.tracklet_id_to_nodes[tracklet_id].remove(node)
+        if not self.tracklet_id_to_nodes[tracklet_id]:
+            del self.tracklet_id_to_nodes[tracklet_id]
 
-        # Update max lineage id
-        if new_lineage_id > self.max_lineage_id:
-            self.max_lineage_id = new_lineage_id
+    def _add_to_lineage_bookkeeping(self, nodes: list[int], lineage_id: int) -> None:
+        """Add nodes to lineage bookkeeping."""
+        if lineage_id not in self.lineage_id_to_nodes:
+            self.lineage_id_to_nodes[lineage_id] = []
+        for node in nodes:
+            if node not in self.lineage_id_to_nodes[lineage_id]:
+                self.lineage_id_to_nodes[lineage_id].append(node)
+        if lineage_id > self.max_lineage_id:
+            self.max_lineage_id = lineage_id
+
+    def _remove_from_lineage_bookkeeping(self, nodes: list[int], lineage_id: int) -> None:
+        """Remove nodes from lineage bookkeeping."""
+        if lineage_id not in self.lineage_id_to_nodes:
+            return
+        for node in nodes:
+            if node in self.lineage_id_to_nodes[lineage_id]:
+                self.lineage_id_to_nodes[lineage_id].remove(node)
+        if not self.lineage_id_to_nodes[lineage_id]:
+            del self.lineage_id_to_nodes[lineage_id]
+
+    def _update_tracklet_bookkeeping(
+        self, nodes: list[int], old_id: int, new_id: int
+    ) -> None:
+        """Move nodes from old tracklet to new tracklet in bookkeeping."""
+        self._remove_from_tracklet_bookkeeping(nodes, old_id)
+        self._add_to_tracklet_bookkeeping(nodes, new_id)
+
+    def _update_lineage_bookkeeping(
+        self, nodes: list[int], old_id: int | None, new_id: int
+    ) -> None:
+        """Move nodes from old lineage to new lineage in bookkeeping."""
+        if old_id is not None:
+            self._remove_from_lineage_bookkeeping(nodes, old_id)
+        self._add_to_lineage_bookkeeping(nodes, new_id)
 
     def _handle_add_node(self, action) -> None:
-        """Handle AddNode action to update track id bookkeeping.
-
-        TODO: Decide if we need to update the max if we delete it?
+        """Handle AddNode action to update bookkeeping.
 
         Args:
             action: The AddNode action
         """
-        track_id = self.tracks.get_track_id(action.node)
-        if track_id not in self.tracklet_id_to_nodes:
-            self.tracklet_id_to_nodes[track_id] = []
-        self.tracklet_id_to_nodes[track_id].append(action.node)
+        node = action.node
+        track_id = self.tracks.get_track_id(node)
+        self._add_to_tracklet_bookkeeping([node], track_id)
 
-        # Update max_tracklet_id if needed
-        if track_id > self.max_tracklet_id:
-            self.max_tracklet_id = track_id
-
-        # Update lineage ids if needed
         if self.lineage_key in self.features:
-            lineage_id = self.get_lineage_id_from_tracklet_id(track_id)
-            if lineage_id not in self.lineage_id_to_nodes:
-                self.lineage_id_to_nodes[lineage_id] = []
-            self.lineage_id_to_nodes[lineage_id].append(action.node)
-
-            self.tracks._set_node_attr(action.node, self.lineage_key, lineage_id)
-
-            if lineage_id > self.max_lineage_id:
-                self.max_lineage_id = lineage_id
+            lineage_id = self.tracks.get_node_attr(node, self.lineage_key)
+            if lineage_id is not None:
+                self._add_to_lineage_bookkeeping([node], lineage_id)
 
     def _handle_delete_node(self, action) -> None:
-        """Handle DeleteNode action to update track id bookkeeping.
+        """Handle DeleteNode action to update bookkeeping.
 
         Args:
             action: The DeleteNode action
         """
+        node = action.node
         track_id = action.attributes.get(self.tracklet_key)
-        if track_id is not None and track_id in self.tracklet_id_to_nodes:
-            if action.node in self.tracklet_id_to_nodes[track_id]:
-                self.tracklet_id_to_nodes[track_id].remove(action.node)
-            # Clean up empty list
-            if not self.tracklet_id_to_nodes[track_id]:
-                del self.tracklet_id_to_nodes[track_id]
+        if track_id is not None:
+            self._remove_from_tracklet_bookkeeping([node], track_id)
 
-        # Update lineage ids if needed
         if self.lineage_key in self.features:
             lineage_id = action.attributes.get(self.lineage_key)
-            if (
-                lineage_id is not None
-                and lineage_id in self.lineage_id_to_nodes
-                and action.node in self.lineage_id_to_nodes[lineage_id]
-            ):
-                self.lineage_id_to_nodes[lineage_id].remove(action.node)
-                if not self.lineage_id_to_nodes[lineage_id]:
-                    del self.lineage_id_to_nodes[lineage_id]
-
-    def get_lineage_id_from_tracklet_id(self, tracklet_id: int) -> int:
-        """Return the lineage ID corresponding to a given tracklet ID.
-
-        The lineage is inferred by finding any node belonging to the tracklet
-        and looking up its lineage ID. If this node does not have a lineage id attr,
-        a new lineage id (max lineage + 1) is assigned.
-
-        Args:
-            tracklet_id: Tracklet ID whose lineage ID should be returned.
-
-        Returns:
-            The new lineage ID.
-        """
-
-        nodes = self.tracklet_id_to_nodes[tracklet_id]
-
-        # Take any node in the tracklet
-        node = nodes[0]
-
-        lineage_id = self.tracks.get_node_attr(node, self.lineage_key)
-        if lineage_id is not None:
-            return lineage_id  # return existing
-        else:
-            return (
-                self.max_lineage_id + 1
-            )  # if no lineage_id assigned yet, assign a new one
+            if lineage_id is not None:
+                self._remove_from_lineage_bookkeeping([node], lineage_id)
 
     def change_key(self, old_key: str, new_key: str) -> None:
         """Rename a feature key in this annotator.

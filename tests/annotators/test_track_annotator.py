@@ -1,8 +1,13 @@
 import pytest
 
-from funtracks.actions import AddEdge, DeleteEdge, UpdateNodeSeg
+from funtracks.actions import UpdateNodeSeg
 from funtracks.annotators import TrackAnnotator
-from funtracks.user_actions import UserAddNode, UserDeleteNode
+from funtracks.user_actions import (
+    UserAddEdge,
+    UserAddNode,
+    UserDeleteEdge,
+    UserDeleteNode,
+)
 
 
 @pytest.mark.parametrize("ndim", [3, 4])
@@ -131,10 +136,10 @@ class TestTrackAnnotator:
         # get the existing TrackAnnotator
         ann = next(a for a in tracks.annotators if isinstance(a, TrackAnnotator))
 
-        # ---- AddEdge: merge lineages ----
+        # ---- UserAddEdge: merge lineages ----
         source_node = 2
         target_node = 6
-        AddEdge(tracks, edge=(source_node, target_node))
+        UserAddEdge(tracks, edge=(source_node, target_node))
 
         # Assert target component adopts source lineage id
         assert tracks.get_node_attr(target_node, ann.lineage_key) == tracks.get_node_attr(
@@ -143,14 +148,14 @@ class TestTrackAnnotator:
         assert set(ann.lineage_id_to_nodes[1]) == {1, 2, 3, 4, 5, 6}
         assert 2 not in ann.lineage_id_to_nodes
 
-        # ---- DeleteEdge: split lineage ----
+        # ---- UserDeleteEdge: split lineage ----
         source_node = 3
         target_node = 4
 
         edge = next(e for e in tracks.graph.edges if set(e) == {3, 4})
 
         expected_lineage_id = ann.max_lineage_id + 1
-        DeleteEdge(tracks, edge=edge)
+        UserDeleteEdge(tracks, edge=edge)
 
         # Assert target component gets a new lineage id
         component = [4, 5]
@@ -168,12 +173,14 @@ class TestTrackAnnotator:
         assert set(ann.lineage_id_to_nodes[expected_lineage_id]) == {4, 5}
 
         # ---- Add a node with existing track id ----
+        # After the split, only node 3 has track_id=3, and it has lineage_id=1
+        # (nodes 4,5 got new track_id=6 and lineage_id=3)
         attrs = {"pos": ([5, 8]), tracks.features.time_key: (5), "track_id": (3)}
         UserAddNode(tracks, node=7, attributes=attrs)
 
-        # Assert new node adopts lineage of existing track
-        assert tracks.get_node_attr(7, ann.lineage_key) == expected_lineage_id
-        assert 7 in ann.lineage_id_to_nodes[3]
+        # Assert new node adopts lineage of existing track (track_id=3 -> lineage_id=1)
+        assert tracks.get_node_attr(7, ann.lineage_key) == 1
+        assert 7 in ann.lineage_id_to_nodes[1]
 
         # ---- Add a node with a new track id ----
         attrs = {"pos": ([5, 8]), tracks.features.time_key: (5), "track_id": (4)}

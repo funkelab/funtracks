@@ -241,6 +241,7 @@ def get_tracks(get_graph, get_segmentation) -> Callable[..., "Tracks | SolutionT
             time_key="t",
             position_key="pos",
             tracklet_key="track_id" if (with_seg or is_solution) else None,
+            lineage_key="lineage_id" if is_solution else None,
         )
 
         # Create the appropriate Tracks type with pre-built FeatureDict
