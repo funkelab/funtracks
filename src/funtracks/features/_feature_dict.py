@@ -20,6 +20,7 @@ class FeatureDict(dict[str, Feature]):
         time_key: str,
         position_key: str | list[str] | None,
         tracklet_key: str | None,
+        lineage_key: str | None = None,
     ):
         """
         Args:
@@ -27,11 +28,13 @@ class FeatureDict(dict[str, Feature]):
             time_key (str): The key for the time feature (must be in features)
             position_key (str | list[str] | None): The key(s) for position feature(s)
             tracklet_key (str | None): The key for the tracklet feature
+            lineage_key (str | None): The key for the lineage feature
         """
         super().__init__(features)
         self.time_key = time_key
         self.position_key = position_key
         self.tracklet_key = tracklet_key
+        self.lineage_key = lineage_key
 
         # Validate that time and position keys exist
         if time_key not in self:
@@ -61,7 +64,7 @@ class FeatureDict(dict[str, Feature]):
 
         Returns:
             dict: A map from the key "FeatureDict" containing features, time_key,
-                position_key, and tracklet_key
+                position_key, tracklet_key, and lineage_key
         """
         return {
             "FeatureDict": {
@@ -69,6 +72,7 @@ class FeatureDict(dict[str, Feature]):
                 "time_key": self.time_key,
                 "position_key": self.position_key,
                 "tracklet_key": self.tracklet_key,
+                "lineage_key": self.lineage_key,
             }
         }
 
@@ -78,7 +82,7 @@ class FeatureDict(dict[str, Feature]):
 
         Args:
             json_dict (dict): A dictionary with the key "FeatureDict" containing
-                features, time_key, position_key, and tracklet_key
+                features, time_key, position_key, tracklet_key, and lineage_key
 
         Returns:
             FeatureDict: A FeatureDict object containing the features from the dictionary
@@ -90,6 +94,7 @@ class FeatureDict(dict[str, Feature]):
             position_key=data["position_key"],
             # Use get() for backwards compatibility with old JSON files
             tracklet_key=data.get("tracklet_key"),
+            lineage_key=data.get("lineage_key"),
         )
 
     def register_position_feature(self, key: str, feature: Feature) -> None:
@@ -110,4 +115,14 @@ class FeatureDict(dict[str, Feature]):
             feature: The Feature to register
         """
         self.tracklet_key = key
+        self[key] = feature
+
+    def register_lineage_feature(self, key: str, feature: Feature) -> None:
+        """Register the lineage feature and set the lineage_key.
+
+        Args:
+            key: The key to use for the lineage feature
+            feature: The Feature to register
+        """
+        self.lineage_key = key
         self[key] = feature
