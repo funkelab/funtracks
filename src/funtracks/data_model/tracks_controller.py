@@ -16,7 +16,7 @@ from ..user_actions import (
     UserAddNode,
     UserDeleteEdge,
     UserDeleteNode,
-    UserSwapNodes,
+    UserSwapPredecessors,
     UserUpdateSegmentation,
 )
 from .solution_tracks import SolutionTracks
@@ -164,10 +164,10 @@ class TracksController:
             )
         return ActionGroup(self.tracks, actions)
 
-    def swap_nodes(self, nodes: tuple[Node, Node]) -> None:
-        """Swap the incoming edges of two horizontal nodes."""
+    def swap_predecessors(self, nodes: tuple[Node, Node]) -> None:
+        """Swap the predecessors (incoming edges) of two nodes at the same time point."""
         try:
-            action = UserSwapNodes(self.tracks, nodes)
+            action = UserSwapPredecessors(self.tracks, nodes)
         except InvalidActionError as e:
             warn(str(e), stacklevel=2)
             return

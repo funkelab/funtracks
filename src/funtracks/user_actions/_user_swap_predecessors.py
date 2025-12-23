@@ -12,15 +12,16 @@ if TYPE_CHECKING:
     from funtracks.data_model import SolutionTracks
 
 
-class UserSwapNodes(ActionGroup):
-    """Swap the incoming edges of two horizontal nodes.
+class UserSwapPredecessors(ActionGroup):
+    """Swap the predecessors (incoming edges) of two nodes at the same time point.
 
     Args:
         tracks (SolutionTracks): The tracks to perform the swap on.
         nodes (tuple[Node, Node]): A tuple with two nodes at the same time point.
 
     Raises:
-        InvalidActionError: If the nodes are not at the same time point.
+        InvalidActionError: If the nodes are not at the same time point, or if
+            not exactly two nodes are provided.
     """
 
     def __init__(

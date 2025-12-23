@@ -329,8 +329,8 @@ def test__add_remove_edges_no_seg(graph_2d_with_computed_features):
     assert tracks.graph.number_of_edges() == num_edges
 
 
-def test__swap_nodes(graph_2d_with_computed_features):
-    """Test swapping the incoming edges of two horizontal nodes."""
+def test__swap_predecessors(graph_2d_with_computed_features):
+    """Test swapping the predecessors (incoming edges) of two nodes."""
 
     tracks = SolutionTracks(
         graph_2d_with_computed_features,
@@ -339,7 +339,7 @@ def test__swap_nodes(graph_2d_with_computed_features):
         tracklet_attr="track_id",
     )
     controller = TracksController(tracks)
-    controller.swap_nodes([5, 6])
+    controller.swap_predecessors([5, 6])
 
     assert tracks.get_track_id(5) == 6  # new (next available) track id
     assert tracks.get_track_id(6) == 3  # now on track id 3

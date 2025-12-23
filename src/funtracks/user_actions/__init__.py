@@ -1,4 +1,4 @@
-from ._user_swap_nodes import UserSwapNodes
+from ._user_swap_predecessors import UserSwapPredecessors
 from .user_add_edge import UserAddEdge
 from .user_add_node import UserAddNode
 from .user_delete_edge import UserDeleteEdge
@@ -10,6 +10,6 @@ __all__ = [
     "UserAddNode",
     "UserDeleteEdge",
     "UserDeleteNode",
-    "UserSwapNodes",
+    "UserSwapPredecessors",
     "UserUpdateSegmentation",
 ]

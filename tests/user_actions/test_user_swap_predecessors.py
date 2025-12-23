@@ -1,12 +1,12 @@
 import pytest
 
 from funtracks.exceptions import InvalidActionError
-from funtracks.user_actions import UserSwapNodes
+from funtracks.user_actions import UserSwapPredecessors
 
 
 @pytest.mark.parametrize("ndim", [3, 4])
 @pytest.mark.parametrize("with_seg", [True, False])
-class TestUserSwapNodes:
+class TestUserSwapPredecessors:
     @pytest.mark.parametrize("order", [(5, 6), (6, 5)])
     def test_user_swap_nodes_one_predecessor(self, get_tracks, ndim, with_seg, order):
         """Test swapping when one node has a predecessor and one doesn't."""
@@ -19,7 +19,7 @@ class TestUserSwapNodes:
         old_track_id_5 = tracks.get_track_id(5)
         old_track_id_6 = tracks.get_track_id(6)
 
-        action = UserSwapNodes(tracks, order)
+        action = UserSwapPredecessors(tracks, order)
 
         # After swap: edge should go from 4 to 6 instead of 4 to 5
         assert (4, 6) in tracks.graph.edges
@@ -46,7 +46,7 @@ class TestUserSwapNodes:
         old_track_id_2 = tracks.get_track_id(2)
         old_track_id_3 = tracks.get_track_id(3)
 
-        action = UserSwapNodes(tracks, (2, 3))
+        action = UserSwapPredecessors(tracks, (2, 3))
 
         # No actions should be created since swapping would result in identical graph
         assert len(action.actions) == 0
@@ -72,7 +72,7 @@ class TestUserSwapNodes:
         old_track_id_5 = tracks.get_track_id(5)
         old_track_id_6 = tracks.get_track_id(6)
 
-        action = UserSwapNodes(tracks, (5, 6))
+        action = UserSwapPredecessors(tracks, (5, 6))
 
         # After swap: edges should be swapped
         assert (4, 6) in tracks.graph.edges
@@ -95,7 +95,7 @@ class TestUserSwapNodes:
         with pytest.raises(
             InvalidActionError, match="Both nodes must have the same time point to swap"
         ):
-            UserSwapNodes(tracks, (1, 5))
+            UserSwapPredecessors(tracks, (1, 5))
 
     def test_user_swap_nodes_wrong_count_raises(self, get_tracks, ndim, with_seg):
         """Test that swapping with wrong number of nodes raises an error."""
@@ -104,12 +104,12 @@ class TestUserSwapNodes:
         with pytest.raises(
             InvalidActionError, match="You can only swap a pair of two nodes"
         ):
-            UserSwapNodes(tracks, (1,))  # type: ignore[arg-type]
+            UserSwapPredecessors(tracks, (1,))  # type: ignore[arg-type]
 
         with pytest.raises(
             InvalidActionError, match="You can only swap a pair of two nodes"
         ):
-            UserSwapNodes(tracks, (1, 2, 3))  # type: ignore[arg-type]
+            UserSwapPredecessors(tracks, (1, 2, 3))  # type: ignore[arg-type]
 
     def test_user_swap_nodes_no_predecessors(self, get_tracks, ndim, with_seg):
         """Test swapping two nodes that both have no predecessors does nothing."""
@@ -130,7 +130,7 @@ class TestUserSwapNodes:
         old_track_id_5 = tracks.get_track_id(5)
         old_track_id_6 = tracks.get_track_id(6)
 
-        action = UserSwapNodes(tracks, (5, 6))
+        action = UserSwapPredecessors(tracks, (5, 6))
 
         # Nothing should change since neither has a predecessor
         assert tracks.get_track_id(5) == old_track_id_5
