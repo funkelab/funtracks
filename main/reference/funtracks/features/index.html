@@ -1111,6 +1111,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#funtracks.features.FeatureDict.register_lineage_feature" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;register_lineage_feature
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#funtracks.features.FeatureDict.register_position_feature" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1863,6 +1874,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#funtracks.features.FeatureDict.register_lineage_feature" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;register_lineage_feature
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#funtracks.features.FeatureDict.register_position_feature" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2221,6 +2243,7 @@ like Position and EllipsoidAxes.</p>
     <span class="n">time_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">position_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">tracklet_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">lineage_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span>
 </code></pre></div>
 
@@ -2347,6 +2370,22 @@ Provides convenient access to time and position features through properties.</p>
                 <em>required</em>
             </td>
           </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>lineage_key</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The key for the lineage feature</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
       </tbody>
     </table>
 
@@ -2443,7 +2482,7 @@ Provides convenient access to time and position features through properties.</p>
             <td>
               <div class="doc-md-description">
                 <p>A map from the key "FeatureDict" containing features, time_key,
-position_key, and tracklet_key</p>
+position_key, tracklet_key, and lineage_key</p>
               </div>
             </td>
           </tr>
@@ -2492,7 +2531,7 @@ position_key, and tracklet_key</p>
             <td>
               <div class="doc-md-description">
                 <p>A dictionary with the key "FeatureDict" containing
-features, time_key, position_key, and tracklet_key</p>
+features, time_key, position_key, tracklet_key, and lineage_key</p>
               </div>
             </td>
             <td>
@@ -2520,6 +2559,75 @@ features, time_key, position_key, and tracklet_key</p>
               <div class="doc-md-description">
                 <p>A FeatureDict object containing the features from the dictionary</p>
               </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="funtracks.features.FeatureDict.register_lineage_feature" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">register_lineage_feature</span>
+
+
+</h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">register_lineage_feature</span><span class="p">(</span>
+    <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">feature</span><span class="p">:</span> <span class="n">Feature</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Register the lineage feature and set the lineage_key.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>key</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The key to use for the lineage feature</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>feature</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="            Feature (funtracks.features._feature.Feature)" href="#funtracks.features.Feature">Feature</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The Feature to register</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
             </td>
           </tr>
       </tbody>

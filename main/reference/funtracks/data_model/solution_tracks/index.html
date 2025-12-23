@@ -949,6 +949,28 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#funtracks.data_model.solution_tracks.SolutionTracks.get_lineage_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;get_lineage_id
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.data_model.solution_tracks.SolutionTracks.get_next_lineage_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;get_next_lineage_id
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#funtracks.data_model.solution_tracks.SolutionTracks.get_next_track_id" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -956,23 +978,6 @@
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label=" get_next_track_id">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#funtracks.data_model.solution_tracks.SolutionTracks.get_next_track_id--todo-i-dont-think-we-need-to-update-the-max-here-it-will-get-updated-if-we" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        TODO: I don't think we need to update the max here, it will get updated if we
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
@@ -1695,6 +1700,28 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#funtracks.data_model.solution_tracks.SolutionTracks.get_lineage_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;get_lineage_id
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.data_model.solution_tracks.SolutionTracks.get_next_lineage_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;get_next_lineage_id
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#funtracks.data_model.solution_tracks.SolutionTracks.get_next_track_id" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1702,23 +1729,6 @@
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label=" get_next_track_id">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#funtracks.data_model.solution_tracks.SolutionTracks.get_next_track_id--todo-i-dont-think-we-need-to-update-the-max-here-it-will-get-updated-if-we" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        TODO: I don't think we need to update the max here, it will get updated if we
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
         
@@ -2086,6 +2096,101 @@ Whether or not to include z is inferred from self.ndim</p>
 <div class="doc doc-object doc-function">
 
 
+<h3 id="funtracks.data_model.solution_tracks.SolutionTracks.get_lineage_id" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">get_lineage_id</span>
+
+
+</h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">get_lineage_id</span><span class="p">(</span><span class="n">node</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Get the lineage ID for a node.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>node</code>
+            </td>
+            <td>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The node to get lineage ID for</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="int">int</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The lineage ID, or None if lineage feature is not enabled</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="funtracks.data_model.solution_tracks.SolutionTracks.get_next_lineage_id" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">get_next_lineage_id</span>
+
+
+</h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">get_next_lineage_id</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Return the next available lineage_id.</p>
+<p>The max_lineage_id in TrackAnnotator is updated automatically when
+a node is added or lineage IDs are updated via UpdateTrackIDs.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
 <h3 id="funtracks.data_model.solution_tracks.SolutionTracks.get_next_track_id" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">get_next_track_id</span>
 
@@ -2096,9 +2201,9 @@ Whether or not to include z is inferred from self.ndim</p>
 
     <div class="doc doc-contents ">
 
-        <p>Return the next available track_id and update max_tracklet_id in TrackAnnotator</p>
-<h4 id="funtracks.data_model.solution_tracks.SolutionTracks.get_next_track_id--todo-i-dont-think-we-need-to-update-the-max-here-it-will-get-updated-if-we">TODO: I don't think we need to update the max here, it will get updated if we</h4>
-<p>actually add a node automatically.</p>
+        <p>Return the next available track_id.</p>
+<p>The max_tracklet_id in TrackAnnotator is updated automatically when
+a node is added or track IDs are updated via UpdateTrackIDs.</p>
 
 
     </div>

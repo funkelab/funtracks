@@ -764,19 +764,19 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#funtracks.actions.update_track_id.UpdateTrackID" class="md-nav__link">
+  <a href="#funtracks.actions.update_track_id.UpdateTrackIDs" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;UpdateTrackID
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;UpdateTrackIDs
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label=" UpdateTrackID">
+    <nav class="md-nav" aria-label=" UpdateTrackIDs">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#funtracks.actions.update_track_id.UpdateTrackID.inverse" class="md-nav__link">
+  <a href="#funtracks.actions.update_track_id.UpdateTrackIDs.inverse" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;inverse
@@ -788,6 +788,17 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#funtracks.actions.update_track_id.__getattr__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;__getattr__
+      
+    </span>
+  </a>
   
 </li>
       
@@ -1622,19 +1633,19 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#funtracks.actions.update_track_id.UpdateTrackID" class="md-nav__link">
+  <a href="#funtracks.actions.update_track_id.UpdateTrackIDs" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;UpdateTrackID
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;UpdateTrackIDs
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label=" UpdateTrackID">
+    <nav class="md-nav" aria-label=" UpdateTrackIDs">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#funtracks.actions.update_track_id.UpdateTrackID.inverse" class="md-nav__link">
+  <a href="#funtracks.actions.update_track_id.UpdateTrackIDs.inverse" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;inverse
@@ -1646,6 +1657,17 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#funtracks.actions.update_track_id.__getattr__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;__getattr__
+      
+    </span>
+  </a>
   
 </li>
       
@@ -1701,22 +1723,33 @@
 
 
 
-<h2 id="funtracks.actions.update_track_id.UpdateTrackID" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">UpdateTrackID</span>
+<h2 id="funtracks.actions.update_track_id.UpdateTrackIDs" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">UpdateTrackIDs</span>
 
 
 </h2>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">UpdateTrackID</span><span class="p">(</span>
-    <span class="n">tracks</span><span class="p">:</span> <span class="n">SolutionTracks</span><span class="p">,</span> <span class="n">start_node</span><span class="p">:</span> <span class="n">Node</span><span class="p">,</span> <span class="n">track_id</span><span class="p">:</span> <span class="nb">int</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">UpdateTrackIDs</span><span class="p">(</span>
+    <span class="n">tracks</span><span class="p">:</span> <span class="n">SolutionTracks</span><span class="p">,</span>
+    <span class="n">start_node</span><span class="p">:</span> <span class="n">Node</span><span class="p">,</span>
+    <span class="n">tracklet_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">lineage_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
             <p class="doc doc-class-bases">
-              Bases: <code><span title="funtracks.actions._base.BasicAction">BasicAction</span></code></p>
+              Bases: <code><a class="autorefs autorefs-internal" title="            BasicAction (funtracks.actions._base.BasicAction)" href="../#funtracks.actions.BasicAction">BasicAction</a></code></p>
 
 
 
+        <p>Update tracklet ID and optionally lineage ID starting from a node.</p>
+<p>This action captures the old IDs before updating, enabling proper undo/redo.
+The actual ID updates are performed by TrackAnnotator via notify_annotators().</p>
+<p>The two updates have different scopes:
+- Tracklet ID: Updated for the linear track segment starting at start_node,
+  following successors until a division is encountered or the track ends.
+- Lineage ID: Updated for the entire weakly connected component containing
+  start_node, including all downstream branches after divisions.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -1735,7 +1768,7 @@
                 <code>tracks</code>
             </td>
             <td>
-                  <code><span title="Tracks">Tracks</span></code>
+                  <code><a class="autorefs autorefs-internal" title="            SolutionTracks (funtracks.data_model.SolutionTracks)" href="../../data_model/solution_tracks/#funtracks.data_model.solution_tracks.SolutionTracks">SolutionTracks</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -1755,8 +1788,7 @@
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The node ID of the first node in the track. All successors
-with the same track id as this node will be updated.</p>
+                <p>The node ID of the first node to update.</p>
               </div>
             </td>
             <td>
@@ -1765,18 +1797,35 @@ with the same track id as this node will be updated.</p>
           </tr>
           <tr class="doc-section-item">
             <td>
-                <code>track_id</code>
+                <code>tracklet_id</code>
             </td>
             <td>
                   <code><span title="int">int</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The new track id to assign.</p>
+                <p>The new tracklet id to assign to the track segment.</p>
               </div>
             </td>
             <td>
                 <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>lineage_id</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The new lineage id to assign to the connected component.
+If None, lineage ID is not updated. Defaults to None.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
             </td>
           </tr>
       </tbody>
@@ -1806,7 +1855,7 @@ with the same track id as this node will be updated.</p>
 <div class="doc doc-object doc-function">
 
 
-<h3 id="funtracks.actions.update_track_id.UpdateTrackID.inverse" class="doc doc-heading">
+<h3 id="funtracks.actions.update_track_id.UpdateTrackIDs.inverse" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">inverse</span>
 
 
@@ -1816,7 +1865,7 @@ with the same track id as this node will be updated.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Restore the previous track_id</p>
+        <p>Restore the previous tracklet_id and lineage_id.</p>
 
 
     </div>
@@ -1831,6 +1880,26 @@ with the same track id as this node will be updated.</p>
 
 </div>
 
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="funtracks.actions.update_track_id.__getattr__" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">__getattr__</span>
+
+
+</h2>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">__getattr__</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Provide backwards compatibility for UpdateTrackID.</p>
+
+
+    </div>
+
+</div>
 
 
 
