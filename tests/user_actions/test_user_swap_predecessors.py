@@ -31,21 +31,13 @@ class TestUserSwapPredecessors:
         assert tracks.get_track_id(5) == old_track_id_5
         assert tracks.get_track_id(6) == old_track_id_6
 
-    def test_same_predecessor_is_noop(self, get_tracks, ndim, with_seg):
-        """Test swapping when both nodes have the same predecessor is a no-op."""
+    def test_same_predecessor_raises(self, get_tracks, ndim, with_seg):
+        """Test error when both nodes have the same predecessor."""
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
 
         # Nodes 2 and 3 both have predecessor 1
-        old_track_id_2 = tracks.get_track_id(2)
-        old_track_id_3 = tracks.get_track_id(3)
-
-        action = UserSwapPredecessors(tracks, (2, 3))
-
-        assert len(action.actions) == 0
-        assert (1, 2) in tracks.graph.edges
-        assert (1, 3) in tracks.graph.edges
-        assert tracks.get_track_id(2) == old_track_id_2
-        assert tracks.get_track_id(3) == old_track_id_3
+        with pytest.raises(InvalidActionError, match="same predecessor"):
+            UserSwapPredecessors(tracks, (2, 3))
 
     def test_different_predecessors(self, get_tracks, ndim, with_seg):
         """Test swapping when both nodes have different predecessors."""
@@ -113,18 +105,12 @@ class TestUserSwapPredecessors:
         ):
             UserSwapPredecessors(tracks, (1, 2, 3))  # type: ignore[arg-type]
 
-    def test_no_predecessors_is_noop(self, get_tracks, ndim, with_seg):
-        """Test swapping two nodes with no predecessors does nothing."""
+    def test_no_predecessors_raises(self, get_tracks, ndim, with_seg):
+        """Test error when neither node has a predecessor."""
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
 
         # Delete edge so node 5 has no predecessor like node 6
         UserDeleteEdge(tracks, (4, 5))
 
-        old_track_id_5 = tracks.get_track_id(5)
-        old_track_id_6 = tracks.get_track_id(6)
-
-        action = UserSwapPredecessors(tracks, (5, 6))
-
-        assert len(action.actions) == 0
-        assert tracks.get_track_id(5) == old_track_id_5
-        assert tracks.get_track_id(6) == old_track_id_6
+        with pytest.raises(InvalidActionError, match="neither node has a predecessor"):
+            UserSwapPredecessors(tracks, (5, 6))

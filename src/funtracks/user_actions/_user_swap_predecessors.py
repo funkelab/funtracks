@@ -45,12 +45,11 @@ class UserSwapPredecessors(ActionGroup):
         pred1 = next(graph.predecessors(node1), None)
         pred2 = next(graph.predecessors(node2), None)
 
-        # No-op cases: nothing to swap
+        # Nothing to swap - raise errors for user feedback
         if pred1 is None and pred2 is None:
-            return
+            raise InvalidActionError("Cannot swap: neither node has a predecessor.")
         if pred1 == pred2:
-            # Same predecessor - swapping would result in identical graph
-            return
+            raise InvalidActionError("Cannot swap: both nodes have the same predecessor.")
 
         # Validate that swapped edges would be valid (predecessors before nodes)
         time1 = tracks.get_time(node1)
