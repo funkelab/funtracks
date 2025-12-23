@@ -132,6 +132,19 @@ def test_export_to_csv(
     assert lines[0].strip().split(",") == header
 
 
+def test_get_lineage_id_without_lineage_key():
+    """Test that get_lineage_id returns None when lineage_key is not set."""
+    graph = nx.DiGraph()
+    graph.add_node(1, t=0, pos=[0, 0], track_id=1)
+    tracks = SolutionTracks(graph, ndim=3, **track_attrs)
+
+    # Unset lineage_key to test the None path
+    tracks.features.lineage_key = None
+
+    # get_lineage_id should return None when lineage_key is not set
+    assert tracks.get_lineage_id(1) is None
+
+
 def test_export_to_csv_with_display_names(
     graph_2d_with_computed_features, graph_3d_with_computed_features, tmp_path
 ):
