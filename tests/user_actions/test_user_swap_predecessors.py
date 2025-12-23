@@ -87,15 +87,46 @@ class TestUserSwapPredecessors:
         assert tracks.get_track_id(5) == old_track_id_5
         assert tracks.get_track_id(6) == old_track_id_6
 
-    def test_user_swap_nodes_different_time_raises(self, get_tracks, ndim, with_seg):
-        """Test that swapping nodes at different time points raises an error."""
+    def test_user_swap_different_time_valid(self, get_tracks, ndim, with_seg):
+        """Test swapping nodes at different time points when predecessors are valid."""
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
 
-        # Node 1 is at time 0, node 5 is at time 4
-        with pytest.raises(
-            InvalidActionError, match="Both nodes must have the same time point to swap"
-        ):
-            UserSwapPredecessors(tracks, (1, 5))
+        # Graph structure: 1(t=0) -> 2(t=1), 1(t=0) -> 3(t=1) -> 4(t=2) -> 5(t=4), 6(t=4)
+        # We want to swap predecessors between nodes at different times.
+        # Use node 4 (time 2, pred 3 at time 1) and node 6 (time 4, no pred)
+        # After adding edge 2 -> 6: node 6 has pred 2 at time 1
+        # pred of 4 (time 1) < node 6 (time 4) ✓
+        # pred of 6 (time 1) < node 4 (time 2) ✓
+        from funtracks.user_actions import UserAddEdge
+
+        UserAddEdge(tracks, (2, 6))
+
+        assert (3, 4) in tracks.graph.edges
+        assert (2, 6) in tracks.graph.edges
+
+        action = UserSwapPredecessors(tracks, (4, 6))
+
+        # After swap: 3 -> 6, 2 -> 4
+        assert (3, 6) in tracks.graph.edges
+        assert (2, 4) in tracks.graph.edges
+        assert (3, 4) not in tracks.graph.edges
+        assert (2, 6) not in tracks.graph.edges
+
+        # Inverse should restore
+        action.inverse()
+        assert (3, 4) in tracks.graph.edges
+        assert (2, 6) in tracks.graph.edges
+
+    def test_user_swap_different_time_invalid_raises(self, get_tracks, ndim, with_seg):
+        """Test that swapping raises error when predecessor would not be before node."""
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+
+        # Node 3 at time 1, pred 1 at time 0
+        # Node 4 at time 2, pred 3 at time 1
+        # pred of 3 (time 0) < node 4 (time 2) ✓
+        # pred of 4 (time 1) >= node 3 (time 1) ✗ (equal, not strictly before)
+        with pytest.raises(InvalidActionError, match="Cannot swap: predecessor"):
+            UserSwapPredecessors(tracks, (3, 4))
 
     def test_user_swap_nodes_wrong_count_raises(self, get_tracks, ndim, with_seg):
         """Test that swapping with wrong number of nodes raises an error."""

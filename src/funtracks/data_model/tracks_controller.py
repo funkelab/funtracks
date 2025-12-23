@@ -165,7 +165,7 @@ class TracksController:
         return ActionGroup(self.tracks, actions)
 
     def swap_predecessors(self, nodes: tuple[Node, Node]) -> None:
-        """Swap the predecessors (incoming edges) of two nodes at the same time point."""
+        """Swap the predecessors (incoming edges) of two nodes."""
         try:
             action = UserSwapPredecessors(self.tracks, nodes)
         except InvalidActionError as e:

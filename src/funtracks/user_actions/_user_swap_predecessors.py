@@ -13,15 +13,18 @@ if TYPE_CHECKING:
 
 
 class UserSwapPredecessors(ActionGroup):
-    """Swap the predecessors (incoming edges) of two nodes at the same time point.
+    """Swap the predecessors (incoming edges) of two nodes.
+
+    The nodes do not need to be at the same time point, but both predecessors
+    must be earlier in time than both nodes for the swap to be valid.
 
     Args:
         tracks (SolutionTracks): The tracks to perform the swap on.
-        nodes (tuple[Node, Node]): A tuple with two nodes at the same time point.
+        nodes (tuple[Node, Node]): A tuple with two nodes.
 
     Raises:
-        InvalidActionError: If the nodes are not at the same time point, or if
-            not exactly two nodes are provided.
+        InvalidActionError: If not exactly two nodes are provided, or if swapping
+            would create invalid edges (predecessor not before node).
     """
 
     def __init__(
@@ -36,13 +39,6 @@ class UserSwapPredecessors(ActionGroup):
             raise InvalidActionError("You can only swap a pair of two nodes.")
 
         node1, node2 = nodes
-
-        # Validate that both nodes have the same time point
-        time1 = tracks.get_time(node1)
-        time2 = tracks.get_time(node2)
-        if time1 != time2:
-            raise InvalidActionError("Both nodes must have the same time point to swap.")
-
         graph = tracks.graph
 
         # Find predecessors
@@ -55,6 +51,24 @@ class UserSwapPredecessors(ActionGroup):
         if pred1 == pred2:
             # Same predecessor - swapping would result in identical graph
             return
+
+        # Validate that swapped edges would be valid (predecessors before nodes)
+        time1 = tracks.get_time(node1)
+        time2 = tracks.get_time(node2)
+        if pred1 is not None:
+            pred1_time = tracks.get_time(pred1)
+            if pred1_time >= time2:
+                raise InvalidActionError(
+                    f"Cannot swap: predecessor of node {node1} (time {pred1_time}) "
+                    f"is not before node {node2} (time {time2})."
+                )
+        if pred2 is not None:
+            pred2_time = tracks.get_time(pred2)
+            if pred2_time >= time1:
+                raise InvalidActionError(
+                    f"Cannot swap: predecessor of node {node2} (time {pred2_time}) "
+                    f"is not before node {node1} (time {time1})."
+                )
 
         # Break existing edges
         if pred1 is not None:
