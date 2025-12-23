@@ -1540,6 +1540,58 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#funtracks.user_actions.UserAddEdge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;UserAddEdge
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#funtracks.user_actions.UserAddNode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;UserAddNode
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#funtracks.user_actions.UserSwapPredecessors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;UserSwapPredecessors
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#funtracks.user_actions.UserUpdateSegmentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;UserUpdateSegmentation
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -1585,6 +1637,608 @@
 
 
 
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="funtracks.user_actions.UserAddEdge" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">UserAddEdge</span>
+
+
+</h2>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">UserAddEdge</span><span class="p">(</span>
+    <span class="n">tracks</span><span class="p">:</span> <span class="n">SolutionTracks</span><span class="p">,</span>
+    <span class="n">edge</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span>
+    <span class="n">force</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="funtracks.actions._base.ActionGroup">ActionGroup</span></code></p>
+
+
+
+        <p>Assumes that the endpoints already exist and have track ids.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>tracks</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="            SolutionTracks (funtracks.data_model.SolutionTracks)" href="../data_model/solution_tracks/#funtracks.data_model.solution_tracks.SolutionTracks">SolutionTracks</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the tracks to add the edge to</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>edge</code>
+            </td>
+            <td>
+                  <code><span title="tuple">tuple</span>[<span title="int">int</span>, <span title="int">int</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The edge to add</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>force</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Whether to force the action by removing any conflicting
+edges. Defaults to False.</p>
+              </div>
+            </td>
+            <td>
+                  <code>False</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="funtracks.user_actions.UserAddNode" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">UserAddNode</span>
+
+
+</h2>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">UserAddNode</span><span class="p">(</span>
+    <span class="n">tracks</span><span class="p">:</span> <span class="n">SolutionTracks</span><span class="p">,</span>
+    <span class="n">node</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">attributes</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="n">pixels</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">ndarray</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">force</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="funtracks.actions._base.ActionGroup">ActionGroup</span></code></p>
+
+
+
+        <p>Determines which basic actions to call when a user adds a node</p>
+<ul>
+<li>Get the track id</li>
+<li>Check if the track has divided earlier in time -&gt; raise InvalidActionException</li>
+<li>Check if there is an earlier and/or later node in the track<ul>
+<li>If there is earlier and later node, remove the edge between them</li>
+<li>Add edges between the earlier/later nodes and the new node</li>
+</ul>
+</li>
+</ul>
+
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>tracks</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="            SolutionTracks (funtracks.data_model.solution_tracks.SolutionTracks)" href="../data_model/solution_tracks/#funtracks.data_model.solution_tracks.SolutionTracks">SolutionTracks</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>the tracks to add the node to</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>node</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The node id of the new node to add</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>attributes</code>
+            </td>
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A dictionary from attribute strings to values.
+Must contain "time" and "track_id".</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>pixels</code>
+            </td>
+            <td>
+                  <code><span title="tuple">tuple</span>[<span title="numpy.ndarray">ndarray</span>, ...] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The pixels of the associated
+segmentation to add to the tracks. Defaults to None.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>force</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Whether to force the action by removing any
+conflicting edges. Defaults to False.</p>
+              </div>
+            </td>
+            <td>
+                  <code>False</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="            InvalidActionError (funtracks.exceptions.InvalidActionError)" href="../exceptions/#funtracks.exceptions.InvalidActionError">InvalidActionError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the action cannot be completed because of one of</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code>following reasons</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <pre><code>- attributes dictionary does not contain `time` or `track_id`.
+- a node with given ID already exists in the tracks.
+- a node is trying to be added to a track that divided in a previous
+time point (forceable).
+- the parent track of the node will divide downstream of the current
+time point (forceable).
+</code></pre>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="funtracks.user_actions.UserSwapPredecessors" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">UserSwapPredecessors</span>
+
+
+</h2>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">UserSwapPredecessors</span><span class="p">(</span>
+    <span class="n">tracks</span><span class="p">:</span> <span class="n">SolutionTracks</span><span class="p">,</span> <span class="n">nodes</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span>
+<span class="p">)</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="funtracks.actions._base.ActionGroup">ActionGroup</span></code></p>
+
+
+
+        <p>Swap the predecessors (incoming edges) of two nodes.</p>
+<p>The nodes do not need to be at the same time point, but both predecessors
+must be earlier in time than both nodes for the swap to be valid.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>tracks</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="            SolutionTracks (funtracks.data_model.SolutionTracks)" href="../data_model/solution_tracks/#funtracks.data_model.solution_tracks.SolutionTracks">SolutionTracks</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The tracks to perform the swap on.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>nodes</code>
+            </td>
+            <td>
+                  <code><span title="tuple">tuple</span>[<span title="Node">Node</span>, <span title="Node">Node</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A tuple with two nodes.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="            InvalidActionError (funtracks.exceptions.InvalidActionError)" href="../exceptions/#funtracks.exceptions.InvalidActionError">InvalidActionError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If not exactly two nodes are provided, if swapping
+would create invalid edges (predecessor not before node), if both
+nodes have the same predecessor, or if neither node has a predecessor.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="funtracks.user_actions.UserUpdateSegmentation" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">UserUpdateSegmentation</span>
+
+
+</h2>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">UserUpdateSegmentation</span><span class="p">(</span>
+    <span class="n">tracks</span><span class="p">:</span> <span class="n">SolutionTracks</span><span class="p">,</span>
+    <span class="n">new_value</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">updated_pixels</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">ndarray</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="nb">int</span><span class="p">]],</span>
+    <span class="n">current_track_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">force</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="funtracks.actions._base.ActionGroup">ActionGroup</span></code></p>
+
+
+
+        <p>Assumes that the pixels have already been updated in the project.segmentation
+NOTE: Re discussion with Kasia: we should have a basic action that updates the
+segmentation, and that is the only place the segmentation is updated. The basic
+add_node action doesn't have anything with pixels.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>tracks</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="            SolutionTracks (funtracks.data_model.SolutionTracks)" href="../data_model/solution_tracks/#funtracks.data_model.solution_tracks.SolutionTracks">SolutionTracks</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The solution tracks that the user is updating.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>new_value</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The new value that the user painted with</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>updated_pixels</code>
+            </td>
+            <td>
+                  <code><span title="list">list</span>[<span title="tuple">tuple</span>[<span title="tuple">tuple</span>[<span title="numpy.ndarray">ndarray</span>, ...], <span title="int">int</span>]]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A list of node
+update actions, consisting of a numpy multi-index, pointing to the array
+elements that were changed (a tuple with len ndims), and the value
+before the change</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>current_track_id</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The track id to use if adding a new node, usually
+the currently selected track id in the viewer.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>force</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Whether to force the operation by removing conflicting edges.
+Defaults to False.</p>
+              </div>
+            </td>
+            <td>
+                  <code>False</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
 
 
 
