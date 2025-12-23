@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from collections import defaultdict
 from typing import TYPE_CHECKING
 
@@ -321,7 +322,12 @@ class TrackAnnotator(GraphAnnotator):
             nodes (list[int]): The nodes to remove.
             tracklet_id (int): The tracklet ID to remove the nodes from.
         """
-        if tracklet_id not in self.tracklet_id_to_nodes:
+        if tracklet_id not in self.tracklet_id_to_nodes:  # pragma: no cover
+            warnings.warn(
+                f"Tracklet ID {tracklet_id} not found in bookkeeping. "
+                "This may indicate a bug in the annotator.",
+                stacklevel=2,
+            )
             return
         for node in nodes:
             if node in self.tracklet_id_to_nodes[tracklet_id]:
@@ -351,7 +357,12 @@ class TrackAnnotator(GraphAnnotator):
             nodes (list[int]): The nodes to remove.
             lineage_id (int): The lineage ID to remove the nodes from.
         """
-        if lineage_id not in self.lineage_id_to_nodes:
+        if lineage_id not in self.lineage_id_to_nodes:  # pragma: no cover
+            warnings.warn(
+                f"Lineage ID {lineage_id} not found in bookkeeping. "
+                "This may indicate a bug in the annotator.",
+                stacklevel=2,
+            )
             return
         for node in nodes:
             if node in self.lineage_id_to_nodes[lineage_id]:

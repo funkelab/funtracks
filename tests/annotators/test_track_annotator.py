@@ -194,3 +194,26 @@ class TestTrackAnnotator:
         # ---- Ensure that deleting a node updates lineage bookkeeping ----
         UserDeleteNode(tracks, node=8)
         assert expected_lineage_id not in ann.lineage_id_to_nodes  # whole list removed
+
+    def test_disabled_tracklet_key_does_nothing(self, get_tracks, ndim, with_seg) -> None:
+        """Test that TrackAnnotator does nothing when tracklet_key is disabled."""
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        ann = TrackAnnotator(tracks)
+
+        # Don't activate any features - they should all be disabled
+        assert len(ann.features) == 0
+
+        # Store original bookkeeping state
+        original_tracklet_map = dict(ann.tracklet_id_to_nodes)
+        original_lineage_map = dict(ann.lineage_id_to_nodes)
+        original_max_tracklet = ann.max_tracklet_id
+        original_max_lineage = ann.max_lineage_id
+
+        # Perform an action that would normally update track IDs
+        UserAddEdge(tracks, edge=(4, 6))
+
+        # Bookkeeping should remain unchanged since features are disabled
+        assert ann.tracklet_id_to_nodes == original_tracklet_map
+        assert ann.lineage_id_to_nodes == original_lineage_map
+        assert ann.max_tracklet_id == original_max_tracklet
+        assert ann.max_lineage_id == original_max_lineage
