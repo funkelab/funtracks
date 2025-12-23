@@ -5,6 +5,19 @@ from .update_node_attrs import UpdateNodeAttrs
 from .update_segmentation import UpdateNodeSeg
 from .update_track_id import UpdateTrackIDs
 
+__all__ = [
+    "Action",
+    "ActionGroup",
+    "AddEdge",
+    "AddNode",
+    "BasicAction",
+    "DeleteEdge",
+    "DeleteNode",
+    "UpdateNodeAttrs",
+    "UpdateNodeSeg",
+    "UpdateTrackIDs",
+]
+
 
 def __getattr__(name: str):
     """Provide backwards compatibility for deprecated names."""
