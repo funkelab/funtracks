@@ -147,20 +147,39 @@ class SolutionTracks(Tracks):
         return nx.get_node_attributes(self.graph, self.features.tracklet_key)
 
     def get_next_track_id(self) -> int:
-        """Return the next available track_id and update max_tracklet_id in TrackAnnotator
+        """Return the next available track_id.
 
-        # TODO: I don't think we need to update the max here, it will get updated if we
-        actually add a node automatically.
+        The max_tracklet_id in TrackAnnotator is updated automatically when
+        a node is added or track IDs are updated via UpdateTrackIDs.
         """
-        annotator = self.track_annotator
-        annotator.max_tracklet_id = annotator.max_tracklet_id + 1
-        return annotator.max_tracklet_id
+        return self.track_annotator.max_tracklet_id + 1
+
+    def get_next_lineage_id(self) -> int:
+        """Return the next available lineage_id.
+
+        The max_lineage_id in TrackAnnotator is updated automatically when
+        a node is added or lineage IDs are updated via UpdateTrackIDs.
+        """
+        return self.track_annotator.max_lineage_id + 1
 
     def get_track_id(self, node) -> int:
         if self.features.tracklet_key is None:
             raise ValueError("Tracklet key not initialized in features")
         track_id = self.get_node_attr(node, self.features.tracklet_key, required=True)
         return track_id
+
+    def get_lineage_id(self, node) -> int | None:
+        """Get the lineage ID for a node.
+
+        Args:
+            node: The node to get lineage ID for
+
+        Returns:
+            The lineage ID, or None if lineage feature is not enabled
+        """
+        if self.features.lineage_key is None:
+            return None
+        return self.get_node_attr(node, self.features.lineage_key)
 
     def export_tracks(
         self, outfile: Path | str, node_ids: set[int] | None = None

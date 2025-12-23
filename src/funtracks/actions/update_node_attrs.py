@@ -57,3 +57,4 @@ class UpdateNodeAttrs(BasicAction):
         """Set new attributes"""
         for attr, value in self.new_attrs.items():
             self.tracks._set_node_attr(self.node, attr, value)
+        self.tracks.notify_annotators(self)

@@ -310,6 +310,9 @@ class Tracks:
                 tracklet_key = annotator.tracklet_key
                 self.features.tracklet_key = tracklet_key
                 core_computed_features.append(tracklet_key)
+                lineage_key = annotator.lineage_key
+                self.features.lineage_key = lineage_key
+                core_computed_features.append(lineage_key)
         for key in core_computed_features:
             if self._check_existing_feature(key):
                 # Add to FeatureDict if not already there

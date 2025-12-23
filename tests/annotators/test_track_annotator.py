@@ -2,6 +2,12 @@ import pytest
 
 from funtracks.actions import UpdateNodeSeg
 from funtracks.annotators import TrackAnnotator
+from funtracks.user_actions import (
+    UserAddEdge,
+    UserAddNode,
+    UserDeleteEdge,
+    UserDeleteNode,
+)
 
 
 @pytest.mark.parametrize("ndim", [3, 4])
@@ -120,3 +126,94 @@ class TestTrackAnnotator:
         assert tracks.get_track_id(node_id) == initial_track_id
         # But area should be updated
         assert tracks.get_node_attr(node_id, "area") == 1
+
+    def test_lineage_id_updated_on_add_and_delete_edge(
+        self, get_tracks, ndim, with_seg
+    ) -> None:
+        tracks = get_tracks(ndim=3, with_seg=False, is_solution=True)
+        tracks.enable_features(["lineage_id"])
+
+        # get the existing TrackAnnotator
+        ann = next(a for a in tracks.annotators if isinstance(a, TrackAnnotator))
+
+        # ---- UserAddEdge: merge lineages ----
+        source_node = 2
+        target_node = 6
+        UserAddEdge(tracks, edge=(source_node, target_node))
+
+        # Assert target component adopts source lineage id
+        assert tracks.get_node_attr(target_node, ann.lineage_key) == tracks.get_node_attr(
+            source_node, ann.lineage_key
+        )
+        assert set(ann.lineage_id_to_nodes[1]) == {1, 2, 3, 4, 5, 6}
+        assert 2 not in ann.lineage_id_to_nodes
+
+        # ---- UserDeleteEdge: split lineage ----
+        source_node = 3
+        target_node = 4
+
+        edge = next(e for e in tracks.graph.edges if set(e) == {3, 4})
+
+        expected_lineage_id = ann.max_lineage_id + 1
+        UserDeleteEdge(tracks, edge=edge)
+
+        # Assert target component gets a new lineage id
+        component = [4, 5]
+        for node in component:
+            assert tracks.get_node_attr(node, ann.lineage_key) == expected_lineage_id
+
+        # Assert source component keeps original lineage id
+        component = [1, 3, 2, 6]
+        for node in component:
+            assert tracks.get_node_attr(node, ann.lineage_key) == tracks.get_node_attr(
+                source_node, ann.lineage_key
+            )
+
+        assert set(ann.lineage_id_to_nodes[1]) == {1, 2, 3, 6}
+        assert set(ann.lineage_id_to_nodes[expected_lineage_id]) == {4, 5}
+
+        # ---- Add a node with existing track id ----
+        # After the split, only node 3 has track_id=3, and it has lineage_id=1
+        # (nodes 4,5 got new track_id=6 and lineage_id=3)
+        attrs = {"pos": ([5, 8]), tracks.features.time_key: (5), "track_id": (3)}
+        UserAddNode(tracks, node=7, attributes=attrs)
+
+        # Assert new node adopts lineage of existing track (track_id=3 -> lineage_id=1)
+        assert tracks.get_node_attr(7, ann.lineage_key) == 1
+        assert 7 in ann.lineage_id_to_nodes[1]
+
+        # ---- Add a node with a new track id ----
+        attrs = {"pos": ([5, 8]), tracks.features.time_key: (5), "track_id": (4)}
+        expected_lineage_id = ann.max_lineage_id + 1
+        UserAddNode(tracks, node=8, attributes=attrs)
+
+        # Assert new node adopts a new lineage id
+        assert tracks.get_node_attr(8, ann.lineage_key) == expected_lineage_id
+        assert 8 in ann.lineage_id_to_nodes[expected_lineage_id]
+
+        # ---- Ensure that deleting a node updates lineage bookkeeping ----
+        UserDeleteNode(tracks, node=8)
+        assert expected_lineage_id not in ann.lineage_id_to_nodes  # whole list removed
+
+    def test_disabled_tracklet_key_does_nothing(self, get_tracks, ndim, with_seg) -> None:
+        """Test that TrackAnnotator does nothing when tracklet_key is disabled."""
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        ann = TrackAnnotator(tracks)
+
+        # Don't activate any features - they should all be disabled
+        assert len(ann.features) == 0
+
+        # Store original bookkeeping state
+        original_tracklet_map = dict(ann.tracklet_id_to_nodes)
+        original_lineage_map = dict(ann.lineage_id_to_nodes)
+        original_max_tracklet = ann.max_tracklet_id
+        original_max_lineage = ann.max_lineage_id
+
+        # Perform an action that would normally update track IDs
+        UserAddEdge(tracks, edge=(4, 6))
+
+        # Bookkeeping should remain unchanged since features are disabled
+        assert ann.tracklet_id_to_nodes == original_tracklet_map
+        assert ann.lineage_id_to_nodes == original_lineage_map
+        assert ann.max_tracklet_id == original_max_tracklet
+        assert ann.max_lineage_id == original_max_lineage

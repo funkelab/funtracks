@@ -121,6 +121,19 @@ class UserAddNode(ActionGroup):
                     # Delete the conflicting edge
                     self.actions.append(UserDeleteEdge(tracks, (pred_of_succ, succ)))
 
+        # Determine lineage_id from existing track nodes (if any)
+        lineage_key = tracks.features.lineage_key
+        if lineage_key is not None and lineage_key not in attributes:
+            if pred is not None:
+                lineage_id = tracks.get_lineage_id(pred)
+            elif succ is not None:
+                lineage_id = tracks.get_lineage_id(succ)
+            else:
+                # New track with no existing nodes - assign new lineage
+                lineage_id = tracks.get_next_lineage_id()
+            if lineage_id is not None:
+                attributes[lineage_key] = lineage_id
+
         # remove skip edge that will be replaced by new edges after adding nodes
         if pred is not None and succ is not None:
             self.actions.append(DeleteEdge(tracks, (pred, succ)))
