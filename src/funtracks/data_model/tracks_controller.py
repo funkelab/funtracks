@@ -10,6 +10,7 @@ from ..actions import (
     UpdateNodeAttrs,
 )
 from ..actions.action_history import ActionHistory
+from ..exceptions import InvalidActionError
 from ..user_actions import (
     UserAddEdge,
     UserAddNode,
@@ -165,11 +166,12 @@ class TracksController:
 
     def swap_nodes(self, nodes: tuple[Node, Node]) -> None:
         """Swap the incoming edges of two horizontal nodes."""
-
-        if not self.is_valid_swap(nodes):
+        try:
+            action = UserSwapNodes(self.tracks, nodes)
+        except InvalidActionError as e:
+            warn(str(e), stacklevel=2)
             return
 
-        action = UserSwapNodes(self.tracks, nodes)
         self.action_history.add_new_action(action)
         self.tracks.refresh.emit()
 
@@ -242,29 +244,6 @@ class TracksController:
         for edge in edges:
             actions.append(UserAddEdge(self.tracks, edge, force))
         return ActionGroup(self.tracks, actions)
-
-    def is_valid_swap(self, node_pair: tuple[Node, Node]) -> bool:
-        """Check if these two nodes share the same time point and can therefore be
-        swapped
-        Args:
-            node_pair ([Node, Node]): pair of nodes to check.
-        Returns:
-            True if the two nodes share the same time point.
-        """
-
-        if len(node_pair) != 2:
-            warn("You can only swap a pair of two nodes.", stacklevel=2)
-            return False
-        node1, node2 = node_pair[0], node_pair[1]
-
-        time1 = self.tracks.get_time(node1)
-        time2 = self.tracks.get_time(node2)
-
-        if time1 != time2:
-            warn("Both nodes must have the same time point to swap.", stacklevel=2)
-            return False
-
-        return True
 
     def is_valid(self, edge: Edge) -> bool:
         """Check if this edge is valid.

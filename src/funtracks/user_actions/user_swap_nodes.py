@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from funtracks.user_actions import UserAddEdge, UserDeleteEdge
+from funtracks.exceptions import InvalidActionError
 
 from ..actions._base import ActionGroup
+from .user_add_edge import UserAddEdge
+from .user_delete_edge import UserDeleteEdge
 
 if TYPE_CHECKING:
     from funtracks.data_model import SolutionTracks
@@ -14,7 +16,11 @@ class UserSwapNodes(ActionGroup):
     """Swap the incoming edges of two horizontal nodes.
 
     Args:
+        tracks (SolutionTracks): The tracks to perform the swap on.
         nodes (tuple[Node, Node]): A tuple with two nodes at the same time point.
+
+    Raises:
+        InvalidActionError: If the nodes are not at the same time point.
     """
 
     def __init__(
@@ -25,7 +31,17 @@ class UserSwapNodes(ActionGroup):
         super().__init__(tracks, actions=[])
         self.tracks: SolutionTracks  # narrow type
 
+        if len(nodes) != 2:
+            raise InvalidActionError("You can only swap a pair of two nodes.")
+
         node1, node2 = nodes
+
+        # Validate that both nodes have the same time point
+        time1 = tracks.get_time(node1)
+        time2 = tracks.get_time(node2)
+        if time1 != time2:
+            raise InvalidActionError("Both nodes must have the same time point to swap.")
+
         graph = tracks.graph
 
         # Find predecessors
