@@ -23,8 +23,9 @@ class UserSwapPredecessors(ActionGroup):
         nodes (tuple[Node, Node]): A tuple with two nodes.
 
     Raises:
-        InvalidActionError: If not exactly two nodes are provided, or if swapping
-            would create invalid edges (predecessor not before node).
+        InvalidActionError: If not exactly two nodes are provided, if swapping
+            would create invalid edges (predecessor not before node), if both
+            nodes have the same predecessor, or if neither node has a predecessor.
     """
 
     def __init__(
