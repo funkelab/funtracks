@@ -48,7 +48,11 @@ class UserSwapNodes(ActionGroup):
         pred1 = next(graph.predecessors(node1), None)
         pred2 = next(graph.predecessors(node2), None)
 
+        # No-op cases: nothing to swap
         if pred1 is None and pred2 is None:
+            return
+        if pred1 == pred2:
+            # Same predecessor - swapping would result in identical graph
             return
 
         # Break existing edges
