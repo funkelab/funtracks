@@ -10,11 +10,13 @@ from ..actions import (
     UpdateNodeAttrs,
 )
 from ..actions.action_history import ActionHistory
+from ..exceptions import InvalidActionError
 from ..user_actions import (
     UserAddEdge,
     UserAddNode,
     UserDeleteEdge,
     UserDeleteNode,
+    UserSwapPredecessors,
     UserUpdateSegmentation,
 )
 from .solution_tracks import SolutionTracks
@@ -161,6 +163,17 @@ class TracksController:
                 )
             )
         return ActionGroup(self.tracks, actions)
+
+    def swap_predecessors(self, nodes: tuple[Node, Node]) -> None:
+        """Swap the predecessors (incoming edges) of two nodes."""
+        try:
+            action = UserSwapPredecessors(self.tracks, nodes)
+        except InvalidActionError as e:
+            warn(str(e), stacklevel=2)
+            return
+
+        self.action_history.add_new_action(action)
+        self.tracks.refresh.emit()
 
     def add_edges(self, edges: Iterable[Edge], force: bool = False) -> None:
         """Add edges to the graph. Also update the track ids and
