@@ -227,7 +227,7 @@ class TrackAnnotator(GraphAnnotator):
         Other actions are ignored.
 
         Args:
-            action: The action that triggered this update
+            action (BasicAction): The action that triggered this update.
         """
 
         # Only update if track_id feature is enabled
@@ -249,7 +249,7 @@ class TrackAnnotator(GraphAnnotator):
         - Lineage IDs: for all downstream nodes (continues through divisions)
 
         Args:
-            action: The UpdateTrackIDs action
+            action (UpdateTrackIDs): The UpdateTrackIDs action.
         """
         start_node = action.start_node
         old_tracklet_id = action.old_tracklet_id
@@ -300,7 +300,12 @@ class TrackAnnotator(GraphAnnotator):
             )
 
     def _add_to_tracklet_bookkeeping(self, nodes: list[int], tracklet_id: int) -> None:
-        """Add nodes to tracklet bookkeeping."""
+        """Add nodes to tracklet bookkeeping.
+
+        Args:
+            nodes (list[int]): The nodes to add.
+            tracklet_id (int): The tracklet ID to add the nodes to.
+        """
         if tracklet_id not in self.tracklet_id_to_nodes:
             self.tracklet_id_to_nodes[tracklet_id] = []
         self.tracklet_id_to_nodes[tracklet_id].extend(nodes)
@@ -310,7 +315,12 @@ class TrackAnnotator(GraphAnnotator):
     def _remove_from_tracklet_bookkeeping(
         self, nodes: list[int], tracklet_id: int
     ) -> None:
-        """Remove nodes from tracklet bookkeeping."""
+        """Remove nodes from tracklet bookkeeping.
+
+        Args:
+            nodes (list[int]): The nodes to remove.
+            tracklet_id (int): The tracklet ID to remove the nodes from.
+        """
         if tracklet_id not in self.tracklet_id_to_nodes:
             return
         for node in nodes:
@@ -320,7 +330,12 @@ class TrackAnnotator(GraphAnnotator):
             del self.tracklet_id_to_nodes[tracklet_id]
 
     def _add_to_lineage_bookkeeping(self, nodes: list[int], lineage_id: int) -> None:
-        """Add nodes to lineage bookkeeping."""
+        """Add nodes to lineage bookkeeping.
+
+        Args:
+            nodes (list[int]): The nodes to add.
+            lineage_id (int): The lineage ID to add the nodes to.
+        """
         if lineage_id not in self.lineage_id_to_nodes:
             self.lineage_id_to_nodes[lineage_id] = []
         for node in nodes:
@@ -330,7 +345,12 @@ class TrackAnnotator(GraphAnnotator):
             self.max_lineage_id = lineage_id
 
     def _remove_from_lineage_bookkeeping(self, nodes: list[int], lineage_id: int) -> None:
-        """Remove nodes from lineage bookkeeping."""
+        """Remove nodes from lineage bookkeeping.
+
+        Args:
+            nodes (list[int]): The nodes to remove.
+            lineage_id (int): The lineage ID to remove the nodes from.
+        """
         if lineage_id not in self.lineage_id_to_nodes:
             return
         for node in nodes:
@@ -342,23 +362,35 @@ class TrackAnnotator(GraphAnnotator):
     def _update_tracklet_bookkeeping(
         self, nodes: list[int], old_id: int, new_id: int
     ) -> None:
-        """Move nodes from old tracklet to new tracklet in bookkeeping."""
+        """Move nodes from old tracklet to new tracklet in bookkeeping.
+
+        Args:
+            nodes (list[int]): The nodes to move.
+            old_id (int): The old tracklet ID.
+            new_id (int): The new tracklet ID.
+        """
         self._remove_from_tracklet_bookkeeping(nodes, old_id)
         self._add_to_tracklet_bookkeeping(nodes, new_id)
 
     def _update_lineage_bookkeeping(
         self, nodes: list[int], old_id: int | None, new_id: int
     ) -> None:
-        """Move nodes from old lineage to new lineage in bookkeeping."""
+        """Move nodes from old lineage to new lineage in bookkeeping.
+
+        Args:
+            nodes (list[int]): The nodes to move.
+            old_id (int | None): The old lineage ID, or None if the nodes had no lineage.
+            new_id (int): The new lineage ID.
+        """
         if old_id is not None:
             self._remove_from_lineage_bookkeeping(nodes, old_id)
         self._add_to_lineage_bookkeeping(nodes, new_id)
 
-    def _handle_add_node(self, action) -> None:
+    def _handle_add_node(self, action: AddNode) -> None:
         """Handle AddNode action to update bookkeeping.
 
         Args:
-            action: The AddNode action
+            action (AddNode): The AddNode action.
         """
         node = action.node
         track_id = self.tracks.get_track_id(node)
@@ -369,11 +401,11 @@ class TrackAnnotator(GraphAnnotator):
             if lineage_id is not None:
                 self._add_to_lineage_bookkeeping([node], lineage_id)
 
-    def _handle_delete_node(self, action) -> None:
+    def _handle_delete_node(self, action: DeleteNode) -> None:
         """Handle DeleteNode action to update bookkeeping.
 
         Args:
-            action: The DeleteNode action
+            action (DeleteNode): The DeleteNode action.
         """
         node = action.node
         track_id = action.attributes.get(self.tracklet_key)
