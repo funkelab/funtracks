@@ -13,7 +13,6 @@ from funtracks.import_export.export_to_geff import export_to_geff
 def test_export_to_geff(
     get_tracks,
     get_graph,
-    get_segmentation,
     ndim,
     with_seg,
     is_solution,
@@ -33,8 +32,11 @@ def test_export_to_geff(
     if pos_attr_type is list:
         # For split pos, we need to manually create tracks since get_tracks
         # doesn't support this
-        graph = get_graph(ndim, with_features="computed")
-        segmentation = get_segmentation(ndim) if with_seg else None
+        graph_type = "segmentation" if with_seg else "position"
+        graph = get_graph(ndim, with_features=graph_type)
+        segmentation_shape = None
+        if with_seg:
+            segmentation_shape = (5, 20, 20) if ndim == 3 else (3, 5, 20, 20)
 
         # Determine position attribute keys based on dimensions
         pos_keys = ["y", "x"] if ndim == 3 else ["z", "y", "x"]
@@ -51,7 +53,7 @@ def test_export_to_geff(
         tracks_cls = SolutionTracks if is_solution else Tracks
         tracks = tracks_cls(
             graph,
-            segmentation=segmentation,
+            segmentation_shape=segmentation_shape,
             time_attr="t",
             pos_attr=pos_keys,
             tracklet_attr="track_id",
@@ -128,7 +130,7 @@ def test_export_to_geff(
         seg_zarr = zarr.open(str(seg_path), mode="r")
         assert isinstance(seg_zarr, zarr.Array)
 
-        filtered_seg = tracks.segmentation.copy()
+        filtered_seg = np.asarray(tracks.segmentation).copy()
         mask = np.isin(filtered_seg, [1, 3, 4, 6])
         filtered_seg[~mask] = 0
         np.testing.assert_array_equal(seg_zarr[:], filtered_seg)

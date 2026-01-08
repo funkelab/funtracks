@@ -9,7 +9,10 @@ import networkx as nx
 import numpy as np
 
 from funtracks.features import FeatureDict
-from funtracks.utils.tracksdata_utils import convert_graph_nx_to_td
+from funtracks.utils.tracksdata_utils import (
+    add_masks_and_bboxes_to_graph,
+    convert_graph_nx_to_td,
+)
 
 if TYPE_CHECKING:
     from ..data_model import SolutionTracks, Tracks
@@ -48,6 +51,12 @@ def load_v1_tracks(
 
     graph_td = convert_graph_nx_to_td(graph_nx)
 
+    # Add mask and bbox attributes to graph if segmentation is available
+    if seg is not None:
+        graph_td = add_masks_and_bboxes_to_graph(graph_td, seg)
+
+    segmentation_shape = seg.shape if seg is not None else None
+
     # filtering the warnings because the default values of time_attr and pos_attr are
     # not None. Therefore, new style Tracks attrs that have features instead of
     # pos_attr and time_attr will always trigger the warning. Updating default values
@@ -62,9 +71,11 @@ def load_v1_tracks(
         )
         tracks: Tracks
         if solution:
-            tracks = SolutionTracks(graph_td, seg, **attrs)
+            tracks = SolutionTracks(
+                graph_td, segmentation_shape=segmentation_shape, **attrs
+            )
         else:
-            tracks = Tracks(graph_td, seg, **attrs)
+            tracks = Tracks(graph_td, segmentation_shape=segmentation_shape, **attrs)
     return tracks
 
 

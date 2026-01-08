@@ -38,6 +38,7 @@ from funtracks.import_export._validation import (
     validate_spatial_dims,
 )
 from funtracks.utils.tracksdata_utils import (
+    add_masks_and_bboxes_to_graph,
     create_empty_graphview_graph,
 )
 
@@ -697,17 +698,23 @@ class TracksBuilder(ABC):
             graph, segmentation, scale
         )
 
-        # 6. Create SolutionTracks
+        # 6. Add segmentation to the graph
+        if segmentation_array is not None:
+            graph = add_masks_and_bboxes_to_graph(graph, segmentation_array)
+
+        # 7. Create SolutionTracks
         tracks = SolutionTracks(
             graph=graph,
-            segmentation=segmentation_array,
+            segmentation_shape=None
+            if segmentation_array is None
+            else segmentation_array.shape,
             pos_attr="pos",
             time_attr=self.TIME_ATTR,
             ndim=self.ndim,
             scale=scale,
         )
 
-        # 7. Enable and register features
+        # 8. Enable and register features
         if node_features is not None:
             self.enable_features(tracks, node_features, feature_type="node")
         if edge_features is not None:

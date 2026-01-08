@@ -123,7 +123,7 @@ class TestSegmentationHandling:
         tracks = tracks_from_df(df, seg)
         assert tracks.segmentation is not None
         # Segmentation should not be relabeled
-        assert tracks.segmentation[0, 10, 15] == 1
+        assert np.asarray(tracks.segmentation)[0, 10, 15] == 1
 
 
 class TestEdgeCases:
@@ -356,7 +356,7 @@ class TestDuplicateMappings:
 
         assert tracks.segmentation is not None
         # Segmentation should not be relabeled since seg_id == id
-        assert tracks.segmentation[0, 10, 15] == 1
+        assert np.asarray(tracks.segmentation)[0, 10, 15] == 1
 
 
 class TestValidationErrors:

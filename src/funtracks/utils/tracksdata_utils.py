@@ -6,6 +6,7 @@ from typing import Any
 import networkx as nx
 import numpy as np
 import polars as pl
+import scipy.ndimage as ndi
 import tracksdata as td
 from polars.testing import assert_frame_equal
 from skimage import measure
@@ -498,6 +499,98 @@ def subtract_td_masks(
         area *= np.prod(scale[1:])
 
     return Mask(final_mask, bbox=result_bbox), float(area)
+
+
+def segmentation_to_masks_and_bboxes(
+    segmentation: np.ndarray,
+) -> list[tuple[int, int, Mask]]:
+    """Convert a segmentation array to individual masks and bounding boxes.
+
+    Parameters
+    ----------
+    segmentation : np.ndarray
+        Segmentation array of shape (T, Z, Y, X) or (T, Y, X)
+        Each unique value represents a different segment/object.
+
+    Returns
+    -------
+    list[tuple[int, int, Mask]]
+        List of tuples, one per segment, containing:
+        - label (int): original label ID
+        - time (int): time point
+        - mask (Mask): tracksdata Mask object with boolean mask and bbox
+    """
+    results = []
+
+    # Process each time point
+    for t in range(segmentation.shape[0]):
+        time_slice = segmentation[t]
+
+        # Get unique labels
+        labels = np.unique(time_slice)
+        labels = labels[labels != 0]
+
+        # Find objects for each label
+        for label in labels:
+            # Create binary mask for this label
+            binary_mask = time_slice == label
+
+            # Find bounding box using scipy (same as Ultrack uses)
+            slices = ndi.find_objects(binary_mask.astype(int))[0]
+
+            if slices is None:
+                continue
+
+            # Extract the cropped mask and ensure C-contiguous for blosc2 serialization
+            cropped_mask = np.ascontiguousarray(binary_mask[slices])
+
+            # Convert slices to bbox format (min_*, max_*)
+            ndim = len(slices)
+            bbox = np.array(
+                [slices[i].start for i in range(ndim)]  # min coordinates
+                + [slices[i].stop for i in range(ndim)]  # max coordinates
+            )
+
+            # Create Mask object
+            mask = Mask(cropped_mask, bbox=bbox)
+
+            results.append((int(label), t, mask))
+
+    return results
+
+
+def add_masks_and_bboxes_to_graph(
+    graph: td.graph.GraphView,
+    segmentation: np.ndarray,
+) -> td.graph.GraphView:
+    """Add mask and bbox attributes to graph nodes from segmentation.
+
+    Parameters
+    ----------
+    graph : td.graph.GraphView
+        Graph to add attributes to
+    segmentation : np.ndarray
+        Segmentation array of shape (T, Z, Y, X) or (T, Y, X)
+
+    Returns
+    -------
+    td.graph.GraphView
+        Graph with 'mask' and 'bbox' attributes added to nodes
+    """
+
+    # Convert segmentation to masks and bounding boxes
+    list_of_masks = segmentation_to_masks_and_bboxes(segmentation)
+
+    # Add 'mask' and 'bbox' attributes to graph nodes
+    graph.add_node_attr_key("mask", default_value=None)
+    graph.add_node_attr_key("bbox", default_value=None)
+
+    for label, _, mask in list_of_masks:
+        if graph.has_node(label):
+            graph[label]["mask"] = [mask]
+            graph[label]["bbox"] = [mask.bbox]
+
+    return graph
 
 
 def td_get_single_attr_from_edge(graph, edge: tuple[int, int], attrs: Sequence[str]):

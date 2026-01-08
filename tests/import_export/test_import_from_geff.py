@@ -326,7 +326,7 @@ def test_tracks_with_segmentation(valid_geff, invalid_geff, valid_segmentation, 
         valid_segmentation[tuple(coords)] == 50
     )  # in original segmentation, the pixel value is equal to seg_id
     assert (
-        tracks.segmentation[tuple(coords)] == last_node
+        np.asarray(tracks.segmentation)[tuple(coords)] == last_node
     )  # test that the seg id has been relabeled
 
     # Check that only required/requested features are present, and that area is recomputed
