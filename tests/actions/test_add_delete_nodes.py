@@ -2,7 +2,6 @@ import numpy as np
 import pytest
 from numpy.testing import assert_array_almost_equal, assert_array_equal
 from polars.testing import assert_frame_equal
-from tests.conftest import make_2d_disk_mask, make_3d_sphere_mask
 from tracksdata.array import GraphArrayView
 
 from funtracks.actions import (
@@ -14,6 +13,8 @@ from funtracks.utils.tracksdata_utils import (
     create_empty_graphview_graph,
     td_mask_to_pixels,
 )
+
+from ..conftest import make_2d_disk_mask, make_3d_sphere_mask
 
 
 @pytest.mark.parametrize("ndim", [3, 4])

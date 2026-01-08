@@ -3,15 +3,15 @@
 import numpy as np
 import pytest
 
-# Import from conftest (pytest makes it available automatically)
-from conftest import (
+from funtracks.utils.tracksdata_utils import pixels_to_td_mask, td_mask_to_pixels
+
+# Import from conftest
+from ..conftest import (
     make_2d_disk_mask,
     make_2d_square_mask,
     make_3d_cube_mask,
     make_3d_sphere_mask,
 )
-
-from funtracks.utils.tracksdata_utils import pixels_to_td_mask, td_mask_to_pixels
 
 
 @pytest.mark.parametrize(
