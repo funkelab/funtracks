@@ -7,13 +7,13 @@ track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
 
 
 def test_annotator_registry_init_with_segmentation(
-    graph_2d_with_computed_features, segmentation_2d
+    graph_2d_with_segmentation,
 ):
     """Test AnnotatorRegistry initializes regionprops and edge annotators with
     segmentation."""
     tracks = Tracks(
-        graph_2d_with_computed_features,
-        segmentation=segmentation_2d,
+        graph_2d_with_segmentation,
+        segmentation_shape=(5, 100, 100),
         ndim=3,
         **track_attrs,
     )
@@ -26,7 +26,7 @@ def test_annotator_registry_init_with_segmentation(
 
 def test_annotator_registry_init_without_segmentation(graph_2d_with_position):
     """Test AnnotatorRegistry doesn't create annotators without segmentation."""
-    tracks = Tracks(graph_2d_with_position, segmentation=None, ndim=3, **track_attrs)
+    tracks = Tracks(graph_2d_with_position, ndim=3, **track_attrs)
 
     annotator_types = [type(ann) for ann in tracks.annotators]
     assert RegionpropsAnnotator not in annotator_types
@@ -35,13 +35,13 @@ def test_annotator_registry_init_without_segmentation(graph_2d_with_position):
 
 
 def test_annotator_registry_init_solution_tracks(
-    graph_2d_with_computed_features, segmentation_2d
+    graph_2d_with_segmentation,
 ):
     """Test AnnotatorRegistry creates all annotators for SolutionTracks with
     segmentation."""
     tracks = SolutionTracks(
-        graph_2d_with_computed_features,
-        segmentation=segmentation_2d,
+        graph_2d_with_segmentation,
+        segmentation_shape=(5, 100, 100),
         ndim=3,
         **track_attrs,
     )
@@ -52,10 +52,10 @@ def test_annotator_registry_init_solution_tracks(
     assert TrackAnnotator in annotator_types
 
 
-def test_enable_disable_features(graph_2d_with_computed_features, segmentation_2d):
+def test_enable_disable_features(graph_2d_with_segmentation):
     tracks = Tracks(
-        graph_2d_with_computed_features,
-        segmentation=segmentation_2d,
+        graph_2d_with_segmentation,
+        segmentation_shape=(5, 100, 100),
         ndim=3,
         **track_attrs,
     )
@@ -105,11 +105,11 @@ def test_enable_disable_features(graph_2d_with_computed_features, segmentation_2
     assert "circularity" not in tracks.features
 
 
-def test_get_available_features(graph_2d_with_computed_features, segmentation_2d):
+def test_get_available_features(graph_2d_with_segmentation):
     """Test get_available_features returns all features from all annotators."""
     tracks = SolutionTracks(
-        graph_2d_with_computed_features,
-        segmentation=segmentation_2d,
+        graph_2d_with_segmentation,
+        segmentation_shape=(5, 100, 100),
         ndim=3,
         **track_attrs,
     )
@@ -123,25 +123,30 @@ def test_get_available_features(graph_2d_with_computed_features, segmentation_2d
     assert "track_id" in available  # tracks
 
 
-def test_enable_nonexistent_feature(graph_clean, segmentation_2d):
+def test_enable_nonexistent_feature(graph_clean):
     """Test enabling a nonexistent feature raises KeyError."""
-    tracks = Tracks(graph_clean, segmentation=segmentation_2d, ndim=3, **track_attrs)
+    tracks = Tracks(graph_clean, ndim=3, **track_attrs)
 
     with pytest.raises(KeyError, match="Features not available"):
         tracks.enable_features(["nonexistent"])
 
 
-def test_disable_nonexistent_feature(graph_clean, segmentation_2d):
+def test_disable_nonexistent_feature(graph_clean):
     """Test disabling a nonexistent feature raises KeyError."""
-    tracks = Tracks(graph_clean, segmentation=segmentation_2d, ndim=3, **track_attrs)
+    tracks = Tracks(graph_clean, ndim=3, **track_attrs)
 
     with pytest.raises(KeyError, match="Features not available"):
         tracks.disable_features(["nonexistent"])
 
 
-def test_compute_strict_validation(graph_clean, segmentation_2d):
+def test_compute_strict_validation(graph_2d_with_segmentation):
     """Test that compute() strictly validates feature keys."""
-    tracks = Tracks(graph_clean, segmentation=segmentation_2d, ndim=3, **track_attrs)
+    tracks = Tracks(
+        graph_2d_with_segmentation,
+        segmentation_shape=(5, 100, 100),
+        ndim=3,
+        **track_attrs,
+    )
 
     # Get the RegionpropsAnnotator from the annotators
     rp_ann = next(

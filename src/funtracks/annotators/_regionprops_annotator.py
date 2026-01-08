@@ -167,7 +167,7 @@ class RegionpropsAnnotator(GraphAnnotator):
 
         seg = self.tracks.segmentation
         for t in range(seg.shape[0]):
-            self._regionprops_update(seg[t], keys_to_compute)
+            self._regionprops_update(np.asarray(seg[t]), keys_to_compute)
 
     def _regionprops_update(self, seg_frame: np.ndarray, feature_keys: list[str]) -> None:
         """Perform the regionprops computation and update all feature values for a
@@ -187,7 +187,11 @@ class RegionpropsAnnotator(GraphAnnotator):
             for key in feature_keys:
                 value = getattr(region, self.regionprops_names[key])
                 if isinstance(value, tuple):
-                    value = list(value)
+                    value = [
+                        float(v) for v in value
+                    ]  # cannot be a list of np.arrays with single values
+                elif isinstance(value, np.floating):
+                    value = float(value)
                 self.tracks._set_node_attr(node, key, value)
 
     def update(self, action: BasicAction):
@@ -214,7 +218,7 @@ class RegionpropsAnnotator(GraphAnnotator):
             return
 
         time = self.tracks.get_time(node)
-        seg_frame = self.tracks.segmentation[time]
+        seg_frame = np.asarray(self.tracks.segmentation[time])
         masked_frame = np.where(seg_frame == node, node, 0)
 
         if np.max(masked_frame) == 0:

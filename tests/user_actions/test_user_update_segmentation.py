@@ -114,9 +114,7 @@ class TestUpdateNodeSeg:
 
         # remove all pixels
         pixels_to_remove = orig_pixels
-        # set the pixels in the array first
-        # (to reflect that the user directly changes the segmentation array)
-        tracks.set_pixels(pixels_to_remove, 0)
+        # setting of pixels no longer necessary, done in UpdateNodeSeg
         action = UserUpdateSegmentation(
             tracks,
             new_value=0,
@@ -125,7 +123,6 @@ class TestUpdateNodeSeg:
         )
         assert node_id not in tracks.graph.node_ids()
 
-        tracks.set_pixels(pixels_to_remove, node_id)
         inverse = action.inverse()
         assert node_id in tracks.graph.node_ids()
         self.pixel_equals(tracks.get_pixels(node_id), orig_pixels)
@@ -133,7 +130,6 @@ class TestUpdateNodeSeg:
         assert tracks.get_node_attr(node_id, "area") == orig_area
         assert tracks.get_edge_attr(edge, iou_key) == pytest.approx(orig_iou, abs=0.01)
 
-        tracks.set_pixels(pixels_to_remove, 0)
         inverse.inverse()
         assert node_id not in tracks.graph.node_ids()
 
@@ -155,14 +151,13 @@ class TestUpdateNodeSeg:
         assert node_id not in tracks.graph.node_ids()
 
         assert np.sum(tracks.segmentation == node_id) == 0
-        tracks.set_pixels(pixels_to_add, node_id)
         action = UserUpdateSegmentation(
             tracks,
             new_value=node_id,
             updated_pixels=[(pixels_to_add, 0)],
             current_track_id=10,
         )
-        assert np.sum(tracks.segmentation == node_id) == len(pixels_to_add[0])
+        assert np.sum(np.asarray(tracks.segmentation) == node_id) == len(pixels_to_add[0])
         assert node_id in tracks.graph.node_ids()
         assert tracks.get_position(node_id) == position
         assert tracks.get_node_attr(node_id, "area") == area

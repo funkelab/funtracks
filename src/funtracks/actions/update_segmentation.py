@@ -48,5 +48,5 @@ class UpdateNodeSeg(BasicAction):
     def _apply(self) -> None:
         """Set new attributes"""
         value = self.node if self.added else 0
-        self.tracks.set_pixels(self.pixels, value)
+        self.tracks.set_pixels(self.pixels, value, self.node)
         self.tracks.notify_annotators(self)

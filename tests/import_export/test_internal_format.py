@@ -107,7 +107,7 @@ def test_delete(
 
 
 # for backward compatibility
-def test_load_without_features(tmp_path, graph_2d_with_computed_features):
+def test_load_without_features(tmp_path, graph_2d_with_segmentation):
     reference_path = Path(f"tests/data/format_v1/test_save_load_{True}_{3}_{True}_0")
 
     # Copy reference data to temporary location

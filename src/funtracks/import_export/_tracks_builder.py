@@ -89,7 +89,7 @@ class TracksBuilder(ABC):
 
     TIME_ATTR = "time"
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize builder state."""
         # State transferred between steps
         self.in_memory_geff: InMemoryGeff | None = None

@@ -39,7 +39,7 @@ dependencies =[
     "pandas>=2.3.3",
     "zarr>=2.18,<4",
     "numcodecs>=0.13,<0.16",
-    "tracksdata@git+https://github.com/royerlab/tracksdata@b35a0f111f8d39baec00245a457d65941222174b",
+    "tracksdata[spatial]@git+https://github.com/royerlab/tracksdata@b35a0f111f8d39baec00245a457d65941222174b",
 ]
 
 [project.urls]
@@ -108,6 +108,7 @@ unfixable = [
 [tool.mypy]
 ignore_missing_imports = true
 python_version = "3.10"
+explicit_package_bases = true
 
 [tool.coverage.report]
 exclude_also = [

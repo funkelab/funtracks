@@ -10,9 +10,7 @@ from funtracks.utils.tracksdata_utils import (
 track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
 
 
-def test_create_tracks(
-    graph_3d_with_computed_features: td.graph.GraphView, segmentation_3d
-):
+def test_create_tracks(graph_3d_with_segmentation: td.graph.GraphView):
     # create empty tracks
     empty_graph = create_empty_graphview_graph()
     tracks = Tracks(graph=empty_graph, ndim=3, **track_attrs)  # type: ignore[arg-type]
@@ -23,7 +21,7 @@ def test_create_tracks(
 
     # create tracks with graph only
     tracks = Tracks(
-        graph=graph_3d_with_computed_features,
+        graph=graph_3d_with_segmentation,
         ndim=4,
         **track_attrs,  # type: ignore[arg-type]
     )
@@ -38,8 +36,8 @@ def test_create_tracks(
 
     # create track with graph and seg
     tracks = Tracks(
-        graph=graph_3d_with_computed_features,
-        segmentation=segmentation_3d,
+        graph=graph_3d_with_segmentation,
+        segmentation_shape=(5, 100, 100, 100),
         **track_attrs,  # type: ignore[arg-type]
     )
     pos_key = tracks.features.position_key
@@ -54,33 +52,31 @@ def test_create_tracks(
     # assert tracks.get_positions([1], incl_time=True).tolist() == [[1, 50, 50, 50]]
 
     tracks_wrong_attr = Tracks(
-        graph=graph_3d_with_computed_features,
-        segmentation=segmentation_3d,
+        graph=graph_3d_with_segmentation,
+        segmentation_shape=(5, 100, 100, 100),
         time_attr="test",
     )
     with pytest.raises(KeyError):  # raises error at access if time is wrong
         tracks_wrong_attr.get_times([1])
 
-    tracks_wrong_attr = Tracks(
-        graph=graph_3d_with_computed_features, pos_attr="test", ndim=3
-    )
+    tracks_wrong_attr = Tracks(graph=graph_3d_with_segmentation, pos_attr="test", ndim=3)
     with pytest.raises(KeyError):  # raises error at access if pos is wrong
         tracks_wrong_attr.get_positions([1])
 
     # test multiple position attrs
     pos_attr = ("z", "y", "x")
-    graph_3d_with_computed_features.add_node_attr_key(key="z", default_value=0)
-    graph_3d_with_computed_features.add_node_attr_key(key="y", default_value=0)
-    graph_3d_with_computed_features.add_node_attr_key(key="x", default_value=0)
-    for node in graph_3d_with_computed_features.node_ids():
-        pos = graph_3d_with_computed_features[node]["pos"]
+    graph_3d_with_segmentation.add_node_attr_key(key="z", default_value=0)
+    graph_3d_with_segmentation.add_node_attr_key(key="y", default_value=0)
+    graph_3d_with_segmentation.add_node_attr_key(key="x", default_value=0)
+    for node in graph_3d_with_segmentation.node_ids():
+        pos = graph_3d_with_segmentation[node]["pos"]
         z, y, x = pos
-        graph_3d_with_computed_features[node]["z"] = z
-        graph_3d_with_computed_features[node]["y"] = y
-        graph_3d_with_computed_features[node]["x"] = x
+        graph_3d_with_segmentation[node]["z"] = z
+        graph_3d_with_segmentation[node]["y"] = y
+        graph_3d_with_segmentation[node]["x"] = x
 
     tracks = Tracks(
-        graph=graph_3d_with_computed_features,
+        graph=graph_3d_with_segmentation,
         pos_attr=pos_attr,
         ndim=4,
         **track_attrs,  # type: ignore[arg-type]
@@ -90,10 +86,12 @@ def test_create_tracks(
     assert tracks.get_position(1) == [55, 56, 57]
 
 
-def test_pixels_and_seg_id(graph_3d_with_computed_features, segmentation_3d):
+def test_pixels_and_seg_id(graph_3d_with_segmentation):
     # create track with graph and seg
     tracks = Tracks(
-        graph=graph_3d_with_computed_features, segmentation=segmentation_3d, **track_attrs
+        graph=graph_3d_with_segmentation,
+        segmentation_shape=(5, 100, 100, 100),
+        **track_attrs,
     )
 
     # changing a segmentation id changes it in the mapping
@@ -102,8 +100,8 @@ def test_pixels_and_seg_id(graph_3d_with_computed_features, segmentation_3d):
     tracks.set_pixels(pix, new_seg_id)
 
 
-def test_nodes_edges(graph_2d_with_computed_features):
-    tracks = Tracks(graph_2d_with_computed_features, ndim=3, **track_attrs)
+def test_nodes_edges(graph_2d_with_segmentation):
+    tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
     assert set(tracks.nodes()) == {1, 2, 3, 4, 5, 6}
     assert set(tracks.edges()) == {1, 2, 3, 4}
     assert set(map(tuple, tracks.graph.edge_list())) == {
@@ -114,8 +112,8 @@ def test_nodes_edges(graph_2d_with_computed_features):
     }
 
 
-def test_degrees(graph_2d_with_computed_features):
-    tracks = Tracks(graph_2d_with_computed_features, ndim=3, **track_attrs)
+def test_degrees(graph_2d_with_segmentation):
+    tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
     assert tracks.in_degree(np.array([1])) == 0
     assert tracks.in_degree(np.array([4])) == 1
     assert np.array_equal(tracks.in_degree(None), np.array([0, 1, 1, 1, 1, 0]))
@@ -126,16 +124,16 @@ def test_degrees(graph_2d_with_computed_features):
     )
 
 
-def test_predecessors_successors(graph_2d_with_computed_features):
-    tracks = Tracks(graph_2d_with_computed_features, ndim=3, **track_attrs)
+def test_predecessors_successors(graph_2d_with_segmentation):
+    tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
     assert tracks.predecessors(2) == [1]
     assert set(tracks.successors(1)) == {2, 3}
     assert tracks.predecessors(1) == []
     assert tracks.successors(2) == []
 
 
-def test_get_set_node_attr(graph_2d_with_computed_features):
-    tracks = Tracks(graph_2d_with_computed_features, ndim=3, **track_attrs)
+def test_get_set_node_attr(graph_2d_with_segmentation):
+    tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
 
     tracks._set_node_attr(1, "area", 42)
 
@@ -157,8 +155,8 @@ def test_get_set_node_attr(graph_2d_with_computed_features):
     tracks._set_nodes_attr((1, 2), "pos", np.array(([1, 2], [4, 5])))
 
 
-def test_get_set_edge_attr(graph_2d_with_computed_features):
-    tracks = Tracks(graph_2d_with_computed_features, ndim=3, **track_attrs)
+def test_get_set_edge_attr(graph_2d_with_segmentation):
+    tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
     tracks._set_edge_attr((1, 2), "iou", 99)
     assert tracks.get_edge_attr((1, 2), "iou") == 99
     assert tracks.get_edge_attr((1, 2), "iou", required=True) == 99
@@ -176,8 +174,8 @@ def test_get_set_edge_attr(graph_2d_with_computed_features):
     )
 
 
-def test_set_positions_str(graph_2d_with_computed_features):
-    tracks = Tracks(graph_2d_with_computed_features, ndim=3, **track_attrs)
+def test_set_positions_str(graph_2d_with_segmentation):
+    tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
     tracks.set_positions((1, 2), [(1, 2), (3, 4)])
     assert np.array_equal(
         tracks.get_positions((1, 2), incl_time=False), np.array([[1, 2], [3, 4]])
@@ -202,27 +200,26 @@ def test_set_positions_list(graph_2d_list):
     )
 
 
-def test_get_pixels_and_set_pixels(graph_2d_with_computed_features, segmentation_2d):
+def test_get_pixels_and_set_pixels(graph_2d_with_segmentation):
     tracks = Tracks(
-        graph_2d_with_computed_features, segmentation_2d, ndim=3, **track_attrs
+        graph_2d_with_segmentation,
+        segmentation_shape=(5, 100, 100),
+        ndim=3,
+        **track_attrs,
     )
     pix = tracks.get_pixels(1)
     assert isinstance(pix, tuple)
     tracks.set_pixels(pix, 99)
-    assert tracks.segmentation[0, 50, 50] == 99
+    assert np.asarray(tracks.segmentation)[0, 50, 50] == 99
 
 
-def test_get_pixels_none(graph_2d_with_computed_features):
-    tracks = Tracks(
-        graph_2d_with_computed_features, segmentation=None, ndim=3, **track_attrs
-    )
+def test_get_pixels_none(graph_2d_with_segmentation):
+    tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
     assert tracks.get_pixels([1]) is None
 
 
-def test_set_pixels_no_segmentation(graph_2d_with_computed_features):
-    tracks = Tracks(
-        graph_2d_with_computed_features, segmentation=None, ndim=3, **track_attrs
-    )
+def test_set_pixels_no_segmentation(graph_2d_with_segmentation):
+    tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
     pix = [(np.array([0]), np.array([10]), np.array([20]))]
     with pytest.raises(ValueError):
         tracks.set_pixels(pix, [1])
@@ -233,9 +230,8 @@ def test_compute_ndim_errors():
     g.add_node_attr_key("pos", default_value=None)
     g.add_node(index=1, attrs={"t": 0, "pos": [0, 0, 0], "solution": True})
     # seg ndim = 3, scale ndim = 2, provided ndim = 4 -> mismatch
-    seg = np.zeros((2, 2, 2))
-    with pytest.raises(ValueError, match="Dimensions from segmentation"):
-        Tracks(g, segmentation=seg, scale=[1, 2], ndim=4)
+    with pytest.raises(ValueError, match="segmentation_shape is incompatible with graph"):
+        Tracks(g, segmentation_shape=(2, 2, 2), scale=[1, 2], ndim=4)
 
     with pytest.raises(
         ValueError, match="Cannot compute dimensions from segmentation or scale"

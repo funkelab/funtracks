@@ -14,12 +14,12 @@ def test_update_node_segs(get_tracks, ndim):
     tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
     reference_graph = tracks.graph.detach().filter().subgraph()
 
-    original_seg = tracks.segmentation.copy()
+    original_seg = np.asarray(tracks.segmentation).copy()
     original_area = tracks.graph[1]["area"]
     original_pos = tracks.graph[1]["pos"]
 
     # Add a couple pixels to the first node
-    new_seg = tracks.segmentation.copy()
+    new_seg = np.asarray(tracks.segmentation).copy()
     if ndim == 3:
         new_seg[0][0][0] = 1  # 2D spatial
     else:

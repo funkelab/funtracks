@@ -1,5 +1,3 @@
-import numpy as np
-
 from funtracks.actions import AddNode
 from funtracks.data_model import SolutionTracks, Tracks
 from funtracks.utils.tracksdata_utils import create_empty_graphview_graph
@@ -16,8 +14,8 @@ def test_recompute_track_ids(graph_2d_with_track_id):
     assert tracks.get_next_track_id() == 6
 
 
-def test_next_track_id(graph_2d_with_computed_features):
-    tracks = SolutionTracks(graph_2d_with_computed_features, ndim=3, **track_attrs)
+def test_next_track_id(graph_2d_with_segmentation):
+    tracks = SolutionTracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
     assert tracks.get_next_track_id() == 6
     AddNode(
         tracks,
@@ -27,9 +25,9 @@ def test_next_track_id(graph_2d_with_computed_features):
     assert tracks.get_next_track_id() == 11
 
 
-def test_from_tracks_cls(graph_2d_with_computed_features):
+def test_from_tracks_cls(graph_2d_with_segmentation):
     tracks = Tracks(
-        graph_2d_with_computed_features,
+        graph_2d_with_segmentation,
         ndim=3,
         pos_attr="POSITION",
         time_attr="TIME",
@@ -46,9 +44,9 @@ def test_from_tracks_cls(graph_2d_with_computed_features):
     assert solution_tracks.get_node_attr(6, tracks.features.tracklet_key) == 5
 
 
-def test_from_tracks_cls_recompute(graph_2d_with_computed_features):
+def test_from_tracks_cls_recompute(graph_2d_with_segmentation):
     tracks = Tracks(
-        graph_2d_with_computed_features,
+        graph_2d_with_segmentation,
         ndim=3,
         pos_attr="POSITION",
         time_attr="TIME",
@@ -71,19 +69,18 @@ def test_next_track_id_empty():
         node_attributes=["pos", "track_id"],
         edge_attributes=[],
     )
-    seg = np.zeros(shape=(10, 100, 100, 100), dtype=np.uint64)
-    tracks = SolutionTracks(graph, segmentation=seg, **track_attrs)
+    tracks = SolutionTracks(graph, segmentation_shape=(5, 100, 100, 100), **track_attrs)
     assert tracks.get_next_track_id() == 1
 
 
 def test_export_to_csv_with_display_names(
-    graph_2d_with_computed_features, graph_3d_with_computed_features, tmp_path
+    graph_2d_with_segmentation, graph_3d_with_segmentation, tmp_path
 ):
     """Test CSV export with use_display_names=True option."""
     from funtracks.import_export import export_to_csv
 
     # Test 2D with display names
-    tracks = SolutionTracks(graph_2d_with_computed_features, **track_attrs, ndim=3)
+    tracks = SolutionTracks(graph_2d_with_segmentation, **track_attrs, ndim=3)
     temp_file = tmp_path / "test_export_2d_display.csv"
     export_to_csv(tracks, temp_file, use_display_names=True)
     with open(temp_file) as f:
@@ -96,7 +93,7 @@ def test_export_to_csv_with_display_names(
     assert lines[0].strip().split(",") == header
 
     # Test 3D with display names
-    tracks = SolutionTracks(graph_3d_with_computed_features, **track_attrs, ndim=4)
+    tracks = SolutionTracks(graph_3d_with_segmentation, **track_attrs, ndim=4)
     temp_file = tmp_path / "test_export_3d_display.csv"
     export_to_csv(tracks, temp_file, use_display_names=True)
     with open(temp_file) as f:

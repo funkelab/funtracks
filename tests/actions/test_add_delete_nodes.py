@@ -1,9 +1,9 @@
-import copy
-
 import numpy as np
 import pytest
-from numpy.testing import assert_array_almost_equal
+from numpy.testing import assert_array_almost_equal, assert_array_equal
 from polars.testing import assert_frame_equal
+from tests.conftest import make_2d_disk_mask, make_3d_sphere_mask
+from tracksdata.array import GraphArrayView
 
 from funtracks.actions import (
     ActionGroup,
@@ -12,6 +12,7 @@ from funtracks.actions import (
 from funtracks.utils.tracksdata_utils import (
     assert_node_attrs_equal_with_masks,
     create_empty_graphview_graph,
+    td_mask_to_pixels,
 )
 
 
@@ -21,7 +22,7 @@ def test_add_delete_nodes(get_tracks, ndim, with_seg):
     # Get a tracks instance
     tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
     reference_graph = tracks.graph
-    reference_seg = copy.deepcopy(tracks.segmentation)
+    reference_seg = np.asarray(tracks.segmentation).copy() if with_seg else None
 
     # Start with an empty Tracks
     node_attributes = [
@@ -31,13 +32,19 @@ def test_add_delete_nodes(get_tracks, ndim, with_seg):
     ]
     edge_attributes = ["iou"] if with_seg else []
     empty_graph = create_empty_graphview_graph(
-        node_attributes=node_attributes + (["area"] if with_seg else []),
+        node_attributes=node_attributes + (["area", "bbox", "mask"] if with_seg else []),
         edge_attributes=edge_attributes,
     )
     empty_seg = np.zeros_like(tracks.segmentation) if with_seg else None
     tracks.graph = empty_graph
-    if with_seg:
-        tracks.segmentation = empty_seg
+    segmentation_shape = (5, 100, 100) if ndim == 3 else (5, 100, 100, 100)
+    tracks.segmentation = (
+        GraphArrayView(
+            graph=tracks.graph, shape=segmentation_shape, attr_key="node_id", offset=0
+        )
+        if with_seg
+        else None
+    )
 
     # add all the nodes from graph_2d/seg_2d
     nodes = list(reference_graph.node_ids())
@@ -59,6 +66,9 @@ def test_add_delete_nodes(get_tracks, ndim, with_seg):
         attrs[tracks.features.tracklet_key] = reference_graph[node][
             tracks.features.tracklet_key
         ]
+        if with_seg:
+            attrs["bbox"] = reference_graph[node]["bbox"]
+            attrs["mask"] = reference_graph[node]["mask"]
 
         actions.append(AddNode(tracks, node, attributes=attrs, pixels=pixels))
     action = ActionGroup(tracks=tracks, actions=actions)
@@ -171,16 +181,17 @@ def test_custom_attributes_preserved(get_tracks, ndim, with_seg):
 
     # Create segmentation if needed
     if with_seg:
-        from conftest import sphere
-        from skimage.draw import disk
-
         if ndim == 3:
-            rr, cc = disk(center=(50, 50), radius=5, shape=(100, 100))
-            pixels = (np.array([2]), rr, cc)
+            # Create 2D mask centered at (50, 50) with radius 5
+            mask_obj = make_2d_disk_mask(center=(50, 50), radius=5)
+            pixels = td_mask_to_pixels(mask_obj, time=custom_attrs["t"], ndim=ndim)
         else:
-            mask = sphere(center=(50, 50, 50), radius=5, shape=(100, 100, 100))
             # Create proper 4D pixel coordinates (t, z, y, x)
-            pixels = (np.array([2]), *np.nonzero(mask))
+            mask_obj = make_3d_sphere_mask(center=(50, 50, 50), radius=5)
+            pixels = td_mask_to_pixels(mask_obj, time=custom_attrs["t"], ndim=ndim)
+        custom_attrs["mask"] = mask_obj
+        # TODO Teun: are these lines necessary? Because we provide pixels to AddNode
+        custom_attrs["bbox"] = mask_obj.bbox
         custom_attrs.pop("pos")  # pos will be computed from segmentation
     else:
         pixels = None
@@ -194,6 +205,10 @@ def test_custom_attributes_preserved(get_tracks, ndim, with_seg):
     for key, value in custom_attrs.items():
         if key == "pos":
             assert_array_almost_equal(tracks.graph[node_id][key], np.array(value))
+        elif key == "mask":
+            continue
+        elif key == "bbox":
+            assert_array_equal(np.asarray(tracks.graph[node_id][key]), value)
         else:
             assert tracks.graph[node_id][key] == value, (
                 f"Attribute {key} not preserved after add"
@@ -211,6 +226,10 @@ def test_custom_attributes_preserved(get_tracks, ndim, with_seg):
     for key, value in custom_attrs.items():
         if key == "pos":
             assert_array_almost_equal(tracks.graph[node_id][key], np.array(value))
+        elif key == "mask":
+            continue
+        elif key == "bbox":
+            assert_array_equal(np.asarray(tracks.graph[node_id][key]), value)
         else:
             assert tracks.graph[node_id][key] == value, (
                 f"Attribute {key} not preserved after delete/re-add cycle"

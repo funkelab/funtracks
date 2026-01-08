@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import itertools
 import logging
 from collections.abc import Iterable, Sequence
 from typing import (
@@ -10,10 +11,17 @@ from typing import (
 from warnings import warn
 
 import numpy as np
+import tracksdata as td
 from psygnal import Signal
+from tracksdata.array import GraphArrayView
 
 from funtracks.features import Feature, FeatureDict, Position, Time
-from funtracks.utils.tracksdata_utils import td_get_single_attr_from_edge
+from funtracks.utils.tracksdata_utils import (
+    combine_td_masks,
+    pixels_to_td_mask,
+    subtract_td_masks,
+    td_get_single_attr_from_edge,
+)
 
 if TYPE_CHECKING:
     import tracksdata as td
@@ -40,9 +48,10 @@ class Tracks:
     Attributes:
         graph (td.graph.GraphView): A graph with nodes representing detections and
             and edges representing links across time.
-        segmentation (np.ndarray | None): An optional segmentation that
-            accompanies the tracking graph. If a segmentation is provided,
+        segmentation_shape (tuple[int, ...] | None): An optional segmentation shape that
+            accompanies the tracking graph. If a segmentation_shape is provided,
             the node ids in the graph must match the segmentation labels.
+            Providing None assumes no segmentation on the graph.
         features (FeatureDict): Dictionary of features tracked on graph nodes/edges.
         annotators (AnnotatorRegistry): List of annotators that compute features.
         scale (list[float] | None): How much to scale each dimension by, including time.
@@ -54,7 +63,7 @@ class Tracks:
     def __init__(
         self,
         graph: td.graph.GraphView,
-        segmentation: np.ndarray | None = None,
+        segmentation_shape: tuple[int, ...] | None = None,
         time_attr: str | None = None,
         pos_attr: str | tuple[str, ...] | list[str] | None = None,
         tracklet_attr: str | None = None,
@@ -67,8 +76,8 @@ class Tracks:
         Args:
             graph (td.graph.GraphView): NetworkX directed graph with nodes as detections
                 and edges as links.
-            segmentation (np.ndarray | None): Optional segmentation array where labels
-                match node IDs. Required for computing region properties (area, etc.).
+            segmentation_shape (tuple[int, ...] | None): Optional segmentation shape where
+                labels match node IDs. Required for computing region props (area, etc.).
             time_attr (str | None): Graph attribute name for time. Defaults to "time"
                 if None.
             pos_attr (str | tuple[str, ...] | list[str] | None): Graph attribute
@@ -89,9 +98,22 @@ class Tracks:
                 area, track_id) are auto-detected by checking if they exist on the graph.
         """
         self.graph = graph
-        self.segmentation = segmentation
+        self.segmentation_shape = segmentation_shape
+        if segmentation_shape is not None:
+            try:
+                array_view = GraphArrayView(
+                    graph=graph, shape=segmentation_shape, attr_key="node_id", offset=0
+                )
+                self.segmentation = array_view
+            except (ValueError, KeyError) as err:
+                raise ValueError(
+                    "segmentation_shape is incompatible with graph, "
+                    "check if mask and bbox attrs exist on nodes"
+                ) from err
+        else:
+            self.segmentation = None
         self.scale = scale
-        self.ndim = self._compute_ndim(segmentation, scale, ndim)
+        self.ndim = self._compute_ndim(self.segmentation_shape, scale, ndim)
         self.axis_names = ["z", "y", "x"] if self.ndim == 4 else ["y", "x"]
 
         # initialization steps:
@@ -432,12 +454,23 @@ class Tracks:
         """
         if self.segmentation is None:
             return None
-        time = self.get_time(node)
-        loc_pixels = np.nonzero(self.segmentation[time] == node)
-        time_array = np.ones_like(loc_pixels[0]) * time
-        return (time_array, *loc_pixels)
 
-    def set_pixels(self, pixels: tuple[np.ndarray, ...], value: int) -> None:
+        # Get time and mask for the node
+        time = self.get_time(node)
+        mask = self.graph[node][td.DEFAULT_ATTR_KEYS.MASK]
+
+        # Get local coordinates and convert to global using bbox offset
+        local_coords = np.nonzero(mask.mask)
+        global_coords = [coord + mask.bbox[dim] for dim, coord in enumerate(local_coords)]
+
+        # Create time array matching the number of points
+        time_array = np.full_like(global_coords[0], time)
+
+        return (time_array, *global_coords)
+
+    def set_pixels(
+        self, pixels: tuple[np.ndarray, ...], value: int, node: int | None = None
+    ):
         """Set the given pixels in the segmentation to the given value.
 
         Args:
@@ -446,18 +479,127 @@ class Tracks:
                 represents one dimension, containing an array of indices in that
                 dimension). Can be used to directly index the segmentation.
             value (Iterable[int | None]): The value to set each pixel to
+            nodes (Iterable[int] | None, optional): The node ids that the pixels
+                correspond to. Only needed if pixels need to be removed (val=0)
         """
         if self.segmentation is None:
             raise ValueError("Cannot set pixels when segmentation is None")
-        self.segmentation[pixels] = value
+
+        node_id = node if node is not None else None
+
+        if value is None:
+            raise ValueError("Cannot set pixels to None value")
+
+        mask_new, area_new = pixels_to_td_mask(pixels, self.ndim, self.scale)
+
+        if value == 0:
+            # val=0 means deleting the pixels from the mask
+            mask_old = self.graph[node_id][td.DEFAULT_ATTR_KEYS.MASK]
+            mask_subtracted, area_subtracted = subtract_td_masks(
+                mask_old, mask_new, self.scale
+            )
+            self.graph.update_node_attrs(
+                attrs={
+                    td.DEFAULT_ATTR_KEYS.MASK: [mask_subtracted],
+                    td.DEFAULT_ATTR_KEYS.BBOX: [mask_subtracted.bbox],
+                    "area": [area_subtracted],
+                },
+                node_ids=[node_id],
+            )
+
+        elif value in self.graph.node_ids():
+            # if node already exists:
+            mask_old = self.graph[value][td.DEFAULT_ATTR_KEYS.MASK]
+            mask_combined, area_combined = combine_td_masks(
+                mask_old, mask_new, self.scale
+            )
+            self.graph.update_node_attrs(
+                attrs={
+                    td.DEFAULT_ATTR_KEYS.MASK: [mask_combined],
+                    td.DEFAULT_ATTR_KEYS.BBOX: [mask_combined.bbox],
+                    "area": [area_combined],
+                },
+                node_ids=[value],
+            )
+
+        else:
+            if len(np.unique(pixels[0])) > 1:
+                raise ValueError(
+                    f"pixels in Tracks.set_pixels has more than 1 timepoint "
+                    f"for node {value}. This is not implemented, so if this is "
+                    "necessary, Tracks.set_pixels should be updated"
+                )
+
+            time = int(np.unique(pixels[0])[0])
+            pos = np.array([np.mean(pixels[dim + 1]) for dim in range(self.ndim - 1)])
+            track_id = -1  # dummy, will be replaced in AddNodes._apply()
+
+            node_dict = {
+                self.features.time_key: time,
+                self.features.position_key: pos,
+                self.features.tracklet_key: track_id,
+                "area": area_new,
+                td.DEFAULT_ATTR_KEYS.SOLUTION: 1,
+                td.DEFAULT_ATTR_KEYS.MASK: mask_new,
+                td.DEFAULT_ATTR_KEYS.BBOX: mask_new.bbox,
+            }
+
+            self.graph.add_node(node_dict, index=value)
+
+        # Invalidate cache for affected chunks
+        self._update_segmentation_cache(pixels)
+
+    def _update_segmentation_cache(self, pixels: tuple[np.ndarray, ...]) -> None:
+        """Invalidate cached chunks that overlap with the given pixels.
+
+        Args:
+            pixels: Tuple of arrays representing pixel coordinates (time, z, y, x)
+            or (time, y, x), formatted like the output of np.nonzero.
+        """
+        if self.segmentation is None:
+            return
+
+        cache = self.segmentation._cache
+        time_coords = pixels[0]
+        spatial_coords = pixels[1:]
+
+        # For each unique time point
+        for time in np.unique(time_coords):
+            time = int(time)
+
+            # Only invalidate if this time point is in the cache
+            if time not in cache._store:
+                continue
+
+            # Get pixels at this time point and create bounding box slices
+            time_mask = time_coords == time
+            volume_slicing = tuple(
+                slice(
+                    int(dim_coords[time_mask].min()), int(dim_coords[time_mask].max()) + 1
+                )
+                for dim_coords in spatial_coords
+            )
+
+            # Use cache's method to get chunk bounds (same logic as cache.get())
+            bounds = cache._chunk_bounds(volume_slicing)
+            chunk_ranges = [range(lo, hi + 1) for lo, hi in bounds]
+
+            # Invalidate all affected chunks
+            cache_entry = cache._store[time]
+            for chunk_idx in itertools.product(*chunk_ranges):
+                if all(
+                    0 <= idx < grid_size
+                    for idx, grid_size in zip(chunk_idx, cache.grid_shape, strict=True)
+                ):
+                    cache_entry.ready[chunk_idx] = False
 
     def _compute_ndim(
         self,
-        seg: np.ndarray | None,
+        segmentation_shape: tuple[int, ...] | None,
         scale: list[float] | None,
         provided_ndim: int | None,
     ):
-        seg_ndim = seg.ndim if seg is not None else None
+        seg_ndim = len(segmentation_shape) if segmentation_shape is not None else None
         scale_ndim = len(scale) if scale is not None else None
         ndims = [seg_ndim, scale_ndim, provided_ndim]
         ndims = [d for d in ndims if d is not None]

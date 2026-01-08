@@ -8,8 +8,10 @@ from funtracks.features import Time
 track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
 
 
-def test_base_graph_annotator(graph_clean, segmentation_2d):
-    tracks = Tracks(graph_clean, segmentation=segmentation_2d, **track_attrs)
+def test_base_graph_annotator(graph_2d_with_segmentation):
+    tracks = Tracks(
+        graph_2d_with_segmentation, segmentation_shape=(5, 100, 100), **track_attrs
+    )
     ann = GraphAnnotator(tracks, {})
     assert len(ann.features) == 0
 

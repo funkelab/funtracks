@@ -1,5 +1,4 @@
-import copy
-
+import numpy as np
 import pytest
 from numpy.testing import assert_array_almost_equal
 from polars.testing import assert_frame_equal
@@ -21,7 +20,7 @@ iou_key = "iou"
 def test_add_delete_edges(get_tracks, ndim, with_seg):
     tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
     reference_graph = tracks.graph
-    reference_seg = copy.deepcopy(tracks.segmentation)
+    reference_seg = np.asarray(tracks.segmentation).copy()
 
     # Create an empty tracks with just nodes (no edges)
     for edge in tracks.graph.edge_list():

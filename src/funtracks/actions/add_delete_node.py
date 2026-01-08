@@ -16,6 +16,7 @@ import tracksdata as td
 from funtracks.utils.tracksdata_utils import (
     compute_node_attrs_from_masks,
     compute_node_attrs_from_pixels,
+    pixels_to_td_mask,
 )
 
 
@@ -96,6 +97,13 @@ class AddNode(BasicAction):
                 )
                 # Extract single values from lists (since we passed one pixel set)
                 computed_attrs = {key: value[0] for key, value in computed_attrs.items()}
+                # if masks are not given, calculate them from the pixels
+                if "mask" not in attrs:
+                    mask_obj, _ = pixels_to_td_mask(
+                        self.pixels, self.tracks.ndim, self.tracks.scale
+                    )
+                    attrs[td.DEFAULT_ATTR_KEYS.MASK] = mask_obj
+                    attrs[td.DEFAULT_ATTR_KEYS.BBOX] = mask_obj.bbox
             elif "mask" in attrs:
                 computed_attrs = compute_node_attrs_from_masks(
                     attrs["mask"], self.tracks.ndim, self.tracks.scale
@@ -213,6 +221,17 @@ class DeleteNode(BasicAction):
             if val is not None:
                 self.attributes[key] = val
 
+        if td.DEFAULT_ATTR_KEYS.MASK in self.tracks.graph.node_attr_keys():
+            self.attributes[td.DEFAULT_ATTR_KEYS.MASK] = self.tracks.get_nodes_attr(
+                [self.node], td.DEFAULT_ATTR_KEYS.MASK
+            )[0]
+            self.attributes[td.DEFAULT_ATTR_KEYS.BBOX] = self.tracks.get_nodes_attr(
+                [self.node], td.DEFAULT_ATTR_KEYS.BBOX
+            )[0]
+        self.attributes[td.DEFAULT_ATTR_KEYS.SOLUTION] = self.tracks.get_nodes_attr(
+            [self.node], td.DEFAULT_ATTR_KEYS.SOLUTION
+        )[0]
+
         self.pixels = self.tracks.get_pixels(node) if pixels is None else pixels
         self._apply()
 
@@ -229,8 +248,6 @@ class DeleteNode(BasicAction):
             set pixels to 0 if self.pixels is provided
         - Remove nodes from graph
         """
-        if self.pixels is not None:
-            self.tracks.set_pixels(self.pixels, 0)
 
         self.tracks.graph.remove_node(self.node)
         self.tracks.notify_annotators(self)

@@ -95,7 +95,7 @@ class EdgeAnnotator(GraphAnnotator):
                 for node in nodes_in_t:
                     for succ in self.tracks.graph.successors(node):
                         edges.append((node, succ))
-                self._iou_update(edges, seg[t], seg[t + 1])
+                self._iou_update(edges, np.asarray(seg[t]), np.asarray(seg[t + 1]))
 
     def _iou_update(
         self,
@@ -164,8 +164,8 @@ class EdgeAnnotator(GraphAnnotator):
             source, target = edge
             start_time = self.tracks.get_time(source)
             end_time = self.tracks.get_time(target)
-            start_seg = self.tracks.segmentation[start_time]
-            end_seg = self.tracks.segmentation[end_time]
+            start_seg = np.asarray(self.tracks.segmentation[start_time])
+            end_seg = np.asarray(self.tracks.segmentation[end_time])
             masked_start = np.where(start_seg == source, source, 0)
             masked_end = np.where(end_seg == target, target, 0)
             if np.max(masked_start) == 0 or np.max(masked_end) == 0:

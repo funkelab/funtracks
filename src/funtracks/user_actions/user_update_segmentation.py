@@ -50,9 +50,10 @@ class UserUpdateSegmentation(ActionGroup):
                 continue
             time = pixels[0][0]
             # check if all pixels of old_value are removed
-            # TODO: this assumes the segmentation is already updated, but then we can't
-            # recover the pixels, so we have to pass them here for undo purposes
-            if np.sum(self.tracks.segmentation[time] == old_value) == 0:
+            seg_time = np.asarray(self.tracks.segmentation[time])
+            if np.unique(seg_time[pixels[1:]]) == old_value and np.sum(
+                seg_time == old_value
+            ) == len(pixels[0]):
                 self.actions.append(UserDeleteNode(tracks, old_value, pixels=pixels))
             else:
                 self.actions.append(UpdateNodeSeg(tracks, old_value, pixels, added=False))
@@ -69,6 +70,7 @@ class UserUpdateSegmentation(ActionGroup):
                 self.actions.append(
                     UpdateNodeSeg(tracks, new_value, all_pixels, added=True)
                 )
+                tracks.graph[new_value][tracks.features.tracklet_key] = current_track_id
             else:
                 time_key = tracks.features.time_key
                 tracklet_key = tracks.features.tracklet_key

@@ -90,6 +90,11 @@ def create_empty_graphview_graph(
             if "z" in position_attrs:
                 graph_sql.add_node_attr_key("z", default_value=0.0)
 
+    if "mask" in (node_attributes or []):
+        graph_sql.add_node_attr_key("mask", default_value=None)
+    if "bbox" in (node_attributes or []):
+        graph_sql.add_node_attr_key("bbox", default_value=None)
+
     for attr in node_attributes or []:
         if attr not in graph_sql.node_attr_keys():
             graph_sql.add_node_attr_key(
@@ -105,10 +110,6 @@ def create_empty_graphview_graph(
             )
     graph_sql.add_node_attr_key(td.DEFAULT_ATTR_KEYS.SOLUTION, default_value=1)
     graph_sql.add_edge_attr_key(td.DEFAULT_ATTR_KEYS.SOLUTION, default_value=1)
-
-    # TODO Teun: segmentation
-    # graph_sql.add_node_attr_key(td.DEFAULT_ATTR_KEYS.MASK, default_value=None)
-    # graph_sql.add_node_attr_key(td.DEFAULT_ATTR_KEYS.BBOX, default_value=None)
 
     graph_td_sub = graph_sql.filter(
         td.NodeAttr(td.DEFAULT_ATTR_KEYS.SOLUTION) == 1,
@@ -138,24 +139,19 @@ def assert_node_attrs_equal_with_masks(
             "Both objects must be either tracksdata graphs or polars DataFrames"
         )
 
-    # TODO Teun: enable this when segmentation/masks are part of node_attrs
-    # assert_frame_equal(
-    #     node_attrs1.drop("mask"),
-    #     node_attrs2.drop("mask"),
-    #     check_column_order=check_column_order,
-    #     check_row_order=check_row_order,
-    # )
-    # for node in node_attrs1["node_id"]:
-    #     mask1 = node_attrs1.filter(pl.col("node_id") == node)["mask"].item()
-    #     mask2 = node_attrs2.filter(pl.col("node_id") == node)["mask"].item()
-    #     assert np.array_equal(mask1.bbox, mask2.bbox)
-    #     assert np.array_equal(mask1.mask, mask2.mask)
+    # Check all fields, except masks
     assert_frame_equal(
-        node_attrs1,
-        node_attrs2,
+        node_attrs1.drop("mask"),
+        node_attrs2.drop("mask"),
         check_column_order=check_column_order,
         check_row_order=check_row_order,
     )
+    # Check masks separately
+    for node in node_attrs1["node_id"]:
+        mask1 = node_attrs1.filter(pl.col("node_id") == node)["mask"].item()
+        mask2 = node_attrs2.filter(pl.col("node_id") == node)["mask"].item()
+        assert np.array_equal(mask1.bbox, mask2.bbox)
+        assert np.array_equal(mask1.mask, mask2.mask)
 
 
 def compute_node_attrs_from_masks(
@@ -282,6 +278,226 @@ def pixels_to_td_mask(
 
     mask = Mask(mask_array, bbox=bbox)
     return mask, area
+
+
+def td_mask_to_pixels(mask: Mask, time: int, ndim: int) -> tuple[np.ndarray, ...]:
+    """
+    Convert tracksdata mask to pixel coordinates.
+
+    This is the inverse of pixels_to_td_mask.
+
+    Args:
+        mask: Tracksdata Mask object with .mask (boolean array) and .bbox attributes
+        time: Time point for this mask
+        ndim: Number of dimensions (3 for 2D+time, 4 for 3D+time)
+
+    Returns:
+        Tuple of numpy arrays: (time_array, *spatial_coords)
+        For 2D: (t, y, x) where each is a 1D array of pixel coordinates
+        For 3D: (t, z, y, x) where each is a 1D array of pixel coordinates
+
+    Example:
+        >>> mask = Mask(np.array([[True, False], [False, True]]),
+        ...             bbox=np.array([10, 20, 12, 22]))
+        >>> pixels = td_mask_to_pixels(mask, time=5, ndim=3)
+        >>> # Returns: (array([5, 5]), array([10, 11]), array([20, 21]))
+    """
+    spatial_dims = ndim - 1
+
+    # Find all True pixels in the local mask
+    local_coords = np.nonzero(mask.mask)
+
+    # Convert local coordinates to global coordinates by adding bbox offset
+    global_coords = []
+    for dim in range(spatial_dims):
+        global_coords.append(local_coords[dim] + mask.bbox[dim])
+
+    # Create time array with same length as spatial coordinates
+    num_pixels = len(local_coords[0])
+    time_array = np.full(num_pixels, time, dtype=int)
+
+    # Return as tuple: (time, spatial_dim_0, spatial_dim_1, ...)
+    return (time_array, *global_coords)
+
+
+def combine_td_masks(
+    mask1: Mask, mask2: Mask, scale: list[float] | None
+) -> tuple[Mask, float]:
+    """
+    Combine two tracksdata mask objects into a single mask object.
+    The resulting mask will encompass both input masks.
+
+    Args:
+        mask1: First Mask object with .mask and .bbox attributes
+        mask2: Second Mask object with .mask and .bbox attributes
+        scale: Scale factors for each dimension, used for area calculation
+
+    Returns:
+        Mask: A new Mask object containing the union of both masks
+    """
+    # Get spatial dimensions from first bbox
+    spatial_dims = len(mask1.bbox) // 2
+
+    # Calculate the combined bounding box
+    combined_bbox = np.zeros(2 * spatial_dims, dtype=int)
+
+    # Find the minimum and maximum coordinates for the new bbox
+    for dim in range(spatial_dims):
+        combined_bbox[dim] = min(mask1.bbox[dim], mask2.bbox[dim])
+        combined_bbox[dim + spatial_dims] = max(
+            mask1.bbox[dim + spatial_dims], mask2.bbox[dim + spatial_dims]
+        )
+
+    # Calculate the shape of the combined mask
+    combined_shape = combined_bbox[spatial_dims:] - combined_bbox[:spatial_dims]
+    combined_mask = np.zeros(combined_shape, dtype=bool)
+
+    # Create slicing for first mask
+    slices1 = tuple(
+        slice(offset1_start, offset1_end)
+        for offset1_start, offset1_end in zip(
+            [mask1.bbox[d] - combined_bbox[d] for d in range(spatial_dims)],
+            [
+                mask1.bbox[d] - combined_bbox[d] + mask1.mask.shape[d]
+                for d in range(spatial_dims)
+            ],
+            strict=True,
+        )
+    )
+
+    # Place second mask in the combined mask
+    slices2 = tuple(
+        slice(offset2_start, offset2_end)
+        for offset2_start, offset2_end in zip(
+            [mask2.bbox[d] - combined_bbox[d] for d in range(spatial_dims)],
+            [
+                mask2.bbox[d] - combined_bbox[d] + mask2.mask.shape[d]
+                for d in range(spatial_dims)
+            ],
+            strict=True,
+        )
+    )
+
+    # Combine the masks using logical OR
+    combined_mask[slices1] |= mask1.mask
+    combined_mask[slices2] |= mask2.mask
+
+    area = np.sum(combined_mask)
+    if scale is not None:
+        area *= np.prod(scale[1:])
+
+    return Mask(combined_mask, bbox=combined_bbox), float(area)
+
+
+def subtract_td_masks(
+    mask_old: Mask, mask_new: Mask, scale: list[float] | None
+) -> tuple[Mask, float]:
+    """
+    Subtract mask_new from mask_old, creating a new mask with the difference.
+    Will throw an error if mask_new contains True pixels that are not True in mask_old.
+
+    Args:
+        mask_old: Original Mask object that pixels will be removed from
+        mask_new: Mask object containing pixels to remove
+        scale: Scale factors for each dimension, used for area calculation
+
+    Returns:
+        Tuple[Mask, float]: A new Mask object containing the result of
+            mask_old - mask_new, and the new area after subtraction
+    """
+    # Get spatial dimensions from first bbox
+    spatial_dims = len(mask_old.bbox) // 2
+
+    # First verify that all True pixels in mask_new are also True in mask_old
+    # We do this by placing both masks in a common coordinate system
+
+    # Calculate the combined bounding box
+    combined_bbox = np.zeros(2 * spatial_dims, dtype=int)
+    for dim in range(spatial_dims):
+        combined_bbox[dim] = min(mask_old.bbox[dim], mask_new.bbox[dim])
+        combined_bbox[dim + spatial_dims] = max(
+            mask_old.bbox[dim + spatial_dims], mask_new.bbox[dim + spatial_dims]
+        )
+
+    # Place both masks in the combined coordinate system
+    combined_shape = combined_bbox[spatial_dims:] - combined_bbox[:spatial_dims]
+    old_mask_full = np.zeros(combined_shape, dtype=bool)
+    new_mask_full = np.zeros(combined_shape, dtype=bool)
+
+    # Create slicing for old mask
+    slices_old = tuple(
+        slice(offset_start, offset_end)
+        for offset_start, offset_end in zip(
+            [mask_old.bbox[d] - combined_bbox[d] for d in range(spatial_dims)],
+            [
+                mask_old.bbox[d] - combined_bbox[d] + mask_old.mask.shape[d]
+                for d in range(spatial_dims)
+            ],
+            strict=True,
+        )
+    )
+
+    # Create slicing for new mask
+    slices_new = tuple(
+        slice(offset_start, offset_end)
+        for offset_start, offset_end in zip(
+            [mask_new.bbox[d] - combined_bbox[d] for d in range(spatial_dims)],
+            [
+                mask_new.bbox[d] - combined_bbox[d] + mask_new.mask.shape[d]
+                for d in range(spatial_dims)
+            ],
+            strict=True,
+        )
+    )
+
+    old_mask_full[slices_old] = mask_old.mask
+    new_mask_full[slices_new] = mask_new.mask
+
+    # Check if all True pixels in mask_new are also True in mask_old
+    if not np.all(new_mask_full <= old_mask_full):
+        raise ValueError("mask_new contains True pixels that are not True in mask_old")
+
+    # Perform the subtraction
+    result_mask = old_mask_full & ~new_mask_full
+
+    # Find the new bounding box based on remaining True pixels
+    if not np.any(result_mask):
+        # If no pixels remain, return minimal empty mask
+        # result_bbox = np.zeros(2 * spatial_dims, dtype=int)
+        result_bbox = np.array([0] * spatial_dims + [1] * spatial_dims)
+        return Mask(np.zeros((1,) * spatial_dims, dtype=bool), bbox=result_bbox), 0.0
+
+    true_indices = np.nonzero(result_mask)
+    result_bbox = np.zeros(2 * spatial_dims, dtype=int)
+
+    for dim in range(spatial_dims):
+        result_bbox[dim] = np.min(true_indices[dim]) + combined_bbox[dim]
+        result_bbox[dim + spatial_dims] = (
+            np.max(true_indices[dim]) + combined_bbox[dim] + 1
+        )
+
+    # Extract the final mask within the new bbox
+    final_shape = result_bbox[spatial_dims:] - result_bbox[:spatial_dims]
+    final_mask = np.zeros(final_shape, dtype=bool)
+
+    # Create slicing from result_mask to final_mask space
+    slices_final = tuple(
+        slice(
+            result_bbox[dim] - combined_bbox[dim],
+            result_bbox[dim] - combined_bbox[dim] + final_shape[dim],
+        )
+        for dim in range(spatial_dims)
+    )
+
+    # Copy the relevant portion of the result_mask to final_mask
+    final_mask[:] = result_mask[slices_final]
+
+    # Calculate area
+    area = np.sum(final_mask)
+    if scale is not None:
+        area *= np.prod(scale[1:])
+
+    return Mask(final_mask, bbox=result_bbox), float(area)
 
 
 def td_get_single_attr_from_edge(graph, edge: tuple[int, int], attrs: Sequence[str]):

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import numpy as np
 import tracksdata as td
 
 from funtracks.features import FeatureDict
@@ -21,7 +20,7 @@ class SolutionTracks(Tracks):
     def __init__(
         self,
         graph: td.graph.GraphView,
-        segmentation: np.ndarray | None = None,
+        segmentation_shape: tuple[int, ...] | None = None,
         time_attr: str | None = None,
         pos_attr: str | tuple[str] | list[str] | None = None,
         tracklet_attr: str | None = None,
@@ -37,8 +36,8 @@ class SolutionTracks(Tracks):
         Args:
             graph (td.graph.GraphView): NetworkX directed graph with nodes as detections
                 and edges as links.
-            segmentation (np.ndarray | None): Optional segmentation array where labels
-                match node IDs. Required for computing region properties (area, etc.).
+            segmentation_shape (tuple[int, ...] | None): Shape of the segmentation
+                volume. If None, segmentation-related features cannot be computed.
             time_attr (str | None): Graph attribute name for time. Defaults to "time"
                 if None.
             pos_attr (str | tuple[str, ...] | list[str] | None): Graph attribute
@@ -60,7 +59,7 @@ class SolutionTracks(Tracks):
         """
         super().__init__(
             graph,
-            segmentation=segmentation,
+            segmentation_shape=segmentation_shape,
             time_attr=time_attr,
             pos_attr=pos_attr,
             tracklet_attr=tracklet_attr,
@@ -105,7 +104,7 @@ class SolutionTracks(Tracks):
 
         soln_tracks = cls(
             tracks.graph,
-            segmentation=tracks.segmentation,
+            segmentation_shape=tracks.segmentation_shape,
             scale=tracks.scale,
             ndim=tracks.ndim,
             features=tracks.features,
