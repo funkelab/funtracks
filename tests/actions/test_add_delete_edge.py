@@ -45,7 +45,6 @@ def test_add_delete_edges(get_tracks, ndim, with_seg):
     if with_seg:
         assert_array_almost_equal(tracks.segmentation, reference_seg)
 
-    # TODO Teun: the next line fails:
     inverse = action.inverse()
 
     assert set(tracks.graph.edge_ids()) == set()

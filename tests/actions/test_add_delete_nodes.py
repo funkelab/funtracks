@@ -191,7 +191,6 @@ def test_custom_attributes_preserved(get_tracks, ndim, with_seg):
             mask_obj = make_3d_sphere_mask(center=(50, 50, 50), radius=5)
             pixels = td_mask_to_pixels(mask_obj, time=custom_attrs["t"], ndim=ndim)
         custom_attrs["mask"] = mask_obj
-        # TODO Teun: are these lines necessary? Because we provide pixels to AddNode
         custom_attrs["bbox"] = mask_obj.bbox
         custom_attrs.pop("pos")  # pos will be computed from segmentation
     else:
