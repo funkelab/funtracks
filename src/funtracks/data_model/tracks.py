@@ -592,6 +592,15 @@ class Tracks:
                     for idx, grid_size in zip(chunk_idx, cache.grid_shape, strict=True)
                 ):
                     cache_entry.ready[chunk_idx] = False
+                    # Clear the buffer to ensure stale data isn't used
+                    # when the chunk is recomputed
+                    chunk_slc = tuple(
+                        slice(ci * cs, min((ci + 1) * cs, fs))
+                        for ci, cs, fs in zip(
+                            chunk_idx, cache.chunk_shape, cache.shape, strict=True
+                        )
+                    )
+                    cache_entry.buffer[chunk_slc] = 0
 
     def _compute_ndim(
         self,
