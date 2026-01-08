@@ -501,7 +501,7 @@ def subtract_td_masks(
     return Mask(final_mask, bbox=result_bbox), float(area)
 
 
-def segmentation_to_masks_and_bboxes(
+def segmentation_to_masks(
     segmentation: np.ndarray,
 ) -> list[tuple[int, int, Mask]]:
     """Convert a segmentation array to individual masks and bounding boxes.
@@ -579,7 +579,7 @@ def add_masks_and_bboxes_to_graph(
     """
 
     # Convert segmentation to masks and bounding boxes
-    list_of_masks = segmentation_to_masks_and_bboxes(segmentation)
+    list_of_masks = segmentation_to_masks(segmentation)
 
     # Add 'mask' and 'bbox' attributes to graph nodes
     graph.add_node_attr_key("mask", default_value=None)
