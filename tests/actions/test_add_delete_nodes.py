@@ -201,7 +201,7 @@ def test_custom_attributes_preserved(get_tracks, ndim, with_seg):
     action = AddNode(tracks, node_id, custom_attrs, pixels=pixels)
 
     # Verify all attributes are present after adding
-    assert node_id in tracks.graph.node_ids()
+    assert tracks.graph.has_node(node_id)
     for key, value in custom_attrs.items():
         if key == "pos":
             assert_array_almost_equal(tracks.graph[node_id][key], np.array(value))

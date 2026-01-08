@@ -86,9 +86,9 @@ class TestRelabelSegmentation:
         assert result[1, 2, 2] == 2
 
         # Graph should also be relabeled
-        assert 1 in graph.node_ids()
-        assert 2 in graph.node_ids()
-        assert 0 not in graph.node_ids()
+        assert graph.has_node(1)
+        assert graph.has_node(2)
+        assert not graph.has_node(0)
 
     def test_no_relabeling_needed_same_ids(self):
         """Test when seg_ids equal node_ids (relabeling still applies mapping)."""

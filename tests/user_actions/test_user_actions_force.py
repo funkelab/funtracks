@@ -44,5 +44,5 @@ def test_auto_assign_new_track_id(get_tracks):
         attrs = {"t": 1, "track_id": 2, "pos": [3, 4]}  # combination exists already
         UserAddNode(tracks, node=7, attributes=attrs)
 
-        assert 7 in tracks.graph.node_ids()
+        assert tracks.graph.has_node(7)
         assert tracks.get_track_id(7) == 6  # new assigned track id

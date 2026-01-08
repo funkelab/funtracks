@@ -507,7 +507,7 @@ class Tracks:
                 node_ids=[node_id],
             )
 
-        elif value in self.graph.node_ids():
+        elif self.graph.has_node(value):
             # if node already exists:
             mask_old = self.graph[value][td.DEFAULT_ATTR_KEYS.MASK]
             mask_combined, area_combined = combine_td_masks(

@@ -56,10 +56,10 @@ class TestUserAddDeleteNode:
         else:
             pixels = None
         graph = tracks.graph
-        assert node_id not in graph.node_ids()
+        assert not graph.has_node(node_id)
         assert graph.has_edge(4, 5)
         action = UserAddNode(tracks, node_id, attributes, pixels=pixels)
-        assert node_id in graph.node_ids()
+        assert graph.has_node(node_id)
         assert not graph.has_edge(4, 5)
         assert graph.has_edge(4, node_id)
         assert graph.has_edge(node_id, 5)
@@ -69,11 +69,11 @@ class TestUserAddDeleteNode:
             assert tracks.get_node_attr(node_id, "area") == 1
 
         inverse = action.inverse()
-        assert node_id not in graph.node_ids()
+        assert not graph.has_node(node_id)
         assert graph.has_edge(4, 5)
 
         inverse.inverse()
-        assert node_id in graph.node_ids()
+        assert graph.has_node(node_id)
         assert not graph.has_edge(4, 5)
         assert graph.has_edge(4, node_id)
         assert graph.has_edge(node_id, 5)
@@ -89,25 +89,25 @@ class TestUserAddDeleteNode:
         node_id = 4
 
         graph = tracks.graph
-        assert node_id in graph.node_ids()
+        assert graph.has_node(node_id)
         assert graph.has_edge(3, node_id)
         assert graph.has_edge(node_id, 5)
         assert not graph.has_edge(3, 5)
 
         action = UserDeleteNode(tracks, node_id)
-        assert node_id not in graph.node_ids()
+        assert not graph.has_node(node_id)
         assert not graph.has_edge(3, node_id)
         assert not graph.has_edge(node_id, 5)
         assert graph.has_edge(3, 5)
 
         inverse = action.inverse()
-        assert node_id in graph.node_ids()
+        assert graph.has_node(node_id)
         assert graph.has_edge(3, node_id)
         assert graph.has_edge(node_id, 5)
         assert not graph.has_edge(3, 5)
 
         inverse.inverse()
-        assert node_id not in graph.node_ids()
+        assert not graph.has_node(node_id)
         assert not graph.has_edge(3, node_id)
         assert not graph.has_edge(node_id, 5)
         assert graph.has_edge(3, 5)
@@ -122,7 +122,7 @@ class TestUserAddDeleteNode:
         sib = 3
 
         graph = tracks.graph
-        assert node_id in graph.node_ids()
+        assert graph.has_node(node_id)
         assert graph.has_edge(parent_node, node_id)
         parent_track_id = tracks.get_track_id(parent_node)
         node_track_id = tracks.get_track_id(node_id)
@@ -132,18 +132,18 @@ class TestUserAddDeleteNode:
         assert node_track_id != sib_track_id
 
         action = UserDeleteNode(tracks, node_id)
-        assert node_id not in graph.node_ids()
+        assert not graph.has_node(node_id)
         assert graph.has_edge(parent_node, sib)
         assert tracks.get_track_id(sib) == parent_track_id
 
         inverse = action.inverse()
-        assert node_id in graph.node_ids()
+        assert graph.has_node(node_id)
         assert graph.has_edge(parent_node, node_id)
         assert tracks.get_track_id(parent_node) == parent_track_id
         assert tracks.get_track_id(node_id) == node_track_id
         assert tracks.get_track_id(sib) == sib_track_id
 
         inverse.inverse()
-        assert node_id not in graph.node_ids()
+        assert not graph.has_node(node_id)
         assert graph.has_edge(parent_node, sib)
         assert tracks.get_track_id(sib) == parent_track_id

@@ -182,7 +182,7 @@ class RegionpropsAnnotator(GraphAnnotator):
         for region in regionprops_extended(seg_frame, spacing=spacing):
             node = region.label
             # Skip labels that aren't nodes in the graph (e.g., unselected detections)
-            if node not in self.tracks.graph.node_ids():
+            if not self.tracks.graph.has_node(node):
                 continue
             for key in feature_keys:
                 value = getattr(region, self.regionprops_names[key])

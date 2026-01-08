@@ -49,7 +49,7 @@ class AddEdge(BasicAction):
         """
         # Check that both endpoints exist before computing edge attributes
         for node in self.edge:
-            if node not in self.tracks.graph.node_ids():
+            if not self.tracks.graph.has_node(node):
                 raise ValueError(
                     f"Cannot add edge {self.edge}: endpoint {node} not in graph yet"
                 )

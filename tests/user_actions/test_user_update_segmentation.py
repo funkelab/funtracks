@@ -39,14 +39,14 @@ class TestUpdateNodeSeg:
             updated_pixels=[(pixels_to_remove, node_id)],
             current_track_id=1,
         )
-        assert node_id in tracks.graph.node_ids()
+        assert tracks.graph.has_node(node_id)
         assert self.pixel_equals(tracks.get_pixels(node_id), remaining_pixels)
         assert tracks.get_position(node_id) == new_position
         assert tracks.get_node_attr(node_id, "area") == 1
         assert tracks.get_edge_attr(edge, iou_key) == pytest.approx(0.0, abs=0.01)
 
         inverse = action.inverse()
-        assert node_id in tracks.graph.node_ids()
+        assert tracks.graph.has_node(node_id)
         assert self.pixel_equals(tracks.get_pixels(node_id), orig_pixels)
         assert tracks.get_position(node_id) == orig_position
         assert tracks.get_node_attr(node_id, "area") == orig_area
@@ -84,20 +84,20 @@ class TestUpdateNodeSeg:
         action = UserUpdateSegmentation(
             tracks, new_value=3, updated_pixels=[(pixels_to_add, 0)], current_track_id=1
         )
-        assert node_id in tracks.graph.node_ids()
+        assert tracks.graph.has_node(node_id)
         assert self.pixel_equals(all_pixels, tracks.get_pixels(node_id))
         assert tracks.get_node_attr(node_id, "area") == orig_area + 1
         assert tracks.get_edge_attr(edge, iou_key) != orig_iou
 
         inverse = action.inverse()
-        assert node_id in tracks.graph.node_ids()
+        assert tracks.graph.has_node(node_id)
         assert self.pixel_equals(orig_pixels, tracks.get_pixels(node_id))
         assert tracks.get_position(node_id) == orig_position
         assert tracks.get_node_attr(node_id, "area") == orig_area
         assert tracks.get_edge_attr(edge, iou_key) == pytest.approx(orig_iou, abs=0.01)
 
         inverse.inverse()
-        assert node_id in tracks.graph.node_ids()
+        assert tracks.graph.has_node(node_id)
         assert self.pixel_equals(all_pixels, tracks.get_pixels(node_id))
         assert tracks.get_node_attr(node_id, "area") == orig_area + 1
         assert tracks.get_edge_attr(edge, iou_key) != orig_iou
@@ -121,17 +121,17 @@ class TestUpdateNodeSeg:
             updated_pixels=[(pixels_to_remove, node_id)],
             current_track_id=1,
         )
-        assert node_id not in tracks.graph.node_ids()
+        assert not tracks.graph.has_node(node_id)
 
         inverse = action.inverse()
-        assert node_id in tracks.graph.node_ids()
+        assert tracks.graph.has_node(node_id)
         self.pixel_equals(tracks.get_pixels(node_id), orig_pixels)
         assert tracks.get_position(node_id) == orig_position
         assert tracks.get_node_attr(node_id, "area") == orig_area
         assert tracks.get_edge_attr(edge, iou_key) == pytest.approx(orig_iou, abs=0.01)
 
         inverse.inverse()
-        assert node_id not in tracks.graph.node_ids()
+        assert not tracks.graph.has_node(node_id)
 
     def test_user_add_seg(self, get_tracks, ndim):
         tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
@@ -148,7 +148,7 @@ class TestUpdateNodeSeg:
         position = tracks.get_position(old_node_id)
         area = tracks.get_node_attr(old_node_id, "area")
 
-        assert node_id not in tracks.graph.node_ids()
+        assert not tracks.graph.has_node(node_id)
 
         assert np.sum(tracks.segmentation == node_id) == 0
         action = UserUpdateSegmentation(
@@ -158,16 +158,16 @@ class TestUpdateNodeSeg:
             current_track_id=10,
         )
         assert np.sum(np.asarray(tracks.segmentation) == node_id) == len(pixels_to_add[0])
-        assert node_id in tracks.graph.node_ids()
+        assert tracks.graph.has_node(node_id)
         assert tracks.get_position(node_id) == position
         assert tracks.get_node_attr(node_id, "area") == area
         assert tracks.get_track_id(node_id) == 10
 
         inverse = action.inverse()
-        assert node_id not in tracks.graph.node_ids()
+        assert not tracks.graph.has_node(node_id)
 
         inverse.inverse()
-        assert node_id in tracks.graph.node_ids()
+        assert tracks.graph.has_node(node_id)
         assert tracks.get_position(node_id) == position
         assert tracks.get_node_attr(node_id, "area") == area
         assert tracks.get_track_id(node_id) == 10
