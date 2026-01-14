@@ -87,7 +87,7 @@ class SolutionTracks(Tracks):
             DeprecationWarning,
             stacklevel=2,
         )
-        self.enable_features([self.features.tracklet_key])  # type: ignore
+        self.enable_features([self.features.tracklet_key, self.features.lineage_key])  # type: ignore
 
     def _get_track_annotator(self) -> TrackAnnotator:
         """Get the TrackAnnotator instance from the annotator registry.
@@ -125,7 +125,12 @@ class SolutionTracks(Tracks):
             features=tracks.features,
         )
         if force_recompute:
-            soln_tracks.enable_features([soln_tracks.features.tracklet_key])  # type: ignore
+            soln_tracks.enable_features(
+                [
+                    soln_tracks.features.tracklet_key,  # type: ignore[list-item]
+                    soln_tracks.features.lineage_key,  # type: ignore[list-item]
+                ]
+            )
         return soln_tracks
 
     @property
