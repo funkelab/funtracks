@@ -30,7 +30,6 @@ classifiers = [
 
 dependencies =[
     "motile>=0.3",
-    "matplotlib",
     "numpy>=2,<3",
     "pydantic>=2,<3",
     "networkx>=3.4,<4",
@@ -41,7 +40,8 @@ dependencies =[
     "pandas>=2.3.3",
     "zarr>=2.18,<4",
     "numcodecs>=0.13,<0.16",
-    "tqdm",
+    "matplotlib>=3.5",
+    "tqdm>=4.0",
 ]
 
 [project.urls]
