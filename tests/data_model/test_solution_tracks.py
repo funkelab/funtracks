@@ -37,7 +37,7 @@ def test_node_id_to_track_id(graph_2d_with_computed_features):
         tracks.node_id_to_track_id  # noqa B018
 
 
-def test_from_tracks_cls(graph_2d_with_computed_features):
+def test_from_tracks_cls_without_lineage_ids(graph_2d_with_computed_features):
     tracks = Tracks(
         graph_2d_with_computed_features,
         ndim=3,
@@ -46,6 +46,10 @@ def test_from_tracks_cls(graph_2d_with_computed_features):
         tracklet_attr=track_attrs["tracklet_attr"],
         scale=(2, 2, 2),
     )
+
+    # Even though the track_ids are present, since lineage_id is missing, track and
+    # lineage ids will still be recomputed.
+    tracks.features.lineage_key = "lineage_id"
     solution_tracks = SolutionTracks.from_tracks(tracks)
     assert solution_tracks.graph == tracks.graph
     assert solution_tracks.segmentation == tracks.segmentation
@@ -53,7 +57,40 @@ def test_from_tracks_cls(graph_2d_with_computed_features):
     assert solution_tracks.features.position_key == tracks.features.position_key
     assert solution_tracks.scale == tracks.scale
     assert solution_tracks.ndim == tracks.ndim
-    assert solution_tracks.get_node_attr(6, tracks.features.tracklet_key) == 5
+    assert (
+        solution_tracks.get_node_attr(6, tracks.features.tracklet_key) == 4
+    )  # new value
+    # after recompute
+
+
+def test_from_tracks_cls_with_lineage_ids(graph_2d_with_computed_features):
+    # In case we do have both lineage ids and track ids provided on all nodes,
+    # we assume they have been tested and if all nodes have a value, no recomputing is
+    # necessary.
+
+    # simulate these tracks to also have lineage ids
+    tracks = Tracks(
+        graph_2d_with_computed_features,
+        ndim=3,
+        pos_attr="POSITION",
+        time_attr="TIME",
+        tracklet_attr=track_attrs["tracklet_attr"],
+        scale=(2, 2, 2),
+    )
+    tracks.features.lineage_key = "lineage_id"
+    tracks._set_nodes_attr(
+        nodes=[1, 2, 3, 4, 5, 6], attr="lineage_id", values=[1, 1, 1, 1, 1, 2]
+    )
+    solution_tracks = SolutionTracks.from_tracks(tracks)
+
+    assert solution_tracks.graph == tracks.graph
+    assert solution_tracks.segmentation == tracks.segmentation
+    assert solution_tracks.features.time_key == tracks.features.time_key
+    assert solution_tracks.features.position_key == tracks.features.position_key
+    assert solution_tracks.scale == tracks.scale
+    assert solution_tracks.ndim == tracks.ndim
+    assert solution_tracks.get_node_attr(6, tracks.features.tracklet_key) == 5  # original
+    # value
 
 
 def test_from_tracks_cls_recompute(graph_2d_with_computed_features):

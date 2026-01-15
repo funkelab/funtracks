@@ -110,11 +110,17 @@ class SolutionTracks(Tracks):
     @classmethod
     def from_tracks(cls, tracks: Tracks):
         force_recompute = False
-        if (tracklet_key := tracks.features.tracklet_key) is not None:
+        if tracks.features.lineage_key is None:
+            tracks.features.lineage_key = "lineage_id"
+            force_recompute = True
+        elif (tracklet_key := tracks.features.tracklet_key) is not None:
             # Check if all nodes have track_id before trusting existing track IDs
             # Short circuit on first missing track_id
             for node in tracks.graph.nodes():
-                if tracks.get_node_attr(node, tracklet_key) is None:
+                if (
+                    tracks.get_node_attr(node, tracklet_key) is None
+                    or tracks.get_node_attr(node, tracks.features.lineage_key) is None
+                ):
                     force_recompute = True
                     break
         soln_tracks = cls(
