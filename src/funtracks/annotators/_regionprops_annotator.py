@@ -178,6 +178,8 @@ class RegionpropsAnnotator(GraphAnnotator):
                 of segmentation data.
             feature_keys: List of feature keys to compute (already filtered to enabled).
         """
+        # TODO: can we do all regionprops on the masks?
+        # So we don't have to materialize the entire frame/volume
         spacing = None if self.tracks.scale is None else tuple(self.tracks.scale[1:])
         for region in regionprops_extended(seg_frame, spacing=spacing):
             node = region.label
@@ -218,10 +220,8 @@ class RegionpropsAnnotator(GraphAnnotator):
             return
 
         time = self.tracks.get_time(node)
-        seg_frame = np.asarray(self.tracks.segmentation[time])
-        masked_frame = np.where(seg_frame == node, node, 0)
 
-        if np.max(masked_frame) == 0:
+        if self.tracks.graph[node]["mask"].mask.sum() == 0:
             warnings.warn(
                 f"Cannot find label {node} in frame {time}: "
                 "updating regionprops values to None",
@@ -229,8 +229,11 @@ class RegionpropsAnnotator(GraphAnnotator):
             )
             for key in keys_to_compute:
                 value = None
+                # TODO Teun: this somehow goes wrong when pos is an array
                 self.tracks._set_node_attr(node, key, value)
         else:
+            seg_frame = np.asarray(self.tracks.segmentation[time])
+            masked_frame = np.where(seg_frame == node, node, 0)
             self._regionprops_update(masked_frame, keys_to_compute)
 
     def change_key(self, old_key: str, new_key: str) -> None:

@@ -81,7 +81,6 @@ def relabel_segmentation(
     if offset:
         mapping = {old_id: old_id + offset for old_id in graph.node_ids()}
         # nx.relabel_nodes modified graph in-place, but td_relabel_nodes returns new graph
-        # Note: This modifies the graph reference but caller must handle reassignment
         graph = td_relabel_nodes(graph, mapping)
         # Update node_ids array to match
         node_ids = node_ids + offset

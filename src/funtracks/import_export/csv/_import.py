@@ -268,7 +268,6 @@ def tracks_from_df(
         # Auto-infer name mapping from DataFrame columns
         builder.prepare(df)
 
-    # TODO Teun: allow the masks and bboxes to be on the dataframe,
     # instead of a separate segmentation array
 
     return builder.build(

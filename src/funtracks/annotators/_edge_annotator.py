@@ -4,13 +4,11 @@ import warnings
 from collections import defaultdict
 from typing import TYPE_CHECKING
 
-import numpy as np
-
 from funtracks.actions.add_delete_edge import AddEdge
 from funtracks.actions.update_segmentation import UpdateNodeSeg
 from funtracks.features import Feature, IoU
 
-from ._compute_ious import _compute_ious
+from ._compute_ious import _compute_iou
 from ._graph_annotator import GraphAnnotator
 
 if TYPE_CHECKING:
@@ -95,34 +93,24 @@ class EdgeAnnotator(GraphAnnotator):
                 for node in nodes_in_t:
                     for succ in self.tracks.graph.successors(node):
                         edges.append((node, succ))
-                self._iou_update(edges, np.asarray(seg[t]), np.asarray(seg[t + 1]))
+                self._iou_update(edges)
 
     def _iou_update(
         self,
         edges: list[tuple[int, int]],
-        seg_frame: np.ndarray,
-        seg_next_frame: np.ndarray,
     ) -> None:
         """Perform the IoU computation and update all feature values for a
-        single pair of frames of segmentation data.
+        list of edges.
 
         Args:
             edges (list[tuple[int, int]]): A list of edges between two frames
-            seg_frame (np.ndarray): A 2D or 3D numpy array representing the seg for the
-                starting time of the edges
-            seg_next_frame (np.ndarray): A 2D or 3D numpy array representing the seg for
-                the ending time of the edges
         """
-        ious = _compute_ious(seg_frame, seg_next_frame)  # list of (id1, id2, iou)
-        for id1, id2, iou in ious:
-            edge = (id1, id2)
-            if edge in edges:
-                self.tracks._set_edge_attr(edge, self.iou_key, iou)
-                edges.remove(edge)
-
-        # anything left has IOU of 0
         for edge in edges:
-            self.tracks._set_edge_attr(edge, self.iou_key, 0.0)
+            source, target = edge
+            mask1 = self.tracks.graph[source]["mask"]
+            mask2 = self.tracks.graph[target]["mask"]
+            iou = _compute_iou(mask1, mask2)
+            self.tracks._set_edge_attr(edge, self.iou_key, iou)
 
     def update(self, action: BasicAction):
         """Update the edge features based on the action.
@@ -162,22 +150,17 @@ class EdgeAnnotator(GraphAnnotator):
         # Update IoU for each edge
         for edge in edges_to_update:
             source, target = edge
-            start_time = self.tracks.get_time(source)
-            end_time = self.tracks.get_time(target)
-            start_seg = np.asarray(self.tracks.segmentation[start_time])
-            end_seg = np.asarray(self.tracks.segmentation[end_time])
-            masked_start = np.where(start_seg == source, source, 0)
-            masked_end = np.where(end_seg == target, target, 0)
-            if np.max(masked_start) == 0 or np.max(masked_end) == 0:
+            mask1 = self.tracks.graph[source]["mask"]
+            mask2 = self.tracks.graph[target]["mask"]
+            if mask1.mask.sum() == 0 or mask2.mask.sum() == 0:
                 warnings.warn(
-                    f"Cannot find label {source} in frame {start_time} or label {target} "
-                    f"in frame {end_time}: updating edge IOU value to 0",
+                    f"Cannot find label {source} in segmentation"
+                    f": updating edge IOU value to 0",
                     stacklevel=2,
                 )
                 self.tracks._set_edge_attr(edge, self.iou_key, 0.0)
             else:
-                iou_list = _compute_ious(masked_start, masked_end)
-                iou = 0.0 if len(iou_list) == 0 else iou_list[0][2]
+                iou = _compute_iou(mask1, mask2)
                 self.tracks._set_edge_attr(edge, self.iou_key, iou)
 
     def change_key(self, old_key: str, new_key: str) -> None:

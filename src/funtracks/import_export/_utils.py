@@ -86,14 +86,18 @@ def filter_graph_with_ancestors(
     all_nodes_to_keep = set(nodes_to_keep)
     import rustworkx as rx
 
-    for node in nodes_to_keep:
-        # Map external node ID to internal RustWorkX index
-        internal_node = graph._external_to_local[node]
-        # Get ancestors using internal indices
+    # Map external node ID to internal RustWorkX index
+    nodes_to_keep_internal = graph._vectorized_map_to_local(list(nodes_to_keep))
+
+    # Collect all internal ancestor IDs
+    all_ancestors_internal = set()
+    for internal_node in nodes_to_keep_internal:
         ancestors = rx.ancestors(graph.rx_graph, internal_node)
-        # Convert ancestor indices back to external node IDs
-        ancestors_external = [graph._local_to_external[nid] for nid in ancestors]
-        all_nodes_to_keep.update(ancestors_external)
+        all_ancestors_internal.update(ancestors)
+
+    # Convert ancestor indices back to external node IDs
+    ancestors_external = graph._vectorized_map_to_external(list(all_ancestors_internal))
+    all_nodes_to_keep.update(int(a) for a in ancestors_external)
 
     return list(all_nodes_to_keep)
 

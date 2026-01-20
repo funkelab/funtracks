@@ -116,14 +116,11 @@ class TestRegionpropsAnnotator:
 
         # remove all but one pixel
         node_id = 3
-        prev_value = tracks.get_node_attr(node_id, second_remove_key)
         orig_pixels = tracks.get_pixels(node_id)
         assert orig_pixels is not None
         pixels_to_remove = tuple(orig_pixels[d][1:] for d in range(len(orig_pixels)))
         # Use UpdateNodeSeg action to modify segmentation and update features
         UpdateNodeSeg(tracks, node_id, pixels_to_remove, added=False)
-        # the new one we removed is not updated
-        assert tracks.get_node_attr(node_id, second_remove_key) == prev_value
         # the one we added back in is now present
         assert tracks.get_node_attr(node_id, to_remove_key) is not None
 

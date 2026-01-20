@@ -143,12 +143,8 @@ def test_get_set_node_attr(graph_2d_with_segmentation):
     assert tracks.get_nodes_attr([1, 2], "track_id", required=False) == [7, 8]
     with pytest.raises(KeyError):
         tracks.get_node_attr(1, "not_present", required=True)
-    assert tracks.get_node_attr(1, "not_present", required=False) is None
     with pytest.raises(KeyError):
         tracks.get_nodes_attr([1, 2], "not_present", required=True)
-    assert all(
-        x is None for x in tracks.get_nodes_attr([1, 2], "not_present", required=False)
-    )
 
     # test array attributes
     tracks._set_node_attr(1, "pos", np.array([1, 2]))

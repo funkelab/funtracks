@@ -50,6 +50,7 @@ class UserUpdateSegmentation(ActionGroup):
                 continue
             time = pixels[0][0]
             # check if all pixels of old_value are removed
+            # TODO Teun: do this from the mask
             seg_time = np.asarray(self.tracks.segmentation[time])
             if np.unique(seg_time[pixels[1:]]) == old_value and np.sum(
                 seg_time == old_value
@@ -70,7 +71,6 @@ class UserUpdateSegmentation(ActionGroup):
                 self.actions.append(
                     UpdateNodeSeg(tracks, new_value, all_pixels, added=True)
                 )
-                tracks.graph[new_value][tracks.features.tracklet_key] = current_track_id
             else:
                 time_key = tracks.features.time_key
                 tracklet_key = tracks.features.tracklet_key

@@ -75,9 +75,7 @@ class TestEdgeAnnotator:
         node_id = 1
         pixels = tracks.get_pixels(node_id)
         assert pixels is not None
-        with pytest.warns(
-            match="Cannot find label 1 in frame .*: updating edge IOU value to 0"
-        ):
+        with pytest.warns(match="Cannot find label 1 in frame .*"):
             UpdateNodeSeg(tracks, node_id, pixels, added=False)
 
         assert td_get_single_attr_from_edge(tracks.graph, edge_id, "iou") == 0

@@ -17,9 +17,7 @@ from tracksdata.array import GraphArrayView
 
 from funtracks.features import Feature, FeatureDict, Position, Time
 from funtracks.utils.tracksdata_utils import (
-    combine_td_masks,
     pixels_to_td_mask,
-    subtract_td_masks,
     td_get_single_attr_from_edge,
 )
 
@@ -281,7 +279,7 @@ class Tracks:
         if self.graph.num_nodes() == 0:
             return True
 
-        # Get a sample node to check which attributes exist
+        # Check which attributes exist
         node_attrs = set(self.graph.node_attr_keys())
         return key in node_attrs
 
@@ -495,14 +493,12 @@ class Tracks:
         if value == 0:
             # val=0 means deleting the pixels from the mask
             mask_old = self.graph[node_id][td.DEFAULT_ATTR_KEYS.MASK]
-            mask_subtracted, area_subtracted = subtract_td_masks(
-                mask_old, mask_new, self.scale
-            )
+            mask_subtracted = mask_old.__isub__(mask_new)
             self.graph.update_node_attrs(
                 attrs={
                     td.DEFAULT_ATTR_KEYS.MASK: [mask_subtracted],
                     td.DEFAULT_ATTR_KEYS.BBOX: [mask_subtracted.bbox],
-                    "area": [area_subtracted],
+                    # "area": [area_subtracted],
                 },
                 node_ids=[node_id],
             )
@@ -510,14 +506,11 @@ class Tracks:
         elif self.graph.has_node(value):
             # if node already exists:
             mask_old = self.graph[value][td.DEFAULT_ATTR_KEYS.MASK]
-            mask_combined, area_combined = combine_td_masks(
-                mask_old, mask_new, self.scale
-            )
+            mask_combined = mask_old.__or__(mask_new)
             self.graph.update_node_attrs(
                 attrs={
                     td.DEFAULT_ATTR_KEYS.MASK: [mask_combined],
                     td.DEFAULT_ATTR_KEYS.BBOX: [mask_combined.bbox],
-                    "area": [area_combined],
                 },
                 node_ids=[value],
             )
@@ -628,17 +621,13 @@ class Tracks:
     def _set_node_attr(self, node: Node, attr: str, value: Any):
         if isinstance(value, np.ndarray):
             value = list(value)
-        self.graph.update_node_attrs(attrs={attr: [value]}, node_ids=[node])
+        self.graph[node][attr] = [value]
 
     def _set_nodes_attr(self, nodes: Iterable[Node], attr: str, values: Iterable[Any]):
         for node, value in zip(nodes, values, strict=False):
             self.graph[node][attr] = [value]
 
     def get_node_attr(self, node: Node, attr: str, required: bool = False):
-        if attr not in self.graph.node_attr_keys():
-            if required:
-                raise KeyError(attr)
-            return None
         return self.graph[int(node)][attr]
 
     def get_nodes_attr(self, nodes: Iterable[Node], attr: str, required: bool = False):

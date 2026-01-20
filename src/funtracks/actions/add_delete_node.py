@@ -186,13 +186,13 @@ class AddNode(BasicAction):
         if self.pixels is not None:
             self.tracks.set_pixels(self.pixels, self.node)
 
-        if type(self.tracks).__name__ == "SolutionTracks":
-            tracklet_key = self.tracks.features.tracklet_key
-            if tracklet_key is not None and tracklet_key in attrs:
-                track_id = attrs[tracklet_key]
-                if track_id not in self.tracks.track_id_to_node:
-                    self.tracks.track_id_to_node[track_id] = []
-                self.tracks.track_id_to_node[track_id].append(self.node)
+        # if type(self.tracks).__name__ == "SolutionTracks":
+        #     tracklet_key = self.tracks.features.tracklet_key
+        #     if tracklet_key is not None and tracklet_key in attrs:
+        #         track_id = attrs[tracklet_key]
+        #         if track_id not in self.tracks.track_id_to_node:
+        #             self.tracks.track_id_to_node[track_id] = []
+        #         self.tracks.track_id_to_node[track_id].append(self.node)
 
         # Always notify annotators - they will check their own preconditions
         self.tracks.notify_annotators(self)

@@ -134,6 +134,8 @@ class TrackAnnotator(GraphAnnotator):
         id_to_nodes = defaultdict(list)
         max_id = 0
         for node in self.tracks.graph.node_ids():
+            if key not in self.tracks.graph.node_attr_keys():
+                continue
             _id: int = self.tracks.get_node_attr(node, key)
             if _id is None:
                 continue
@@ -230,7 +232,6 @@ class TrackAnnotator(GraphAnnotator):
             daughters = [edge[1] for edge in all_edges if edge[0] == parent]
 
             for daughter in daughters:
-                # remove edge from graph, by setting solution to 0 + subgraphing
                 graph_copy.remove_edge(parent, daughter)
 
         track_id = 1
