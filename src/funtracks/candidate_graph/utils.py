@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 def nodes_from_segmentation(
     segmentation: np.ndarray,
     scale: list[float] | None = None,
-    seg_hypo=None,
 ) -> tuple[nx.DiGraph, dict[int, list[Any]]]:
     """Extract candidate nodes from a segmentation. Returns a networkx graph
     with only nodes, and also a dictionary from frames to node_ids for
@@ -37,7 +36,6 @@ def nodes_from_segmentation(
             dimensions (including time, which should have a dummy 1 value).
             Will be used to rescale the point locations and attribute computations.
             Defaults to None, which implies the data is isotropic.
-        seg_hypo (int | None): A number to be stored in NodeAttr.SEG_HYPO, if given.
 
     Returns:
         tuple[nx.DiGraph, dict[int, list[Any]]]: A candidate graph with only nodes,
@@ -65,8 +63,6 @@ def nodes_from_segmentation(
             node_id = regionprop.label
             attrs = {NodeAttr.TIME.value: t, NodeAttr.AREA.value: regionprop.area}
             attrs[NodeAttr.SEG_ID.value] = regionprop.label
-            if seg_hypo:
-                attrs[NodeAttr.SEG_HYPO.value] = seg_hypo
             centroid = regionprop.centroid  # [z,] y, x
             attrs[NodeAttr.POS.value] = centroid
             cand_graph.add_node(node_id, **attrs)

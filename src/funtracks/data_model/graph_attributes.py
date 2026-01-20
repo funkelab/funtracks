@@ -60,7 +60,6 @@ class NodeAttr(Enum, metaclass=DeprecatedEnumMeta):
     AREA = "area"
     TRACK_ID = "track_id"
     SEG_ID = "seg_id"
-    SEG_HYPO = "seg_hypo"
 
 
 class EdgeAttr(Enum, metaclass=DeprecatedEnumMeta):

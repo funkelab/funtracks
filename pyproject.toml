@@ -29,7 +29,6 @@ classifiers = [
 ]
 
 dependencies =[
-    "motile>=0.3",
     "numpy>=2,<3",
     "pydantic>=2,<3",
     "networkx>=3.4,<4",
