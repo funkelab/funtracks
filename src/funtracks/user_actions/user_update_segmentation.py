@@ -12,6 +12,8 @@ from .user_delete_node import UserDeleteNode
 if TYPE_CHECKING:
     from funtracks.data_model import SolutionTracks
 
+from funtracks.utils.tracksdata_utils import pixels_to_td_mask
+
 
 class UserUpdateSegmentation(ActionGroup):
     def __init__(
@@ -50,11 +52,12 @@ class UserUpdateSegmentation(ActionGroup):
                 continue
             time = pixels[0][0]
             # check if all pixels of old_value are removed
-            # TODO Teun: do this from the mask
-            seg_time = np.asarray(self.tracks.segmentation[time])
-            if np.unique(seg_time[pixels[1:]]) == old_value and np.sum(
-                seg_time == old_value
-            ) == len(pixels[0]):
+            mask_pixels, _ = pixels_to_td_mask(
+                pixels, self.tracks.ndim, self.tracks.scale
+            )
+            mask_old_value = self.tracks.graph[old_value]["mask"]
+            # If pixels fully overlaps with old_value mask, delete node
+            if mask_pixels.intersection(mask_old_value) == mask_old_value.mask.sum():
                 self.actions.append(UserDeleteNode(tracks, old_value, pixels=pixels))
             else:
                 self.actions.append(UpdateNodeSeg(tracks, old_value, pixels, added=False))
