@@ -3,6 +3,7 @@ import math
 import numpy as np
 from skimage.measure import marching_cubes, mesh_surface_area, regionprops
 from skimage.measure._regionprops import RegionProperties
+from tracksdata.nodes._mask import Mask
 
 
 class ExtendedRegionProperties(RegionProperties):
@@ -138,8 +139,15 @@ class ExtendedRegionProperties(RegionProperties):
         if self._label_image.ndim == 2:
             return super().perimeter
         else:  # 3D
+            # Create binary mask and pad with background to ensure a surface boundary
+            # exists. This prevents marching_cubes from failing when the mask fills
+            # the entire volume
+            binary_mask = self._label_image == self.label
+            padded_mask = np.pad(
+                binary_mask, pad_width=1, mode="constant", constant_values=False
+            )
             verts, faces, _, _ = marching_cubes(
-                self._label_image == self.label, level=0.5, spacing=self._spacing
+                padded_mask, level=0.5, spacing=self._spacing
             )
             return mesh_surface_area(verts, faces)
 
@@ -170,24 +178,30 @@ class ExtendedRegionProperties(RegionProperties):
 
 
 def regionprops_extended(
-    img: np.ndarray,
+    mask: Mask,
     spacing: tuple[float, ...] | None,
-    intensity_image: np.ndarray | None = None,
 ) -> list[ExtendedRegionProperties]:
     """
     Create instances of ExtendedRegionProperties that extend
     skimage.measure.RegionProperties.
 
     Args:
-        img (np.ndarray): The labeled image.
+        mask (Mask): The labeled mask.
         spacing (tuple[float, ...]| None): The spacing between voxels in each dimension.
             If None, each voxel is assumed to be 1 in all dimensions.
-        intensity_image (np.ndarray, optional): The intensity image.
-
+    q
     Returns:
         list[ExtendedRegionProperties]: A list of ExtendedRegionProperties instances.
     """
-    results = regionprops(img, intensity_image=intensity_image, spacing=spacing)
+
+    results = regionprops(
+        mask._mask.astype(np.uint16),
+        cache=True,
+        spacing=spacing,
+        offset=tuple(mask._bbox[: mask._mask.ndim]),
+    )
+
+    # results = regionprops(img, intensity_image=intensity_image, spacing=spacing)
     for i, _ in enumerate(results):
         a = results[i]
         b = ExtendedRegionProperties(
@@ -197,6 +211,7 @@ def regionprops_extended(
             intensity_image=a._intensity_image,
             cache_active=a._cache_active,
             spacing=a._spacing,
+            offset=a._offset,
         )
         results[i] = b
 

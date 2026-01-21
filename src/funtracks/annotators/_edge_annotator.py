@@ -80,14 +80,13 @@ class EdgeAnnotator(GraphAnnotator):
         if not keys_to_compute:
             return
 
-        seg = self.tracks.segmentation
         # TODO: add skip edges
         if self.iou_key in keys_to_compute:
             nodes_by_frame = defaultdict(list)
             for n in self.tracks.graph.node_ids():
                 nodes_by_frame[self.tracks.get_time(n)].append(n)
 
-            for t in range(seg.shape[0] - 1):
+            for t in range(self.tracks.segmentation_shape[0] - 1):
                 nodes_in_t = nodes_by_frame[t]
                 edges = []
                 for node in nodes_in_t:
