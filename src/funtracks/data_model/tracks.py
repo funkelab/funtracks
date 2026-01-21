@@ -46,10 +46,6 @@ class Tracks:
     Attributes:
         graph (td.graph.GraphView): A graph with nodes representing detections and
             and edges representing links across time.
-        segmentation_shape (tuple[int, ...] | None): An optional segmentation shape that
-            accompanies the tracking graph. If a segmentation_shape is provided,
-            the node ids in the graph must match the segmentation labels.
-            Providing None assumes no segmentation on the graph.
         features (FeatureDict): Dictionary of features tracked on graph nodes/edges.
         annotators (AnnotatorRegistry): List of annotators that compute features.
         scale (list[float] | None): How much to scale each dimension by, including time.
@@ -61,21 +57,19 @@ class Tracks:
     def __init__(
         self,
         graph: td.graph.GraphView,
-        segmentation_shape: tuple[int, ...] | None = None,
         time_attr: str | None = None,
         pos_attr: str | tuple[str, ...] | list[str] | None = None,
         tracklet_attr: str | None = None,
         scale: list[float] | None = None,
         ndim: int | None = None,
         features: FeatureDict | None = None,
+        _segmentation: GraphArrayView | None = None,
     ):
         """Initialize a Tracks object.
 
         Args:
             graph (td.graph.GraphView): NetworkX directed graph with nodes as detections
                 and edges as links.
-            segmentation_shape (tuple[int, ...] | None): Optional segmentation shape where
-                labels match node IDs. Required for computing region props (area, etc.).
             time_attr (str | None): Graph attribute name for time. Defaults to "time"
                 if None.
             pos_attr (str | tuple[str, ...] | list[str] | None): Graph attribute
@@ -94,13 +88,21 @@ class Tracks:
                 Assumes that all features in the dict already exist on the graph (will
                 be activated but not recomputed). If None, core computed features (pos,
                 area, track_id) are auto-detected by checking if they exist on the graph.
+            _segmentation (GraphArrayView | None): Internal parameter for reusing an
+                existing GraphArrayView instance. Not intended for public use.
         """
         self.graph = graph
-        self.segmentation_shape = segmentation_shape
-        if segmentation_shape is not None:
+        if _segmentation is not None:
+            # Reuse provided segmentation instance (internal use only)
+            self.segmentation = _segmentation
+        elif "mask" in graph.node_attr_keys():
+            # Create new GraphArrayView from graph metadata
             try:
                 array_view = GraphArrayView(
-                    graph=graph, shape=segmentation_shape, attr_key="node_id", offset=0
+                    graph=graph,
+                    shape=graph.metadata()["segmentation_shape"],
+                    attr_key="node_id",
+                    offset=0,
                 )
                 self.segmentation = array_view
             except (ValueError, KeyError) as err:
@@ -111,7 +113,11 @@ class Tracks:
         else:
             self.segmentation = None
         self.scale = scale
-        self.ndim = self._compute_ndim(self.segmentation_shape, scale, ndim)
+        self.ndim = self._compute_ndim(
+            self.segmentation.shape if self.segmentation is not None else None,
+            scale,
+            ndim,
+        )
         self.axis_names = ["z", "y", "x"] if self.ndim == 4 else ["y", "x"]
 
         # initialization steps:

@@ -86,7 +86,7 @@ class EdgeAnnotator(GraphAnnotator):
             for n in self.tracks.graph.node_ids():
                 nodes_by_frame[self.tracks.get_time(n)].append(n)
 
-            for t in range(self.tracks.segmentation_shape[0] - 1):
+            for t in range(self.tracks.segmentation.shape[0] - 1):
                 nodes_in_t = nodes_by_frame[t]
                 edges = []
                 for node in nodes_in_t:

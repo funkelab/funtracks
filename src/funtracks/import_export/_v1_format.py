@@ -54,8 +54,7 @@ def load_v1_tracks(
     # Add mask and bbox attributes to graph if segmentation is available
     if seg is not None:
         graph_td = add_masks_and_bboxes_to_graph(graph_td, seg)
-
-    segmentation_shape = seg.shape if seg is not None else None
+        graph_td.update_metadata(segmentation_shape=seg.shape)
 
     # filtering the warnings because the default values of time_attr and pos_attr are
     # not None. Therefore, new style Tracks attrs that have features instead of
@@ -71,11 +70,9 @@ def load_v1_tracks(
         )
         tracks: Tracks
         if solution:
-            tracks = SolutionTracks(
-                graph_td, segmentation_shape=segmentation_shape, **attrs
-            )
+            tracks = SolutionTracks(graph_td, **attrs)
         else:
-            tracks = Tracks(graph_td, segmentation_shape=segmentation_shape, **attrs)
+            tracks = Tracks(graph_td, **attrs)
     return tracks
 
 

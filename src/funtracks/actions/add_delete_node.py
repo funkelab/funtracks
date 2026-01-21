@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 
 import numpy as np
 import tracksdata as td
+from tracksdata.nodes._mask import Mask
 
 from funtracks.utils.tracksdata_utils import (
     compute_node_attrs_from_masks,
@@ -110,6 +111,22 @@ class AddNode(BasicAction):
                 )
                 # Extract single values from lists (since we passed one mask)
                 computed_attrs = {key: value[0] for key, value in computed_attrs.items()}
+            else:
+                # TODO Teun: remove this defaulting behavior, see new tracksdata PR
+                if len(self.tracks.segmentation.shape) == 3:
+                    attrs[td.DEFAULT_ATTR_KEYS.MASK] = Mask(
+                        np.array([[False]]), bbox=[0, 0, 1, 1]
+                    )
+                    attrs[td.DEFAULT_ATTR_KEYS.BBOX] = [0, 0, 1, 1]
+                elif len(self.tracks.segmentation.shape) == 4:
+                    attrs[td.DEFAULT_ATTR_KEYS.MASK] = Mask(
+                        np.array([[[False]]]), bbox=[0, 0, 0, 1, 1, 1]
+                    )
+                    attrs[td.DEFAULT_ATTR_KEYS.BBOX] = [0, 0, 0, 1, 1, 1]
+                else:
+                    raise ValueError(
+                        "Must provide pixels or mask when adding node to tracks with seg"
+                    )
             # Handle position_key safely using the same pattern as in tracks.py
             if isinstance(self.tracks.features.position_key, list):
                 # Multi-axis position keys - check if any are missing from attrs
@@ -140,7 +157,7 @@ class AddNode(BasicAction):
                 else:
                     raise ValueError("Position key is None")
             # Set area using string literal since FeatureDict doesn't have area_key
-            attrs["area"] = computed_attrs["area"]
+            # TODO Teun: remove all computed stuff, because annotators will handle this
         else:
             # No segmentation - handle position_key safely
             if isinstance(self.tracks.features.position_key, list):
@@ -185,14 +202,6 @@ class AddNode(BasicAction):
 
         if self.pixels is not None:
             self.tracks.set_pixels(self.pixels, self.node)
-
-        # if type(self.tracks).__name__ == "SolutionTracks":
-        #     tracklet_key = self.tracks.features.tracklet_key
-        #     if tracklet_key is not None and tracklet_key in attrs:
-        #         track_id = attrs[tracklet_key]
-        #         if track_id not in self.tracks.track_id_to_node:
-        #             self.tracks.track_id_to_node[track_id] = []
-        #         self.tracks.track_id_to_node[track_id].append(self.node)
 
         # Always notify annotators - they will check their own preconditions
         self.tracks.notify_annotators(self)

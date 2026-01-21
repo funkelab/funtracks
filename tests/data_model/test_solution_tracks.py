@@ -69,7 +69,7 @@ def test_next_track_id_empty():
         node_attributes=["pos", "track_id"],
         edge_attributes=[],
     )
-    tracks = SolutionTracks(graph, segmentation_shape=(5, 100, 100, 100), **track_attrs)
+    tracks = SolutionTracks(graph, ndim=4, **track_attrs)
     assert tracks.get_next_track_id() == 1
 
 
@@ -88,8 +88,8 @@ def test_export_to_csv_with_display_names(
 
     assert len(lines) == tracks.graph.num_nodes() + 1  # add header
 
-    # With display names: ID, Parent ID, Time, y, x, Tracklet ID
-    header = ["ID", "Parent ID", "Time", "y", "x", "Tracklet ID"]
+    # With display names: ID, Parent ID, Time, y, x, Area, Tracklet ID
+    header = ["ID", "Parent ID", "Time", "y", "x", "Area", "Tracklet ID"]
     assert lines[0].strip().split(",") == header
 
     # Test 3D with display names
@@ -102,5 +102,5 @@ def test_export_to_csv_with_display_names(
     assert len(lines) == tracks.graph.num_nodes() + 1  # add header
 
     # With display names: ID, Parent ID, Time, z, y, x, Tracklet ID
-    header = ["ID", "Parent ID", "Time", "z", "y", "x", "Tracklet ID"]
+    header = ["ID", "Parent ID", "Time", "z", "y", "x", "Volume", "Tracklet ID"]
     assert lines[0].strip().split(",") == header

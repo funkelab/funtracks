@@ -13,7 +13,6 @@ class TestRegionpropsAnnotator:
         graph = get_graph(ndim, with_features="segmentation")
         tracks = Tracks(
             graph,
-            segmentation_shape=(5, 100, 100) if ndim == 3 else (5, 100, 100, 100),
             ndim=ndim,
             **track_attrs,
         )
@@ -31,7 +30,6 @@ class TestRegionpropsAnnotator:
         graph = get_graph(ndim, with_features="segmentation")
         tracks = Tracks(
             graph,
-            segmentation_shape=(5, 100, 100) if ndim == 3 else (5, 100, 100, 100),
             ndim=ndim,
             **track_attrs,
         )
@@ -51,7 +49,6 @@ class TestRegionpropsAnnotator:
         graph = get_graph(ndim, with_features="segmentation")
         tracks = Tracks(
             graph,
-            segmentation_shape=(5, 100, 100) if ndim == 3 else (5, 100, 100, 100),
             ndim=ndim,
             **track_attrs,
         )
@@ -90,7 +87,6 @@ class TestRegionpropsAnnotator:
         graph = get_graph(ndim, with_features="segmentation")
         tracks = Tracks(
             graph,
-            segmentation_shape=(5, 100, 100) if ndim == 3 else (5, 100, 100, 100),
             ndim=ndim,
             **track_attrs,
         )
@@ -140,7 +136,6 @@ class TestRegionpropsAnnotator:
         graph = get_graph(ndim, with_features="segmentation")
         tracks = SolutionTracks(
             graph,
-            segmentation_shape=(5, 100, 100) if ndim == 3 else (5, 100, 100, 100),
             ndim=ndim,
             **track_attrs,
         )

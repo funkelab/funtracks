@@ -215,6 +215,7 @@ def _make_graph(
     track_ids = {1: 1, 2: 2, 3: 3, 4: 3, 5: 3, 6: 5}
 
     # Mask data (matches segmentation structure)
+    segmentation_shape: tuple[int, ...]
     if ndim == 3:  # 2D spatial
         masks = {
             1: make_2d_disk_mask(center=(50, 50), radius=20),
@@ -224,6 +225,7 @@ def _make_graph(
             5: make_2d_square_mask(start_corner=(0, 0), width=4),
             6: make_2d_square_mask(start_corner=(96, 96), width=4),
         }
+        segmentation_shape = (5, 100, 100)
     else:  # 3D spatial
         masks = {
             1: make_3d_sphere_mask(center=(50, 50, 50), radius=20),
@@ -233,6 +235,7 @@ def _make_graph(
             5: make_3d_cube_mask(start_corner=(0, 0, 0), width=4),
             6: make_3d_cube_mask(start_corner=(96, 96, 96), width=4),
         }
+        segmentation_shape = (5, 100, 100, 100)
 
     # Build nodes with requested features
     nodes_id_list = []
@@ -265,6 +268,8 @@ def _make_graph(
 
     graph.bulk_add_nodes(nodes=nodes_attrs_list, indices=nodes_id_list)
     graph.bulk_add_edges(edges)
+    if with_masks:
+        graph.update_metadata(segmentation_shape=segmentation_shape)
 
     # Add IOUs to edges if requested
     if with_iou:
@@ -373,7 +378,6 @@ def get_tracks(get_graph) -> Callable[..., "Tracks | SolutionTracks"]:
             # With segmentation: use graph with mask/bbox node attrs
             # and all computed features
             graph = get_graph(ndim=ndim, with_features="segmentation")
-            segmentation_shape = (5, 100, 100) if ndim == 3 else (5, 100, 100, 100)
         else:
             # Without segmentation
             if is_solution:
@@ -382,7 +386,6 @@ def get_tracks(get_graph) -> Callable[..., "Tracks | SolutionTracks"]:
             else:
                 # Regular Tracks: use graph with just pos
                 graph = get_graph(ndim=ndim, with_features="position")
-            segmentation_shape = None
 
         # Build FeatureDict based on what exists in the graph
         features_dict = {
@@ -410,14 +413,12 @@ def get_tracks(get_graph) -> Callable[..., "Tracks | SolutionTracks"]:
         if is_solution:
             return SolutionTracks(
                 graph,
-                segmentation_shape=segmentation_shape,
                 ndim=ndim,
                 features=feature_dict,
             )
         else:
             return Tracks(
                 graph,
-                segmentation_shape=segmentation_shape,
                 ndim=ndim,
                 features=feature_dict,
             )

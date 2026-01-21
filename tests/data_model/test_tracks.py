@@ -37,7 +37,6 @@ def test_create_tracks(graph_3d_with_segmentation: td.graph.GraphView):
     # create track with graph and seg
     tracks = Tracks(
         graph=graph_3d_with_segmentation,
-        segmentation_shape=(5, 100, 100, 100),
         **track_attrs,  # type: ignore[arg-type]
     )
     pos_key = tracks.features.position_key
@@ -53,15 +52,16 @@ def test_create_tracks(graph_3d_with_segmentation: td.graph.GraphView):
 
     tracks_wrong_attr = Tracks(
         graph=graph_3d_with_segmentation,
-        segmentation_shape=(5, 100, 100, 100),
         time_attr="test",
     )
     with pytest.raises(KeyError):  # raises error at access if time is wrong
         tracks_wrong_attr.get_times([1])
 
-    tracks_wrong_attr = Tracks(graph=graph_3d_with_segmentation, pos_attr="test", ndim=3)
-    with pytest.raises(KeyError):  # raises error at access if pos is wrong
-        tracks_wrong_attr.get_positions([1])
+    with pytest.raises(ValueError):
+        # Raise error is segmentation shape does not match provided ndim
+        tracks_wrong_attr = Tracks(
+            graph=graph_3d_with_segmentation, pos_attr="test", ndim=3
+        )
 
     # test multiple position attrs
     pos_attr = ("z", "y", "x")
@@ -90,7 +90,6 @@ def test_pixels_and_seg_id(graph_3d_with_segmentation):
     # create track with graph and seg
     tracks = Tracks(
         graph=graph_3d_with_segmentation,
-        segmentation_shape=(5, 100, 100, 100),
         **track_attrs,
     )
 
@@ -199,7 +198,6 @@ def test_set_positions_list(graph_2d_list):
 def test_get_pixels_and_set_pixels(graph_2d_with_segmentation):
     tracks = Tracks(
         graph_2d_with_segmentation,
-        segmentation_shape=(5, 100, 100),
         ndim=3,
         **track_attrs,
     )
@@ -209,25 +207,22 @@ def test_get_pixels_and_set_pixels(graph_2d_with_segmentation):
     assert np.asarray(tracks.segmentation)[0, 50, 50] == 99
 
 
-def test_get_pixels_none(graph_2d_with_segmentation):
-    tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
-    assert tracks.get_pixels([1]) is None
+def test_get_pixels_none(graph_2d_with_track_id):
+    tracks = Tracks(graph_2d_with_track_id, ndim=3, **track_attrs)
+    assert tracks.get_pixels(1) is None
 
 
-def test_set_pixels_no_segmentation(graph_2d_with_segmentation):
-    tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
+def test_set_pixels_no_segmentation(graph_2d_with_track_id):
+    tracks = Tracks(graph_2d_with_track_id, ndim=3, **track_attrs)
     pix = [(np.array([0]), np.array([10]), np.array([20]))]
     with pytest.raises(ValueError):
-        tracks.set_pixels(pix, [1])
+        tracks.set_pixels(pix, 1)
 
 
 def test_compute_ndim_errors():
     g = create_empty_graphview_graph()
     g.add_node_attr_key("pos", default_value=None)
     g.add_node(index=1, attrs={"t": 0, "pos": [0, 0, 0], "solution": True})
-    # seg ndim = 3, scale ndim = 2, provided ndim = 4 -> mismatch
-    with pytest.raises(ValueError, match="segmentation_shape is incompatible with graph"):
-        Tracks(g, segmentation_shape=(2, 2, 2), scale=[1, 2], ndim=4)
 
     with pytest.raises(
         ValueError, match="Cannot compute dimensions from segmentation or scale"

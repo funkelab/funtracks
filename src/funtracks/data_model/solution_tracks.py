@@ -20,13 +20,13 @@ class SolutionTracks(Tracks):
     def __init__(
         self,
         graph: td.graph.GraphView,
-        segmentation_shape: tuple[int, ...] | None = None,
         time_attr: str | None = None,
         pos_attr: str | tuple[str] | list[str] | None = None,
         tracklet_attr: str | None = None,
         scale: list[float] | None = None,
         ndim: int | None = None,
         features: FeatureDict | None = None,
+        _segmentation: td.array.GraphArrayView | None = None,
     ):
         """Initialize a SolutionTracks object.
 
@@ -36,8 +36,6 @@ class SolutionTracks(Tracks):
         Args:
             graph (td.graph.GraphView): NetworkX directed graph with nodes as detections
                 and edges as links.
-            segmentation_shape (tuple[int, ...] | None): Shape of the segmentation
-                volume. If None, segmentation-related features cannot be computed.
             time_attr (str | None): Graph attribute name for time. Defaults to "time"
                 if None.
             pos_attr (str | tuple[str, ...] | list[str] | None): Graph attribute
@@ -56,16 +54,18 @@ class SolutionTracks(Tracks):
                 Assumes that all features in the dict already exist on the graph (will
                 be activated but not recomputed). If None, core computed features (pos,
                 area, track_id) are auto-detected by checking if they exist on the graph.
+            _segmentation (GraphArrayView | None): Internal parameter for reusing an
+                existing GraphArrayView instance. Not intended for public use.
         """
         super().__init__(
             graph,
-            segmentation_shape=segmentation_shape,
             time_attr=time_attr,
             pos_attr=pos_attr,
             tracklet_attr=tracklet_attr,
             scale=scale,
             ndim=ndim,
             features=features,
+            _segmentation=_segmentation,
         )
 
         self.track_annotator = self._get_track_annotator()
@@ -104,10 +104,10 @@ class SolutionTracks(Tracks):
 
         soln_tracks = cls(
             tracks.graph,
-            segmentation_shape=tracks.segmentation_shape,
             scale=tracks.scale,
             ndim=tracks.ndim,
             features=tracks.features,
+            _segmentation=tracks.segmentation,
         )
         if force_recompute:
             soln_tracks.enable_features([soln_tracks.features.tracklet_key])  # type: ignore

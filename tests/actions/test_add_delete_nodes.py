@@ -198,7 +198,7 @@ def test_custom_attributes_preserved(get_tracks, ndim, with_seg):
 
     # Add a node with custom attributes
     node_id = 100
-    action = AddNode(tracks, node_id, custom_attrs, pixels=pixels)
+    action = AddNode(tracks, node_id, custom_attrs.copy(), pixels=pixels)
 
     # Verify all attributes are present after adding
     assert tracks.graph.has_node(node_id)

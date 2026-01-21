@@ -34,9 +34,6 @@ def test_export_to_geff(
         # doesn't support this
         graph_type = "segmentation" if with_seg else "position"
         graph = get_graph(ndim, with_features=graph_type)
-        segmentation_shape = None
-        if with_seg:
-            segmentation_shape = (5, 20, 20) if ndim == 3 else (3, 5, 20, 20)
 
         # Determine position attribute keys based on dimensions
         pos_keys = ["y", "x"] if ndim == 3 else ["z", "y", "x"]
@@ -53,7 +50,6 @@ def test_export_to_geff(
         tracks_cls = SolutionTracks if is_solution else Tracks
         tracks = tracks_cls(
             graph,
-            segmentation_shape=segmentation_shape,
             time_attr="t",
             pos_attr=pos_keys,
             tracklet_attr="track_id",

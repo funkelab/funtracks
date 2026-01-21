@@ -13,7 +13,6 @@ def test_annotator_registry_init_with_segmentation(
     segmentation."""
     tracks = Tracks(
         graph_2d_with_segmentation,
-        segmentation_shape=(5, 100, 100),
         ndim=3,
         **track_attrs,
     )
@@ -41,7 +40,6 @@ def test_annotator_registry_init_solution_tracks(
     segmentation."""
     tracks = SolutionTracks(
         graph_2d_with_segmentation,
-        segmentation_shape=(5, 100, 100),
         ndim=3,
         **track_attrs,
     )
@@ -55,7 +53,6 @@ def test_annotator_registry_init_solution_tracks(
 def test_enable_disable_features(graph_2d_with_segmentation):
     tracks = Tracks(
         graph_2d_with_segmentation,
-        segmentation_shape=(5, 100, 100),
         ndim=3,
         **track_attrs,
     )
@@ -109,7 +106,6 @@ def test_get_available_features(graph_2d_with_segmentation):
     """Test get_available_features returns all features from all annotators."""
     tracks = SolutionTracks(
         graph_2d_with_segmentation,
-        segmentation_shape=(5, 100, 100),
         ndim=3,
         **track_attrs,
     )
@@ -143,7 +139,6 @@ def test_compute_strict_validation(graph_2d_with_segmentation):
     """Test that compute() strictly validates feature keys."""
     tracks = Tracks(
         graph_2d_with_segmentation,
-        segmentation_shape=(5, 100, 100),
         ndim=3,
         **track_attrs,
     )
