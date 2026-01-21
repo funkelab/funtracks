@@ -1,7 +1,7 @@
 import math
 
 import numpy as np
-from skimage.measure import marching_cubes, mesh_surface_area, regionprops
+from skimage.measure import marching_cubes, mesh_surface_area
 from skimage.measure._regionprops import RegionProperties
 from tracksdata.nodes._mask import Mask
 
@@ -189,30 +189,21 @@ def regionprops_extended(
         mask (Mask): The labeled mask.
         spacing (tuple[float, ...]| None): The spacing between voxels in each dimension.
             If None, each voxel is assumed to be 1 in all dimensions.
-    q
+
     Returns:
         list[ExtendedRegionProperties]: A list of ExtendedRegionProperties instances.
     """
 
-    results = regionprops(
-        mask._mask.astype(np.uint16),
-        cache=True,
-        spacing=spacing,
-        offset=tuple(mask._bbox[: mask._mask.ndim]),
+    region = mask.regionprops(spacing=spacing)
+
+    extended_region = ExtendedRegionProperties(
+        slice=region.slice,
+        label=region.label,
+        label_image=region._label_image,
+        intensity_image=region._intensity_image,
+        cache_active=region._cache_active,
+        spacing=region._spacing,
+        offset=region._offset,
     )
 
-    # results = regionprops(img, intensity_image=intensity_image, spacing=spacing)
-    for i, _ in enumerate(results):
-        a = results[i]
-        b = ExtendedRegionProperties(
-            slice=a.slice,
-            label=a.label,
-            label_image=a._label_image,
-            intensity_image=a._intensity_image,
-            cache_active=a._cache_active,
-            spacing=a._spacing,
-            offset=a._offset,
-        )
-        results[i] = b
-
-    return results
+    return [extended_region]
