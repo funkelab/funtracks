@@ -31,7 +31,7 @@ def nodes_from_segmentation(
         segmentation (np.ndarray): A numpy array with integer labels and dimensions
             (t, [z], y, x). Labels must be unique across time, and the label
             will be used as the node id. If the labels are not unique, preprocess
-            with motile_toolbox.utils.ensure_unique_ids before calling this function.
+            with funtracks.utils.ensure_ensure_unique_labels before calling this function.
         scale (list[float] | None, optional): The scale of the segmentation data in all
             dimensions (including time, which should have a dummy 1 value).
             Will be used to rescale the point locations and attribute computations.
