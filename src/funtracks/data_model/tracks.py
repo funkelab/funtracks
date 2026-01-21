@@ -60,6 +60,7 @@ class Tracks:
         time_attr: str | None = None,
         pos_attr: str | tuple[str, ...] | list[str] | None = None,
         tracklet_attr: str | None = None,
+        lineage_attr: str | None = None,
         scale: list[float] | None = None,
         ndim: int | None = None,
         features: FeatureDict | None = None,
@@ -80,6 +81,8 @@ class Tracks:
                 Defaults to "pos" if None.
             tracklet_attr (str | None): Graph attribute name for tracklet/track IDs.
                 Defaults to "track_id" if None.
+            lineage_attr (str | None): Graph attribute name for lineage IDs.
+                Defaults to "lineage_id" if None.
             scale (list[float] | None): Scaling factors for each dimension (including
                 time). If None, all dimensions scaled by 1.0.
             ndim (int | None): Number of dimensions (3 for 2D+time, 4 for 3D+time).
@@ -107,12 +110,14 @@ class Tracks:
             time_attr is not None or pos_attr is not None or tracklet_attr is not None
         ):
             warn(
-                "Provided both FeatureDict and pos, time, or tracklet attr: ignoring attr"
-                f" arguments ({pos_attr=}, {time_attr=}, {tracklet_attr=}).",
+                "Provided both FeatureDict and pos, time, tracklet, or lineage attr: "
+                "ignoring attr"
+                f" arguments ({pos_attr=}, {time_attr=}, {tracklet_attr=}, "
+                f"{lineage_attr=}).",
                 stacklevel=2,
             )
         self.features = (
-            self._get_feature_set(time_attr, pos_attr, tracklet_attr)
+            self._get_feature_set(time_attr, pos_attr, tracklet_attr, lineage_attr)
             if features is None
             else features
         )
@@ -151,6 +156,7 @@ class Tracks:
         time_attr: str | None,
         pos_attr: str | tuple[str, ...] | list[str] | None,
         tracklet_key: str | None,
+        lineage_key: str | None,
     ) -> FeatureDict:
         """Create a FeatureDict with static (user-provided) features only.
 
@@ -167,6 +173,8 @@ class Tracks:
                 - None: defaults to "pos"
             tracklet_key: Graph attribute name for tracklet/track IDs (e.g., "track_id").
                 If None, defaults to "track_id"
+            lineage_key: Graph attribute name for lineage IDs (e.g., "lineage_id").
+                if None, defaults to "lineage_id"
 
         Returns:
             FeatureDict initialized with time feature and position if no segmentation
@@ -177,6 +185,8 @@ class Tracks:
             pos_attr = "pos"
         if tracklet_key is None:
             tracklet_key = "track_id"
+        if lineage_key is None:
+            lineage_key = "lineage_id"
 
         # Build static features dict - always include time
         features: dict[str, Feature] = {time_key: Time()}
@@ -188,6 +198,7 @@ class Tracks:
             time_key=time_key,
             position_key=None,
             tracklet_key=tracklet_key,
+            lineage_key=lineage_key,
         )
 
         # Register position feature if no segmentation (static position)
@@ -255,7 +266,11 @@ class Tracks:
         # TrackAnnotator: requires SolutionTracks (checked in can_annotate)
         if TrackAnnotator.can_annotate(self):
             annotator_list.append(
-                TrackAnnotator(self, tracklet_key=self.features.tracklet_key)  # type: ignore
+                TrackAnnotator(
+                    self,  # type: ignore[arg-type]
+                    tracklet_key=self.features.tracklet_key,
+                    lineage_key=self.features.lineage_key,
+                )
             )
         return AnnotatorRegistry(annotator_list)
 

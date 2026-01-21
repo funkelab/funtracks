@@ -28,6 +28,7 @@ class SolutionTracks(Tracks):
         time_attr: str | None = None,
         pos_attr: str | tuple[str] | list[str] | None = None,
         tracklet_attr: str | None = None,
+        lineage_attr: str | None = None,
         scale: list[float] | None = None,
         ndim: int | None = None,
         features: FeatureDict | None = None,
@@ -51,6 +52,8 @@ class SolutionTracks(Tracks):
                 Defaults to "pos" if None.
             tracklet_attr (str | None): Graph attribute name for tracklet/track IDs.
                 Defaults to "track_id" if None.
+            lineage_attr (str | None): Graph attribute name for lineage IDs.
+                Defaults to "lineage_id" if None.
             scale (list[float] | None): Scaling factors for each dimension (including
                 time). If None, all dimensions scaled by 1.0.
             ndim (int | None): Number of dimensions (3 for 2D+time, 4 for 3D+time).
@@ -67,6 +70,7 @@ class SolutionTracks(Tracks):
             time_attr=time_attr,
             pos_attr=pos_attr,
             tracklet_attr=tracklet_attr,
+            lineage_attr=lineage_attr,
             scale=scale,
             ndim=ndim,
             features=features,
@@ -110,16 +114,13 @@ class SolutionTracks(Tracks):
     @classmethod
     def from_tracks(cls, tracks: Tracks):
         force_recompute = False
-        if tracks.features.lineage_key is None:
-            tracks.features.lineage_key = "lineage_id"
-            force_recompute = True
-        elif (tracklet_key := tracks.features.tracklet_key) is not None:
+        if (tracklet_key := tracks.features.tracklet_key) is not None:
             # Check if all nodes have track_id before trusting existing track IDs
             # Short circuit on first missing track_id
             for node in tracks.graph.nodes():
                 if (
                     tracks.get_node_attr(node, tracklet_key) is None
-                    or tracks.get_node_attr(node, tracks.features.lineage_key) is None
+                    or tracks.get_node_attr(node, tracks.features.lineage_key) is None  # type: ignore[arg-type]
                 ):
                     force_recompute = True
                     break

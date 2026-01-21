@@ -19,14 +19,14 @@ class TestTrackAnnotator:
         # Features start disabled by default
         assert len(ann.all_features) == 2
         assert len(ann.features) == 0
-        assert len(ann.lineage_id_to_nodes) == 0
+        assert len(ann.lineage_id_to_nodes) == 2
 
         ann = TrackAnnotator(tracks, tracklet_key="track_id")
         assert len(ann.all_features) == 2
         assert len(ann.features) == 0
-        assert len(ann.lineage_id_to_nodes) == 0
+        assert len(ann.lineage_id_to_nodes) == 2
         assert len(ann.tracklet_id_to_nodes) == 4
-        assert ann.max_lineage_id == 0
+        assert ann.max_lineage_id == 2
         assert ann.max_tracklet_id == 5
 
     def test_compute_all(self, get_tracks, ndim, with_seg) -> None:
