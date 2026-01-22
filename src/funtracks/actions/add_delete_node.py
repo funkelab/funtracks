@@ -15,8 +15,6 @@ import tracksdata as td
 from tracksdata.nodes._mask import Mask
 
 from funtracks.utils.tracksdata_utils import (
-    compute_node_attrs_from_masks,
-    compute_node_attrs_from_pixels,
     pixels_to_td_mask,
 )
 
@@ -90,27 +88,13 @@ class AddNode(BasicAction):
         """Apply the action, and set segmentation if provided in self.pixels"""
         attrs = self.attributes
 
-        final_pos: np.ndarray
         if self.tracks.segmentation is not None:
             if self.pixels is not None:
-                computed_attrs = compute_node_attrs_from_pixels(
-                    [self.pixels], self.tracks.ndim, self.tracks.scale
+                mask_obj, _ = pixels_to_td_mask(
+                    self.pixels, self.tracks.ndim, self.tracks.scale
                 )
-                # Extract single values from lists (since we passed one pixel set)
-                computed_attrs = {key: value[0] for key, value in computed_attrs.items()}
-                # if masks are not given, calculate them from the pixels
-                if "mask" not in attrs:
-                    mask_obj, _ = pixels_to_td_mask(
-                        self.pixels, self.tracks.ndim, self.tracks.scale
-                    )
-                    attrs[td.DEFAULT_ATTR_KEYS.MASK] = mask_obj
-                    attrs[td.DEFAULT_ATTR_KEYS.BBOX] = mask_obj.bbox
-            elif "mask" in attrs:
-                computed_attrs = compute_node_attrs_from_masks(
-                    attrs["mask"], self.tracks.ndim, self.tracks.scale
-                )
-                # Extract single values from lists (since we passed one mask)
-                computed_attrs = {key: value[0] for key, value in computed_attrs.items()}
+                attrs[td.DEFAULT_ATTR_KEYS.MASK] = mask_obj
+                attrs[td.DEFAULT_ATTR_KEYS.BBOX] = mask_obj.bbox
             else:
                 # TODO Teun: remove this defaulting behavior, see new tracksdata PR
                 if len(self.tracks.segmentation.shape) == 3:
@@ -127,60 +111,6 @@ class AddNode(BasicAction):
                     raise ValueError(
                         "Must provide pixels or mask when adding node to tracks with seg"
                     )
-            # Handle position_key safely using the same pattern as in tracks.py
-            if isinstance(self.tracks.features.position_key, list):
-                # Multi-axis position keys - check if any are missing from attrs
-                missing_keys = [
-                    k for k in self.tracks.features.position_key if k not in attrs
-                ]
-                if missing_keys:
-                    # Use computed position from segmentation
-                    final_pos = np.array(computed_attrs["pos"])
-                    # Set individual components in attrs
-                    for i, key in enumerate(self.tracks.features.position_key):
-                        attrs[key] = (
-                            final_pos[i] if final_pos.ndim == 1 else final_pos[:, i]
-                        )
-                else:
-                    # All position components provided, combine them
-                    final_pos = np.stack(
-                        [attrs[key] for key in self.tracks.features.position_key], axis=0
-                    )
-            else:
-                # Single position key
-                pos_key = self.tracks.features.position_key
-                if pos_key is not None and pos_key not in attrs:
-                    final_pos = np.array(computed_attrs["pos"])
-                    attrs[pos_key] = final_pos
-                elif pos_key is not None:
-                    final_pos = np.array(attrs[pos_key])
-                else:
-                    raise ValueError("Position key is None")
-            # Set area using string literal since FeatureDict doesn't have area_key
-            # TODO Teun: remove all computed stuff, because annotators will handle this
-        else:
-            # No segmentation - handle position_key safely
-            if isinstance(self.tracks.features.position_key, list):
-                # Multi-axis position keys - check if any are missing
-                missing_keys = [
-                    k for k in self.tracks.features.position_key if k not in attrs
-                ]
-                if missing_keys:
-                    raise ValueError(
-                        f"Must provide positions {missing_keys} or segmentation"
-                    )
-                # All position components provided, combine them
-                final_pos = np.stack(
-                    [attrs[key] for key in self.tracks.features.position_key], axis=0
-                )
-            else:
-                # Single position key
-                if (
-                    self.tracks.features.position_key is None
-                    or self.tracks.features.position_key not in attrs
-                ):
-                    raise ValueError("Must provide positions or segmentation and ids")
-                final_pos = np.array(attrs[self.tracks.features.position_key])
 
         # Position is already set in attrs above
         # Add nodes to td graph
@@ -191,7 +121,8 @@ class AddNode(BasicAction):
             attrs[td.DEFAULT_ATTR_KEYS.SOLUTION] = 1
         for attr in required_attrs:
             if attr not in attrs:
-                attrs[attr] = None
+                # TODO Teun: remove this logic when td has default values (PR)
+                attrs[attr] = self.tracks.features[attr]["default_value"]
 
         node_dict = {
             attr: np.array(values) if attr == "pos" else values
