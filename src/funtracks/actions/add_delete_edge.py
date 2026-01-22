@@ -64,7 +64,7 @@ class AddEdge(BasicAction):
         required_attrs = self.tracks.graph.edge_attr_keys()
         for attr in required_attrs:
             if attr not in attrs:
-                attrs[attr] = None
+                attrs[attr] = self.tracks.features[attr]["default_value"]
 
         # Create edge attributes for this specific edge
         self.tracks.graph.add_edge(
