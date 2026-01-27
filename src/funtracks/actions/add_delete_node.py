@@ -126,9 +126,6 @@ class AddNode(BasicAction):
 
         self.tracks.graph.add_node(attrs=attrs, index=self.node, validate_keys=True)
 
-        if self.pixels is not None:
-            self.tracks.set_pixels(self.pixels, self.node)
-
         # Always notify annotators - they will check their own preconditions
         self.tracks.notify_annotators(self)
 

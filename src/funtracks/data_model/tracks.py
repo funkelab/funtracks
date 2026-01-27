@@ -505,7 +505,6 @@ class Tracks:
                 attrs={
                     td.DEFAULT_ATTR_KEYS.MASK: [mask_subtracted],
                     td.DEFAULT_ATTR_KEYS.BBOX: [mask_subtracted.bbox],
-                    # "area": [area_subtracted],
                 },
                 node_ids=[node_id],
             )
