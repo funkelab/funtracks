@@ -108,7 +108,7 @@ unfixable = [
 [tool.mypy]
 ignore_missing_imports = true
 python_version = "3.10"
-exclude = ["tests/candidate_graph/conftest.py"]
+explicit_package_bases = true
 
 [tool.coverage.report]
 exclude_also = [
