@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://funkelab.github.io/funtracks/main/reference/funtracks/user_actions/user_delete_edge/">
+        <link rel="canonical" href="https://funkelab.github.io/funtracks/main/reference/funtracks/candidate_graph/utils/">
       
       
-        <link rel="prev" href="../user_add_node/">
+        <link rel="prev" href="../iou/">
       
       
-        <link rel="next" href="../user_delete_node/">
+        <link rel="next" href="../../data_model/">
       
       
         
@@ -25,7 +25,7 @@
     
     
       
-        <title>user_delete_edge - funtracks</title>
+        <title>utils - funtracks</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#funtracks.user_actions.user_delete_edge" class="md-skip">
+        <a href="#funtracks.candidate_graph.utils" class="md-skip">
           Skip to content
         </a>
       
@@ -117,7 +117,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              user_delete_edge
+              utils
             
           </span>
         </div>
@@ -765,6 +765,8 @@
                 
   
   
+    
+  
   
   
     
@@ -784,15 +786,15 @@
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1_4" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1_4" checked>
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../../candidate_graph/" class="md-nav__link ">
+            <a href="../" class="md-nav__link ">
               
   
   
@@ -816,7 +818,7 @@
             
           </div>
         
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_1_4_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_1_4_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3_1_4">
             <span class="md-nav__icon md-icon"></span>
             
@@ -836,7 +838,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../candidate_graph/compute_graph/" class="md-nav__link">
+      <a href="../compute_graph/" class="md-nav__link">
         
   
   
@@ -864,7 +866,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../candidate_graph/iou/" class="md-nav__link">
+      <a href="../iou/" class="md-nav__link">
         
   
   
@@ -889,10 +891,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../candidate_graph/utils/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>utils
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -908,6 +937,70 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#funtracks.candidate_graph.utils.add_cand_edges" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;add_cand_edges
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#funtracks.candidate_graph.utils.create_kdtree" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;create_kdtree
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#funtracks.candidate_graph.utils.nodes_from_points_list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;nodes_from_points_list
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#funtracks.candidate_graph.utils.nodes_from_segmentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;nodes_from_segmentation
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1421,8 +1514,6 @@
                 
   
   
-    
-  
   
   
     
@@ -1446,15 +1537,15 @@
     
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1_9" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1_9" >
         
           
           <div class="md-nav__link md-nav__container">
-            <a href="../" class="md-nav__link ">
+            <a href="../../user_actions/" class="md-nav__link ">
               
   
   
@@ -1478,7 +1569,7 @@
             
           </div>
         
-        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_1_9_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_1_9_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3_1_9">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1498,7 +1589,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../user_add_edge/" class="md-nav__link">
+      <a href="../../user_actions/user_add_edge/" class="md-nav__link">
         
   
   
@@ -1526,7 +1617,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../user_add_node/" class="md-nav__link">
+      <a href="../../user_actions/user_add_node/" class="md-nav__link">
         
   
   
@@ -1551,19 +1642,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../user_actions/user_delete_edge/" class="md-nav__link">
         
   
   
@@ -1579,7 +1661,6 @@
   
 
       </a>
-      
     </li>
   
 
@@ -1592,7 +1673,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../user_delete_node/" class="md-nav__link">
+      <a href="../../user_actions/user_delete_node/" class="md-nav__link">
         
   
   
@@ -1620,7 +1701,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../user_update_segmentation/" class="md-nav__link">
+      <a href="../../user_actions/user_update_segmentation/" class="md-nav__link">
         
   
   
@@ -1712,6 +1793,58 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#funtracks.candidate_graph.utils.add_cand_edges" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;add_cand_edges
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#funtracks.candidate_graph.utils.create_kdtree" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;create_kdtree
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#funtracks.candidate_graph.utils.nodes_from_points_list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;nodes_from_points_list
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#funtracks.candidate_graph.utils.nodes_from_segmentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;nodes_from_segmentation
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -1731,8 +1864,8 @@
 
 
 
-<h1 id="funtracks.user_actions.user_delete_edge" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-module"></code>            <span class="doc doc-object-name doc-module-name">funtracks.user_actions.user_delete_edge</span>
+<h1 id="funtracks.candidate_graph.utils" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-module"></code>            <span class="doc doc-object-name doc-module-name">funtracks.candidate_graph.utils</span>
 
 
 </h1>
@@ -1758,6 +1891,399 @@
 
 
 
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="funtracks.candidate_graph.utils.add_cand_edges" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">add_cand_edges</span>
+
+
+</h2>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">add_cand_edges</span><span class="p">(</span>
+    <span class="n">cand_graph</span><span class="p">:</span> <span class="n">DiGraph</span><span class="p">,</span>
+    <span class="n">max_edge_distance</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">node_frame_dict</span><span class="p">:</span> <span class="kc">None</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Add candidate edges to a candidate graph by connecting all nodes in adjacent
+frames that are closer than max_edge_distance. Also adds attributes to the edges.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>cand_graph</code>
+            </td>
+            <td>
+                  <code><span title="networkx.DiGraph">DiGraph</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Candidate graph with only nodes populated. Will
+be modified in-place to add edges.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>max_edge_distance</code>
+            </td>
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Maximum distance that objects can travel between
+frames. All nodes within this distance in adjacent frames will by connected
+with a candidate edge.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>node_frame_dict</code>
+            </td>
+            <td>
+                  <code><span title="dict">dict</span>[<span title="int">int</span>, <span title="list">list</span>[<span title="typing.Any">Any</span>]] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A mapping from frames
+to node ids. If not provided, it will be computed from cand_graph. Defaults
+to None.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="funtracks.candidate_graph.utils.create_kdtree" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">create_kdtree</span>
+
+
+</h2>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">create_kdtree</span><span class="p">(</span>
+    <span class="n">cand_graph</span><span class="p">:</span> <span class="n">DiGraph</span><span class="p">,</span> <span class="n">node_ids</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">KDTree</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Create a kdtree with the given nodes from the candidate graph.
+Will fail if provided node ids are not in the candidate graph.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>cand_graph</code>
+            </td>
+            <td>
+                  <code><span title="networkx.DiGraph">DiGraph</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A candidate graph</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>node_ids</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Iterable">Iterable</span>[<span title="typing.Any">Any</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The nodes within the candidate graph to
+include in the KDTree. Useful for limiting to one time frame.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+<th>Name</th>          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+<td><code>KDTree</code></td>            <td>
+                  <code><span title="scipy.spatial.KDTree">KDTree</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A KDTree containing the positions of the given nodes.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="funtracks.candidate_graph.utils.nodes_from_points_list" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">nodes_from_points_list</span>
+
+
+</h2>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">nodes_from_points_list</span><span class="p">(</span>
+    <span class="n">points_list</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span> <span class="n">scale</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]]]</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Extract candidate nodes from a list of points. Uses the index of the
+point in the list as its unique id.
+Returns a networkx graph with only nodes, and also a dictionary from frames to
+node_ids for efficient edge adding.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>points_list</code>
+            </td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>An NxD numpy array with N points and D
+(3 or 4) dimensions. Dimensions should be in order (t, [z], y, x).</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>scale</code>
+            </td>
+            <td>
+                  <code><span title="list">list</span>[<span title="float">float</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Amount to scale the points in each
+dimension (including time). Only needed if the provided points are in
+"voxel" coordinates instead of world coordinates. Defaults to None, which
+implies the data is isotropic.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="tuple">tuple</span>[<span title="networkx.DiGraph">DiGraph</span>, <span title="dict">dict</span>[<span title="int">int</span>, <span title="list">list</span>[<span title="typing.Any">Any</span>]]]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>tuple[nx.DiGraph, dict[int, list[Any]]]: A candidate graph with only nodes,
+and a mapping from time frames to node ids.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="funtracks.candidate_graph.utils.nodes_from_segmentation" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">nodes_from_segmentation</span>
+
+
+</h2>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">nodes_from_segmentation</span><span class="p">(</span>
+    <span class="n">segmentation</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span> <span class="n">scale</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]]]</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Extract candidate nodes from a segmentation. Returns a networkx graph
+with only nodes, and also a dictionary from frames to node_ids for
+efficient edge adding.</p>
+<p>Each node will have the following attributes (named as in NodeAttrs):
+    - time
+    - position
+    - segmentation id
+    - area</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>segmentation</code>
+            </td>
+            <td>
+                  <code><span title="numpy.ndarray">ndarray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A numpy array with integer labels and dimensions
+(t, [z], y, x). Labels must be unique across time, and the label
+will be used as the node id. If the labels are not unique, preprocess
+with funtracks.utils.ensure_ensure_unique_labels before calling this function.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>scale</code>
+            </td>
+            <td>
+                  <code><span title="list">list</span>[<span title="float">float</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The scale of the segmentation data in all
+dimensions (including time, which should have a dummy 1 value).
+Will be used to rescale the point locations and attribute computations.
+Defaults to None, which implies the data is isotropic.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="tuple">tuple</span>[<span title="networkx.DiGraph">DiGraph</span>, <span title="dict">dict</span>[<span title="int">int</span>, <span title="list">list</span>[<span title="typing.Any">Any</span>]]]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>tuple[nx.DiGraph, dict[int, list[Any]]]: A candidate graph with only nodes,
+and a mapping from time frames to node ids.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
 
 
 

@@ -49,6 +49,22 @@
          <lastmod>2026-01-27</lastmod>
     </url>
     <url>
+         <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/candidate_graph/</loc>
+         <lastmod>2026-01-27</lastmod>
+    </url>
+    <url>
+         <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/candidate_graph/compute_graph/</loc>
+         <lastmod>2026-01-27</lastmod>
+    </url>
+    <url>
+         <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/candidate_graph/iou/</loc>
+         <lastmod>2026-01-27</lastmod>
+    </url>
+    <url>
+         <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/candidate_graph/utils/</loc>
+         <lastmod>2026-01-27</lastmod>
+    </url>
+    <url>
          <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/data_model/</loc>
          <lastmod>2026-01-27</lastmod>
     </url>
