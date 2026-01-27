@@ -1,4 +1,5 @@
 import numpy as np
+import polars as pl
 import pytest
 import zarr
 
@@ -39,7 +40,7 @@ def test_export_to_geff(
         pos_keys = ["y", "x"] if ndim == 3 else ["z", "y", "x"]
         # Split the composite position attribute into separate attributes
         for key in pos_keys:
-            graph.add_node_attr_key(key, default_value=0.0)
+            graph.add_node_attr_key(key, default_value=0.0, dtype=pl.Float64)
         for node in graph.node_ids():
             pos = graph[node]["pos"]
             for i, key in enumerate(pos_keys):

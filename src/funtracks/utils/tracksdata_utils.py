@@ -13,6 +13,61 @@ from skimage import measure
 from tracksdata.nodes._mask import Mask
 
 
+def to_polars_dtype(dtype_or_value: str | Any) -> pl.DataType:
+    """Convert a type string or value to polars dtype.
+
+    Args:
+        dtype_or_value: Either a type string ("int", "float", "str", "bool")
+                       or a value whose type should be inferred
+
+    Returns:
+        Corresponding polars dtype
+
+    Raises:
+        ValueError: If the type is not supported
+
+    Examples:
+        >>> to_polars_dtype("int")
+        Int64
+        >>> to_polars_dtype(5)
+        Int64
+        >>> to_polars_dtype(np.int64(5))
+        Int64
+        >>> to_polars_dtype("")  # String value
+        String
+    """
+    # Check if it's a known type string first
+    type_string_mapping = {
+        "str": pl.String,
+        "int": pl.Int64,
+        "float": pl.Float64,
+        "bool": pl.Boolean,
+        "datetime": pl.Datetime,
+        "date": pl.Date,
+    }
+
+    if dtype_or_value in type_string_mapping:
+        return type_string_mapping[dtype_or_value]
+
+    # If it's a string but not a type name, try as polars type name (backward compat)
+    if isinstance(dtype_or_value, str):
+        try:
+            return getattr(pl, dtype_or_value)
+        except AttributeError:
+            # It's a string value, not a type name - return String dtype
+            return pl.String
+
+    # Otherwise, infer from the value's type
+    if isinstance(dtype_or_value, (bool, np.bool_)):
+        return pl.Boolean
+    elif isinstance(dtype_or_value, (int, np.integer)):
+        return pl.Int64
+    elif isinstance(dtype_or_value, (float, np.floating)):
+        return pl.Float64
+    else:
+        raise ValueError(f"Unsupported type: {type(dtype_or_value)}")
+
+
 def create_empty_graphview_graph(
     node_attributes: list[str] | None = None,
     edge_attributes: list[str] | None = None,
@@ -20,6 +75,7 @@ def create_empty_graphview_graph(
     edge_default_values: list[Any] | None = None,
     database: str | None = None,
     position_attrs: list[str] | None = None,
+    ndim: int = 3,
 ) -> td.graph.GraphView:
     """
     Create an empty tracksdata GraphView with standard node and edge attributes.
@@ -41,6 +97,9 @@ def create_empty_graphview_graph(
     position_attrs : list[str] | None
         List of position attribute names, e.g. ['pos'] or ['x', 'y', 'z'].
         Defaults to ['pos'] if None.
+    ndim : int
+        Number of dimensions including time, so 2D+T dataset has ndim = 3.
+        Defaults to 3 (2D+time).
 
     Returns
     -------
@@ -82,35 +141,48 @@ def create_empty_graphview_graph(
         attr in (node_attributes or []) for attr in position_attrs
     ):
         if "pos" in position_attrs:
-            graph_sql.add_node_attr_key("pos", default_value=None)
+            graph_sql.add_node_attr_key("pos", pl.Array(pl.Float64, ndim - 1))
         else:
             if "x" in position_attrs:
-                graph_sql.add_node_attr_key("x", default_value=0.0)
+                graph_sql.add_node_attr_key("x", default_value=0.0, dtype=pl.Float64)
             if "y" in position_attrs:
-                graph_sql.add_node_attr_key("y", default_value=0.0)
+                graph_sql.add_node_attr_key("y", default_value=0.0, dtype=pl.Float64)
             if "z" in position_attrs:
-                graph_sql.add_node_attr_key("z", default_value=0.0)
-
+                graph_sql.add_node_attr_key("z", default_value=0.0, dtype=pl.Float64)
     if "mask" in (node_attributes or []):
-        graph_sql.add_node_attr_key("mask", default_value=None)
+        graph_sql.add_node_attr_key("mask", pl.Object)
     if "bbox" in (node_attributes or []):
-        graph_sql.add_node_attr_key("bbox", default_value=None)
+        graph_sql.add_node_attr_key("bbox", pl.Array(pl.Int64, 2 * (ndim - 1)))
+    if "track_id" in (node_attributes or []):
+        graph_sql.add_node_attr_key("track_id", default_value=-1, dtype=pl.Int64)
 
     for attr in node_attributes or []:
         if attr not in graph_sql.node_attr_keys():
+            default_value = node_default_values[(node_attributes or []).index(attr)]
             graph_sql.add_node_attr_key(
                 attr,
-                default_value=node_default_values[(node_attributes or []).index(attr)],
+                default_value=default_value
+                if not isinstance(default_value, np.ndarray)
+                else None,
+                dtype=to_polars_dtype(default_value)
+                if not isinstance(default_value, np.ndarray)
+                else pl.Array(pl.Float64, len(default_value)),  # type: ignore
             )
 
     for attr in edge_attributes or []:
         if attr not in graph_sql.edge_attr_keys():
+            default_value = edge_default_values[(edge_attributes or []).index(attr)]
             graph_sql.add_edge_attr_key(
                 attr,
-                default_value=edge_default_values[(edge_attributes or []).index(attr)],
+                default_value=default_value,
+                dtype=to_polars_dtype(default_value),
             )
-    graph_sql.add_node_attr_key(td.DEFAULT_ATTR_KEYS.SOLUTION, default_value=1)
-    graph_sql.add_edge_attr_key(td.DEFAULT_ATTR_KEYS.SOLUTION, default_value=1)
+    graph_sql.add_node_attr_key(
+        td.DEFAULT_ATTR_KEYS.SOLUTION, default_value=1, dtype=pl.Int64
+    )
+    graph_sql.add_edge_attr_key(
+        td.DEFAULT_ATTR_KEYS.SOLUTION, default_value=1, dtype=pl.Int64
+    )
 
     graph_td_sub = graph_sql.filter(
         td.NodeAttr(td.DEFAULT_ATTR_KEYS.SOLUTION) == 1,
@@ -146,6 +218,7 @@ def assert_node_attrs_equal_with_masks(
         node_attrs2.drop("mask"),
         check_column_order=check_column_order,
         check_row_order=check_row_order,
+        check_dtypes=False,
     )
     # Check masks separately
     for node in node_attrs1["node_id"]:
@@ -402,8 +475,8 @@ def add_masks_and_bboxes_to_graph(
     list_of_masks = segmentation_to_masks(segmentation)
 
     # Add 'mask' and 'bbox' attributes to graph nodes
-    graph.add_node_attr_key("mask", default_value=None)
-    graph.add_node_attr_key("bbox", default_value=None)
+    graph.add_node_attr_key("mask", pl.Object)
+    graph.add_node_attr_key("bbox", pl.Array(pl.Int64, 2 * (segmentation.ndim - 1)))
 
     for label, _, mask in list_of_masks:
         if graph.has_node(label):
@@ -449,14 +522,20 @@ def td_relabel_nodes(graph, mapping: dict[int, int]) -> td.graph.SQLGraph:
     }
     new_graph = td.graph.SQLGraph(**kwargs)
 
-    # Copy attribute key registrations with defaults
-    node_defaults = get_node_attr_defaults(graph)
-    for key, default_val in node_defaults.items():
-        new_graph.add_node_attr_key(key, default_value=default_val)
+    # Copy attribute key registrations with defaults and dtypes
+    node_schemas = graph._node_attr_schemas()
+    for key, schema in node_schemas.items():
+        if key not in ["node_id", "t"]:  # Skip system columns
+            new_graph.add_node_attr_key(
+                key, default_value=schema.default_value, dtype=schema.dtype
+            )
 
-    edge_defaults = get_edge_attr_defaults(graph)
-    for key, default_val in edge_defaults.items():
-        new_graph.add_edge_attr_key(key, default_value=default_val)
+    edge_schemas = graph._edge_attr_schemas()
+    for key, schema in edge_schemas.items():
+        if key not in ["edge_id", "source_id", "target_id"]:  # Skip system columns
+            new_graph.add_edge_attr_key(
+                key, default_value=schema.default_value, dtype=schema.dtype
+            )
 
     # Get all data
     old_nodes = old_graph.node_attrs()
@@ -562,37 +641,78 @@ def convert_graph_nx_to_td(graph_nx: nx.DiGraph) -> td.graph.GraphView:
     # Add node attribute keys to tracksdata graph
     for attr, value in all_nodes[0][1].items():
         if attr not in graph_td.node_attr_keys():
-            default_value = None if isinstance(value, list) else 0.0
-            graph_td.add_node_attr_key(attr, default_value=default_value)
+            default_value: Any  # mypy necessities
+            dtype: pl.DataType
+            if isinstance(value, list):
+                # Array type - always use Float64 for numeric arrays from NetworkX
+                # since NetworkX doesn't enforce type consistency across nodes
+                default_value = None
+                dtype = pl.Array(pl.Float64, len(value))
+            else:
+                # Scalar type - always use Float64 for numeric types from NetworkX
+                # since NetworkX doesn't enforce type consistency across nodes
+                if isinstance(value, (int, float, np.integer, np.floating)):
+                    default_value = 0.0
+                    dtype = pl.Float64
+                else:
+                    default_value = ""
+                    dtype = pl.String
+            graph_td.add_node_attr_key(attr, default_value=default_value, dtype=dtype)
         else:
             if attr != "t":
                 raise Warning(
                     f"Node attribute '{attr}' already exists in "
                     f"tracksdata graph. Skipping addition."
                 )
-    graph_td.add_node_attr_key(td.DEFAULT_ATTR_KEYS.SOLUTION, default_value=1)
+    graph_td.add_node_attr_key(
+        td.DEFAULT_ATTR_KEYS.SOLUTION, default_value=1, dtype=pl.Int64
+    )
 
     # Add edge attribute keys to tracksdata graph
     for attr, value in all_edges[0][2].items():
         if attr not in graph_td.edge_attr_keys():
-            default_value = None if isinstance(value, list) else 0.0
-            graph_td.add_edge_attr_key(attr, default_value=default_value)
+            if isinstance(value, list):
+                # Array type - always use Float64 for numeric arrays from NetworkX
+                default_value = None
+                dtype = pl.Array(pl.Float64, len(value))
+            else:
+                # Scalar type - always use Float64 for numeric types from NetworkX
+                if isinstance(value, (int, float, np.integer, np.floating)):
+                    default_value = 0.0
+                    dtype = pl.Float64
+                else:
+                    default_value = ""
+                    dtype = pl.String
+            graph_td.add_edge_attr_key(attr, default_value=default_value, dtype=dtype)
         else:
             raise Warning(
                 f"Edge attribute '{attr}' already exists in tracksdata graph. "
                 f"Skipping addition."
             )
-    graph_td.add_edge_attr_key(td.DEFAULT_ATTR_KEYS.SOLUTION, default_value=1)
+    graph_td.add_edge_attr_key(
+        td.DEFAULT_ATTR_KEYS.SOLUTION, default_value=1, dtype=pl.Int64
+    )
 
     # Add node attributes
     for node_id, attrs in all_nodes:
-        attrs[td.DEFAULT_ATTR_KEYS.SOLUTION] = 1
-        graph_td.add_node(attrs, index=node_id)
+        attrs_copy = dict(attrs)
+        # Convert lists to numpy arrays to work around tracksdata SQLGraph bug
+        # where Python lists with floats get truncated
+        for key, value in attrs_copy.items():
+            if isinstance(value, list):
+                attrs_copy[key] = np.array(value, dtype=np.float64)
+        attrs_copy[td.DEFAULT_ATTR_KEYS.SOLUTION] = 1
+        graph_td.add_node(attrs_copy, index=node_id)
 
     # Add edges
     for source_id, target_id, attrs in all_edges:
-        attrs[td.DEFAULT_ATTR_KEYS.SOLUTION] = 1
-        graph_td.add_edge(source_id, target_id, attrs)
+        attrs_copy = dict(attrs)
+        # Convert lists to numpy arrays to work around tracksdata SQLGraph bug
+        for key, value in attrs_copy.items():
+            if isinstance(value, list):
+                attrs_copy[key] = np.array(value, dtype=np.float64)
+        attrs_copy[td.DEFAULT_ATTR_KEYS.SOLUTION] = 1
+        graph_td.add_edge(source_id, target_id, attrs_copy)
 
     # Create subgraph (GraphView) with only solution nodes and edges
     graph_td_sub = graph_td.filter(

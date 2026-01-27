@@ -1,4 +1,5 @@
 import numpy as np
+import polars as pl
 import pytest
 import tracksdata as td
 
@@ -65,9 +66,9 @@ def test_create_tracks(graph_3d_with_segmentation: td.graph.GraphView):
 
     # test multiple position attrs
     pos_attr = ("z", "y", "x")
-    graph_3d_with_segmentation.add_node_attr_key(key="z", default_value=0)
-    graph_3d_with_segmentation.add_node_attr_key(key="y", default_value=0)
-    graph_3d_with_segmentation.add_node_attr_key(key="x", default_value=0)
+    graph_3d_with_segmentation.add_node_attr_key("z", default_value=0.0, dtype=pl.Float64)
+    graph_3d_with_segmentation.add_node_attr_key("y", default_value=0.0, dtype=pl.Float64)
+    graph_3d_with_segmentation.add_node_attr_key("x", default_value=0.0, dtype=pl.Float64)
     for node in graph_3d_with_segmentation.node_ids():
         pos = graph_3d_with_segmentation[node]["pos"]
         z, y, x = pos
@@ -221,7 +222,7 @@ def test_set_pixels_no_segmentation(graph_2d_with_track_id):
 
 def test_compute_ndim_errors():
     g = create_empty_graphview_graph()
-    g.add_node_attr_key("pos", default_value=None)
+    g.add_node_attr_key("pos", default_value=[0, 0], dtype=pl.List(pl.Int64))
     g.add_node(index=1, attrs={"t": 0, "pos": [0, 0, 0], "solution": True})
 
     with pytest.raises(

@@ -8,6 +8,7 @@ from typing import (
 
 import geff_spec
 import numpy as np
+import polars as pl
 import tracksdata as td
 from geff_spec import GeffMetadata
 
@@ -176,8 +177,8 @@ def split_position_attr(tracks: Tracks) -> tuple[td.graph.GraphView, list[str] |
         new_graph = new_graph.filter().subgraph()
 
         # Register new attribute keys
-        new_graph.add_node_attr_key("x", default_value=0.0)
-        new_graph.add_node_attr_key("y", default_value=0.0)
+        new_graph.add_node_attr_key("x", default_value=0.0, dtype=pl.Float64)
+        new_graph.add_node_attr_key("y", default_value=0.0, dtype=pl.Float64)
 
         # Get all position values at once
         pos_values = new_graph.node_attrs()["pos"].to_numpy()
@@ -191,7 +192,7 @@ def split_position_attr(tracks: Tracks) -> tuple[td.graph.GraphView, list[str] |
             )
         elif ndim == 3:
             new_keys = ["z", "y", "x"]
-            new_graph.add_node_attr_key("z", default_value=0.0)
+            new_graph.add_node_attr_key("z", default_value=0.0, dtype=pl.Float64)
             new_graph.update_node_attrs(
                 attrs={
                     "x": pos_values[:, 2],

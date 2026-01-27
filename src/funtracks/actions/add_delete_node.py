@@ -124,12 +124,7 @@ class AddNode(BasicAction):
                 # TODO Teun: remove this logic when td has default values (PR)
                 attrs[attr] = self.tracks.features[attr]["default_value"]
 
-        node_dict = {
-            attr: np.array(values) if attr == "pos" else values
-            for attr, values in attrs.items()
-        }
-
-        self.tracks.graph.add_node(attrs=node_dict, index=self.node)
+        self.tracks.graph.add_node(attrs=attrs, index=self.node, validate_keys=True)
 
         if self.pixels is not None:
             self.tracks.set_pixels(self.pixels, self.node)

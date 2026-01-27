@@ -2,6 +2,7 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 import numpy as np
+import polars as pl
 import pytest
 import tracksdata as td
 from skimage.draw import disk
@@ -175,6 +176,7 @@ def _make_graph(
         edge_attributes=edge_attributes,
         database=database,
         position_attrs=["pos"] if with_pos else None,
+        ndim=ndim,
     )
 
     # Base node data (always has time)
@@ -447,10 +449,11 @@ def graph_2d_list(tmp_path) -> td.graph.GraphView:
             "track_id": 2,
         },
     ]
-    graph.add_node_attr_key("y", default_value=0)
-    graph.add_node_attr_key("x", default_value=0)
-    graph.add_node_attr_key("area", default_value=0)
-    graph.add_node_attr_key("track_id", default_value=0)
+    graph.add_node_attr_key("y", default_value=0.0, dtype=pl.Float64)
+    graph.add_node_attr_key("x", default_value=0.0, dtype=pl.Float64)
+    graph.add_node_attr_key("area", default_value=0.0, dtype=pl.Float64)
+    graph.add_node_attr_key("track_id", default_value=0.0, dtype=pl.Float64)
+
     graph.bulk_add_nodes(nodes=nodes, indices=[1, 2])
     return graph
 

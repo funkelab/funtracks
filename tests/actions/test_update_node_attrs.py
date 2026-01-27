@@ -25,7 +25,7 @@ def test_update_node_attrs(get_tracks, ndim):
     assert tracks.get_node_attr(node, "score") == 1.0
 
     inverse = action.inverse()
-    assert tracks.get_node_attr(node, "score") is None
+    assert tracks.get_node_attr(node, "score") == -1.0
 
     inverse.inverse()
     assert tracks.get_node_attr(node, "score") == 1.0

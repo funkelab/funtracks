@@ -1,4 +1,6 @@
+import numpy as np
 import pytest
+from tracksdata.utils._dtypes import infer_default_value_from_dtype
 
 from funtracks.actions import UpdateNodeSeg, UpdateTrackID
 from funtracks.annotators import RegionpropsAnnotator
@@ -80,8 +82,16 @@ class TestRegionpropsAnnotator:
         ):
             UpdateNodeSeg(tracks, node_id, pixels, added=False)
 
+        # all regionprops features should be the defaults, because seg doesn't exist
         for key in rp_ann.features:
-            assert tracks.graph[node_id][key] is None
+            actual = tracks.graph[node_id][key]
+            expected = infer_default_value_from_dtype(
+                tracks.graph._node_attr_schemas()[key].dtype
+            )
+            # Convert to numpy arrays for comparison (handles both scalar and array types)
+            actual_np = np.asarray(actual)
+            expected_np = np.asarray(expected)
+            assert np.array_equal(actual_np, expected_np)
 
     def test_add_remove_feature(self, get_graph, ndim):
         graph = get_graph(ndim, with_features="segmentation")

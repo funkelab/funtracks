@@ -94,11 +94,13 @@ class SolutionTracks(Tracks):
         # Check if all nodes have track_id before trusting existing track IDs
         if (
             tracks.features.tracklet_key is not None
-            and tracks.graph.node_attrs(attr_keys=tracks.features.tracklet_key)[
-                tracks.features.tracklet_key
-            ]
-            .is_null()
-            .any()
+            and (
+                tracks.graph.node_attrs(attr_keys=tracks.features.tracklet_key)[
+                    tracks.features.tracklet_key
+                ]
+                == -1
+            ).any()
+            # Attributes are no longer None, so 0 now means non-computed
         ):
             force_recompute = True
 

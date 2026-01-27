@@ -19,6 +19,7 @@ from funtracks.features import Feature, FeatureDict, Position, Time
 from funtracks.utils.tracksdata_utils import (
     pixels_to_td_mask,
     td_get_single_attr_from_edge,
+    to_polars_dtype,
 )
 
 if TYPE_CHECKING:
@@ -739,9 +740,17 @@ class Tracks:
 
         # Perform custom graph operations when a feature is added
         if feature["feature_type"] == "node" and key not in self.graph.node_attr_keys():
-            self.graph.add_node_attr_key(key, default_value=feature["default_value"])
+            self.graph.add_node_attr_key(
+                key,
+                default_value=feature["default_value"],
+                dtype=to_polars_dtype(feature["value_type"]),
+            )
         elif feature["feature_type"] == "edge" and key not in self.graph.edge_attr_keys():
-            self.graph.add_edge_attr_key(key, default_value=feature["default_value"])
+            self.graph.add_edge_attr_key(
+                key,
+                default_value=feature["default_value"],
+                dtype=to_polars_dtype(feature["value_type"]),
+            )
 
     def delete_feature(self, key: str) -> None:
         """Delete a feature from the features dictionary and perform graph operations.

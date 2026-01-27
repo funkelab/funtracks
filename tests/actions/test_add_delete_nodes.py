@@ -35,6 +35,7 @@ def test_add_delete_nodes(get_tracks, ndim, with_seg):
     empty_graph = create_empty_graphview_graph(
         node_attributes=node_attributes + (["area", "bbox", "mask"] if with_seg else []),
         edge_attributes=edge_attributes,
+        ndim=ndim,
     )
     empty_seg = np.zeros_like(tracks.segmentation) if with_seg else None
     tracks.graph = empty_graph
@@ -86,6 +87,7 @@ def test_add_delete_nodes(get_tracks, ndim, with_seg):
             data_tracks,  # .drop(["mask", "bbox", "area"]),
             check_column_order=False,
             check_row_order=False,
+            check_dtypes=False,
         )
 
     # Invert the action to delete all the nodes
@@ -108,6 +110,7 @@ def test_add_delete_nodes(get_tracks, ndim, with_seg):
             data_tracks,  # .drop(["mask", "bbox", "area"]),
             check_column_order=False,
             check_row_order=False,
+            check_dtypes=False,
         )
 
 

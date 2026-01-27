@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 import tracksdata as td
@@ -404,18 +404,31 @@ class TracksBuilder(ABC):
 
         if node_name_map is not None:
             node_attributes = list(self.in_memory_geff["node_props"].keys())
-            node_default_values = [
-                0.0
-                if key in node_name_map and isinstance(node_name_map[key], str)
-                else None
+            node_first_values = [
+                self.in_memory_geff["node_props"][key]["values"][0]
                 for key in node_attributes
             ]
+
+            node_default_dtypes = [type(value) for value in node_first_values]
+            node_default_values = []
+            for i, dtype in enumerate(node_default_dtypes):
+                default_value: Any
+                if issubclass(dtype, np.integer):
+                    default_value = -1
+                elif issubclass(dtype, np.floating):
+                    default_value = 0.0
+                elif issubclass(dtype, np.str_):
+                    default_value = ""
+                elif issubclass(dtype, np.ndarray):
+                    default_value = np.array([0.0 for _ in node_first_values[i]])
+                else:
+                    default_value = 0
+                node_default_values.append(default_value)
+
         graph = create_empty_graphview_graph(
             node_attributes=list(self.in_memory_geff["node_props"].keys()),
             edge_attributes=list(self.in_memory_geff["edge_props"].keys()),
-            node_default_values=node_default_values
-            if node_name_map is not None
-            else None,
+            node_default_values=node_default_values,
             database=":memory:",
         )
 
