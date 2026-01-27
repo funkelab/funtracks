@@ -107,6 +107,9 @@ def _make_graph(
     # Track IDs
     track_ids = {1: 1, 2: 2, 3: 3, 4: 3, 5: 3, 6: 5}
 
+    # Lineage IDs
+    lineage_ids = {1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 2}
+
     # Build nodes with requested features
     nodes = []
     for node_id, attrs in base_nodes:
@@ -115,6 +118,7 @@ def _make_graph(
             node_attrs["pos"] = positions[node_id]
         if with_track_id:
             node_attrs["track_id"] = track_ids[node_id]
+            node_attrs["lineage_id"] = lineage_ids[node_id]
         if with_area:
             node_attrs["area"] = areas[node_id]
         nodes.append((node_id, node_attrs))
@@ -196,7 +200,15 @@ def get_tracks(get_graph, get_segmentation) -> Callable[..., "Tracks | SolutionT
         exist in the test graph fixtures.
     """
     from funtracks.data_model import SolutionTracks, Tracks
-    from funtracks.features import Area, FeatureDict, IoU, Position, Time, TrackletID
+    from funtracks.features import (
+        Area,
+        FeatureDict,
+        IoU,
+        LineageID,
+        Position,
+        Time,
+        TrackletID,
+    )
 
     def _make_tracks(
         ndim: int,
@@ -232,9 +244,11 @@ def get_tracks(get_graph, get_segmentation) -> Callable[..., "Tracks | SolutionT
             features_dict["area"] = Area(ndim=ndim)
             features_dict["iou"] = IoU()
             features_dict["track_id"] = TrackletID()
+            features_dict["lineage_id"] = LineageID()
         elif is_solution:
             # SolutionTracks without seg: has track_id but not area/iou
             features_dict["track_id"] = TrackletID()
+            features_dict["lineage_id"] = LineageID()
 
         feature_dict = FeatureDict(
             features=features_dict,
@@ -275,6 +289,7 @@ def graph_2d_list() -> nx.DiGraph:
                 "t": 0,
                 "area": 1245,
                 "track_id": 1,
+                "lineage_id": 1,
             },
         ),
         (
@@ -285,6 +300,7 @@ def graph_2d_list() -> nx.DiGraph:
                 "t": 1,
                 "area": 500,
                 "track_id": 2,
+                "lineage_id": 2,
             },
         ),
     ]
@@ -335,7 +351,8 @@ def get_graph(request) -> Callable[..., nx.DiGraph]:
         with_features: Feature level to include:
             - "clean": time only
             - "position": time + pos
-            - "track_id": time + pos + track_id (for SolutionTracks without seg)
+            - "track_id": time + pos + track_id and lineage_id (for SolutionTracks
+                without seg)
             - "computed": time + pos + track_id + area + iou (full features)
 
     Returns:
