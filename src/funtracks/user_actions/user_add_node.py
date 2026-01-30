@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 
 from funtracks.exceptions import InvalidActionError
+from funtracks.utils.tracksdata_utils import pixels_to_td_mask
 
 from ..actions._base import ActionGroup
 from ..actions.add_delete_edge import AddEdge, DeleteEdge
@@ -126,7 +127,8 @@ class UserAddNode(ActionGroup):
         if pred is not None and succ is not None:
             self.actions.append(DeleteEdge(tracks, (pred, succ)))
         # add predecessor and successor edges
-        self.actions.append(AddNode(tracks, node, attributes, pixels))
+        mask = pixels_to_td_mask(pixels, self.tracks.ndim) if pixels is not None else None
+        self.actions.append(AddNode(tracks, node, attributes, mask))
         if pred is not None:
             self.actions.append(AddEdge(tracks, (pred, node)))
         if succ is not None:

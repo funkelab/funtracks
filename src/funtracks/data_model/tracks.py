@@ -14,6 +14,7 @@ import numpy as np
 import tracksdata as td
 from psygnal import Signal
 from tracksdata.array import GraphArrayView
+from tracksdata.nodes._mask import Mask
 
 from funtracks.features import Feature, FeatureDict, Position, Time
 from funtracks.utils.tracksdata_utils import (
@@ -443,6 +444,22 @@ class Tracks:
             int: The time frame that the node is in
         """
         return int(self.get_times([node])[0])
+
+    def get_mask(self, node: Node) -> Mask | None:
+        """Get the segmentation mask associated with a given node.
+
+        Args:
+            node (Node): The node to get the mask for.
+
+        Returns:
+            Mask | None: The segmentation mask for the node, or None if no
+            segmentation is available.
+        """
+        if self.segmentation is None:
+            return None
+
+        mask = self.graph[node][td.DEFAULT_ATTR_KEYS.MASK]
+        return mask
 
     def get_pixels(self, node: Node) -> tuple[np.ndarray, ...] | None:
         """Get the pixels corresponding to each node in the nodes list.

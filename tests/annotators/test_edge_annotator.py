@@ -3,7 +3,10 @@ import pytest
 from funtracks.actions import UpdateNodeSeg, UpdateTrackID
 from funtracks.annotators import EdgeAnnotator
 from funtracks.data_model import SolutionTracks, Tracks
-from funtracks.utils.tracksdata_utils import td_get_single_attr_from_edge
+from funtracks.utils.tracksdata_utils import (
+    pixels_to_td_mask,
+    td_get_single_attr_from_edge,
+)
 
 track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
 
@@ -65,15 +68,16 @@ class TestEdgeAnnotator:
         expected_iou = pytest.approx(0.0, abs=0.001)
 
         # Use UpdateNodeSeg action to modify segmentation and update edge
-        UpdateNodeSeg(tracks, node_id, pixels_to_remove, added=False)
+        mask_to_remove = pixels_to_td_mask(pixels_to_remove, ndim=ndim)
+        UpdateNodeSeg(tracks, node_id, mask_to_remove, added=False)
         assert tracks.get_edge_attr(edge_id, "iou", required=True) == expected_iou
 
         # segmentation is fully erased and you try to update
         node_id = 1
-        pixels = tracks.get_pixels(node_id)
-        assert pixels is not None
+        mask = tracks.get_mask(node_id)
+        assert mask is not None
         with pytest.warns(match="Cannot find label 1 in frame .*"):
-            UpdateNodeSeg(tracks, node_id, pixels, added=False)
+            UpdateNodeSeg(tracks, node_id, mask, added=False)
 
         assert td_get_single_attr_from_edge(tracks.graph, edge_id, "iou") == 0
 
@@ -110,7 +114,8 @@ class TestEdgeAnnotator:
         # add it back in
         tracks.enable_features([to_remove_key])
         # Use UpdateNodeSeg action to modify segmentation and update edge
-        UpdateNodeSeg(tracks, node_id, pixels_to_remove, added=False)
+        mask_to_remove = pixels_to_td_mask(pixels_to_remove, ndim=ndim)
+        UpdateNodeSeg(tracks, node_id, mask_to_remove, added=False)
         new_iou = pytest.approx(0.0, abs=0.001)
         # the feature is now updated
         assert tracks.get_edge_attr(edge_id, to_remove_key, required=True) == new_iou

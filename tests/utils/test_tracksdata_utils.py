@@ -40,7 +40,9 @@ def test_mask_pixels_roundtrip(mask_func, ndim):
     assert np.all(pixels[0] == time)  # Time should be constant
 
     # Convert pixels back to mask
-    reconstructed_mask, area = pixels_to_td_mask(pixels, ndim=ndim, scale=None)
+    reconstructed_mask, area = pixels_to_td_mask(
+        pixels, ndim=ndim, scale=[1 for _ in range(ndim)], include_area=True
+    )
 
     # Verify the reconstructed mask matches the original
     assert np.array_equal(reconstructed_mask.bbox, original_mask.bbox), (
@@ -69,7 +71,9 @@ def test_mask_pixels_roundtrip_with_scale(ndim):
     pixels = td_mask_to_pixels(mask, time=time, ndim=ndim)
 
     # Convert back with scale
-    reconstructed_mask, scaled_area = pixels_to_td_mask(pixels, ndim=ndim, scale=scale)
+    reconstructed_mask, scaled_area = pixels_to_td_mask(
+        pixels, ndim=ndim, scale=scale, include_area=True
+    )
 
     # Verify mask structure is preserved
     assert np.array_equal(reconstructed_mask.bbox, mask.bbox)

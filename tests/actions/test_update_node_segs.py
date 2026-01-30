@@ -3,9 +3,8 @@ import pytest
 from numpy.testing import assert_array_almost_equal
 from polars.testing import assert_series_equal
 
-from funtracks.actions import (
-    UpdateNodeSeg,
-)
+from funtracks.actions import UpdateNodeSeg
+from funtracks.utils.tracksdata_utils import pixels_to_td_mask
 
 
 @pytest.mark.parametrize("ndim", [3, 4])
@@ -27,7 +26,8 @@ def test_update_node_segs(get_tracks, ndim):
     node = 1
 
     pixels = np.nonzero(original_seg != new_seg)
-    action = UpdateNodeSeg(tracks, node, pixels=pixels, added=True)
+    mask = pixels_to_td_mask(pixels, ndim=ndim)
+    action = UpdateNodeSeg(tracks, node, mask=mask, added=True)
 
     assert set(tracks.graph.node_ids()) == set(reference_graph.node_ids())
     assert tracks.graph[1]["area"] == original_area + 1

@@ -3,40 +3,41 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import tracksdata as td
+from tracksdata.nodes._mask import Mask
 
-from funtracks.utils.tracksdata_utils import pixels_to_td_mask
+from funtracks.utils.tracksdata_utils import td_mask_to_pixels
 
 from ._base import BasicAction
 
 if TYPE_CHECKING:
     from funtracks.data_model import Tracks
-    from funtracks.data_model.tracks import Node, SegMask
+    from funtracks.data_model.tracks import Node
 
 
 class UpdateNodeSeg(BasicAction):
     """Action for updating the segmentation associated with a node.
 
-    New nodes call AddNode with pixels instead of this action.
+    New nodes call AddNode with mask instead of this action.
     """
 
     def __init__(
         self,
         tracks: Tracks,
         node: Node,
-        pixels: SegMask,
+        mask: Mask,
         added: bool = True,
     ):
         """
         Args:
-            tracks (Tracks): The tracks to update the segmenatations for
-            node (Node): The node with updated segmenatation
-            pixels (SegMask): The pixels that were updated for the node
-            added (bool, optional): If the provided pixels were added (True) or deleted
+            tracks (Tracks): The tracks to update the segmentations for
+            node (Node): The node with updated segmentation
+            mask (Mask): The mask that was updated for the node
+            added (bool, optional): If the provided mask were added (True) or deleted
                 (False) from this node. Defaults to True
         """
         super().__init__(tracks)
         self.node = node
-        self.pixels = pixels
+        self.mask = mask
         self.added = added
         self._apply()
 
@@ -45,7 +46,7 @@ class UpdateNodeSeg(BasicAction):
         return UpdateNodeSeg(
             self.tracks,
             self.node,
-            pixels=self.pixels,
+            mask=self.mask,
             added=not self.added,
         )
 
@@ -53,12 +54,10 @@ class UpdateNodeSeg(BasicAction):
         """Set new attributes"""
         value = self.node if self.added else 0
 
-        mask_new, area_new = pixels_to_td_mask(
-            self.pixels, self.tracks.ndim, self.tracks.scale
-        )
+        mask_new = self.mask
 
         if value == 0:
-            # val=0 means deleting the pixels from the mask
+            # val=0 means deleting (part of) the mask
             mask_old = self.tracks.graph[self.node][td.DEFAULT_ATTR_KEYS.MASK]
             mask_subtracted = mask_old.__isub__(mask_new)
             self.tracks.graph.update_node_attrs(
@@ -82,6 +81,9 @@ class UpdateNodeSeg(BasicAction):
             )
 
         # Invalidate cache for affected chunks
-        self.tracks._update_segmentation_cache(self.pixels)
+        pixels = td_mask_to_pixels(
+            mask_new, time=self.tracks.get_time(self.node), ndim=self.tracks.ndim
+        )
+        self.tracks._update_segmentation_cache(pixels)
 
         self.tracks.notify_annotators(self)

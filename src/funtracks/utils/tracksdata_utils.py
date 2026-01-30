@@ -302,7 +302,7 @@ def compute_node_attrs_from_pixels(
     # Convert pixels to masks first
     masks = []
     for pix in pixels:
-        mask, _ = pixels_to_td_mask(pix, ndim, scale)
+        mask = pixels_to_td_mask(pix, ndim)
         masks.append(mask)
 
     # Reuse the from_masks function to compute attributes
@@ -310,8 +310,11 @@ def compute_node_attrs_from_pixels(
 
 
 def pixels_to_td_mask(
-    pix: tuple[np.ndarray, ...], ndim: int, scale: list[float] | None
-) -> tuple[Mask, float]:
+    pix: tuple[np.ndarray, ...],
+    ndim: int,
+    scale: list[float] | None = None,
+    include_area: bool = False,
+) -> Mask | tuple[Mask, float]:
     """
     Convert pixel coordinates to tracksdata mask format.
 
@@ -319,11 +322,16 @@ def pixels_to_td_mask(
         pix: Pixel coordinates for 1 node!
         ndim: Number of dimensions (2D or 3D).
         scale: Scale factors for each dimension, used for area calculation
+        include_area: Whether to compute and return the area.
 
     Returns:
-        Tuple[td.Mask, np.ndarray]: A tuple containing the
-            tracksdata mask and the mask array.
+        Mask | tuple[Mask, float]: A tuple containing the
+            tracksdata mask and the area if include_area is True.
+            Otherwise, just the tracksdata mask.
     """
+
+    if include_area and scale is None:
+        raise ValueError("Scale must be provided when include_area is True.")
 
     spatial_dims = ndim - 1  # Handle both 2D and 3D
 
@@ -345,13 +353,15 @@ def pixels_to_td_mask(
     local_coords = [pix[dim + 1] - bbox[dim] for dim in range(spatial_dims)]
     mask_array = np.zeros(mask_shape, dtype=bool)
     mask_array[tuple(local_coords)] = True
-
-    area = np.sum(mask_array)
-    if scale is not None:
-        area *= np.prod(scale[1:])
-
     mask = Mask(mask_array, bbox=bbox)
-    return mask, area
+
+    if include_area:
+        area = np.sum(mask_array)
+        if scale is not None:
+            area *= np.prod(scale[1:])
+        return mask, area
+    else:
+        return mask
 
 
 def td_mask_to_pixels(mask: Mask, time: int, ndim: int) -> tuple[np.ndarray, ...]:

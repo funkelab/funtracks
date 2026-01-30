@@ -4,6 +4,7 @@ import pytest
 from funtracks.actions import UpdateNodeSeg, UpdateTrackID
 from funtracks.annotators import RegionpropsAnnotator
 from funtracks.data_model import SolutionTracks, Tracks
+from funtracks.utils.tracksdata_utils import pixels_to_td_mask
 
 track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
 
@@ -65,22 +66,22 @@ class TestRegionpropsAnnotator:
         orig_pixels = tracks.get_pixels(node_id)
         # remove all but one pixel
         pixels_to_remove = tuple(orig_pixels[d][1:] for d in range(len(orig_pixels)))
+        mask_to_remove = pixels_to_td_mask(pixels_to_remove, ndim=ndim)
         expected_area = 1
 
         # Use UpdateNodeSeg action to modify segmentation and update features
-        UpdateNodeSeg(tracks, node_id, pixels_to_remove, added=False)
+        UpdateNodeSeg(tracks, node_id, mask_to_remove, added=False)
         assert tracks.get_node_attr(node_id, "area") == expected_area
         for key in rp_ann.features:
             assert key in tracks.graph.node_attr_keys()
 
         # segmentation is fully erased and you try to update
         node_id = 1
-        pixels = tracks.get_pixels(node_id)
+        mask = tracks.get_mask(node_id)
         with pytest.warns(
             match="Cannot find label 1 in frame .*: updating regionprops values to None"
         ):
-            UpdateNodeSeg(tracks, node_id, pixels, added=False)
-
+            UpdateNodeSeg(tracks, node_id, mask, added=False)
         # all regionprops features should be the defaults, because seg doesn't exist
         for key in rp_ann.features:
             actual = tracks.graph[node_id][key]
@@ -122,8 +123,9 @@ class TestRegionpropsAnnotator:
         orig_pixels = tracks.get_pixels(node_id)
         assert orig_pixels is not None
         pixels_to_remove = tuple(orig_pixels[d][1:] for d in range(len(orig_pixels)))
+        mask_to_remove = pixels_to_td_mask(pixels_to_remove, ndim=ndim)
         # Use UpdateNodeSeg action to modify segmentation and update features
-        UpdateNodeSeg(tracks, node_id, pixels_to_remove, added=False)
+        UpdateNodeSeg(tracks, node_id, mask_to_remove, added=False)
         # the one we added back in is now present
         assert tracks.get_node_attr(node_id, to_remove_key) is not None
 
