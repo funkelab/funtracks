@@ -2,6 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import tracksdata as td
+
+from funtracks.utils.tracksdata_utils import pixels_to_td_mask
+
 from ._base import BasicAction
 
 if TYPE_CHECKING:
@@ -48,5 +52,36 @@ class UpdateNodeSeg(BasicAction):
     def _apply(self) -> None:
         """Set new attributes"""
         value = self.node if self.added else 0
-        self.tracks.set_pixels(self.pixels, value, self.node)
+
+        mask_new, area_new = pixels_to_td_mask(
+            self.pixels, self.tracks.ndim, self.tracks.scale
+        )
+
+        if value == 0:
+            # val=0 means deleting the pixels from the mask
+            mask_old = self.tracks.graph[self.node][td.DEFAULT_ATTR_KEYS.MASK]
+            mask_subtracted = mask_old.__isub__(mask_new)
+            self.tracks.graph.update_node_attrs(
+                attrs={
+                    td.DEFAULT_ATTR_KEYS.MASK: [mask_subtracted],
+                    td.DEFAULT_ATTR_KEYS.BBOX: [mask_subtracted.bbox],
+                },
+                node_ids=[self.node],
+            )
+
+        elif self.tracks.graph.has_node(value):
+            # if node already exists:
+            mask_old = self.tracks.graph[value][td.DEFAULT_ATTR_KEYS.MASK]
+            mask_combined = mask_old.__or__(mask_new)
+            self.tracks.graph.update_node_attrs(
+                attrs={
+                    td.DEFAULT_ATTR_KEYS.MASK: [mask_combined],
+                    td.DEFAULT_ATTR_KEYS.BBOX: [mask_combined.bbox],
+                },
+                node_ids=[value],
+            )
+
+        # Invalidate cache for affected chunks
+        self.tracks._update_segmentation_cache(self.pixels)
+
         self.tracks.notify_annotators(self)

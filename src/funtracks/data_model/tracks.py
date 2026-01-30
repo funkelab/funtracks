@@ -17,7 +17,6 @@ from tracksdata.array import GraphArrayView
 
 from funtracks.features import Feature, FeatureDict, Position, Time
 from funtracks.utils.tracksdata_utils import (
-    pixels_to_td_mask,
     td_get_single_attr_from_edge,
     to_polars_dtype,
 )
@@ -472,81 +471,6 @@ class Tracks:
         time_array = np.full_like(global_coords[0], time)
 
         return (time_array, *global_coords)
-
-    def set_pixels(
-        self, pixels: tuple[np.ndarray, ...], value: int, node: int | None = None
-    ):
-        """Set the given pixels in the segmentation to the given value.
-
-        Args:
-            pixels (Iterable[tuple[np.ndarray]]): The pixels that should be set,
-                formatted like the output of np.nonzero (each element of the tuple
-                represents one dimension, containing an array of indices in that
-                dimension). Can be used to directly index the segmentation.
-            value (Iterable[int | None]): The value to set each pixel to
-            nodes (Iterable[int] | None, optional): The node ids that the pixels
-                correspond to. Only needed if pixels need to be removed (val=0)
-        """
-        if self.segmentation is None:
-            raise ValueError("Cannot set pixels when segmentation is None")
-
-        node_id = node if node is not None else None
-
-        if value is None:
-            raise ValueError("Cannot set pixels to None value")
-
-        mask_new, area_new = pixels_to_td_mask(pixels, self.ndim, self.scale)
-
-        if value == 0:
-            # val=0 means deleting the pixels from the mask
-            mask_old = self.graph[node_id][td.DEFAULT_ATTR_KEYS.MASK]
-            mask_subtracted = mask_old.__isub__(mask_new)
-            self.graph.update_node_attrs(
-                attrs={
-                    td.DEFAULT_ATTR_KEYS.MASK: [mask_subtracted],
-                    td.DEFAULT_ATTR_KEYS.BBOX: [mask_subtracted.bbox],
-                },
-                node_ids=[node_id],
-            )
-
-        elif self.graph.has_node(value):
-            # if node already exists:
-            mask_old = self.graph[value][td.DEFAULT_ATTR_KEYS.MASK]
-            mask_combined = mask_old.__or__(mask_new)
-            self.graph.update_node_attrs(
-                attrs={
-                    td.DEFAULT_ATTR_KEYS.MASK: [mask_combined],
-                    td.DEFAULT_ATTR_KEYS.BBOX: [mask_combined.bbox],
-                },
-                node_ids=[value],
-            )
-
-        else:
-            if len(np.unique(pixels[0])) > 1:
-                raise ValueError(
-                    f"pixels in Tracks.set_pixels has more than 1 timepoint "
-                    f"for node {value}. This is not implemented, so if this is "
-                    "necessary, Tracks.set_pixels should be updated"
-                )
-
-            time = int(np.unique(pixels[0])[0])
-            pos = np.array([np.mean(pixels[dim + 1]) for dim in range(self.ndim - 1)])
-            track_id = -1  # dummy, will be replaced in AddNodes._apply()
-
-            node_dict = {
-                self.features.time_key: time,
-                self.features.position_key: pos,
-                self.features.tracklet_key: track_id,
-                "area": area_new,
-                td.DEFAULT_ATTR_KEYS.SOLUTION: 1,
-                td.DEFAULT_ATTR_KEYS.MASK: mask_new,
-                td.DEFAULT_ATTR_KEYS.BBOX: mask_new.bbox,
-            }
-
-            self.graph.add_node(node_dict, index=value)
-
-        # Invalidate cache for affected chunks
-        self._update_segmentation_cache(pixels)
 
     def _update_segmentation_cache(self, pixels: tuple[np.ndarray, ...]) -> None:
         """Invalidate cached chunks that overlap with the given pixels.

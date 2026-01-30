@@ -1,5 +1,8 @@
+import numpy as np
+
 from funtracks.actions import AddNode
 from funtracks.data_model import SolutionTracks, Tracks
+from funtracks.user_actions import UserUpdateSegmentation
 from funtracks.utils.tracksdata_utils import create_empty_graphview_graph
 
 track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
@@ -62,6 +65,23 @@ def test_from_tracks_cls_recompute(graph_2d_with_segmentation):
     assert (
         solution_tracks.get_node_attr(1, solution_tracks.features.tracklet_key) == 1
     )  # still 1
+
+
+def test_update_segmentation(graph_2d_with_segmentation):
+    tracks = SolutionTracks(
+        graph_2d_with_segmentation,
+        ndim=3,
+        **track_attrs,
+    )
+    pix = tracks.get_pixels(1)
+    assert isinstance(pix, tuple)
+    UserUpdateSegmentation(
+        tracks,
+        new_value=99,
+        updated_pixels=[(pix, 0)],
+        current_track_id=6,
+    )
+    assert np.asarray(tracks.segmentation)[0, 50, 50] == 99
 
 
 def test_next_track_id_empty():

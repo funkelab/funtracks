@@ -4,6 +4,7 @@ import pytest
 import tracksdata as td
 
 from funtracks.data_model import Tracks
+from funtracks.user_actions import UserUpdateSegmentation
 from funtracks.utils.tracksdata_utils import (
     create_empty_graphview_graph,
 )
@@ -85,19 +86,6 @@ def test_create_tracks(graph_3d_with_segmentation: td.graph.GraphView):
     assert tracks.get_positions([1]).tolist() == [[50, 50, 50]]
     tracks.set_position(1, [55, 56, 57])
     assert tracks.get_position(1) == [55, 56, 57]
-
-
-def test_pixels_and_seg_id(graph_3d_with_segmentation):
-    # create track with graph and seg
-    tracks = Tracks(
-        graph=graph_3d_with_segmentation,
-        **track_attrs,
-    )
-
-    # changing a segmentation id changes it in the mapping
-    pix = tracks.get_pixels(1)
-    new_seg_id = 10
-    tracks.set_pixels(pix, new_seg_id)
 
 
 def test_nodes_edges(graph_2d_with_segmentation):
@@ -196,18 +184,6 @@ def test_set_positions_list(graph_2d_list):
     )
 
 
-def test_get_pixels_and_set_pixels(graph_2d_with_segmentation):
-    tracks = Tracks(
-        graph_2d_with_segmentation,
-        ndim=3,
-        **track_attrs,
-    )
-    pix = tracks.get_pixels(1)
-    assert isinstance(pix, tuple)
-    tracks.set_pixels(pix, 99)
-    assert np.asarray(tracks.segmentation)[0, 50, 50] == 99
-
-
 def test_get_pixels_none(graph_2d_with_track_id):
     tracks = Tracks(graph_2d_with_track_id, ndim=3, **track_attrs)
     assert tracks.get_pixels(1) is None
@@ -216,8 +192,14 @@ def test_get_pixels_none(graph_2d_with_track_id):
 def test_set_pixels_no_segmentation(graph_2d_with_track_id):
     tracks = Tracks(graph_2d_with_track_id, ndim=3, **track_attrs)
     pix = [(np.array([0]), np.array([10]), np.array([20]))]
+    # set_pixels no longer exist, so we use UserUpdateSegmentation
     with pytest.raises(ValueError):
-        tracks.set_pixels(pix, 1)
+        UserUpdateSegmentation(
+            tracks,
+            new_value=1,
+            updated_pixels=[(pix, 1)],
+            current_track_id=1,
+        )
 
 
 def test_compute_ndim_errors():
