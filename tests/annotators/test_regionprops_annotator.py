@@ -1,6 +1,5 @@
 import numpy as np
 import pytest
-from tracksdata.utils._dtypes import infer_default_value_from_dtype
 
 from funtracks.actions import UpdateNodeSeg, UpdateTrackID
 from funtracks.annotators import RegionpropsAnnotator
@@ -85,9 +84,7 @@ class TestRegionpropsAnnotator:
         # all regionprops features should be the defaults, because seg doesn't exist
         for key in rp_ann.features:
             actual = tracks.graph[node_id][key]
-            expected = infer_default_value_from_dtype(
-                tracks.graph._node_attr_schemas()[key].dtype
-            )
+            expected = tracks.graph._node_attr_schemas()[key].default_value
             # Convert to numpy arrays for comparison (handles both scalar and array types)
             actual_np = np.asarray(actual)
             expected_np = np.asarray(expected)

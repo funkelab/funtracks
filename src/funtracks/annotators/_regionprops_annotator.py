@@ -231,7 +231,6 @@ class RegionpropsAnnotator(GraphAnnotator):
             )
             for key in keys_to_compute:
                 value = None
-                # TODO Teun: this somehow goes wrong when pos is an array
                 self.tracks._set_node_attr(node, key, value)
         else:
             mask = self.tracks.graph[node]["mask"]
