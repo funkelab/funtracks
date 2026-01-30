@@ -268,9 +268,12 @@ def tracks_from_df(
         # Auto-infer name mapping from DataFrame columns
         builder.prepare(df)
 
+    # instead of a separate segmentation array
+
     return builder.build(
         df,
         segmentation,
         scale=scale,
         node_features=node_features,
+        node_name_map=builder.node_name_map,
     )
