@@ -105,19 +105,7 @@ class AddNode(BasicAction):
                         "Must provide mask when adding node to tracks with seg"
                     )
 
-        # Position is already set in attrs above
-        # Add nodes to td graph
-        required_attrs = self.tracks.graph.node_attr_keys().copy()
-        if td.DEFAULT_ATTR_KEYS.NODE_ID in required_attrs:
-            required_attrs.remove(td.DEFAULT_ATTR_KEYS.NODE_ID)
-        if td.DEFAULT_ATTR_KEYS.SOLUTION not in attrs:
-            attrs[td.DEFAULT_ATTR_KEYS.SOLUTION] = 1
-        for attr in required_attrs:
-            if attr not in attrs:
-                # TODO Teun: remove this logic when td has default values (PR)
-                attrs[attr] = self.tracks.features[attr]["default_value"]
-
-        self.tracks.graph.add_node(attrs=attrs, index=self.node, validate_keys=True)
+        self.tracks.graph.add_node(attrs=attrs, index=self.node, validate_keys=False)
 
         # Always notify annotators - they will check their own preconditions
         self.tracks.notify_annotators(self)
