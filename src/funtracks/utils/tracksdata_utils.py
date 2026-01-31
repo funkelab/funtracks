@@ -9,7 +9,6 @@ import polars as pl
 import scipy.ndimage as ndi
 import tracksdata as td
 from polars.testing import assert_frame_equal
-from skimage import measure
 from tracksdata.nodes._mask import Mask
 
 
@@ -226,87 +225,6 @@ def assert_node_attrs_equal_with_masks(
         mask2 = node_attrs2.filter(pl.col("node_id") == node)["mask"].item()
         assert np.array_equal(mask1.bbox, mask2.bbox)
         assert np.array_equal(mask1.mask, mask2.mask)
-
-
-def compute_node_attrs_from_masks(
-    masks: list[Mask], ndim: int, scale: list[float] | None
-) -> dict[str, list[Any]]:
-    """
-    Compute node attributes (area and pos) from a tracksdata Mask object.
-
-    Parameters
-    ----------
-    masks : list[Mask]
-        A list of tracksdata Mask objects containing the mask and bounding box.
-    ndim : int
-        Number of dimensions (2D or 3D).
-    scale : list[float] | None
-        Scale factors for each dimension.
-
-    Returns
-    -------
-    dict[str, Any]
-        A dictionary containing the computed node attributes ('area' and 'pos').
-    """
-    if not masks:
-        return {}
-
-    area_list = []
-    pos_list = []
-    for mask in masks:
-        seg_crop = mask.mask
-        seg_bbox = mask.bbox
-
-        pos_scale = scale[1:] if scale is not None else np.ones(ndim - 1)
-        area = np.sum(seg_crop)
-        if pos_scale is not None:
-            area *= np.prod(pos_scale)
-        area_list.append(float(area))
-
-        # Calculate position - use centroid if area > 0, otherwise use bbox center
-        if area > 0:
-            pos = measure.centroid(seg_crop, spacing=pos_scale)  # type: ignore
-            pos += seg_bbox[: ndim - 1] * (pos_scale if pos_scale is not None else 1)
-        else:
-            # Use bbox center when area is 0
-            pos = np.array(
-                [(seg_bbox[d] + seg_bbox[d + ndim - 1]) / 2 for d in range(ndim - 1)]
-            )
-        pos_list.append(pos)
-
-    return {"area": area_list, "pos": pos_list}
-
-
-def compute_node_attrs_from_pixels(
-    pixels: list[tuple[np.ndarray, ...]] | None, ndim: int, scale: list[float] | None
-) -> dict[str, list[Any]]:
-    """
-    Compute node attributes (area and pos) from pixel coordinates.
-    Parameters
-    ----------
-    pixels : list[tuple[np.ndarray, ...]]
-        List of pixel coordinates for each node.
-    ndim : int
-        Number of dimensions (2D or 3D).
-    scale : list[float] | None
-        Scale factors for each dimension.
-
-    Returns
-    -------
-    dict[str, list[Any]]
-        A dictionary containing the computed node attributes ('area' and 'pos').
-    """
-    if pixels is None:
-        return {}
-
-    # Convert pixels to masks first
-    masks = []
-    for pix in pixels:
-        mask = pixels_to_td_mask(pix, ndim)
-        masks.append(mask)
-
-    # Reuse the from_masks function to compute attributes
-    return compute_node_attrs_from_masks(masks, ndim, scale)
 
 
 def pixels_to_td_mask(
