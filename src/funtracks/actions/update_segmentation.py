@@ -5,8 +5,6 @@ from typing import TYPE_CHECKING
 import tracksdata as td
 from tracksdata.nodes._mask import Mask
 
-from funtracks.utils.tracksdata_utils import td_mask_to_pixels
-
 from ._base import BasicAction
 
 if TYPE_CHECKING:
@@ -81,9 +79,7 @@ class UpdateNodeSeg(BasicAction):
             )
 
         # Invalidate cache for affected chunks
-        pixels = td_mask_to_pixels(
-            mask_new, time=self.tracks.get_time(self.node), ndim=self.tracks.ndim
-        )
-        self.tracks._update_segmentation_cache(pixels)
+        time = self.tracks.get_time(self.node)
+        self.tracks._update_segmentation_cache(mask=mask_new, time=time)
 
         self.tracks.notify_annotators(self)

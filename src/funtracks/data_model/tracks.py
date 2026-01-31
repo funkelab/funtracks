@@ -489,59 +489,51 @@ class Tracks:
 
         return (time_array, *global_coords)
 
-    def _update_segmentation_cache(self, pixels: tuple[np.ndarray, ...]) -> None:
-        """Invalidate cached chunks that overlap with the given pixels.
+    def _update_segmentation_cache(self, mask: td.Mask, time: int) -> None:
+        """Invalidate cached chunks that overlap with the given mask.
 
         Args:
-            pixels: Tuple of arrays representing pixel coordinates (time, z, y, x)
-            or (time, y, x), formatted like the output of np.nonzero.
+            mask: Mask object with .bbox attribute defining the affected region
+            time: Time point of the mask
         """
-        # TODO Teun: ideally should work on the mask, not on pixels
         if self.segmentation is None:
             return
 
         cache = self.segmentation._cache
-        time_coords = pixels[0]
-        spatial_coords = pixels[1:]
 
-        # For each unique time point
-        for time in np.unique(time_coords):
-            time = int(time)
+        # Only invalidate if this time point is in the cache
+        if time not in cache._store:
+            return
 
-            # Only invalidate if this time point is in the cache
-            if time not in cache._store:
-                continue
+        # Convert bbox to slices directly
+        # bbox format: [z_min, y_min, x_min, z_max, y_max, x_max] (3D)
+        # or [y_min, x_min, y_max, x_max] (2D)
+        ndim = len(mask.bbox) // 2
+        volume_slicing = tuple(
+            slice(mask.bbox[i], mask.bbox[i + ndim] + 1) for i in range(ndim)
+        )
 
-            # Get pixels at this time point and create bounding box slices
-            time_mask = time_coords == time
-            volume_slicing = tuple(
-                slice(
-                    int(dim_coords[time_mask].min()), int(dim_coords[time_mask].max()) + 1
-                )
-                for dim_coords in spatial_coords
-            )
+        # Use cache's method to get chunk bounds (same logic as cache.get())
+        bounds = cache._chunk_bounds(volume_slicing)
+        chunk_ranges = [range(lo, hi + 1) for lo, hi in bounds]
 
-            # Use cache's method to get chunk bounds (same logic as cache.get())
-            bounds = cache._chunk_bounds(volume_slicing)
-            chunk_ranges = [range(lo, hi + 1) for lo, hi in bounds]
-
-            # Invalidate all affected chunks
-            cache_entry = cache._store[time]
-            for chunk_idx in itertools.product(*chunk_ranges):
-                if all(
-                    0 <= idx < grid_size
-                    for idx, grid_size in zip(chunk_idx, cache.grid_shape, strict=True)
-                ):
-                    cache_entry.ready[chunk_idx] = False
-                    # Clear the buffer to ensure stale data isn't used
-                    # when the chunk is recomputed
-                    chunk_slc = tuple(
-                        slice(ci * cs, min((ci + 1) * cs, fs))
-                        for ci, cs, fs in zip(
-                            chunk_idx, cache.chunk_shape, cache.shape, strict=True
-                        )
+        # Invalidate all affected chunks
+        cache_entry = cache._store[time]
+        for chunk_idx in itertools.product(*chunk_ranges):
+            if all(
+                0 <= idx < grid_size
+                for idx, grid_size in zip(chunk_idx, cache.grid_shape, strict=True)
+            ):
+                cache_entry.ready[chunk_idx] = False
+                # Clear the buffer to ensure stale data isn't used
+                # when the chunk is recomputed
+                chunk_slc = tuple(
+                    slice(ci * cs, min((ci + 1) * cs, fs))
+                    for ci, cs, fs in zip(
+                        chunk_idx, cache.chunk_shape, cache.shape, strict=True
                     )
-                    cache_entry.buffer[chunk_slc] = 0
+                )
+                cache_entry.buffer[chunk_slc] = 0
 
     def _compute_ndim(
         self,
