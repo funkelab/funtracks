@@ -496,6 +496,7 @@ class Tracks:
             pixels: Tuple of arrays representing pixel coordinates (time, z, y, x)
             or (time, y, x), formatted like the output of np.nonzero.
         """
+        # TODO Teun: ideally should work on the mask, not on pixels
         if self.segmentation is None:
             return
 
