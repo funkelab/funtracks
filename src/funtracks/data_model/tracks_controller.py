@@ -9,7 +9,6 @@ from ..actions import (
     ActionGroup,
     UpdateNodeAttrs,
 )
-from ..actions.action_history import ActionHistory
 from ..exceptions import InvalidActionError
 from ..user_actions import (
     UserAddEdge,
@@ -40,7 +39,6 @@ class TracksController:
             stacklevel=2,
         )
         self.tracks = tracks
-        self.action_history = ActionHistory()
         self.node_id_counter = 1
 
     def add_nodes(
@@ -64,7 +62,7 @@ class TracksController:
         result = self._add_nodes(attributes, pixels, force)
         if result is not None:
             action, nodes = result
-            self.action_history.add_new_action(action)
+            self.tracks.action_history.add_new_action(action)
             self.tracks.refresh.emit(nodes[0] if nodes else None)
 
     def _add_nodes(
@@ -131,7 +129,7 @@ class TracksController:
         """
 
         action = self._delete_nodes(nodes)
-        self.action_history.add_new_action(action)
+        self.tracks.action_history.add_new_action(action)
         self.tracks.refresh.emit()
 
     def _delete_nodes(
@@ -172,7 +170,7 @@ class TracksController:
             warn(str(e), stacklevel=2)
             return
 
-        self.action_history.add_new_action(action)
+        self.tracks.action_history.add_new_action(action)
         self.tracks.refresh.emit()
 
     def add_edges(self, edges: Iterable[Edge], force: bool = False) -> None:
@@ -193,7 +191,7 @@ class TracksController:
 
         action: Action
         action = self._add_edges(edges, force)
-        self.action_history.add_new_action(action)
+        self.tracks.action_history.add_new_action(action)
         self.tracks.refresh.emit()
 
     def update_node_attrs(self, nodes: Iterable[Node], attributes: Attrs):
@@ -206,7 +204,7 @@ class TracksController:
                 each node.
         """
         action = self._update_node_attrs(nodes, attributes)
-        self.action_history.add_new_action(action)
+        self.tracks.action_history.add_new_action(action)
         self.tracks.refresh.emit()
 
     def _update_node_attrs(self, nodes: Iterable[Node], attributes: Attrs) -> Action:
@@ -318,7 +316,7 @@ class TracksController:
                 warn("Cannot delete non-existing edge!", stacklevel=2)
                 return
         action = self._delete_edges(edges)
-        self.action_history.add_new_action(action)
+        self.tracks.action_history.add_new_action(action)
         self.tracks.refresh.emit()
 
     def _delete_edges(self, edges: Iterable[Edge]) -> ActionGroup:
@@ -357,7 +355,7 @@ class TracksController:
         action = UserUpdateSegmentation(
             self.tracks, new_value, updated_pixels, current_track_id, force
         )
-        self.action_history.add_new_action(action)
+        self.tracks.action_history.add_new_action(action)
         nodes_added = action.nodes_added
         times = self.tracks.get_times(nodes_added)
         if current_timepoint in times:
@@ -371,7 +369,7 @@ class TracksController:
         Returns:
             bool: True if the action was undone, False if there were no more actions
         """
-        if self.action_history.undo():
+        if self.tracks.action_history.undo():
             self.tracks.refresh.emit()
             return True
         else:
@@ -382,7 +380,7 @@ class TracksController:
         Returns:
             bool: True if the action was re-done, False if there were no more actions
         """
-        if self.action_history.redo():
+        if self.tracks.action_history.redo():
             self.tracks.refresh.emit()
             return True
         else:
