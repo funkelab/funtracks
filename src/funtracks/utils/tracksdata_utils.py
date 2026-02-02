@@ -417,14 +417,7 @@ def add_masks_and_bboxes_to_graph(
 def td_get_single_attr_from_edge(graph, edge: tuple[int, int], attrs: Sequence[str]):
     """Get a single attribute from a edge in a tracksdata graph."""
 
-    # TODO Teun: later opdate to:
-    # edge_id = graph.edge_id(edge[0], edge[1])
-    # item = graph.edge_attrs(attr_keys=attrs).filter(pl.col("edge_id") == edge_id)
-    # .select(attrs).item()once tracksdata supports default values. Right now, polars
-    # crashes when the edge attributes have different types. We either need a
-    # df = pl.DataFrame(data, strict=False).with_columns(... in line 171 in
-    # tracksdata/graph/rx, or tracksdata needs to support default values for missing
-    # attributes. The implementation below can be slow for large graphs.
+    # TODO Teun: later opdate to: graph.edges[edge_id][attr] (after td update)
     item = graph.filter(node_ids=[edge[0], edge[1]]).edge_attrs()[attrs].item()
     return item
 

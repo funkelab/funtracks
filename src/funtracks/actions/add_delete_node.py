@@ -90,6 +90,7 @@ class AddNode(BasicAction):
                 attrs[td.DEFAULT_ATTR_KEYS.BBOX] = self.mask.bbox
             else:
                 # TODO Teun: remove this defaulting behavior, see new tracksdata PR
+                # update: default behaviour in td has a bug rn, will remove later
                 if len(self.tracks.segmentation.shape) == 3:
                     attrs[td.DEFAULT_ATTR_KEYS.MASK] = Mask(
                         np.array([[False]]), bbox=[0, 0, 1, 1]
