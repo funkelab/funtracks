@@ -287,4 +287,5 @@ def import_from_geff(
         scale=scale,
         node_features=node_features,
         edge_features=edge_features,
+        node_name_map=node_name_map,
     )
