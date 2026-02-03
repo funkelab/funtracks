@@ -41,6 +41,7 @@ class UserUpdateSegmentation(ActionGroup):
         """
         super().__init__(tracks, actions=[])
         self.tracks: SolutionTracks  # Narrow type from base class
+        # TODO Teun: remove the next line, only TracksController needs it
         self.nodes_added = []
         if self.tracks.segmentation is None:
             raise ValueError("Cannot update non-existing segmentation.")
@@ -87,7 +88,8 @@ class UserUpdateSegmentation(ActionGroup):
                         force=force,
                     )
                 )
+                # TODO Teun: remove the next line, only TracksController needs it
                 self.nodes_added.append(new_value)
 
         self.tracks.action_history.add_new_action(self)
-        self.tracks.refresh.emit(node for node in self.nodes_added)
+        self.tracks.refresh.emit(new_value)
