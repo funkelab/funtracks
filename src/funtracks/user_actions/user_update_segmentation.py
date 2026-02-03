@@ -92,4 +92,4 @@ class UserUpdateSegmentation(ActionGroup):
                 self.nodes_added.append(new_value)
 
         self.tracks.action_history.add_new_action(self)
-        self.tracks.refresh.emit(new_value)
+        self.tracks.refresh.emit(new_value if new_value != 0 else None)
