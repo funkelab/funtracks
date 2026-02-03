@@ -57,7 +57,7 @@ class UserUpdateSegmentation(ActionGroup):
                 self.actions.append(UserDeleteNode(tracks, old_value, pixels=pixels))
             else:
                 self.actions.append(UpdateNodeSeg(tracks, old_value, pixels, added=False))
-        if new_value != 0:
+        if new_value != 0 and updated_pixels:
             all_pixels = tuple(
                 np.concatenate([pixels[dim] for pixels, _ in updated_pixels])
                 for dim in range(ndim)
@@ -92,4 +92,4 @@ class UserUpdateSegmentation(ActionGroup):
                 self.nodes_added.append(new_value)
 
         self.tracks.action_history.add_new_action(self)
-        self.tracks.refresh.emit(new_value if new_value != 0 else None)
+        self.tracks.refresh.emit(self.nodes_added[0] if self.nodes_added else None)
