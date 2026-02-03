@@ -15,6 +15,7 @@ import numpy as np
 from psygnal import Signal
 from skimage import measure
 
+from funtracks.actions.action_history import ActionHistory
 from funtracks.features import Feature, FeatureDict, Position, Time
 
 if TYPE_CHECKING:
@@ -98,6 +99,7 @@ class Tracks:
         self.scale = scale
         self.ndim = self._compute_ndim(segmentation, scale, ndim)
         self.axis_names = ["z", "y", "x"] if self.ndim == 4 else ["y", "x"]
+        self.action_history = ActionHistory()
 
         # initialization steps:
         # 1. set up feature dict (or use provided)

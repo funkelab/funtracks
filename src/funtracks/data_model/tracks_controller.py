@@ -9,7 +9,6 @@ from ..actions import (
     ActionGroup,
     UpdateNodeAttrs,
 )
-from ..actions.action_history import ActionHistory
 from ..exceptions import InvalidActionError
 from ..user_actions import (
     UserAddEdge,
@@ -40,7 +39,7 @@ class TracksController:
             stacklevel=2,
         )
         self.tracks = tracks
-        self.action_history = ActionHistory()
+        self.action_history = self.tracks.action_history
         self.node_id_counter = 1
 
     def add_nodes(
