@@ -628,6 +628,28 @@ class Tracks:
         else:
             logger.info("Edge %s not found in the graph.", edge)
 
+    def undo(self) -> bool:
+        """Undo the last performed action from the action history.
+
+        Returns:
+            bool: True if an action was undone, False if there were no actions to undo
+        """
+        if self.action_history.undo():
+            self.refresh.emit()
+            return True
+        return False
+
+    def redo(self) -> bool:
+        """Redo the last undone action from the action history.
+
+        Returns:
+            bool: True if an action was redone, False if there were no actions to redo
+        """
+        if self.action_history.redo():
+            self.refresh.emit()
+            return True
+        return False
+
     def _compute_ndim(
         self,
         seg: np.ndarray | None,

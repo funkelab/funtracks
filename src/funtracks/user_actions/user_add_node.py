@@ -143,3 +143,6 @@ class UserAddNode(ActionGroup):
             self.actions.append(AddEdge(tracks, (pred, node)))
         if succ is not None:
             self.actions.append(AddEdge(tracks, (node, succ)))
+
+        self.tracks.action_history.add_new_action(self)
+        self.tracks.refresh.emit(node)

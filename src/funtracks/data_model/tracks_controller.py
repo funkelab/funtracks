@@ -366,26 +366,28 @@ class TracksController:
         self.tracks.refresh.emit(node_to_select)
 
     def undo(self) -> bool:
-        """Obtain the action to undo from the history, and invert.
+        """Undo the last performed action from the action history.
+
+        Note:
+            Kept for backwards compatibility. New code should call
+            `tracks.undo()` directly.
+
         Returns:
             bool: True if the action was undone, False if there were no more actions
         """
-        if self.action_history.undo():
-            self.tracks.refresh.emit()
-            return True
-        else:
-            return False
+        return self.tracks.undo()
 
     def redo(self) -> bool:
-        """Obtain the action to redo from the history
+        """Redo the last undone action from the action history.
+
+        Note:
+            Kept for backwards compatibility. New code should call
+            `tracks.redo()` directly.
+
         Returns:
-            bool: True if the action was re-done, False if there were no more actions
+            bool: True if the action was redone, False if there were no more actions
         """
-        if self.action_history.redo():
-            self.tracks.refresh.emit()
-            return True
-        else:
-            return False
+        return self.tracks.redo()
 
     def _get_new_node_ids(self, n: int) -> list[Node]:
         """Get a list of new node ids for creating new nodes.

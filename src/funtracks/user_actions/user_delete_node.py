@@ -47,3 +47,6 @@ class UserDeleteNode(ActionGroup):
 
         # delete node
         self.actions.append(DeleteNode(tracks, node, pixels=pixels))
+
+        self.tracks.action_history.add_new_action(self)
+        self.tracks.refresh.emit()
