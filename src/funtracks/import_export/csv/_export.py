@@ -78,7 +78,12 @@ def export_to_csv(
                 else:
                     # Fall back to display_name or feature_name with index suffix
                     base_name = feature_dict.get("display_name", feature_name)
-                    header.extend([f"{base_name}_{i}" for i in range(num_values)])
+                    if len(base_name) == num_values:
+                        # use list elements
+                        header.extend(list(base_name))
+                    else:
+                        # use a suffix
+                        header.extend([f"{base_name}_{i}" for i in range(num_values)])
             else:
                 # Single-value feature: use display_name or feature_name
                 col_name = feature_dict.get("display_name", feature_name)
