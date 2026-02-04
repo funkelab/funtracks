@@ -100,6 +100,7 @@ class Tracks:
         self.ndim = self._compute_ndim(segmentation, scale, ndim)
         self.axis_names = ["z", "y", "x"] if self.ndim == 4 else ["y", "x"]
         self.action_history = ActionHistory()
+        self.node_id_counter = 1
 
         # initialization steps:
         # 1. set up feature dict (or use provided)
@@ -649,6 +650,25 @@ class Tracks:
             self.refresh.emit()
             return True
         return False
+
+    def _get_new_node_ids(self, n: int) -> list[Node]:
+        """Get a list of new node ids for creating new nodes.
+        They will be unique from all existing nodes, but have no other guarantees.
+
+        Args:
+            n (int): The number of new node ids to return
+
+        Returns:
+            list[Node]: A list of new node ids.
+        """
+        ids = [self.node_id_counter + i for i in range(n)]
+        self.node_id_counter += n
+        for idx, _id in enumerate(ids):
+            while self.graph.has_node(_id):
+                _id = self.node_id_counter
+                self.node_id_counter += 1
+            ids[idx] = _id
+        return ids
 
     def _compute_ndim(
         self,

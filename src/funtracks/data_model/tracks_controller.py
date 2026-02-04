@@ -399,11 +399,5 @@ class TracksController:
         Returns:
             list[Node]: A list of new node ids.
         """
-        ids = [self.node_id_counter + i for i in range(n)]
-        self.node_id_counter += n
-        for idx, _id in enumerate(ids):
-            while self.tracks.graph.has_node(_id):
-                _id = self.node_id_counter
-                self.node_id_counter += 1
-            ids[idx] = _id
-        return ids
+
+        return self.tracks._get_new_node_ids(n)
