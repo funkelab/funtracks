@@ -82,3 +82,6 @@ class UserAddEdge(ActionGroup):
             )
 
         self.actions.append(AddEdge(tracks, edge))
+
+        self.tracks.action_history.add_new_action(self)
+        self.tracks.refresh.emit()

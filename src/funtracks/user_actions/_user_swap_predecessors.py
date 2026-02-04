@@ -81,3 +81,6 @@ class UserSwapPredecessors(ActionGroup):
             self.actions.append(UserAddEdge(tracks, (pred1, node2), force=False))
         if pred2 is not None:
             self.actions.append(UserAddEdge(tracks, (pred2, node1), force=False))
+
+        self.tracks.action_history.add_new_action(self)
+        self.tracks.refresh.emit()

@@ -41,3 +41,6 @@ class UserDeleteEdge(ActionGroup):
             raise InvalidActionError(
                 f"Expected degree of 0 or 1 after removing edge, got {out_degree}"
             )
+
+        self.tracks.action_history.add_new_action(self)
+        self.tracks.refresh.emit()
