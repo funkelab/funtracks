@@ -61,10 +61,10 @@ def nodes_from_segmentation(
         props = regionprops(segs, spacing=tuple(scale[1:]))
         for regionprop in props:
             node_id = regionprop.label
-            attrs = {NodeAttr.TIME.value: t, NodeAttr.AREA.value: regionprop.area}
-            attrs[NodeAttr.SEG_ID.value] = regionprop.label
+            attrs = {"time": t, "area": regionprop.area}
+            attrs["seg_id"] = regionprop.label
             centroid = regionprop.centroid  # [z,] y, x
-            attrs[NodeAttr.POS.value] = centroid
+            attrs["pos"] = centroid
             cand_graph.add_node(node_id, **attrs)
             nodes_in_frame.append(node_id)
         if nodes_in_frame:
@@ -154,7 +154,7 @@ def create_kdtree(cand_graph: nx.DiGraph, node_ids: Iterable[Any]) -> KDTree:
     Returns:
         KDTree: A KDTree containing the positions of the given nodes.
     """
-    positions = [cand_graph.nodes[node][NodeAttr.POS.value] for node in node_ids]
+    positions = [cand_graph.nodes[node]["pos"] for node in node_ids]
     return KDTree(positions)
 
 

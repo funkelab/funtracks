@@ -4,8 +4,6 @@ import networkx as nx
 import numpy as np
 from tqdm import tqdm
 
-from funtracks.data_model.graph_attributes import EdgeAttr
-
 from .utils import _compute_node_frame_dict
 
 
@@ -112,4 +110,4 @@ def add_iou(
             for next_id in next_nodes:
                 iou = ious.get(node_id, {}).get(next_id, 0)
                 if (node_id, next_id) in cand_graph.edges:
-                    cand_graph.edges[(node_id, next_id)][EdgeAttr.IOU.value] = iou
+                    cand_graph.edges[(node_id, next_id)]["iou"] = iou
