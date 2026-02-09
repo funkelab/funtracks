@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
+import pandas as pd
+import tifffile
 
 from .._utils import filter_graph_with_ancestors
 
@@ -18,6 +20,8 @@ def export_to_csv(
     outfile: Path | str,
     node_ids: set[int] | None = None,
     use_display_names: bool = False,
+    export_seg: bool = False,
+    seg_path: Path | str | None = None,
 ) -> None:
     """Export tracks to a CSV file.
     TODO: export_all = False for backward compatibility - display names option shouldn't
@@ -33,6 +37,8 @@ def export_to_csv(
             nodes and their ancestors will be included in the output.
         use_display_names: If True, use feature display names as column headers.
             If False (default), use raw feature keys for backward compatibility.
+        export_seg (bool): whether to export the segmentation, relabeled by tracklet ID
+        seg_path (Path | str, optional): path to save segmentation file to, if requested.
 
     Example:
         >>> from funtracks.import_export import export_to_csv
@@ -43,6 +49,38 @@ def export_to_csv(
         >>> export_to_csv(tracks, "filtered.csv", node_ids={1, 2, 3})
     """
 
+    def relabel_by_column(
+        seg: np.ndarray,
+        df: pd.DataFrame,
+        column: str,
+        time_key: str = "t",
+        id_key: str = "id",
+    ) -> np.ndarray:
+        # Determine maximum value in the column to assign bit depth
+        max_val = int(df[column].max())
+
+        # Pick dtype based on max_val
+        if max_val <= np.iinfo(np.uint8).max:
+            dtype = np.uint8
+        elif max_val <= np.iinfo(np.uint16).max:
+            dtype = np.uint16
+        elif max_val <= np.iinfo(np.uint32).max:
+            dtype = np.uint32
+        else:
+            dtype = np.uint64  # large values
+
+        # Initialize relabeled array with correct dtype
+        relabeled = np.zeros_like(seg, dtype=dtype)
+
+        for _, row in df.iterrows():
+            t = int(row[time_key])
+            node_id = int(row[id_key])
+            new_label = int(row[column])
+
+            relabeled[t][seg[t] == node_id] = new_label
+
+        return relabeled
+
     def convert_numpy_to_python(value):
         """Convert numpy types to native Python types."""
         if isinstance(value, (np.float64, np.float32, np.float16)):
@@ -51,18 +89,30 @@ def export_to_csv(
             return int(value)
         return value
 
+    header: list[str] = []
+    column_map: dict[str, str | list[str]] = {}
+
     # Build header - use old hardcoded format for backward compatibility
     if use_display_names:
-        header = ["ID", "Parent ID"]
+        header.extend(["ID", "Parent ID"])
+        column_map["id"] = "ID"
+        column_map["parent_id"] = "Parent ID"
     else:
-        # Backward compatibility: use old column names
-        # Old format: t, [z], y, x, id, parent_id, track_id
-        header = ["t"]
-        if tracks.ndim == 4:
-            header.extend(["z", "y", "x"])
-        else:  # ndim == 3
-            header.extend(["y", "x"])
+        # time
+        header.append("t")
+        column_map["time"] = "t"
+
+        # spatial coordinates
+        coords = ["z", "y", "x"] if tracks.ndim == 4 else ["y", "x"]
+
+        header.extend(coords)
+        column_map["coords"] = coords
+
+        # identifiers
         header.extend(["id", "parent_id", "track_id"])
+        column_map["id"] = "id"
+        column_map["parent_id"] = "parent_id"
+        column_map["track_id"] = "track_id"
 
     # For display names mode, build dynamic header from features
     feature_names = []
@@ -70,24 +120,31 @@ def export_to_csv(
         for feature_name, feature_dict in tracks.features.items():
             feature_names.append(feature_name)
             num_values = feature_dict.get("num_values", 1)
+
             if num_values > 1:
                 # Multi-value feature: use value_names if available
                 value_names = feature_dict.get("value_names")
                 if value_names is not None:
-                    header.extend(value_names)
+                    names = list(value_names)
                 else:
                     # Fall back to display_name or feature_name with index suffix
                     base_name = feature_dict.get("display_name", feature_name)
-                    if len(base_name) == num_values:
+                    if (
+                        isinstance(base_name, (list, tuple))
+                        and len(base_name) == num_values
+                    ):
                         # use list elements
-                        header.extend(list(base_name))
+                        names = list(base_name)
                     else:
                         # use a suffix
-                        header.extend([f"{base_name}_{i}" for i in range(num_values)])
+                        names = [f"{base_name}_{i}" for i in range(num_values)]
+                header.extend(names)
             else:
                 # Single-value feature: use display_name or feature_name
-                col_name = feature_dict.get("display_name", feature_name)
-                header.append(col_name)
+                names = feature_dict.get("display_name", feature_name)
+                header.extend([names])
+
+            column_map[feature_name] = names
 
     # Determine which nodes to export
     if node_ids is None:
@@ -96,29 +153,52 @@ def export_to_csv(
         node_to_keep = filter_graph_with_ancestors(tracks.graph, node_ids)
 
     # Write CSV file
-    with open(outfile, "w") as f:
-        f.write(",".join(header))
-        for node_id in node_to_keep:
-            parents = list(tracks.graph.predecessors(node_id))
-            parent_id = "" if len(parents) == 0 else parents[0]
+    rows: list[dict[str, Any]] = []
 
-            if use_display_names:
-                # Dynamic feature export
-                features: list[Any] = []
-                for feature_name in feature_names:
-                    feature_value = tracks.get_node_attr(node_id, feature_name)
-                    if isinstance(feature_value, list | tuple):
-                        features.extend(feature_value)
-                    else:
-                        features.append(feature_value)
-                row = [node_id, parent_id, *features]
-            else:
-                # Backward compatibility: hardcoded format matching old behavior
-                time = tracks.get_time(node_id)
-                position = tracks.get_position(node_id)
-                track_id = tracks.get_track_id(node_id)
-                row = [time, *position, node_id, parent_id, track_id]
+    for node_id in node_to_keep:
+        parents = list(tracks.graph.predecessors(node_id))
+        parent_id = "" if len(parents) == 0 else parents[0]
 
-            row = [convert_numpy_to_python(value) for value in row]
-            f.write("\n")
-            f.write(",".join(map(str, row)))
+        row: dict[str, Any]
+
+        row = {}
+        row[cast(str, column_map["id"])] = node_id
+        row[cast(str, column_map["parent_id"])] = parent_id
+
+        if use_display_names:
+            for feature_name in feature_names:
+                value = tracks.get_node_attr(node_id, feature_name)
+                cols = column_map[feature_name]
+                if isinstance(cols, list):
+                    assert isinstance(value, (list, tuple))
+                    for col, v in zip(cols, value, strict=True):
+                        row[col] = convert_numpy_to_python(v)
+                else:
+                    row[cols] = convert_numpy_to_python(value)
+
+        else:
+            row[cast(str, column_map["time"])] = convert_numpy_to_python(
+                tracks.get_time(node_id)
+            )
+
+            pos = tracks.get_position(node_id)
+            for name, value in zip(column_map["coords"], pos, strict=True):
+                row[name] = convert_numpy_to_python(value)
+
+            row[cast(str, column_map["track_id"])] = tracks.get_track_id(node_id)
+
+        rows.append(row)
+
+    df = pd.DataFrame(rows)
+    df = df[header]
+    df.to_csv(outfile, index=False)
+
+    if export_seg:
+        relabeled_seg = relabel_by_column(
+            tracks.segmentation,
+            df,
+            column=cast(str, column_map["track_id"]),
+            time_key=cast(str, column_map["time"]),
+            id_key=cast(str, column_map["id"]),
+        )
+        tifffile.imwrite(seg_path, relabeled_seg, compression="deflate")
