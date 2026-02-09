@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 def export_to_csv(
     tracks: SolutionTracks,
     outfile: Path | str,
+    color_dict: dict[int, np.ndarray] | None = None,
     node_ids: set[int] | None = None,
     use_display_names: bool = False,
     export_seg: bool = False,
@@ -33,6 +34,8 @@ def export_to_csv(
     Args:
         tracks: SolutionTracks object containing the tracking data to export
         outfile: Path to output CSV file
+        color_dict: dict[int, np.ndarray], optional. If provided, will be used to save the
+            hex colors.
         node_ids: Optional set of node IDs to include. If provided, only these
             nodes and their ancestors will be included in the output.
         use_display_names: If True, use feature display names as column headers.
@@ -191,6 +194,31 @@ def export_to_csv(
 
     df = pd.DataFrame(rows)
     df = df[header]
+
+    # Also add a column with the track ID color
+    if color_dict is not None:
+
+        def rgb_to_hex(rgb):
+            """Convert [R, G, B] to #RRGGBB."""
+            r, g, b = [int(round(c * 255)) for c in rgb[:3]]  # scale and convert to int
+            return f"#{r:02x}{g:02x}{b:02x}"
+
+        track_id_to_hex = {}
+
+        for track_id, nodes in tracks.track_id_to_node.items():
+            if not nodes:
+                continue
+            first_node = nodes[0]
+            rgb = color_dict[first_node]
+            track_id_to_hex[track_id] = rgb_to_hex(rgb)
+
+        df_colors = pd.DataFrame(
+            list(track_id_to_hex.items()),  # convert dict to list of (track_id, hex)
+            columns=[column_map["track_id"], "Tracklet ID Color"],
+        )
+
+        df = pd.merge(df, df_colors, how="left", on=[column_map["track_id"]])
+
     df.to_csv(outfile, index=False)
 
     if export_seg:
