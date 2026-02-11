@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, cast
 import numpy as np
 import pandas as pd
 import tifffile
+from skimage.util import map_array
 
 from .._utils import filter_graph_with_ancestors
 
@@ -51,38 +52,6 @@ def export_to_csv(
         >>> # Export only specific nodes
         >>> export_to_csv(tracks, "filtered.csv", node_ids={1, 2, 3})
     """
-
-    def relabel_by_column(
-        seg: np.ndarray,
-        df: pd.DataFrame,
-        column: str,
-        time_key: str = "t",
-        id_key: str = "id",
-    ) -> np.ndarray:
-        # Determine maximum value in the column to assign bit depth
-        max_val = int(df[column].max())
-
-        # Pick dtype based on max_val
-        if max_val <= np.iinfo(np.uint8).max:
-            dtype = np.uint8
-        elif max_val <= np.iinfo(np.uint16).max:
-            dtype = np.uint16
-        elif max_val <= np.iinfo(np.uint32).max:
-            dtype = np.uint32
-        else:
-            dtype = np.uint64  # large values
-
-        # Initialize relabeled array with correct dtype
-        relabeled = np.zeros_like(seg, dtype=dtype)
-
-        for _, row in df.iterrows():
-            t = int(row[time_key])
-            node_id = int(row[id_key])
-            new_label = int(row[column])
-
-            relabeled[t][seg[t] == node_id] = new_label
-
-        return relabeled
 
     def convert_numpy_to_python(value):
         """Convert numpy types to native Python types."""
@@ -222,11 +191,20 @@ def export_to_csv(
     df.to_csv(outfile, index=False)
 
     if export_seg:
-        relabeled_seg = relabel_by_column(
-            tracks.segmentation,
-            df,
-            column=cast(str, column_map["track_id"]),
-            time_key=cast(str, column_map["time"]),
-            id_key=cast(str, column_map["id"]),
-        )
+        # Determine maximum value in the column to assign bit depth
+        max_val = int(df[column_map["track_id"]].max())
+
+        # Pick dtype based on max_val
+        if max_val <= np.iinfo(np.uint8).max:
+            dtype = np.uint8
+        elif max_val <= np.iinfo(np.uint16).max:
+            dtype = np.uint16
+        elif max_val <= np.iinfo(np.uint32).max:
+            dtype = np.uint32
+        else:
+            dtype = np.uint64  # large values
+
+        input_vals = np.array(df[column_map["id"]])
+        output_vals = np.array(df[column_map["track_id"]], dtype=dtype)
+        relabeled_seg = map_array(tracks.segmentation, input_vals, output_vals)
         tifffile.imwrite(seg_path, relabeled_seg, compression="deflate")
