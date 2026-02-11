@@ -36,18 +36,6 @@ def compute_graph_from_seg(
     """
     # add nodes
     cand_graph, node_frame_dict = nodes_from_segmentation(segmentation, scale=scale)
-    # safety check for duplicate nodes with early exit for efficiency
-    seen = set()
-    for values in node_frame_dict.values():
-        for x in set(values):
-            if x in seen:
-                logger.info(
-                    "Duplicate values are found among nodes, segmentation will be "
-                    "relabeled"
-                )
-                raise ValueError("Duplicate values found among nodes")
-            seen.add(x)
-
     logger.info("Candidate nodes: %d", cand_graph.number_of_nodes())
 
     # add edges
