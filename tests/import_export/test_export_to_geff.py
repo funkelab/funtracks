@@ -42,9 +42,9 @@ def test_export_to_geff(
         for key in pos_keys:
             graph.add_node_attr_key(key, default_value=0.0, dtype=pl.Float64)
         for node in graph.node_ids():
-            pos = graph[node]["pos"]
+            pos = graph.nodes[node]["pos"]
             for i, key in enumerate(pos_keys):
-                graph[node][key] = pos[i]
+                graph.nodes[node][key] = pos[i]
         graph.remove_node_attr_key("pos")
         # Create Tracks with split position attributes
         # Features like area, track_id will be auto-detected from the graph

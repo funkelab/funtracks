@@ -39,7 +39,7 @@ dependencies =[
     "pandas>=2.3.3",
     "zarr>=2.18,<4",
     "numcodecs>=0.13,<0.16",
-    "tracksdata[spatial]@git+https://github.com/JoOkuma/tracksdata@9b09154c1257b6b526389f7de606e050567d9601",
+    "tracksdata[spatial]@git+https://github.com/JoOkuma/tracksdata@25a0b8ff5ddc2d72e86ba302a88bb9eedfa71643",
     # This will soon be main, and I will then update the commit hash
 ]
 

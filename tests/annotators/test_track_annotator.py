@@ -36,7 +36,7 @@ class TestTrackAnnotator:
         ann.compute()
         for node in tracks.graph.node_ids():
             for key in all_features:
-                assert tracks.graph[node][key] is not None
+                assert tracks.graph.nodes[node][key] is not None
 
         lineages = [
             [1, 2, 3, 4, 5],

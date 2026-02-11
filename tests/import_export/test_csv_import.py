@@ -659,7 +659,7 @@ class TestSpatialDimsValidation:
 
         # Position should be computed from segmentation centroids
         assert "pos" in tracks.graph.node_attr_keys()
-        pos_1 = tracks.graph[1]["pos"]
+        pos_1 = tracks.graph.nodes[1]["pos"]
         # Centroid of 3x3 region at [2:5, 2:5] is approximately [3, 3]
         np.testing.assert_array_almost_equal(pos_1, [3.0, 3.0], decimal=0)
 

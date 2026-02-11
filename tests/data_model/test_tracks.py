@@ -71,11 +71,11 @@ def test_create_tracks(graph_3d_with_segmentation: td.graph.GraphView):
     graph_3d_with_segmentation.add_node_attr_key("y", default_value=0.0, dtype=pl.Float64)
     graph_3d_with_segmentation.add_node_attr_key("x", default_value=0.0, dtype=pl.Float64)
     for node in graph_3d_with_segmentation.node_ids():
-        pos = graph_3d_with_segmentation[node]["pos"]
+        pos = graph_3d_with_segmentation.nodes[node]["pos"]
         z, y, x = pos
-        graph_3d_with_segmentation[node]["z"] = z
-        graph_3d_with_segmentation[node]["y"] = y
-        graph_3d_with_segmentation[node]["x"] = x
+        graph_3d_with_segmentation.nodes[node]["z"] = z
+        graph_3d_with_segmentation.nodes[node]["y"] = y
+        graph_3d_with_segmentation.nodes[node]["x"] = x
 
     tracks = Tracks(
         graph=graph_3d_with_segmentation,

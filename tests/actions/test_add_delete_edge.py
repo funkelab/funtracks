@@ -8,9 +8,6 @@ from funtracks.actions import (
     AddEdge,
     DeleteEdge,
 )
-from funtracks.utils.tracksdata_utils import (
-    td_get_single_attr_from_edge,
-)
 
 iou_key = "iou"
 
@@ -131,8 +128,9 @@ def test_custom_edge_attributes_preserved(get_tracks, ndim, with_seg):
     # Verify all attributes are present after adding
     assert tracks.graph.has_edge(*edge)
     for key, value in custom_attrs.items():
-        assert td_get_single_attr_from_edge(tracks.graph, edge, key) == value, (
-            f"Attribute {key} not preserved after add"
+        edge_id = tracks.graph.edge_id(*edge)
+        assert tracks.graph.edges[edge_id][key] == value, (
+            f"Attribute {key} not set correctly on edge"
         )
 
     # Delete the edge
@@ -145,6 +143,7 @@ def test_custom_edge_attributes_preserved(get_tracks, ndim, with_seg):
 
     # Verify all custom attributes are still present after re-adding
     for key, value in custom_attrs.items():
-        assert td_get_single_attr_from_edge(tracks.graph, edge, key) == value, (
+        edge_id = tracks.graph.edge_id(*edge)
+        assert tracks.graph.edges[edge_id][key] == value, (
             f"Attribute {key} not preserved after delete/re-add cycle"
         )

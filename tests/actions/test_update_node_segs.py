@@ -24,8 +24,8 @@ def test_update_node_segs(get_tracks, ndim):
     assert time in tracks.segmentation._cache._store
 
     original_seg = np.asarray(tracks.segmentation).copy()
-    original_area = tracks.graph[1]["area"]
-    original_pos = tracks.graph[1]["pos"]
+    original_area = tracks.graph.nodes[1]["area"]
+    original_pos = tracks.graph.nodes[1]["pos"]
 
     # Add a couple pixels to the first node
     new_seg = np.asarray(tracks.segmentation).copy()
@@ -40,8 +40,8 @@ def test_update_node_segs(get_tracks, ndim):
     action = UpdateNodeSeg(tracks, node, mask=mask, added=True)
 
     assert set(tracks.graph.node_ids()) == set(reference_graph.node_ids())
-    assert tracks.graph[1]["area"] == original_area + 1
-    assert not np.allclose(tracks.graph[1]["pos"], original_pos)
+    assert tracks.graph.nodes[1]["area"] == original_area + 1
+    assert not np.allclose(tracks.graph.nodes[1]["pos"], original_pos)
     assert_array_almost_equal(tracks.segmentation, new_seg)
 
     # Re-populate cache for inverse action test
@@ -50,8 +50,8 @@ def test_update_node_segs(get_tracks, ndim):
     inverse = action.inverse()
     assert set(tracks.graph.node_ids()) == set(reference_graph.node_ids())
     assert_series_equal(
-        reference_graph[1]["pos"],
-        tracks.graph[1]["pos"],
+        reference_graph.nodes[1]["pos"],
+        tracks.graph.nodes[1]["pos"],
     )
     assert_array_almost_equal(tracks.segmentation, original_seg)
 
@@ -61,6 +61,6 @@ def test_update_node_segs(get_tracks, ndim):
     inverse.inverse()
 
     assert set(tracks.graph.node_ids()) == set(reference_graph.node_ids())
-    assert tracks.graph[1]["area"] == original_area + 1
-    assert not np.allclose(tracks.graph[1]["pos"], original_pos)
+    assert tracks.graph.nodes[1]["area"] == original_area + 1
+    assert not np.allclose(tracks.graph.nodes[1]["pos"], original_pos)
     assert_array_almost_equal(tracks.segmentation, new_seg)

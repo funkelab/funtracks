@@ -315,9 +315,9 @@ def test_tracks_with_segmentation(valid_geff, invalid_geff, valid_segmentation, 
     # Get last node by ID (don't rely on iteration order)
     last_node = max(tracks.graph.node_ids())
     # With composite pos, position is stored as an array
-    pos = tracks.graph[last_node]["pos"]
+    pos = tracks.graph.nodes[last_node]["pos"]
     coords = [
-        tracks.graph[last_node]["t"],
+        tracks.graph.nodes[last_node]["t"],
         pos[0],  # y
         pos[1],  # x
     ]
@@ -330,7 +330,7 @@ def test_tracks_with_segmentation(valid_geff, invalid_geff, valid_segmentation, 
     )  # test that the seg id has been relabeled
 
     # Check that only required/requested features are present, and that area is recomputed
-    data = tracks.graph[last_node]
+    data = tracks.graph.nodes[last_node]
     assert "random_feature" in tracks.graph.node_attr_keys()
     assert "random_feature2" not in tracks.graph.node_attr_keys()
     assert "area" in tracks.graph.node_attr_keys()
@@ -353,7 +353,7 @@ def test_tracks_with_segmentation(valid_geff, invalid_geff, valid_segmentation, 
     )
     # Get last node by ID (don't rely on iteration order)
     last_node = max(tracks.graph.node_ids())
-    data = tracks.graph[last_node]
+    data = tracks.graph.nodes[last_node]
     assert "area" in tracks.graph.node_attr_keys()
     assert data["area"] == 21
 
@@ -449,7 +449,7 @@ def test_node_features_compute_vs_load(valid_geff, valid_segmentation, tmp_path)
 
     # Get last node by ID (don't rely on iteration order)
     max_node_id = max(tracks.graph.node_ids())
-    data = tracks.graph[max_node_id]
+    data = tracks.graph.nodes[max_node_id]
 
     # All requested features should be present
     for key in feature_keys:

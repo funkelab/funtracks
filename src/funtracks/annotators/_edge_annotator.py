@@ -106,8 +106,8 @@ class EdgeAnnotator(GraphAnnotator):
         """
         for edge in edges:
             source, target = edge
-            mask1 = self.tracks.graph[source]["mask"]
-            mask2 = self.tracks.graph[target]["mask"]
+            mask1 = self.tracks.graph.nodes[source]["mask"]
+            mask2 = self.tracks.graph.nodes[target]["mask"]
             iou = _compute_iou(mask1, mask2)
             self.tracks._set_edge_attr(edge, self.iou_key, iou)
 
@@ -149,8 +149,8 @@ class EdgeAnnotator(GraphAnnotator):
         # Update IoU for each edge
         for edge in edges_to_update:
             source, target = edge
-            mask1 = self.tracks.graph[source]["mask"]
-            mask2 = self.tracks.graph[target]["mask"]
+            mask1 = self.tracks.graph.nodes[source]["mask"]
+            mask2 = self.tracks.graph.nodes[target]["mask"]
             if mask1.mask.sum() == 0 or mask2.mask.sum() == 0:
                 warnings.warn(
                     f"Cannot find label {source} in segmentation"

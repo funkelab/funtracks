@@ -53,7 +53,7 @@ class UserUpdateSegmentation(ActionGroup):
             time = pixels[0][0]
             # check if all pixels of old_value are removed
             mask_pixels = pixels_to_td_mask(pixels, self.tracks.ndim)
-            mask_old_value = self.tracks.graph[old_value]["mask"]
+            mask_old_value = self.tracks.graph.nodes[old_value]["mask"]
             # If pixels fully overlaps with old_value mask, delete node
             if mask_pixels.intersection(mask_old_value) == mask_old_value.mask.sum():
                 self.actions.append(UserDeleteNode(tracks, old_value, pixels=pixels))

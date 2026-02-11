@@ -64,8 +64,8 @@ def test_enable_disable_features(graph_2d_with_segmentation):
     assert "pos" in tracks.features
     assert "t" in tracks.features
     assert "area" in tracks.features  # Core feature for backward compatibility
-    assert tracks.graph[nodes[0]]["pos"] is not None
-    assert tracks.graph[nodes[0]]["area"] is not None
+    assert tracks.graph.nodes[nodes[0]]["pos"] is not None
+    assert tracks.graph.nodes[nodes[0]]["area"] is not None
 
     # Other features should NOT be in tracks.features initially
     assert "iou" not in tracks.features
@@ -79,7 +79,7 @@ def test_enable_disable_features(graph_2d_with_segmentation):
     assert "circularity" in tracks.features
 
     # Verify values are actually computed on the graph
-    assert tracks.graph[nodes[0]]["circularity"] is not None
+    assert tracks.graph.nodes[nodes[0]]["circularity"] is not None
     if edges:
         assert None not in tracks.graph.edge_attrs()["iou"].to_list()
 
@@ -93,7 +93,7 @@ def test_enable_disable_features(graph_2d_with_segmentation):
     assert "circularity" in tracks.features
 
     # Values no longer exist in the graph for tracksdata
-    # assert tracks.graph[1]["area"] is not None
+    # assert tracks.graph.nodes[1]["area"] is not None
 
     # Disable the remaining enabled features
     tracks.disable_features(["pos", "iou", "circularity"])

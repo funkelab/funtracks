@@ -1,6 +1,5 @@
 import tempfile
 import uuid
-from collections.abc import Sequence
 from typing import Any
 
 import networkx as nx
@@ -408,18 +407,10 @@ def add_masks_and_bboxes_to_graph(
 
     for label, _, mask in list_of_masks:
         if graph.has_node(label):
-            graph[label]["mask"] = [mask]
-            graph[label]["bbox"] = [mask.bbox]
+            graph.nodes[label]["mask"] = [mask]
+            graph.nodes[label]["bbox"] = [mask.bbox]
 
     return graph
-
-
-def td_get_single_attr_from_edge(graph, edge: tuple[int, int], attrs: Sequence[str]):
-    """Get a single attribute from a edge in a tracksdata graph."""
-
-    # TODO Teun: later opdate to: graph.edges[edge_id][attr] (after td update)
-    item = graph.filter(node_ids=[edge[0], edge[1]]).edge_attrs()[attrs].item()
-    return item
 
 
 def td_relabel_nodes(graph, mapping: dict[int, int]) -> td.graph.SQLGraph:

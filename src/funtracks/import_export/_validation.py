@@ -56,7 +56,7 @@ def validate_graph_seg_match(
         raise ValueError("Graph has no nodes")
 
     last_node_id = node_ids[-1]
-    last_node_data = graph[last_node_id]
+    last_node_data = graph.nodes[last_node_id]
 
     # Check if seg_id exists; if not, assume it matches node_id
     seg_id = last_node_data["seg_id"]

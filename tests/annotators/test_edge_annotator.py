@@ -3,10 +3,7 @@ import pytest
 from funtracks.actions import UpdateNodeSeg, UpdateTrackID
 from funtracks.annotators import EdgeAnnotator
 from funtracks.data_model import SolutionTracks, Tracks
-from funtracks.utils.tracksdata_utils import (
-    pixels_to_td_mask,
-    td_get_single_attr_from_edge,
-)
+from funtracks.utils.tracksdata_utils import pixels_to_td_mask
 
 track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
 
@@ -79,7 +76,7 @@ class TestEdgeAnnotator:
         with pytest.warns(match="Cannot find label 1 in frame .*"):
             UpdateNodeSeg(tracks, node_id, mask, added=False)
 
-        assert td_get_single_attr_from_edge(tracks.graph, edge_id, "iou") == 0
+        assert tracks.graph.edges[tracks.graph.edge_id(*edge_id)]["iou"] == 0
 
     def test_add_remove_feature(self, get_graph, ndim):
         graph = get_graph(ndim, with_features="segmentation")
@@ -141,8 +138,9 @@ class TestEdgeAnnotator:
         tracks.enable_features(["iou", track_attrs["tracklet_attr"]])
 
         node_id = 3
-        edge_id = (1, 3)
-        initial_iou = td_get_single_attr_from_edge(tracks.graph, edge_id, "iou")
+        edge = (1, 3)
+        edge_id = tracks.graph.edge_id(*edge)
+        initial_iou = tracks.get_edge_attr(edge, "iou", required=True)
 
         # If we recomputed IoU now, it would be different
         # But we won't - we'll just call UpdateTrackID on node 1
@@ -156,6 +154,6 @@ class TestEdgeAnnotator:
         UpdateTrackID(tracks, node_id, new_track_id)
 
         # IoU should remain unchanged (no recomputation happened despite seg change)
-        assert td_get_single_attr_from_edge(tracks.graph, edge_id, "iou") == initial_iou
+        assert tracks.graph.edges[edge_id]["iou"] == initial_iou
         # But track_id should be updated
         assert tracks.get_track_id(node_id) == new_track_id

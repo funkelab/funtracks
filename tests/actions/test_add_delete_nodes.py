@@ -60,21 +60,23 @@ def test_add_delete_nodes(get_tracks, ndim, with_seg):
             mask = None
 
         attrs = {}
-        attrs[tracks.features.time_key] = reference_graph[node][tracks.features.time_key]
+        attrs[tracks.features.time_key] = reference_graph.nodes[node][
+            tracks.features.time_key
+        ]
         if tracks.features.position_key == "pos":
-            attrs[tracks.features.position_key] = reference_graph[node][
+            attrs[tracks.features.position_key] = reference_graph.nodes[node][
                 tracks.features.position_key
             ].to_list()
         else:
-            attrs[tracks.features.position_key] = reference_graph[node][
+            attrs[tracks.features.position_key] = reference_graph.nodes[node][
                 tracks.features.position_key
             ]
-        attrs[tracks.features.tracklet_key] = reference_graph[node][
+        attrs[tracks.features.tracklet_key] = reference_graph.nodes[node][
             tracks.features.tracklet_key
         ]
         if with_seg:
-            attrs["bbox"] = reference_graph[node]["bbox"]
-            attrs["mask"] = reference_graph[node]["mask"]
+            attrs["bbox"] = reference_graph.nodes[node]["bbox"]
+            attrs["mask"] = reference_graph.nodes[node]["mask"]
 
         actions.append(AddNode(tracks, node, attributes=attrs, mask=mask))
     action = ActionGroup(tracks=tracks, actions=actions)
@@ -208,13 +210,13 @@ def test_custom_attributes_preserved(get_tracks, ndim, with_seg):
     assert tracks.graph.has_node(node_id)
     for key, value in custom_attrs.items():
         if key == "pos":
-            assert_array_almost_equal(tracks.graph[node_id][key], np.array(value))
+            assert_array_almost_equal(tracks.graph.nodes[node_id][key], np.array(value))
         elif key == "mask":
             continue
         elif key == "bbox":
-            assert_array_equal(np.asarray(tracks.graph[node_id][key]), value)
+            assert_array_equal(np.asarray(tracks.graph.nodes[node_id][key]), value)
         else:
-            assert tracks.graph[node_id][key] == value, (
+            assert tracks.graph.nodes[node_id][key] == value, (
                 f"Attribute {key} not preserved after add"
             )
 
@@ -229,12 +231,12 @@ def test_custom_attributes_preserved(get_tracks, ndim, with_seg):
     # Verify all custom attributes are still present after re-adding
     for key, value in custom_attrs.items():
         if key == "pos":
-            assert_array_almost_equal(tracks.graph[node_id][key], np.array(value))
+            assert_array_almost_equal(tracks.graph.nodes[node_id][key], np.array(value))
         elif key == "mask":
             continue
         elif key == "bbox":
-            assert_array_equal(np.asarray(tracks.graph[node_id][key]), value)
+            assert_array_equal(np.asarray(tracks.graph.nodes[node_id][key]), value)
         else:
-            assert tracks.graph[node_id][key] == value, (
+            assert tracks.graph.nodes[node_id][key] == value, (
                 f"Attribute {key} not preserved after delete/re-add cycle"
             )

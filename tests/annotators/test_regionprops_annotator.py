@@ -44,7 +44,7 @@ class TestRegionpropsAnnotator:
         for key in rp_ann.features:
             assert key in tracks.graph.node_attr_keys()
             for node_id in tracks.graph.node_ids():
-                value = tracks.graph[node_id][key]
+                value = tracks.graph.nodes[node_id][key]
                 assert value is not None
 
     def test_update_all(self, get_graph, ndim):
@@ -84,7 +84,7 @@ class TestRegionpropsAnnotator:
             UpdateNodeSeg(tracks, node_id, mask, added=False)
         # all regionprops features should be the defaults, because seg doesn't exist
         for key in rp_ann.features:
-            actual = tracks.graph[node_id][key]
+            actual = tracks.graph.nodes[node_id][key]
             expected = tracks.graph._node_attr_schemas()[key].default_value
             # Convert to numpy arrays for comparison (handles both scalar and array types)
             actual_np = np.asarray(actual)

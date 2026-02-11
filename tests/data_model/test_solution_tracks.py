@@ -58,7 +58,7 @@ def test_from_tracks_cls_recompute(graph_2d_with_segmentation):
     )
     # delete track id (default value -1) on one node triggers reassignment of
     # track_ids even when recompute is False.
-    tracks.graph[1][tracks.features.tracklet_key] = -1
+    tracks.graph.nodes[1][tracks.features.tracklet_key] = -1
     solution_tracks = SolutionTracks.from_tracks(tracks)
     # should have reassigned new track_id to node 6
     assert solution_tracks.get_node_attr(6, solution_tracks.features.tracklet_key) == 4

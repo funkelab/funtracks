@@ -18,7 +18,6 @@ from tracksdata.nodes._mask import Mask
 
 from funtracks.features import Feature, FeatureDict, Position, Time
 from funtracks.utils.tracksdata_utils import (
-    td_get_single_attr_from_edge,
     to_polars_dtype,
 )
 
@@ -458,7 +457,7 @@ class Tracks:
         if self.segmentation is None:
             return None
 
-        mask = self.graph[node][td.DEFAULT_ATTR_KEYS.MASK]
+        mask = self.graph.nodes[node][td.DEFAULT_ATTR_KEYS.MASK]
         return mask
 
     def get_pixels(self, node: Node) -> tuple[np.ndarray, ...] | None:
@@ -478,7 +477,7 @@ class Tracks:
 
         # Get time and mask for the node
         time = self.get_time(node)
-        mask = self.graph[node][td.DEFAULT_ATTR_KEYS.MASK]
+        mask = self.graph.nodes[node][td.DEFAULT_ATTR_KEYS.MASK]
 
         # Get local coordinates and convert to global using bbox offset
         local_coords = np.nonzero(mask.mask)
@@ -561,14 +560,14 @@ class Tracks:
     def _set_node_attr(self, node: Node, attr: str, value: Any):
         if isinstance(value, np.ndarray):
             value = list(value)
-        self.graph[node][attr] = [value]
+        self.graph.nodes[node][attr] = [value]
 
     def _set_nodes_attr(self, nodes: Iterable[Node], attr: str, values: Iterable[Any]):
         for node, value in zip(nodes, values, strict=False):
-            self.graph[node][attr] = [value]
+            self.graph.nodes[node][attr] = [value]
 
     def get_node_attr(self, node: Node, attr: str, required: bool = False):
-        return self.graph[int(node)][attr]
+        return self.graph.nodes[int(node)][attr]
 
     def get_nodes_attr(self, nodes: Iterable[Node], attr: str, required: bool = False):
         return [self.get_node_attr(node, attr, required=required) for node in nodes]
@@ -587,7 +586,8 @@ class Tracks:
             if required:
                 raise KeyError(attr)
             return None
-        return td_get_single_attr_from_edge(self.graph, edge=edge, attrs=[attr])
+        edge_id = self.graph.edge_id(edge[0], edge[1])
+        return self.graph.edges[edge_id][attr]
 
     def get_edges_attr(self, edges: Iterable[Edge], attr: str, required: bool = False):
         return [self.get_edge_attr(edge, attr, required=required) for edge in edges]

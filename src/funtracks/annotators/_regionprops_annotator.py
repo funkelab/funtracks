@@ -167,7 +167,7 @@ class RegionpropsAnnotator(GraphAnnotator):
             return
 
         for node_id in self.tracks.graph.node_ids():
-            mask = self.tracks.graph[node_id]["mask"]
+            mask = self.tracks.graph.nodes[node_id]["mask"]
             self._regionprops_update(node_id, mask, keys_to_compute)
 
     def _regionprops_update(
@@ -223,7 +223,7 @@ class RegionpropsAnnotator(GraphAnnotator):
 
         time = self.tracks.get_time(node)
 
-        if self.tracks.graph[node]["mask"].mask.sum() == 0:
+        if self.tracks.graph.nodes[node]["mask"].mask.sum() == 0:
             warnings.warn(
                 f"Cannot find label {node} in frame {time}: "
                 "updating regionprops values to None",
@@ -233,7 +233,7 @@ class RegionpropsAnnotator(GraphAnnotator):
                 value = None
                 self.tracks._set_node_attr(node, key, value)
         else:
-            mask = self.tracks.graph[node]["mask"]
+            mask = self.tracks.graph.nodes[node]["mask"]
             self._regionprops_update(node, mask, keys_to_compute)
 
     def change_key(self, old_key: str, new_key: str) -> None:
