@@ -30,7 +30,9 @@ def export_to_csv(
     change which columns are exported, just using which names
 
     Exports tracking data to CSV format with columns for node ID, parent ID,
-    and all registered features.
+    and all registered features. Optionally also exports the segmentation, relabeled by
+    tracklet ID, as tif. If a color dictionary is provided, it will also export the
+    tracklet colors.
 
     Args:
         tracks: SolutionTracks object containing the tracking data to export
@@ -51,6 +53,8 @@ def export_to_csv(
         >>> export_to_csv(tracks, "output.csv", use_display_names=True)
         >>> # Export only specific nodes
         >>> export_to_csv(tracks, "filtered.csv", node_ids={1, 2, 3})
+        >>> # Export with segmentation
+        >>> export_to_csv(tracks, "filtered.csv", export_seg=True, seg_path="seg.tif")
     """
 
     def convert_numpy_to_python(value):
