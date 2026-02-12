@@ -17,8 +17,8 @@ def test_recompute_track_ids(graph_2d_with_track_id):
     assert tracks.get_next_track_id() == 6
 
 
-def test_next_track_id(graph_2d_with_segmentation):
-    tracks = SolutionTracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
+def test_next_track_id(graph_2d_with_track_id):
+    tracks = SolutionTracks(graph_2d_with_track_id, ndim=3, **track_attrs)
     assert tracks.get_next_track_id() == 6
     AddNode(
         tracks,

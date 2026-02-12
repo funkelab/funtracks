@@ -10,7 +10,6 @@ if TYPE_CHECKING:
     from funtracks.data_model.solution_tracks import SolutionTracks
     from funtracks.data_model.tracks import Node
 
-import numpy as np
 import tracksdata as td
 from tracksdata.nodes._mask import Mask
 
@@ -84,27 +83,9 @@ class AddNode(BasicAction):
         """Apply the action, and set segmentation if provided in self.mask"""
         attrs = self.attributes
 
-        if self.tracks.segmentation is not None:
-            if self.mask is not None:
-                attrs[td.DEFAULT_ATTR_KEYS.MASK] = self.mask
-                attrs[td.DEFAULT_ATTR_KEYS.BBOX] = self.mask.bbox
-            else:
-                # TODO Teun: remove this defaulting behavior, see new tracksdata PR
-                # update: default behaviour in td has a bug rn, will remove later
-                if len(self.tracks.segmentation.shape) == 3:
-                    attrs[td.DEFAULT_ATTR_KEYS.MASK] = Mask(
-                        np.array([[False]]), bbox=[0, 0, 1, 1]
-                    )
-                    attrs[td.DEFAULT_ATTR_KEYS.BBOX] = [0, 0, 1, 1]
-                elif len(self.tracks.segmentation.shape) == 4:
-                    attrs[td.DEFAULT_ATTR_KEYS.MASK] = Mask(
-                        np.array([[[False]]]), bbox=[0, 0, 0, 1, 1, 1]
-                    )
-                    attrs[td.DEFAULT_ATTR_KEYS.BBOX] = [0, 0, 0, 1, 1, 1]
-                else:
-                    raise ValueError(
-                        "Must provide mask when adding node to tracks with seg"
-                    )
+        if self.tracks.segmentation is not None and self.mask is not None:
+            attrs[td.DEFAULT_ATTR_KEYS.MASK] = self.mask
+            attrs[td.DEFAULT_ATTR_KEYS.BBOX] = self.mask.bbox
 
         self.tracks.graph.add_node(attrs=attrs, index=self.node, validate_keys=False)
 
