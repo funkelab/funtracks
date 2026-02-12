@@ -4,6 +4,10 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
+from funtracks.utils.tracksdata_utils import (
+    pixels_to_td_mask,
+)
+
 from ..actions._base import ActionGroup
 from ..actions.add_delete_edge import AddEdge, DeleteEdge
 from ..actions.add_delete_node import DeleteNode
@@ -45,4 +49,9 @@ class UserDeleteNode(ActionGroup):
                 self.actions.append(AddEdge(tracks, (predecessor, successor)))
 
         # delete node
-        self.actions.append(DeleteNode(tracks, node, pixels=pixels))
+        mask = (
+            pixels_to_td_mask(pixels, ndim=self.tracks.ndim)
+            if pixels is not None
+            else None
+        )
+        self.actions.append(DeleteNode(tracks, node, mask=mask))

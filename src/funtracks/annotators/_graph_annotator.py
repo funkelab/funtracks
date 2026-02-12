@@ -3,6 +3,10 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+import polars as pl
+
+from funtracks.utils.tracksdata_utils import to_polars_dtype
+
 if TYPE_CHECKING:
     from funtracks.actions import BasicAction
     from funtracks.data_model import Tracks
@@ -65,6 +69,31 @@ class GraphAnnotator:
             if key in self.all_features:
                 feat, _ = self.all_features[key]
                 self.all_features[key] = (feat, True)
+
+                # Ensure attribute key exists in graph schema
+                if (
+                    feat["feature_type"] == "node"
+                    and key not in self.tracks.graph.node_attr_keys()
+                ):
+                    # Get the dtype from the feature dict
+                    # unless the feature has multiple values, in which case use Array type
+                    dtype = to_polars_dtype(feat["value_type"])
+                    if feat["num_values"] is not None and feat["num_values"] > 1:
+                        dtype = pl.Array(pl.Float64, feat["num_values"])
+                    self.tracks.graph.add_node_attr_key(
+                        key,
+                        default_value=feat["default_value"],
+                        dtype=dtype,
+                    )
+                elif (
+                    feat["feature_type"] == "edge"
+                    and key not in self.tracks.graph.edge_attr_keys()
+                ):
+                    self.tracks.graph.add_edge_attr_key(
+                        key,
+                        default_value=feat["default_value"],
+                        dtype=to_polars_dtype(feat["value_type"]),
+                    )
 
     def deactivate_features(self, keys: list[str]) -> None:
         """Deactivate computation of the given features in the annotation process.

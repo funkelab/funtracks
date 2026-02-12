@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import TYPE_CHECKING
 
-import networkx as nx
+import rustworkx as rx
 
 from funtracks.actions import AddNode, DeleteNode, UpdateTrackID
 from funtracks.data_model import SolutionTracks
@@ -110,13 +110,13 @@ class TrackAnnotator(GraphAnnotator):
         self.max_lineage_id = 0
 
         # Initialize tracklet bookkeeping if track IDs already exist in the graph
-        if tracks.graph.number_of_nodes() > 0:
+        if tracks.graph.num_nodes() > 0:
             max_id, id_to_nodes = self._get_max_id_and_map(self.tracklet_key)
             self.max_tracklet_id = max_id
             self.tracklet_id_to_nodes = id_to_nodes
 
         # Initialize lineage bookkeeping if lineage IDs already exist
-        if lineage_key is not None and tracks.graph.number_of_nodes() > 0:
+        if lineage_key is not None and tracks.graph.num_nodes() > 0:
             max_id, id_to_nodes = self._get_max_id_and_map(self.lineage_key)
             self.max_lineage_id = max_id
             self.lineage_id_to_nodes = id_to_nodes
@@ -133,7 +133,9 @@ class TrackAnnotator(GraphAnnotator):
         """
         id_to_nodes = defaultdict(list)
         max_id = 0
-        for node in self.tracks.nodes():
+        for node in self.tracks.graph.node_ids():
+            if key not in self.tracks.graph.node_attr_keys():
+                continue
             _id: int = self.tracks.get_node_attr(node, key)
             if _id is None:
                 continue
@@ -195,8 +197,17 @@ class TrackAnnotator(GraphAnnotator):
         Each connected component will get a unique id, and the relevant class
         attributes will be updated.
         """
-        lineages = nx.weakly_connected_components(self.tracks.graph)
-        max_id, ids_to_nodes = self._assign_ids(lineages, self.lineage_key)
+
+        lineages_internal = rx.weakly_connected_components(self.tracks.graph.rx_graph)
+        lineages_external = []
+        for lin in lineages_internal:
+            node_ids_internal = list(lin)
+            node_ids_external = [
+                self.tracks.graph.node_ids()[nid] for nid in node_ids_internal
+            ]
+            lineages_external.append(node_ids_external)
+
+        max_id, ids_to_nodes = self._assign_ids(lineages_external, self.lineage_key)
         self.max_lineage_id = max_id
         self.lineage_id_to_nodes = ids_to_nodes
 
@@ -206,19 +217,37 @@ class TrackAnnotator(GraphAnnotator):
         After removing division edges, each connected component will get a unique ID,
         and the relevant class attributes will be updated.
         """
-        graph_copy = self.tracks.graph.copy()
-        parents = [node for node, degree in self.tracks.graph.out_degree() if degree >= 2]
+        graph_copy = self.tracks.graph.detach().filter().subgraph()
+
+        parents = [
+            node
+            for node, degree in zip(
+                self.tracks.graph.node_ids(), self.tracks.graph.out_degree(), strict=True
+            )
+            if degree >= 2
+        ]
 
         # Remove all intertrack edges from a copy of the original graph
         for parent in parents:
-            daughters = self.tracks.successors(parent)
+            all_edges = self.tracks.graph.edge_list()
+            daughters = [edge[1] for edge in all_edges if edge[0] == parent]
+
             for daughter in daughters:
                 graph_copy.remove_edge(parent, daughter)
 
-        tracklets = nx.weakly_connected_components(graph_copy)
-        max_id, ids_to_nodes = self._assign_ids(tracklets, self.tracklet_key)
-        self.max_tracklet_id = max_id
-        self.tracklet_id_to_nodes = ids_to_nodes
+        track_id = 1
+        for tracklet in rx.weakly_connected_components(graph_copy.rx_graph):
+            node_ids_internal = list(tracklet)
+            node_ids_external = [graph_copy.node_ids()[nid] for nid in node_ids_internal]
+            self.tracks.graph.update_node_attrs(
+                attrs={
+                    self.tracks.features.tracklet_key: [track_id] * len(node_ids_external)
+                },
+                node_ids=node_ids_external,
+            )
+            self.tracklet_id_to_nodes[track_id] = node_ids_external
+            track_id += 1
+        self.max_tracklet_id = track_id - 1
 
     def update(self, action: BasicAction) -> None:
         """Update track-level features based on the action.

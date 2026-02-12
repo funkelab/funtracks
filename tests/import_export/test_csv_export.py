@@ -20,14 +20,14 @@ def test_export_solution_to_csv(get_tracks, tmp_path, ndim, expected_header):
     with open(temp_file) as f:
         lines = f.readlines()
 
-    assert len(lines) == tracks.graph.number_of_nodes() + 1  # add header
+    assert len(lines) == tracks.graph.num_nodes() + 1  # add header
     assert lines[0].strip().split(",") == expected_header
 
     # Check first data line (node 1: t=0, pos=[50, 50] or [50, 50, 50], track_id=1)
     if ndim == 3:
-        expected_line1 = ["0", "50", "50", "1", "", "1"]
+        expected_line1 = ["0", "50.0", "50.0", "1", "", "1"]
     else:
-        expected_line1 = ["0", "50", "50", "50", "1", "", "1"]
+        expected_line1 = ["0", "50.0", "50.0", "50.0", "1", "", "1"]
     assert lines[1].strip().split(",") == expected_line1
 
 

@@ -43,8 +43,8 @@ class TestDataFrameImportBasic:
         tracks = tracks_from_df(simple_df_2d)
 
         assert isinstance(tracks, SolutionTracks)
-        assert tracks.graph.number_of_nodes() == 4
-        assert tracks.graph.number_of_edges() == 3
+        assert tracks.graph.num_nodes() == 4
+        assert tracks.graph.num_edges() == 3
         assert tracks.ndim == 3
 
     def test_import_3d(self, df_3d):
@@ -52,7 +52,7 @@ class TestDataFrameImportBasic:
         tracks = tracks_from_df(df_3d)
 
         assert tracks.ndim == 4
-        assert tracks.graph.number_of_nodes() == 3
+        assert tracks.graph.num_nodes() == 3
         # Check z coordinate
         pos = tracks.get_position(1)
         assert len(pos) == 3  # z, y, x
@@ -123,7 +123,7 @@ class TestSegmentationHandling:
         tracks = tracks_from_df(df, seg)
         assert tracks.segmentation is not None
         # Segmentation should not be relabeled
-        assert tracks.segmentation[0, 10, 15] == 1
+        assert np.asarray(tracks.segmentation)[0, 10, 15] == 1
 
 
 class TestEdgeCases:
@@ -143,8 +143,8 @@ class TestEdgeCases:
 
         tracks = tracks_from_df(df)
 
-        assert tracks.graph.number_of_nodes() == 1
-        assert tracks.graph.number_of_edges() == 0
+        assert tracks.graph.num_nodes() == 1
+        assert tracks.graph.num_edges() == 0
 
     def test_multiple_roots(self):
         """Test multiple independent lineages."""
@@ -160,11 +160,11 @@ class TestEdgeCases:
 
         tracks = tracks_from_df(df)
 
-        assert tracks.graph.number_of_nodes() == 4
-        assert tracks.graph.number_of_edges() == 2
+        assert tracks.graph.num_nodes() == 4
+        assert tracks.graph.num_edges() == 2
 
         # Should have two root nodes
-        roots = [n for n in tracks.graph.nodes() if tracks.graph.in_degree(n) == 0]
+        roots = [n for n in tracks.graph.node_ids() if tracks.graph.in_degree(n) == 0]
         assert len(roots) == 2
 
     def test_division_event(self):
@@ -181,8 +181,8 @@ class TestEdgeCases:
 
         tracks = tracks_from_df(df)
 
-        assert tracks.graph.number_of_nodes() == 3
-        assert tracks.graph.number_of_edges() == 2
+        assert tracks.graph.num_nodes() == 3
+        assert tracks.graph.num_edges() == 2
 
         # Node 1 should have two children
         children = list(tracks.graph.successors(1))
@@ -203,15 +203,17 @@ class TestEdgeCases:
 
         tracks = tracks_from_df(df)
 
-        assert tracks.graph.number_of_nodes() == 10
-        assert tracks.graph.number_of_edges() == 9
+        assert tracks.graph.num_nodes() == 10
+        assert tracks.graph.num_edges() == 9
 
         # Should form a single linear chain
-        roots = [n for n in tracks.graph.nodes() if tracks.graph.in_degree(n) == 0]
+        roots = [n for n in tracks.graph.node_ids() if tracks.graph.in_degree(n) == 0]
         assert len(roots) == 1
 
         # Each non-leaf node should have exactly one child
-        non_leaves = [n for n in tracks.graph.nodes() if tracks.graph.out_degree(n) > 0]
+        non_leaves = [
+            n for n in tracks.graph.node_ids() if tracks.graph.out_degree(n) > 0
+        ]
         for node in non_leaves:
             assert tracks.graph.out_degree(node) == 1
 
@@ -330,8 +332,8 @@ class TestDuplicateMappings:
         tracks = tracks_from_df(simple_df_2d, node_name_map=name_map)
 
         # Both id and seg_id should be present with same values
-        assert tracks.graph.number_of_nodes() == 4
-        for node_id in tracks.graph.nodes():
+        assert tracks.graph.num_nodes() == 4
+        for node_id in tracks.graph.node_ids():
             assert tracks.get_node_attr(node_id, "seg_id") == node_id
 
     def test_duplicate_mapping_with_segmentation(self, simple_df_2d):
@@ -354,7 +356,7 @@ class TestDuplicateMappings:
 
         assert tracks.segmentation is not None
         # Segmentation should not be relabeled since seg_id == id
-        assert tracks.segmentation[0, 10, 15] == 1
+        assert np.asarray(tracks.segmentation)[0, 10, 15] == 1
 
 
 class TestValidationErrors:
@@ -623,7 +625,7 @@ class TestSpatialDimsValidation:
         tracks = tracks_from_df(df, node_name_map=name_map)
         assert tracks is not None
         # The empty mapping should not result in a feature being added
-        assert not tracks.graph.nodes[1].get("ellipse_axis_radii")
+        assert "ellipse_axis_radii" not in tracks.graph.node_attr_keys()
 
     def test_import_without_position_with_segmentation(self):
         """Test that position can be omitted when segmentation is provided.
@@ -656,7 +658,7 @@ class TestSpatialDimsValidation:
         assert tracks is not None
 
         # Position should be computed from segmentation centroids
-        assert "pos" in tracks.graph.nodes[1]
+        assert "pos" in tracks.graph.node_attr_keys()
         pos_1 = tracks.graph.nodes[1]["pos"]
         # Centroid of 3x3 region at [2:5, 2:5] is approximately [3, 3]
         np.testing.assert_array_almost_equal(pos_1, [3.0, 3.0], decimal=0)
