@@ -197,6 +197,7 @@ class TrackAnnotator(GraphAnnotator):
         Each connected component will get a unique id, and the relevant class
         attributes will be updated.
         """
+
         lineages_internal = rx.weakly_connected_components(self.tracks.graph.rx_graph)
         lineages_external = []
         for lin in lineages_internal:
