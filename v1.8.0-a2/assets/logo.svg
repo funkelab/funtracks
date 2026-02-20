@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="4 -1 54 66" width="128" height="128">
+  <!-- Cowboy outline layer (dark gold, drawn first so it's behind) -->
+  <g id="cowboy-outline">
+    <circle cx="32" cy="40" r="4" fill="none" stroke="#b58a2f" stroke-width="1"/>
+    <ellipse cx="32" cy="38" rx="8" ry="2" fill="none" stroke="#b58a2f" stroke-width="1"/>
+    <path d="M28 38 L29 34 L35 34 L36 38" fill="none" stroke="#b58a2f" stroke-width="1"/>
+    <path d="M32 44 L32 50" stroke="#b58a2f" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+    <path d="M28 62 L32 50 L36 62" stroke="#b58a2f" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+    <path d="M32 46 L38 50" stroke="#b58a2f" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+    <path d="M32 46 L26 42 L22 36" stroke="#b58a2f" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+  </g>
+  <!-- Cowboy fill layer (gold, on top) -->
+  <g id="cowboy">
+    <circle cx="32" cy="40" r="4" fill="#f7be42"/>
+    <ellipse cx="32" cy="38" rx="8" ry="2" fill="#b58a2f"/>
+    <path d="M28 38 L29 34 L35 34 L36 38" fill="#f7be42" stroke="#b58a2f" stroke-width="0.5"/>
+    <path d="M32 44 L32 50" stroke="#f7be42" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+    <path d="M28 62 L32 50 L36 62" stroke="#f7be42" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+    <path d="M32 46 L38 50" stroke="#f7be42" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+    <path d="M32 46 L26 42 L22 36" stroke="#f7be42" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+  </g>
+  <!-- Lasso handle with nodes -->
+  <path d="M22 36 L19 30 L16 26" stroke="#8a2fb5" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+  <!-- Handle nodes -->
+  <circle cx="22" cy="36" r="1.5" fill="#42f7be" stroke="#8a2fb5" stroke-width="0.5"/>
+  <!-- Lasso made of nodes and edges - curvy organic shape -->
+  <path d="M16 26 L10 20 L8 12 L12 6 L20 3 L30 2 L42 5 L50 10 L54 18 L52 26 L46 30 L39 26 L31 24 L24 28 L16 26" stroke="#8a2fb5" stroke-width="1.5" fill="none"/>
+  <!-- Lasso nodes - smaller -->
+  <circle cx="16" cy="26" r="1.5" fill="#42f7be" stroke="#8a2fb5" stroke-width="0.5"/>
+  <circle cx="10" cy="20" r="1.5" fill="#42f7be" stroke="#8a2fb5" stroke-width="0.5"/>
+  <circle cx="8" cy="12" r="1.5" fill="#42f7be" stroke="#8a2fb5" stroke-width="0.5"/>
+  <circle cx="12" cy="6" r="1.5" fill="#42f7be" stroke="#8a2fb5" stroke-width="0.5"/>
+  <circle cx="20" cy="3" r="1.5" fill="#42f7be" stroke="#8a2fb5" stroke-width="0.5"/>
+  <circle cx="30" cy="2" r="1.5" fill="#42f7be" stroke="#8a2fb5" stroke-width="0.5"/>
+  <circle cx="42" cy="5" r="1.5" fill="#42f7be" stroke="#8a2fb5" stroke-width="0.5"/>
+  <circle cx="50" cy="10" r="1.5" fill="#42f7be" stroke="#8a2fb5" stroke-width="0.5"/>
+  <circle cx="54" cy="18" r="1.5" fill="#42f7be" stroke="#8a2fb5" stroke-width="0.5"/>
+  <circle cx="52" cy="26" r="1.5" fill="#42f7be" stroke="#8a2fb5" stroke-width="0.5"/>
+  <circle cx="46" cy="30" r="1.5" fill="#42f7be" stroke="#8a2fb5" stroke-width="0.5"/>
+  <circle cx="39" cy="26" r="1.5" fill="#42f7be" stroke="#8a2fb5" stroke-width="0.5"/>
+  <circle cx="31" cy="24" r="1.5" fill="#42f7be" stroke="#8a2fb5" stroke-width="0.5"/>
+  <circle cx="24" cy="28" r="1.5" fill="#42f7be" stroke="#8a2fb5" stroke-width="0.5"/>
+</svg>
