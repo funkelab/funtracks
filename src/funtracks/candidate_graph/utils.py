@@ -65,6 +65,8 @@ def nodes_from_segmentation(
             attrs[NodeAttr.SEG_ID.value] = regionprop.label
             centroid = regionprop.centroid  # [z,] y, x
             attrs[NodeAttr.POS.value] = centroid
+            if node_id in cand_graph.nodes:
+                raise ValueError("Duplicate values found among nodes")
             cand_graph.add_node(node_id, **attrs)
             nodes_in_frame.append(node_id)
         if nodes_in_frame:
