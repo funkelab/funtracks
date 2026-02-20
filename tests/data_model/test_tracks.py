@@ -4,6 +4,7 @@ import pytest
 from networkx.utils import graphs_equal
 from numpy.testing import assert_array_almost_equal
 
+from funtracks.actions import UpdateNodeAttrs
 from funtracks.data_model import Tracks
 
 track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
@@ -304,3 +305,51 @@ def test_compute_ndim_errors():
         ValueError, match="Cannot compute dimensions from segmentation or scale"
     ):
         Tracks(g)
+
+
+def test_undo_redo(graph_2d_with_computed_features):
+    """Test undo/redo functionality on Tracks."""
+    tracks = Tracks(graph_2d_with_computed_features, ndim=3, **track_attrs)
+
+    # Initially nothing to undo or redo
+    assert tracks.undo() is False
+    assert tracks.redo() is False
+
+    # Perform an action - add a custom attribute
+    action1 = UpdateNodeAttrs(tracks, node=1, attrs={"custom_label": "test_value"})
+    tracks.action_history.add_new_action(action1)
+    assert tracks.get_node_attr(1, "custom_label") == "test_value"
+
+    # Test undo - should revert the change and return True
+    assert tracks.undo() is True
+    assert tracks.get_node_attr(1, "custom_label") is None
+
+    # Can't undo further
+    assert tracks.undo() is False
+
+    # Test redo - should reapply the change and return True
+    assert tracks.redo() is True
+    assert tracks.get_node_attr(1, "custom_label") == "test_value"
+
+    # Can't redo further
+    assert tracks.redo() is False
+
+    # Perform another action
+    action2 = UpdateNodeAttrs(tracks, node=2, attrs={"another_label": "second_value"})
+    tracks.action_history.add_new_action(action2)
+    assert tracks.get_node_attr(2, "another_label") == "second_value"
+
+    # Undo both actions
+    assert tracks.undo() is True  # Undo second action
+    assert tracks.get_node_attr(2, "another_label") is None
+    assert tracks.get_node_attr(1, "custom_label") == "test_value"
+
+    assert tracks.undo() is True  # Undo first action
+    assert tracks.get_node_attr(1, "custom_label") is None
+
+    # Redo both actions
+    assert tracks.redo() is True  # Redo first action
+    assert tracks.get_node_attr(1, "custom_label") == "test_value"
+
+    assert tracks.redo() is True  # Redo second action
+    assert tracks.get_node_attr(2, "another_label") == "second_value"

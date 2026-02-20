@@ -41,6 +41,7 @@ class UserUpdateSegmentation(ActionGroup):
         """
         super().__init__(tracks, actions=[])
         self.tracks: SolutionTracks  # Narrow type from base class
+        # TODO Teun: remove the next line, only TracksController needs it
         self.nodes_added = []
         if self.tracks.segmentation is None:
             raise ValueError("Cannot update non-existing segmentation.")
@@ -56,7 +57,7 @@ class UserUpdateSegmentation(ActionGroup):
                 self.actions.append(UserDeleteNode(tracks, old_value, pixels=pixels))
             else:
                 self.actions.append(UpdateNodeSeg(tracks, old_value, pixels, added=False))
-        if new_value != 0:
+        if new_value != 0 and updated_pixels:
             all_pixels = tuple(
                 np.concatenate([pixels[dim] for pixels, _ in updated_pixels])
                 for dim in range(ndim)
@@ -87,4 +88,8 @@ class UserUpdateSegmentation(ActionGroup):
                         force=force,
                     )
                 )
+                # TODO Teun: remove the next line, only TracksController needs it
                 self.nodes_added.append(new_value)
+
+        self.tracks.action_history.add_new_action(self)
+        self.tracks.refresh.emit(self.nodes_added[0] if self.nodes_added else None)
