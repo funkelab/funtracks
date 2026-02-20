@@ -2014,6 +2014,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#funtracks.import_export.export_to_csv--export-with-segmentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Export with segmentation
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -3545,8 +3556,11 @@ and is not required in name_map</p>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">export_to_csv</span><span class="p">(</span>
     <span class="n">tracks</span><span class="p">:</span> <span class="n">SolutionTracks</span><span class="p">,</span>
     <span class="n">outfile</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">color_dict</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">ndarray</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">node_ids</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">use_display_names</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">export_seg</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">seg_path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre></div>
 
@@ -3556,7 +3570,9 @@ and is not required in name_map</p>
 TODO: export_all = False for backward compatibility - display names option shouldn't
 change which columns are exported, just using which names</p>
 <p>Exports tracking data to CSV format with columns for node ID, parent ID,
-and all registered features.</p>
+and all registered features. Optionally also exports the segmentation, relabeled by
+tracklet ID, as tif. If a color dictionary is provided, it will also export the
+tracklet colors.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -3604,6 +3620,23 @@ and all registered features.</p>
           </tr>
           <tr class="doc-section-item">
             <td>
+                <code>color_dict</code>
+            </td>
+            <td>
+                  <code><span title="dict">dict</span>[<span title="int">int</span>, <span title="numpy.ndarray">ndarray</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>dict[int, np.ndarray], optional. If provided, will be used to save the
+hex colors.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
                 <code>node_ids</code>
             </td>
             <td>
@@ -3636,6 +3669,38 @@ If False (default), use raw feature keys for backward compatibility.</p>
                   <code>False</code>
             </td>
           </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>export_seg</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>whether to export the segmentation, relabeled by tracklet ID</p>
+              </div>
+            </td>
+            <td>
+                  <code>False</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>seg_path</code>
+            </td>
+            <td>
+                  <code><span title="pathlib.Path">Path</span> | <span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>path to save segmentation file to, if requested.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
       </tbody>
     </table>
 
@@ -3651,6 +3716,8 @@ export_to_csv(tracks, "output.csv")</p>
 <p>export_to_csv(tracks, "output.csv", use_display_names=True)</p>
 <h3 id="funtracks.import_export.export_to_csv--export-only-specific-nodes">Export only specific nodes</h3>
 <p>export_to_csv(tracks, "filtered.csv", node_ids={1, 2, 3})</p>
+<h3 id="funtracks.import_export.export_to_csv--export-with-segmentation">Export with segmentation</h3>
+<p>export_to_csv(tracks, "filtered.csv", export_seg=True, seg_path="seg.tif")</p>
 </blockquote>
 </blockquote>
 </blockquote>
