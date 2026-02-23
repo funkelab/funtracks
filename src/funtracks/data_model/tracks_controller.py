@@ -40,7 +40,6 @@ class TracksController:
         )
         self.tracks = tracks
         self.action_history = self.tracks.action_history
-        self.node_id_counter = 1
 
     def add_nodes(
         self,
