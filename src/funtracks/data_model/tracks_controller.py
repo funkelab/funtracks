@@ -59,11 +59,7 @@ class TracksController:
                 Defaults to False.
 
         """
-        result = self._add_nodes(attributes, pixels, force)
-        if result is not None:
-            action, nodes = result
-            self.action_history.add_new_action(action)
-            self.tracks.refresh.emit(nodes[0] if nodes else None)
+        self._add_nodes(attributes, pixels, force)
 
     def _add_nodes(
         self,
@@ -128,9 +124,7 @@ class TracksController:
             nodes (Iterable[Node]): array of node_ids to be deleted
         """
 
-        action = self._delete_nodes(nodes)
-        self.action_history.add_new_action(action)
-        self.tracks.refresh.emit()
+        self._delete_nodes(nodes)
 
     def _delete_nodes(
         self, nodes: Iterable[Node], pixels: Iterable[SegMask] | None = None
@@ -165,13 +159,11 @@ class TracksController:
     def swap_predecessors(self, nodes: tuple[Node, Node]) -> None:
         """Swap the predecessors (incoming edges) of two nodes."""
         try:
-            action = UserSwapPredecessors(self.tracks, nodes)
+            UserSwapPredecessors(self.tracks, nodes)
         except InvalidActionError as e:
             warn(str(e), stacklevel=2)
             return
 
-        self.action_history.add_new_action(action)
-        self.tracks.refresh.emit()
 
     def add_edges(self, edges: Iterable[Edge], force: bool = False) -> None:
         """Add edges to the graph. Also update the track ids and
@@ -189,10 +181,7 @@ class TracksController:
                 # warning was printed with details in is_valid call
                 return
 
-        action: Action
-        action = self._add_edges(edges, force)
-        self.action_history.add_new_action(action)
-        self.tracks.refresh.emit()
+        self._add_edges(edges, force)
 
     def update_node_attrs(self, nodes: Iterable[Node], attributes: Attrs):
         """Update the user provided node attributes (not the managed attributes).
@@ -226,7 +215,7 @@ class TracksController:
             )
         return ActionGroup(self.tracks, actions)
 
-    def _add_edges(self, edges: Iterable[Edge], force: bool = False) -> ActionGroup:
+    def _add_edges(self, edges: Iterable[Edge], force: bool = False) -> None:
         """Add edges and attributes to the graph. Also update the track ids of the
         target node tracks and potentially sibling tracks.
 
@@ -234,14 +223,9 @@ class TracksController:
             edges (Iterable[edge]): An iterable of edges, each with source and target
                 node ids
             force (bool): Whether to force this action by removing conflicting edges.
-
-        Returns:
-            An Action containing all edits performed in this call
         """
-        actions: list[ActionGroup | Action] = []
         for edge in edges:
-            actions.append(UserAddEdge(self.tracks, edge, force))
-        return ActionGroup(self.tracks, actions)
+            UserAddEdge(self.tracks, edge, force)
 
     def is_valid(self, edge: Edge) -> bool:
         """Check if this edge is valid.
@@ -315,15 +299,11 @@ class TracksController:
             if not self.tracks.graph.has_edge(edge[0], edge[1]):
                 warn("Cannot delete non-existing edge!", stacklevel=2)
                 return
-        action = self._delete_edges(edges)
-        self.action_history.add_new_action(action)
-        self.tracks.refresh.emit()
+        self._delete_edges(edges)
 
-    def _delete_edges(self, edges: Iterable[Edge]) -> ActionGroup:
-        actions: list[ActionGroup | Action] = []
+    def _delete_edges(self, edges: Iterable[Edge]) -> None:
         for edge in edges:
-            actions.append(UserDeleteEdge(self.tracks, edge))
-        return ActionGroup(self.tracks, actions)
+            UserDeleteEdge(self.tracks, edge)
 
     def update_segmentations(
         self,
@@ -352,17 +332,9 @@ class TracksController:
                 Defaults to False.
         """
 
-        action = UserUpdateSegmentation(
+        UserUpdateSegmentation(
             self.tracks, new_value, updated_pixels, current_track_id, force
         )
-        self.action_history.add_new_action(action)
-        nodes_added = action.nodes_added
-        times = self.tracks.get_times(nodes_added)
-        if current_timepoint in times:
-            node_to_select = nodes_added[times.index(current_timepoint)]
-        else:
-            node_to_select = None
-        self.tracks.refresh.emit(node_to_select)
 
     def undo(self) -> bool:
         """Undo the last performed action from the action history.
