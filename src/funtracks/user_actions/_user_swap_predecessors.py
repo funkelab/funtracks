@@ -72,15 +72,19 @@ class UserSwapPredecessors(ActionGroup):
 
         # Break existing edges
         if pred1 is not None:
-            self.actions.append(UserDeleteEdge(tracks, (pred1, node1)))
+            self.actions.append(UserDeleteEdge(tracks, (pred1, node1), _top_level=False))
         if pred2 is not None:
-            self.actions.append(UserDeleteEdge(tracks, (pred2, node2)))
+            self.actions.append(UserDeleteEdge(tracks, (pred2, node2), _top_level=False))
 
         # Create swapped edges
         if pred1 is not None:
-            self.actions.append(UserAddEdge(tracks, (pred1, node2), force=False))
+            self.actions.append(
+                UserAddEdge(tracks, (pred1, node2), force=False, _top_level=False)
+            )
         if pred2 is not None:
-            self.actions.append(UserAddEdge(tracks, (pred2, node1), force=False))
+            self.actions.append(
+                UserAddEdge(tracks, (pred2, node1), force=False, _top_level=False)
+            )
 
         self.tracks.action_history.add_new_action(self)
         self.tracks.refresh.emit()

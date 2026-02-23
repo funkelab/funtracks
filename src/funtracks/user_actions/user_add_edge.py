@@ -22,6 +22,9 @@ class UserAddEdge(ActionGroup):
         edge (tuple[int, int]): The edge to add
         force (bool, optional): Whether to force the action by removing any conflicting
             edges. Defaults to False.
+        _top_level (bool): If True, add this action to the history and emit refresh.
+            Set to False when used as a sub-action inside a compound action.
+            Defaults to True.
     """
 
     def __init__(
@@ -29,6 +32,7 @@ class UserAddEdge(ActionGroup):
         tracks: SolutionTracks,
         edge: tuple[int, int],
         force: bool = False,
+        _top_level: bool = True,
     ):
         super().__init__(tracks, actions=[])
         self.tracks: SolutionTracks  # Narrow type from base class
@@ -58,7 +62,9 @@ class UserAddEdge(ActionGroup):
                     f"Removing edge {merge_edge} to add new edge without merging.",
                     stacklevel=2,
                 )
-                self.actions.append(UserDeleteEdge(self.tracks, merge_edge))
+                self.actions.append(
+                    UserDeleteEdge(self.tracks, merge_edge, _top_level=False)
+                )
 
         # update track ids if needed
         out_degree_source = self.tracks.graph.out_degree(source)
@@ -83,5 +89,6 @@ class UserAddEdge(ActionGroup):
 
         self.actions.append(AddEdge(tracks, edge))
 
-        self.tracks.action_history.add_new_action(self)
-        self.tracks.refresh.emit()
+        if _top_level:
+            self.tracks.action_history.add_new_action(self)
+            self.tracks.refresh.emit()

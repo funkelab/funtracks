@@ -19,7 +19,19 @@ class UserDeleteNode(ActionGroup):
         tracks: SolutionTracks,
         node: int,
         pixels: None | tuple[np.ndarray, ...] = None,
+        _top_level: bool = True,
     ):
+        """
+        Args:
+            tracks (SolutionTracks): The tracks to delete the node from.
+            node (int): The node id to delete.
+            pixels (tuple[np.ndarray, ...] | None): The pixels of the node in the
+                segmentation, if known. Will be computed if not provided.
+                Defaults to None.
+            _top_level (bool): If True, add this action to the history and emit
+                refresh. Set to False when used as a sub-action inside a compound
+                action. Defaults to True.
+        """
         super().__init__(tracks, actions=[])
         self.tracks: SolutionTracks  # Narrow type from base class
         # delete adjacent edges
@@ -48,5 +60,6 @@ class UserDeleteNode(ActionGroup):
         # delete node
         self.actions.append(DeleteNode(tracks, node, pixels=pixels))
 
-        self.tracks.action_history.add_new_action(self)
-        self.tracks.refresh.emit()
+        if _top_level:
+            self.tracks.action_history.add_new_action(self)
+            self.tracks.refresh.emit()

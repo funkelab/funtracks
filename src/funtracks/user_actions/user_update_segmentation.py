@@ -53,7 +53,9 @@ class UserUpdateSegmentation(ActionGroup):
             # TODO: this assumes the segmentation is already updated, but then we can't
             # recover the pixels, so we have to pass them here for undo purposes
             if np.sum(self.tracks.segmentation[time] == old_value) == 0:
-                self.actions.append(UserDeleteNode(tracks, old_value, pixels=pixels))
+                self.actions.append(
+                    UserDeleteNode(tracks, old_value, pixels=pixels, _top_level=False)
+                )
             else:
                 self.actions.append(UpdateNodeSeg(tracks, old_value, pixels, added=False))
         if new_value != 0 and updated_pixels:
@@ -85,6 +87,7 @@ class UserUpdateSegmentation(ActionGroup):
                         attributes=attrs,
                         pixels=all_pixels,
                         force=force,
+                        _top_level=False,
                     )
                 )
                 node_to_select = new_value

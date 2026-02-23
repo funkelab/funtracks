@@ -17,7 +17,19 @@ class UserDeleteEdge(ActionGroup):
         self,
         tracks: SolutionTracks,
         edge: tuple[int, int],
+        _top_level: bool = True,
     ):
+        """
+        Args:
+            tracks (SolutionTracks): The tracks to delete the edge from.
+            edge (tuple[int, int]): The edge to delete.
+            _top_level (bool): If True, add this action to the history and emit
+                refresh. Set to False when used as a sub-action inside a compound
+                action. Defaults to True.
+
+        Raises:
+            InvalidActionError: If the edge does not exist in the graph.
+        """
         super().__init__(tracks, actions=[])
         self.tracks: SolutionTracks  # Narrow type from base class
         if not self.tracks.graph.has_edge(*edge):
@@ -42,5 +54,6 @@ class UserDeleteEdge(ActionGroup):
                 f"Expected degree of 0 or 1 after removing edge, got {out_degree}"
             )
 
-        self.tracks.action_history.add_new_action(self)
-        self.tracks.refresh.emit()
+        if _top_level:
+            self.tracks.action_history.add_new_action(self)
+            self.tracks.refresh.emit()
