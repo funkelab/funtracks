@@ -220,7 +220,7 @@ class SolutionTracks(Tracks):
         # Import here to avoid circular imports
         from funtracks.import_export.csv._export import export_to_csv
 
-        export_to_csv(self, outfile, node_ids)
+        export_to_csv(self, outfile=outfile, node_ids=node_ids)
 
     def get_track_neighbors(
         self, track_id: int, time: int
