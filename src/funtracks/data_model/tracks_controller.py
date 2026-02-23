@@ -164,7 +164,6 @@ class TracksController:
             warn(str(e), stacklevel=2)
             return
 
-
     def add_edges(self, edges: Iterable[Edge], force: bool = False) -> None:
         """Add edges to the graph. Also update the track ids and
         corresponding segmentations if applicable
