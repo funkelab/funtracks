@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import networkx as nx
-import numpy as np
+import tracksdata as td
 
 from funtracks.features import FeatureDict
 
@@ -20,14 +19,14 @@ class SolutionTracks(Tracks):
 
     def __init__(
         self,
-        graph: nx.DiGraph,
-        segmentation: np.ndarray | None = None,
+        graph: td.graph.GraphView,
         time_attr: str | None = None,
         pos_attr: str | tuple[str] | list[str] | None = None,
         tracklet_attr: str | None = None,
         scale: list[float] | None = None,
         ndim: int | None = None,
         features: FeatureDict | None = None,
+        _segmentation: td.array.GraphArrayView | None = None,
     ):
         """Initialize a SolutionTracks object.
 
@@ -35,10 +34,8 @@ class SolutionTracks(Tracks):
         TrackAnnotator is automatically added to manage track IDs.
 
         Args:
-            graph (nx.DiGraph): NetworkX directed graph with nodes as detections and
-                edges as links.
-            segmentation (np.ndarray | None): Optional segmentation array where labels
-                match node IDs. Required for computing region properties (area, etc.).
+            graph (td.graph.GraphView): NetworkX directed graph with nodes as detections
+                and edges as links.
             time_attr (str | None): Graph attribute name for time. Defaults to "time"
                 if None.
             pos_attr (str | tuple[str, ...] | list[str] | None): Graph attribute
@@ -57,16 +54,18 @@ class SolutionTracks(Tracks):
                 Assumes that all features in the dict already exist on the graph (will
                 be activated but not recomputed). If None, core computed features (pos,
                 area, track_id) are auto-detected by checking if they exist on the graph.
+            _segmentation (GraphArrayView | None): Internal parameter for reusing an
+                existing GraphArrayView instance. Not intended for public use.
         """
         super().__init__(
             graph,
-            segmentation=segmentation,
             time_attr=time_attr,
             pos_attr=pos_attr,
             tracklet_attr=tracklet_attr,
             scale=scale,
             ndim=ndim,
             features=features,
+            _segmentation=_segmentation,
         )
 
         self.track_annotator = self._get_track_annotator()
@@ -92,19 +91,25 @@ class SolutionTracks(Tracks):
     @classmethod
     def from_tracks(cls, tracks: Tracks):
         force_recompute = False
-        if (tracklet_key := tracks.features.tracklet_key) is not None:
-            # Check if all nodes have track_id before trusting existing track IDs
-            # Short circuit on first missing track_id
-            for node in tracks.graph.nodes():
-                if tracks.get_node_attr(node, tracklet_key) is None:
-                    force_recompute = True
-                    break
+        # Check if all nodes have track_id before trusting existing track IDs
+        if (
+            tracks.features.tracklet_key is not None
+            and (
+                tracks.graph.node_attrs(attr_keys=tracks.features.tracklet_key)[
+                    tracks.features.tracklet_key
+                ]
+                == -1
+            ).any()
+            # Attributes are no longer None, so 0 now means non-computed
+        ):
+            force_recompute = True
+
         soln_tracks = cls(
             tracks.graph,
-            segmentation=tracks.segmentation,
             scale=tracks.scale,
             ndim=tracks.ndim,
             features=tracks.features,
+            _segmentation=tracks.segmentation,
         )
         if force_recompute:
             soln_tracks.enable_features([soln_tracks.features.tracklet_key])  # type: ignore
@@ -168,7 +173,10 @@ class SolutionTracks(Tracks):
             elif self.get_time(cand) > time:
                 succ = cand
                 break
-        return pred, succ
+        return (
+            int(pred) if pred is not None else None,
+            int(succ) if succ is not None else None,
+        )
 
     def has_track_id_at_time(self, track_id: int, time: int) -> bool:
         """Function to check if a node with given track id exists at given time point.

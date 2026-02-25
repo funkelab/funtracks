@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import itertools
 import logging
 from collections.abc import Iterable, Sequence
 from typing import (
@@ -9,13 +10,20 @@ from typing import (
 )
 from warnings import warn
 
-import networkx as nx
 import numpy as np
+import tracksdata as td
 from psygnal import Signal
+from tracksdata.array import GraphArrayView
+from tracksdata.nodes._mask import Mask
 
 from funtracks.features import Feature, FeatureDict, Position, Time
+from funtracks.utils.tracksdata_utils import (
+    to_polars_dtype,
+)
 
 if TYPE_CHECKING:
+    import tracksdata as td
+
     from funtracks.actions import BasicAction
     from funtracks.annotators import AnnotatorRegistry, GraphAnnotator
 
@@ -36,11 +44,8 @@ class Tracks:
     position attribute. Edges in the graph represent links across time.
 
     Attributes:
-        graph (nx.DiGraph): A graph with nodes representing detections and
+        graph (td.graph.GraphView): A graph with nodes representing detections and
             and edges representing links across time.
-        segmentation (np.ndarray | None): An optional segmentation that
-            accompanies the tracking graph. If a segmentation is provided,
-            the node ids in the graph must match the segmentation labels.
         features (FeatureDict): Dictionary of features tracked on graph nodes/edges.
         annotators (AnnotatorRegistry): List of annotators that compute features.
         scale (list[float] | None): How much to scale each dimension by, including time.
@@ -51,22 +56,20 @@ class Tracks:
 
     def __init__(
         self,
-        graph: nx.DiGraph,
-        segmentation: np.ndarray | None = None,
+        graph: td.graph.GraphView,
         time_attr: str | None = None,
         pos_attr: str | tuple[str, ...] | list[str] | None = None,
         tracklet_attr: str | None = None,
         scale: list[float] | None = None,
         ndim: int | None = None,
         features: FeatureDict | None = None,
+        _segmentation: GraphArrayView | None = None,
     ):
         """Initialize a Tracks object.
 
         Args:
-            graph (nx.DiGraph): NetworkX directed graph with nodes as detections and
-                edges as links.
-            segmentation (np.ndarray | None): Optional segmentation array where labels
-                match node IDs. Required for computing region properties (area, etc.).
+            graph (td.graph.GraphView): NetworkX directed graph with nodes as detections
+                and edges as links.
             time_attr (str | None): Graph attribute name for time. Defaults to "time"
                 if None.
             pos_attr (str | tuple[str, ...] | list[str] | None): Graph attribute
@@ -85,11 +88,36 @@ class Tracks:
                 Assumes that all features in the dict already exist on the graph (will
                 be activated but not recomputed). If None, core computed features (pos,
                 area, track_id) are auto-detected by checking if they exist on the graph.
+            _segmentation (GraphArrayView | None): Internal parameter for reusing an
+                existing GraphArrayView instance. Not intended for public use.
         """
         self.graph = graph
-        self.segmentation = segmentation
+        if _segmentation is not None:
+            # Reuse provided segmentation instance (internal use only)
+            self.segmentation = _segmentation
+        elif "mask" in graph.node_attr_keys():
+            # Create new GraphArrayView from graph metadata
+            try:
+                array_view = GraphArrayView(
+                    graph=graph,
+                    shape=graph.metadata()["segmentation_shape"],
+                    attr_key="node_id",
+                    offset=0,
+                )
+                self.segmentation = array_view
+            except (ValueError, KeyError) as err:
+                raise ValueError(
+                    "segmentation_shape is incompatible with graph, "
+                    "check if mask and bbox attrs exist on nodes"
+                ) from err
+        else:
+            self.segmentation = None
         self.scale = scale
-        self.ndim = self._compute_ndim(segmentation, scale, ndim)
+        self.ndim = self._compute_ndim(
+            self.segmentation.shape if self.segmentation is not None else None,
+            scale,
+            ndim,
+        )
         self.axis_names = ["z", "y", "x"] if self.ndim == 4 else ["y", "x"]
 
         # initialization steps:
@@ -254,12 +282,11 @@ class Tracks:
             bool: True if the key is on the first sampled node or there are no nodes,
                 and False if missing from the first node.
         """
-        if self.graph.number_of_nodes() == 0:
+        if self.graph.num_nodes() == 0:
             return True
 
-        # Get a sample node to check which attributes exist
-        sample_node = next(iter(self.graph.nodes()))
-        node_attrs = set(self.graph.nodes[sample_node].keys())
+        # Check which attributes exist
+        node_attrs = set(self.graph.node_attr_keys())
         return key in node_attrs
 
     def _setup_core_computed_features(self) -> None:
@@ -291,26 +318,35 @@ class Tracks:
                 # Add to FeatureDict if not already there
                 if key not in self.features:
                     feature, _ = self.annotators.all_features[key]
-                    self.features[key] = feature
+                    self.add_feature(key, feature)
                 self.annotators.activate_features([key])
             else:
                 # enable it (compute it)
                 self.enable_features([key])
 
     def nodes(self):
-        return np.array(self.graph.nodes())
+        return np.array(self.graph.node_ids())
 
     def edges(self):
-        return np.array(self.graph.edges())
+        return np.array(self.graph.edge_ids())
 
     def in_degree(self, nodes: np.ndarray | None = None) -> np.ndarray:
+        """Get the in-degree edge_ids of the nodes in the graph."""
         if nodes is not None:
+            # make sure nodes is a numpy array
+            if not isinstance(nodes, np.ndarray):
+                nodes = np.array(nodes)
+
             return np.array([self.graph.in_degree(node.item()) for node in nodes])
         else:
             return np.array(self.graph.in_degree())
 
     def out_degree(self, nodes: np.ndarray | None = None) -> np.ndarray:
         if nodes is not None:
+            # make sure nodes is a numpy array
+            if not isinstance(nodes, np.ndarray):
+                nodes = np.array(nodes)
+
             return np.array([self.graph.out_degree(node.item()) for node in nodes])
         else:
             return np.array(self.graph.out_degree())
@@ -388,7 +424,7 @@ class Tracks:
             for idx, key in enumerate(self.features.position_key):
                 self._set_nodes_attr(nodes, key, positions[:, idx].tolist())
         else:
-            self._set_nodes_attr(nodes, self.features.position_key, positions.tolist())
+            self._set_nodes_attr(nodes, self.features.position_key, positions)
 
     def set_position(self, node: Node, position: list | np.ndarray):
         self.set_positions([node], np.expand_dims(np.array(position), axis=0))
@@ -408,6 +444,22 @@ class Tracks:
         """
         return int(self.get_times([node])[0])
 
+    def get_mask(self, node: Node) -> Mask | None:
+        """Get the segmentation mask associated with a given node.
+
+        Args:
+            node (Node): The node to get the mask for.
+
+        Returns:
+            Mask | None: The segmentation mask for the node, or None if no
+            segmentation is available.
+        """
+        if self.segmentation is None:
+            return None
+
+        mask = self.graph.nodes[node][td.DEFAULT_ATTR_KEYS.MASK]
+        return mask
+
     def get_pixels(self, node: Node) -> tuple[np.ndarray, ...] | None:
         """Get the pixels corresponding to each node in the nodes list.
 
@@ -422,32 +474,73 @@ class Tracks:
         """
         if self.segmentation is None:
             return None
-        time = self.get_time(node)
-        loc_pixels = np.nonzero(self.segmentation[time] == node)
-        time_array = np.ones_like(loc_pixels[0]) * time
-        return (time_array, *loc_pixels)
 
-    def set_pixels(self, pixels: tuple[np.ndarray, ...], value: int) -> None:
-        """Set the given pixels in the segmentation to the given value.
+        # Get time and mask for the node
+        time = self.get_time(node)
+        mask = self.graph.nodes[node][td.DEFAULT_ATTR_KEYS.MASK]
+
+        # Get local coordinates and convert to global using bbox offset
+        local_coords = np.nonzero(mask.mask)
+        global_coords = [coord + mask.bbox[dim] for dim, coord in enumerate(local_coords)]
+
+        # Create time array matching the number of points
+        time_array = np.full_like(global_coords[0], time)
+
+        return (time_array, *global_coords)
+
+    def _update_segmentation_cache(self, mask: td.Mask, time: int) -> None:
+        """Invalidate cached chunks that overlap with the given mask.
 
         Args:
-            pixels (Iterable[tuple[np.ndarray]]): The pixels that should be set,
-                formatted like the output of np.nonzero (each element of the tuple
-                represents one dimension, containing an array of indices in that
-                dimension). Can be used to directly index the segmentation.
-            value (Iterable[int | None]): The value to set each pixel to
+            mask: Mask object with .bbox attribute defining the affected region
+            time: Time point of the mask
         """
         if self.segmentation is None:
-            raise ValueError("Cannot set pixels when segmentation is None")
-        self.segmentation[pixels] = value
+            return
+
+        cache = self.segmentation._cache
+
+        # Only invalidate if this time point is in the cache
+        if time not in cache._store:
+            return
+
+        # Convert bbox to slices directly
+        # bbox format: [z_min, y_min, x_min, z_max, y_max, x_max] (3D)
+        # or [y_min, x_min, y_max, x_max] (2D)
+        ndim = len(mask.bbox) // 2
+        volume_slicing = tuple(
+            slice(mask.bbox[i], mask.bbox[i + ndim] + 1) for i in range(ndim)
+        )
+
+        # Use cache's method to get chunk bounds (same logic as cache.get())
+        bounds = cache._chunk_bounds(volume_slicing)
+        chunk_ranges = [range(lo, hi + 1) for lo, hi in bounds]
+
+        # Invalidate all affected chunks
+        cache_entry = cache._store[time]
+        for chunk_idx in itertools.product(*chunk_ranges):
+            if all(
+                0 <= idx < grid_size
+                for idx, grid_size in zip(chunk_idx, cache.grid_shape, strict=True)
+            ):
+                cache_entry.ready[chunk_idx] = False
+                # Clear the buffer to ensure stale data isn't used
+                # when the chunk is recomputed
+                chunk_slc = tuple(
+                    slice(ci * cs, min((ci + 1) * cs, fs))
+                    for ci, cs, fs in zip(
+                        chunk_idx, cache.chunk_shape, cache.shape, strict=True
+                    )
+                )
+                cache_entry.buffer[chunk_slc] = 0
 
     def _compute_ndim(
         self,
-        seg: np.ndarray | None,
+        segmentation_shape: tuple[int, ...] | None,
         scale: list[float] | None,
         provided_ndim: int | None,
     ):
-        seg_ndim = seg.ndim if seg is not None else None
+        seg_ndim = len(segmentation_shape) if segmentation_shape is not None else None
         scale_ndim = len(scale) if scale is not None else None
         ndims = [seg_ndim, scale_ndim, provided_ndim]
         ndims = [d for d in ndims if d is not None]
@@ -467,35 +560,34 @@ class Tracks:
     def _set_node_attr(self, node: Node, attr: str, value: Any):
         if isinstance(value, np.ndarray):
             value = list(value)
-        self.graph.nodes[node][attr] = value
+        self.graph.nodes[node][attr] = [value]
 
     def _set_nodes_attr(self, nodes: Iterable[Node], attr: str, values: Iterable[Any]):
         for node, value in zip(nodes, values, strict=False):
-            if isinstance(value, np.ndarray):
-                value = list(value)
-            self.graph.nodes[node][attr] = value
+            self.graph.nodes[node][attr] = [value]
 
     def get_node_attr(self, node: Node, attr: str, required: bool = False):
-        if required:
-            return self.graph.nodes[node][attr]
-        else:
-            return self.graph.nodes[node].get(attr, None)
+        return self.graph.nodes[int(node)][attr]
 
     def get_nodes_attr(self, nodes: Iterable[Node], attr: str, required: bool = False):
         return [self.get_node_attr(node, attr, required=required) for node in nodes]
 
     def _set_edge_attr(self, edge: Edge, attr: str, value: Any):
-        self.graph.edges[edge][attr] = value
+        edge_id = self.graph.edge_id(edge[0], edge[1])
+        self.graph.update_edge_attrs(attrs={attr: value}, edge_ids=[edge_id])
 
     def _set_edges_attr(self, edges: Iterable[Edge], attr: str, values: Iterable[Any]):
         for edge, value in zip(edges, values, strict=False):
-            self.graph.edges[edge][attr] = value
+            edge_id = self.graph.edge_id(edge[0], edge[1])
+            self.graph.update_edge_attrs(attrs={attr: value}, edge_ids=[edge_id])
 
     def get_edge_attr(self, edge: Edge, attr: str, required: bool = False):
-        if required:
-            return self.graph.edges[edge][attr]
-        else:
-            return self.graph.edges[edge].get(attr, None)
+        if attr not in self.graph.edge_attr_keys():
+            if required:
+                raise KeyError(attr)
+            return None
+        edge_id = self.graph.edge_id(edge[0], edge[1])
+        return self.graph.edges[edge_id][attr]
 
     def get_edges_attr(self, edges: Iterable[Edge], attr: str, required: bool = False):
         return [self.get_edge_attr(edge, attr, required=required) for edge in edges]
@@ -541,7 +633,7 @@ class Tracks:
         for key in feature_keys:
             if key not in self.features:
                 feature, _ = self.annotators.all_features[key]
-                self.features[key] = feature
+                self.add_feature(key, feature)
 
         # Compute the features if requested
         if recompute:
@@ -564,4 +656,51 @@ class Tracks:
         # Remove from FeatureDict
         for key in feature_keys:
             if key in self.features:
-                del self.features[key]
+                self.delete_feature(key)
+
+    def add_feature(self, key: str, feature: Feature) -> None:
+        """Add a feature to the features dictionary and perform graph operations.
+
+        This is the preferred way to add new features as it ensures both the
+        features dictionary is updated and any necessary graph operations are performed.
+
+        Args:
+            key: The key for the new feature
+            feature: The Feature object to add
+        """
+        # Add to the features dictionary
+        self.features[key] = feature
+
+        # Perform custom graph operations when a feature is added
+        if feature["feature_type"] == "node" and key not in self.graph.node_attr_keys():
+            self.graph.add_node_attr_key(
+                key,
+                default_value=feature["default_value"],
+                dtype=to_polars_dtype(feature["value_type"]),
+            )
+        elif feature["feature_type"] == "edge" and key not in self.graph.edge_attr_keys():
+            self.graph.add_edge_attr_key(
+                key,
+                default_value=feature["default_value"],
+                dtype=to_polars_dtype(feature["value_type"]),
+            )
+
+    def delete_feature(self, key: str) -> None:
+        """Delete a feature from the features dictionary and perform graph operations.
+
+        This is the preferred way to delete features as it ensures both the
+        features dictionary is updated and any necessary graph operations are performed.
+
+        Args:
+            key: The key for the feature to delete
+        """
+        # Remove from the features dictionary
+        del self.features[key]
+
+        # Perform custom graph operations when a feature is deleted
+        if feature := self.annotators.all_features.get(key):
+            feature_type = feature[0]["feature_type"]
+            if feature_type == "node" and key in self.graph.node_attr_keys():
+                self.graph.remove_node_attr_key(key)
+            elif feature_type == "edge" and key in self.graph.edge_attr_keys():
+                self.graph.remove_edge_attr_key(key)

@@ -12,6 +12,8 @@ from .user_delete_node import UserDeleteNode
 if TYPE_CHECKING:
     from funtracks.data_model import SolutionTracks
 
+from funtracks.utils.tracksdata_utils import pixels_to_td_mask
+
 
 class UserUpdateSegmentation(ActionGroup):
     def __init__(
@@ -50,12 +52,15 @@ class UserUpdateSegmentation(ActionGroup):
                 continue
             time = pixels[0][0]
             # check if all pixels of old_value are removed
-            # TODO: this assumes the segmentation is already updated, but then we can't
-            # recover the pixels, so we have to pass them here for undo purposes
-            if np.sum(self.tracks.segmentation[time] == old_value) == 0:
+            mask_pixels = pixels_to_td_mask(pixels, self.tracks.ndim)
+            mask_old_value = self.tracks.graph.nodes[old_value]["mask"]
+            # If pixels fully overlaps with old_value mask, delete node
+            if mask_pixels.intersection(mask_old_value) == mask_old_value.mask.sum():
                 self.actions.append(UserDeleteNode(tracks, old_value, pixels=pixels))
             else:
-                self.actions.append(UpdateNodeSeg(tracks, old_value, pixels, added=False))
+                self.actions.append(
+                    UpdateNodeSeg(tracks, old_value, mask_pixels, added=False)
+                )
         if new_value != 0:
             all_pixels = tuple(
                 np.concatenate([pixels[dim] for pixels, _ in updated_pixels])
@@ -66,8 +71,9 @@ class UserUpdateSegmentation(ActionGroup):
             )
             time = all_pixels[0][0]
             if self.tracks.graph.has_node(new_value):
+                mask_pixels = pixels_to_td_mask(all_pixels, self.tracks.ndim)
                 self.actions.append(
-                    UpdateNodeSeg(tracks, new_value, all_pixels, added=True)
+                    UpdateNodeSeg(tracks, new_value, mask_pixels, added=True)
                 )
             else:
                 time_key = tracks.features.time_key

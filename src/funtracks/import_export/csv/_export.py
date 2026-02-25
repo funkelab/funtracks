@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
+import polars as pl
 
 from .._utils import filter_graph_with_ancestors
 
@@ -86,7 +87,7 @@ def export_to_csv(
 
     # Determine which nodes to export
     if node_ids is None:
-        node_to_keep = tracks.graph.nodes()
+        node_to_keep = tracks.graph.node_ids()
     else:
         node_to_keep = filter_graph_with_ancestors(tracks.graph, node_ids)
 
@@ -104,6 +105,10 @@ def export_to_csv(
                     feature_value = tracks.get_node_attr(node_id, feature_name)
                     if isinstance(feature_value, list | tuple):
                         features.extend(feature_value)
+                    elif feature_name == "pos" and isinstance(
+                        feature_value, pl.series.Series
+                    ):
+                        features.extend(feature_value.to_list())
                     else:
                         features.append(feature_value)
                 row = [node_id, parent_id, *features]

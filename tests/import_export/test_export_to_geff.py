@@ -1,4 +1,5 @@
 import numpy as np
+import polars as pl
 import pytest
 import zarr
 
@@ -13,7 +14,6 @@ from funtracks.import_export.export_to_geff import export_to_geff
 def test_export_to_geff(
     get_tracks,
     get_graph,
-    get_segmentation,
     ndim,
     with_seg,
     is_solution,
@@ -33,23 +33,24 @@ def test_export_to_geff(
     if pos_attr_type is list:
         # For split pos, we need to manually create tracks since get_tracks
         # doesn't support this
-        graph = get_graph(ndim, with_features="computed")
-        segmentation = get_segmentation(ndim) if with_seg else None
+        graph_type = "segmentation" if with_seg else "position"
+        graph = get_graph(ndim, with_features=graph_type)
 
         # Determine position attribute keys based on dimensions
         pos_keys = ["y", "x"] if ndim == 3 else ["z", "y", "x"]
         # Split the composite position attribute into separate attributes
-        for node in graph.nodes():
+        for key in pos_keys:
+            graph.add_node_attr_key(key, default_value=0.0, dtype=pl.Float64)
+        for node in graph.node_ids():
             pos = graph.nodes[node]["pos"]
             for i, key in enumerate(pos_keys):
                 graph.nodes[node][key] = pos[i]
-            del graph.nodes[node]["pos"]
+        graph.remove_node_attr_key("pos")
         # Create Tracks with split position attributes
         # Features like area, track_id will be auto-detected from the graph
         tracks_cls = SolutionTracks if is_solution else Tracks
         tracks = tracks_cls(
             graph,
-            segmentation=segmentation,
             time_attr="t",
             pos_attr=pos_keys,
             tracklet_attr="track_id",
@@ -58,13 +59,17 @@ def test_export_to_geff(
     else:
         # Use get_tracks fixture for the simple case
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=is_solution)
-    export_to_geff(tracks, tmp_path)
-    z = zarr.open((tmp_path / "tracks").as_posix(), mode="r")
+
+    # Export to subdirectory to avoid conflicts with database files in tmp_path
+    export_dir = tmp_path / "export"
+    export_dir.mkdir()
+    export_to_geff(tracks, export_dir)
+    z = zarr.open((export_dir / "tracks").as_posix(), mode="r")
     assert isinstance(z, zarr.Group)
 
     # Check that segmentation was saved (only when using segmentation)
     if with_seg:
-        seg_path = tmp_path / "segmentation"
+        seg_path = export_dir / "segmentation"
         seg_zarr = zarr.open(str(seg_path), mode="r")
         assert isinstance(seg_zarr, zarr.Array)
         np.testing.assert_array_equal(seg_zarr[:], tracks.segmentation)
@@ -122,7 +127,7 @@ def test_export_to_geff(
         seg_zarr = zarr.open(str(seg_path), mode="r")
         assert isinstance(seg_zarr, zarr.Array)
 
-        filtered_seg = tracks.segmentation.copy()
+        filtered_seg = np.asarray(tracks.segmentation).copy()
         mask = np.isin(filtered_seg, [1, 3, 4, 6])
         filtered_seg[~mask] = 0
         np.testing.assert_array_equal(seg_zarr[:], filtered_seg)

@@ -9,6 +9,10 @@ import networkx as nx
 import numpy as np
 
 from funtracks.features import FeatureDict
+from funtracks.utils.tracksdata_utils import (
+    add_masks_and_bboxes_to_graph,
+    convert_graph_nx_to_td,
+)
 
 if TYPE_CHECKING:
     from ..data_model import SolutionTracks, Tracks
@@ -16,88 +20,6 @@ if TYPE_CHECKING:
 GRAPH_FILE = "graph.json"
 SEG_FILE = "seg.npy"
 ATTRS_FILE = "attrs.json"
-
-
-def _save_v1_tracks(tracks: Tracks, directory: Path) -> None:
-    """Only used for testing backward compatibility!
-
-    Currently, saves the graph as a json file in networkx node link data format,
-    saves the segmentation as a numpy npz file, and saves the time and position
-    attributes and scale information in an attributes json file.
-    Will make the directory if it doesn't exist.
-
-    Args:
-        tracks (Tracks): the tracks to save
-        directory (Path): The directory to save the tracks in.
-    """
-    directory.mkdir(exist_ok=True, parents=True)
-    _save_graph(tracks, directory)
-    _save_seg(tracks, directory)
-    _save_attrs(tracks, directory)
-
-
-def _save_graph(tracks: Tracks, directory: Path) -> None:
-    """Save the graph to file. Currently uses networkx node link data
-    format (and saves it as json).
-
-    Args:
-        tracks (Tracks): the tracks to save the graph of
-        directory (Path): The directory in which to save the graph file.
-    """
-    graph_file = directory / GRAPH_FILE
-    graph_data = nx.node_link_data(tracks.graph, edges="links")
-
-    def convert_np_types(data):
-        """Recursively convert numpy types to native Python types."""
-
-        if isinstance(data, dict):
-            return {key: convert_np_types(value) for key, value in data.items()}
-        elif isinstance(data, list):
-            return [convert_np_types(item) for item in data]
-        elif isinstance(data, np.ndarray):
-            return data.tolist()  # Convert numpy arrays to Python lists
-        elif isinstance(data, np.integer):
-            return int(data)  # Convert numpy integers to Python int
-        elif isinstance(data, np.floating):
-            return float(data)  # Convert numpy floats to Python float
-        else:
-            return data  # Return the data as-is if it's already a native Python type
-
-    graph_data = convert_np_types(graph_data)
-    with open(graph_file, "w") as f:
-        json.dump(graph_data, f)
-
-
-def _save_seg(tracks: Tracks, directory: Path) -> None:
-    """Save a segmentation as a numpy array using np.save. In the future,
-    could be changed to use zarr or other file types.
-
-    Args:
-        tracks (Tracks): the tracks to save the segmentation of
-        directory (Path): The directory in which to save the segmentation
-    """
-    if tracks.segmentation is not None:
-        out_path = directory / SEG_FILE
-        np.save(out_path, tracks.segmentation)
-
-
-def _save_attrs(tracks: Tracks, directory: Path) -> None:
-    """Save the and scale, ndim, and features in a json file in the given directory.
-
-    Args:
-        tracks (Tracks): the tracks to save the attributes of
-        directory (Path):  The directory in which to save the attributes
-    """
-    out_path = directory / ATTRS_FILE
-    attrs_dict = {
-        "scale": tracks.scale
-        if not isinstance(tracks.scale, np.ndarray)
-        else tracks.scale.tolist(),
-        "ndim": tracks.ndim,
-        "features": tracks.features.dump_json(),
-    }
-    with open(out_path, "w") as f:
-        json.dump(attrs_dict, f)
 
 
 def load_v1_tracks(
@@ -119,13 +41,20 @@ def load_v1_tracks(
         Tracks: A tracks object loaded from the given directory
     """
     graph_file = directory / GRAPH_FILE
-    graph = _load_graph(graph_file)
+    graph_nx = _load_graph(graph_file)
 
     seg_file = directory / SEG_FILE
     seg = _load_seg(seg_file, seg_required=seg_required)
 
     attrs_file = directory / ATTRS_FILE
     attrs = _load_attrs(attrs_file)
+
+    graph_td = convert_graph_nx_to_td(graph_nx)
+
+    # Add mask and bbox attributes to graph if segmentation is available
+    if seg is not None:
+        graph_td = add_masks_and_bboxes_to_graph(graph_td, seg)
+        graph_td.update_metadata(segmentation_shape=seg.shape)
 
     # filtering the warnings because the default values of time_attr and pos_attr are
     # not None. Therefore, new style Tracks attrs that have features instead of
@@ -141,9 +70,9 @@ def load_v1_tracks(
         )
         tracks: Tracks
         if solution:
-            tracks = SolutionTracks(graph, seg, **attrs)
+            tracks = SolutionTracks(graph_td, **attrs)
         else:
-            tracks = Tracks(graph, seg, **attrs)
+            tracks = Tracks(graph_td, **attrs)
     return tracks
 
 

@@ -46,7 +46,7 @@ class TestUserAddDeleteNode:
             "t": time,
         }
         if with_seg:
-            seg_copy = tracks.segmentation.copy()
+            seg_copy = np.asarray(tracks.segmentation).copy()
             if ndim == 3:
                 seg_copy[time, position[0], position[1]] = node_id
             else:
