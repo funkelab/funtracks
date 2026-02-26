@@ -135,16 +135,12 @@ class EdgeAnnotator(GraphAnnotator):
             edges_to_update = [action.edge]
         else:  # UpdateNodeSeg
             # Get all incident edges to the modified node
-            node = action.node
-
+            modified_node = action.node
             edges_to_update = []
-            for node in self.tracks.graph.node_ids():
-                # Add edges from predecessors
-                for pred in self.tracks.graph.predecessors(node):
-                    edges_to_update.append((pred, node))
-                # Add edges from successors
-                for succ in self.tracks.graph.successors(node):
-                    edges_to_update.append((node, succ))
+            for pred in self.tracks.graph.predecessors(modified_node):
+                edges_to_update.append((pred, modified_node))
+            for succ in self.tracks.graph.successors(modified_node):
+                edges_to_update.append((modified_node, succ))
 
         # Update IoU for each edge
         for edge in edges_to_update:
@@ -152,8 +148,10 @@ class EdgeAnnotator(GraphAnnotator):
             mask1 = self.tracks.graph.nodes[source]["mask"]
             mask2 = self.tracks.graph.nodes[target]["mask"]
             if mask1.mask.sum() == 0 or mask2.mask.sum() == 0:
+                empty_node = source if mask1.mask.sum() == 0 else target
+                frame = self.tracks.get_time(empty_node)
                 warnings.warn(
-                    f"Cannot find label {source} in segmentation"
+                    f"Cannot find label {empty_node} in frame {frame}"
                     f": updating edge IOU value to 0",
                     stacklevel=2,
                 )

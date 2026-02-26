@@ -105,12 +105,16 @@ class ExtendedRegionProperties(RegionProperties):
             float: The circularity (2D) or sphericity (3D) of the region.
         """
         if self._label_image.ndim == 2:
+            if self.perimeter == 0:  # single-pixel region
+                return 0.0
             return 4 * math.pi * self.area / self.perimeter**2
         else:  # 3D
             vol = self.volume
             r = (3 / 4 / np.pi * vol) ** (1 / 3)
             a_equiv = 4 * np.pi * r**2
             a_region = self.perimeter  # perimeter returns surface_area for 3D
+            if a_region == 0:  # single-pixel region
+                return 0.0
             return a_equiv / a_region
 
     @property

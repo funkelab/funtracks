@@ -4,7 +4,7 @@ import pytest
 import zarr
 
 from funtracks.data_model import SolutionTracks, Tracks
-from funtracks.import_export.export_to_geff import export_to_geff
+from funtracks.import_export import export_to_geff
 
 
 @pytest.mark.parametrize("ndim", [3, 4])
