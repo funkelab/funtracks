@@ -1,4 +1,5 @@
 import pytest
+import tracksdata as td
 
 from funtracks.exceptions import InvalidActionError
 from funtracks.user_actions import UserAddEdge, UserDeleteEdge
@@ -123,8 +124,16 @@ def test_delete_missing_edge(get_tracks):
 
 def test_delete_edge_triple_div(get_tracks):
     tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
-    tracks.graph.add_edge(1, 6)
+    attrs = {}
+    attrs[td.DEFAULT_ATTR_KEYS.SOLUTION] = 1
+    attrs["iou"] = 0.9
+
+    tracks.graph.add_edge(
+        source_id=1,
+        target_id=6,
+        attrs=attrs,
+    )
     with pytest.raises(
-        InvalidActionError, match="Expected degree of 0 or 1 after removing edge"
+        InvalidActionError, match="Expected degree of 0 or 1 after removing edge, got 2"
     ):
         UserDeleteEdge(tracks, (1, 6))

@@ -25,25 +25,19 @@ def segmentation_2d_repeat_labels():
     return segmentation
 
 
-def test_relabel_segmentation(segmentation_2d, graph_2d):
-    frame_shape = (100, 100)
-    expected = np.zeros(segmentation_2d.shape, dtype="int32")
-    # make frame with one cell in center with label 1
-    rr, cc = disk(center=(50, 50), radius=20, shape=(100, 100))
-    expected[0][rr, cc] = 1
+def test_relabel_segmentation(get_tracks):
+    tracks = get_tracks(ndim=3, with_seg=True)
+    segmentation = np.asarray(tracks.segmentation)
 
-    # make frame with cell centered at (20, 80) with label 1
-    rr, cc = disk(center=(20, 80), radius=10, shape=frame_shape)
-    expected[1][rr, cc] = 1
+    # Use only nodes 1 and 2 (single tracklet: node 1 at t=0, node 2 at t=1)
+    subgraph = tracks.graph.filter(node_ids=[1, 2]).subgraph()
+    relabeled = relabel_segmentation_with_track_id(subgraph, segmentation)
 
-    graph_2d.remove_node(3)
-    relabeled_seg = relabel_segmentation_with_track_id(graph_2d, segmentation_2d)
-    print(f"Nonzero relabeled: {np.count_nonzero(relabeled_seg)}")  # noqa
-    print(f"Nonzero expected: {np.count_nonzero(expected)}")  # noqa
-    print(f"Max relabeled: {np.max(relabeled_seg)}")  # noqa
-    print(f"Max expected: {np.max(expected)}")  # noqa
-
-    assert_array_equal(relabeled_seg, expected)
+    # Nodes 1 and 2 form one tracklet → both get label 1
+    assert (relabeled[0][segmentation[0] == 1] == 1).all()
+    assert (relabeled[1][segmentation[1] == 2] == 1).all()
+    # Node 3 not in subgraph → pixels become 0
+    assert (relabeled[1][segmentation[1] == 3] == 0).all()
 
 
 def test_ensure_unique_labels_2d(segmentation_2d_repeat_labels):

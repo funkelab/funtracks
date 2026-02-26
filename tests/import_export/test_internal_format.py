@@ -1,15 +1,14 @@
 import json
+import shutil
 from collections.abc import Sequence
+from pathlib import Path
 
 import pytest
-from networkx.utils import graphs_equal
 from numpy.testing import assert_array_almost_equal
 
-from funtracks.data_model import Tracks
-from funtracks.import_export.internal_format import (
+from funtracks.import_export._v1_format import (
     delete_tracks,
-    load_tracks,
-    save_tracks,
+    load_v1_tracks,
 )
 
 
@@ -21,13 +20,15 @@ def test_save_load(
     with_seg,
     ndim,
     is_solution,
-    tmp_path,
 ):
     tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=is_solution)
-    save_tracks(tracks, tmp_path)
 
-    loaded = load_tracks(tmp_path, solution=is_solution)
-    assert loaded.ndim == tracks.ndim
+    data_path = Path(
+        f"tests/data/format_v1/test_save_load_{is_solution}_{ndim}_{with_seg}_0"
+    )
+
+    loaded = load_v1_tracks(data_path, solution=is_solution)
+    assert loaded.ndim == ndim
     # Check feature keys and important properties match (allow tuple vs list diff)
     assert loaded.features.time_key == tracks.features.time_key
     assert loaded.features.position_key == tracks.features.position_key
@@ -71,7 +72,14 @@ def test_save_load(
     else:
         assert loaded.segmentation is None
 
-    assert graphs_equal(loaded.graph, tracks.graph)
+    # graphs_equal doesn't exist for TracksData, so we check properties
+    assert set(loaded.graph.node_attr_keys()) == set(tracks.graph.node_attr_keys())
+    assert set(loaded.graph.edge_attr_keys()) == set(tracks.graph.edge_attr_keys())
+    assert loaded.graph.num_nodes() == tracks.graph.num_nodes()
+    assert loaded.graph.num_edges() == tracks.graph.num_edges()
+    assert set(loaded.graph.node_ids()) == set(tracks.graph.node_ids())
+    # edge_ids dont matter, only the actual edges:
+    assert sorted(loaded.graph.edge_list()) == sorted(tracks.graph.edge_list())
 
 
 @pytest.mark.parametrize("with_seg", [True, False])
@@ -84,19 +92,32 @@ def test_delete(
     is_solution,
     tmp_path,
 ):
+    reference_path = Path(
+        f"tests/data/format_v1/test_save_load_{is_solution}_{ndim}_{with_seg}_0"
+    )
+
+    # Copy reference data to temporary location
     tracks_path = tmp_path / "test_tracks"
-    tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=is_solution)
-    save_tracks(tracks, tracks_path)
+    shutil.copytree(reference_path, tracks_path)
+
+    # Delete the copy
     delete_tracks(tracks_path)
     with pytest.raises(StopIteration):
         next(tmp_path.iterdir())
 
 
 # for backward compatibility
-def test_load_without_features(tmp_path, graph_2d_with_computed_features):
-    tracks = Tracks(graph_2d_with_computed_features, ndim=3)
+def test_load_without_features(tmp_path, graph_2d_with_segmentation):
+    reference_path = Path(f"tests/data/format_v1/test_save_load_{True}_{3}_{True}_0")
+
+    # Copy reference data to temporary location
     tracks_path = tmp_path / "test_tracks"
-    save_tracks(tracks, tracks_path)
+    shutil.copytree(reference_path, tracks_path)
+
+    # Load the original data first to verify it loads correctly
+    load_v1_tracks(tracks_path, solution=True)
+
+    # Modify the copy to test backward compatibility
     attrs_path = tracks_path / "attrs.json"
     with open(attrs_path) as f:
         attrs = json.load(f)
@@ -107,6 +128,7 @@ def test_load_without_features(tmp_path, graph_2d_with_computed_features):
     with open(attrs_path, "w") as f:
         json.dump(attrs, f)
 
-    imported_tracks = load_tracks(tracks_path)
+    # Load the modified data to test old format compatibility
+    imported_tracks = load_v1_tracks(tracks_path)
     assert imported_tracks.features.time_key == "time"
     assert imported_tracks.features.position_key == "pos"

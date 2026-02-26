@@ -10,6 +10,10 @@ class TestUserUpdateNodeAttrs:
         """Test basic node attribute update functionality."""
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
 
+        tracks.graph.add_node_attr_key("label", default_value=None, dtype=object)
+        tracks.graph.add_node_attr_key("confidence", default_value=None, dtype=float)
+        tracks.graph.add_node_attr_key("validated", default_value=None, dtype=bool)
+
         # Add custom attributes to update
         custom_attrs = {"label": "my_label", "confidence": 0.95, "validated": True}
 
@@ -41,6 +45,9 @@ class TestUserUpdateNodeAttrs:
     def test_user_update_existing_attrs(self, get_tracks, ndim, with_seg):
         """Test updating attributes that already exist."""
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+
+        tracks.graph.add_node_attr_key("label", default_value=None, dtype=object)
+        tracks.graph.add_node_attr_key("score", default_value=None, dtype=float)
 
         # Set initial custom attributes
         tracks._set_node_attr(1, "label", "old_label")
@@ -93,6 +100,7 @@ class TestUserUpdateNodeAttrs:
     def test_action_history_integration(self, get_tracks, ndim, with_seg):
         """Test that action integrates properly with action history."""
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        tracks.graph.add_node_attr_key("label", default_value=None, dtype=object)
 
         # Initially empty
         assert len(tracks.action_history.undo_stack) == 0

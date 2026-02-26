@@ -1,21 +1,18 @@
-import networkx as nx
 import numpy as np
-
-from funtracks.data_model.graph_attributes import NodeAttr
+import tracksdata as td
 
 
 def relabel_segmentation_with_track_id(
-    solution_nx_graph: nx.DiGraph,
+    solution_graph: td.graph.GraphView,
     segmentation: np.ndarray,
 ) -> np.ndarray:
     """Relabel a segmentation based on tracking results so that nodes in same
     track share the same id. IDs do change at division.
 
     Args:
-        solution_nx_graph (nx.DiGraph): Networkx graph with the solution to use
-            for relabeling. Nodes not in graph will be removed from seg. Original
-            segmentation ids have to be stored in the graph so we
-            can map them back.
+        solution_graph (td.graph.GraphView): Tracksdata graph with the solution to use
+            for relabeling. Nodes not in graph will be set to 0 in the output.
+            Node IDs must match the segmentation labels.
         segmentation (np.ndarray): Original segmentation with dimensions (t, [z], y, x)
 
     Returns:
@@ -24,18 +21,43 @@ def relabel_segmentation_with_track_id(
     """
     tracked_masks = np.zeros_like(segmentation)
     id_counter = 1
-    parent_nodes = [n for (n, d) in solution_nx_graph.out_degree() if d > 1]
-    soln_copy = solution_nx_graph.copy()
-    for parent_node in parent_nodes:
-        out_edges = solution_nx_graph.out_edges(parent_node)
-        soln_copy.remove_edges_from(out_edges)
-    for node_set in nx.weakly_connected_components(soln_copy):
-        for node in node_set:
-            time_frame = solution_nx_graph.nodes[node][NodeAttr.TIME.value]
-            previous_seg_id = solution_nx_graph.nodes[node][NodeAttr.SEG_ID.value]
-            previous_seg_mask = segmentation[time_frame] == previous_seg_id
-            tracked_masks[time_frame][previous_seg_mask] = id_counter
+
+    # Division nodes have out_degree > 1; their outgoing edges are cut so that
+    # each daughter cell starts a new tracklet
+    division_nodes = {
+        n for n in solution_graph.node_ids() if solution_graph.out_degree(n) > 1
+    }
+
+    visited: set = set()
+    for start_node in solution_graph.node_ids():
+        if start_node in visited:
+            continue
+
+        # BFS to collect the connected tracklet, cutting at division out-edges
+        component: set = set()
+        queue = [start_node]
+        while queue:
+            node = queue.pop()
+            if node in visited:
+                continue
+            visited.add(node)
+            component.add(node)
+            # Traverse predecessors: only if the predecessor is not a division node
+            # (because a division node's out-edges are cut)
+            for pred in solution_graph.predecessors(node):
+                if pred not in visited and pred not in division_nodes:
+                    queue.append(pred)
+            # Traverse successors: only if the current node is not a division node
+            if node not in division_nodes:
+                for succ in solution_graph.successors(node):
+                    if succ not in visited:
+                        queue.append(succ)
+
+        for node in component:
+            t = int(solution_graph.nodes[node]["t"])
+            tracked_masks[t][segmentation[t] == node] = id_counter
         id_counter += 1
+
     return tracked_masks
 
 

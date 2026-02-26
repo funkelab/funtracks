@@ -1,7 +1,8 @@
 from itertools import product
 
-import networkx as nx
 import numpy as np
+import polars as pl
+import tracksdata as td
 from tqdm import tqdm
 
 from .utils import _compute_node_frame_dict
@@ -79,7 +80,7 @@ def _get_iou_dict(segmentation, multiseg=False) -> dict[int, dict[int, float]]:
 
 
 def add_iou(
-    cand_graph: nx.DiGraph,
+    cand_graph: td.graph.GraphView,
     segmentation: np.ndarray,
     node_frame_dict: dict[int, list[int]] | None = None,
     multiseg=False,
@@ -87,7 +88,8 @@ def add_iou(
     """Add IOU to the candidate graph.
 
     Args:
-        cand_graph (nx.DiGraph): Candidate graph with nodes and edges already populated
+        cand_graph (td.graph.GraphView): Candidate graph with nodes and edges already
+            populated.
         segmentation (np.ndarray): segmentation that was used to create cand_graph.
             Has shape ([h], t, [z], y, x), where h is the number of hypotheses if
             multiseg is True.
@@ -100,6 +102,9 @@ def add_iou(
     """
     if node_frame_dict is None:
         node_frame_dict = _compute_node_frame_dict(cand_graph)
+
+    cand_graph.add_edge_attr_key("iou", default_value=0.0, dtype=pl.Float64)
+
     frames = sorted(node_frame_dict.keys())
     ious = _get_iou_dict(segmentation, multiseg=multiseg)
     for frame in tqdm(frames):
@@ -109,5 +114,6 @@ def add_iou(
         for node_id in node_frame_dict[frame]:
             for next_id in next_nodes:
                 iou = ious.get(node_id, {}).get(next_id, 0)
-                if (node_id, next_id) in cand_graph.edges:
-                    cand_graph.edges[(node_id, next_id)]["iou"] = iou
+                if cand_graph.has_edge(node_id, next_id):
+                    edge_id = cand_graph.edge_id(node_id, next_id)
+                    cand_graph.update_edge_attrs(attrs={"iou": iou}, edge_ids=[edge_id])

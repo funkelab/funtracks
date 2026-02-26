@@ -253,15 +253,15 @@ def test_duplicate_values_in_name_map(valid_geff):
     store, _ = valid_geff
 
     # Duplicate values should be allowed - each standard key gets a copy of the data
-    name_map = {"time": "t", "pos": ["y", "x"], "seg_id": "t"}
+    node_name_map = {"time": "t", "pos": ["y", "x"], "seg_id": "t"}
 
     # Should not raise - seg_id maps to same source as time
-    tracks = import_from_geff(store, name_map)
+    tracks = import_from_geff(store, node_name_map)
 
     # Both time and seg_id should be present with same values
-    for node_id in tracks.graph.nodes():
+    for node_id in tracks.graph.node_ids():
         assert tracks.get_node_attr(node_id, "seg_id") == tracks.get_node_attr(
-            node_id, "time"
+            node_id, "t"
         )
 
 
@@ -313,11 +313,11 @@ def test_tracks_with_segmentation(valid_geff, invalid_geff, valid_segmentation, 
     assert hasattr(tracks, "segmentation")
     assert tracks.segmentation.shape == valid_segmentation.shape
     # Get last node by ID (don't rely on iteration order)
-    last_node = max(tracks.graph.nodes())
+    last_node = max(tracks.graph.node_ids())
     # With composite pos, position is stored as an array
     pos = tracks.graph.nodes[last_node]["pos"]
     coords = [
-        tracks.graph.nodes[last_node]["time"],
+        tracks.graph.nodes[last_node]["t"],
         pos[0],  # y
         pos[1],  # x
     ]
@@ -326,14 +326,14 @@ def test_tracks_with_segmentation(valid_geff, invalid_geff, valid_segmentation, 
         valid_segmentation[tuple(coords)] == 50
     )  # in original segmentation, the pixel value is equal to seg_id
     assert (
-        tracks.segmentation[tuple(coords)] == last_node
+        np.asarray(tracks.segmentation)[tuple(coords)] == last_node
     )  # test that the seg id has been relabeled
 
     # Check that only required/requested features are present, and that area is recomputed
     data = tracks.graph.nodes[last_node]
-    assert "random_feature" in data
-    assert "random_feature2" not in data
-    assert "area" in data
+    assert "random_feature" in tracks.graph.node_attr_keys()
+    assert "random_feature2" not in tracks.graph.node_attr_keys()
+    assert "area" in tracks.graph.node_attr_keys()
     assert (
         data["area"] == 0.01
     )  # recomputed area values should be 1 pixel, so 0.01 after applying the scaling.
@@ -352,9 +352,9 @@ def test_tracks_with_segmentation(valid_geff, invalid_geff, valid_segmentation, 
         node_features=node_features,
     )
     # Get last node by ID (don't rely on iteration order)
-    last_node = max(tracks.graph.nodes())
+    last_node = max(tracks.graph.node_ids())
     data = tracks.graph.nodes[last_node]
-    assert "area" in data
+    assert "area" in tracks.graph.node_attr_keys()
     assert data["area"] == 21
 
     # Test that import fails with ValueError when invalid seg_ids are provided.
@@ -417,7 +417,7 @@ def test_node_features_compute_vs_load(valid_geff, valid_segmentation, tmp_path)
     Features not in the geff can still be computed if marked True.
     """
     store, _ = valid_geff
-    name_map = {
+    node_name_map = {
         "time": "t",
         "pos": ["y", "x"],  # Composite position mapping
         "seg_id": "seg_id",
@@ -437,7 +437,7 @@ def test_node_features_compute_vs_load(valid_geff, valid_segmentation, tmp_path)
 
     tracks = import_from_geff(
         store,
-        name_map,
+        node_name_map,
         segmentation_path=valid_segmentation_path,
         scale=scale,
         node_features=node_features,
@@ -448,12 +448,12 @@ def test_node_features_compute_vs_load(valid_geff, valid_segmentation, tmp_path)
         assert key in tracks.features
 
     # Get last node by ID (don't rely on iteration order)
-    max_node_id = max(tracks.graph.nodes())
+    max_node_id = max(tracks.graph.node_ids())
     data = tracks.graph.nodes[max_node_id]
 
     # All requested features should be present
     for key in feature_keys:
-        assert key in data
+        assert data[key] is not None
 
     # Verify computed values (1 pixel = 0.01 after scaling)
     # Original geff had area=21 for last node

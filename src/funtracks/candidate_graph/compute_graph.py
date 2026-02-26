@@ -1,7 +1,7 @@
 import logging
 
-import networkx as nx
 import numpy as np
+import tracksdata as td
 
 from .iou import add_iou
 from .utils import add_cand_edges, nodes_from_points_list, nodes_from_segmentation
@@ -14,7 +14,7 @@ def compute_graph_from_seg(
     max_edge_distance: float,
     iou: bool = False,
     scale: list[float] | None = None,
-) -> nx.DiGraph:
+) -> td.graph.GraphView:
     """Construct a candidate graph from a segmentation array. Nodes are placed at the
     centroid of each segmentation and edges are added for all nodes in adjacent frames
     within max_edge_distance.
@@ -32,11 +32,11 @@ def compute_graph_from_seg(
             Defaults to None, which implies the data is isotropic.
 
     Returns:
-        nx.DiGraph: A candidate graph that can be passed to the motile solver
+        td.graph.GraphView: A candidate graph that can be passed to the motile solver
     """
     # add nodes
     cand_graph, node_frame_dict = nodes_from_segmentation(segmentation, scale=scale)
-    logger.info("Candidate nodes: %d", cand_graph.number_of_nodes())
+    logger.info("Candidate nodes: %d", cand_graph.num_nodes())
 
     # add edges
     add_cand_edges(
@@ -49,7 +49,7 @@ def compute_graph_from_seg(
         # are scaled by the anisotropy.
         add_iou(cand_graph, segmentation, node_frame_dict)
 
-    logger.info("Candidate edges: %d", cand_graph.number_of_edges())
+    logger.info("Candidate edges: %d", cand_graph.num_edges())
 
     return cand_graph
 
@@ -58,7 +58,7 @@ def compute_graph_from_points_list(
     points_list: np.ndarray,
     max_edge_distance: float,
     scale: list[float] | None = None,
-) -> nx.DiGraph:
+) -> td.graph.GraphView:
     """Construct a candidate graph from a points list.
 
     Args:
@@ -73,11 +73,11 @@ def compute_graph_from_points_list(
             isotropic.
 
     Returns:
-        nx.DiGraph: A candidate graph that can be passed to the motile solver.
+        td.graph.GraphView: A candidate graph that can be passed to the motile solver.
     """
     # add nodes
     cand_graph, node_frame_dict = nodes_from_points_list(points_list, scale=scale)
-    logger.info("Candidate nodes: %d", cand_graph.number_of_nodes())
+    logger.info("Candidate nodes: %d", cand_graph.num_nodes())
     # add edges
     add_cand_edges(
         cand_graph,

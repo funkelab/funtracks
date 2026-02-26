@@ -43,8 +43,8 @@ class UserSwapPredecessors(ActionGroup):
         graph = tracks.graph
 
         # Find predecessors
-        pred1 = next(graph.predecessors(node1), None)
-        pred2 = next(graph.predecessors(node2), None)
+        pred1 = graph.predecessors(node1)[0] if graph.predecessors(node1) else None
+        pred2 = graph.predecessors(node2)[0] if graph.predecessors(node2) else None
 
         # Nothing to swap - raise errors for user feedback
         if pred1 is None and pred2 is None:
