@@ -214,6 +214,26 @@ def test_compute_ndim_errors():
         Tracks(g)
 
 
+def test_get_new_node_ids(graph_2d_with_position):
+    """Test that _get_new_node_ids returns unique IDs not present in the graph,
+    and skips IDs that are already taken."""
+    g = graph_2d_with_position
+
+    tracks = Tracks(g, ndim=3)
+    ids = tracks._get_new_node_ids(3)
+
+    assert len(ids) == 3
+    assert len(set(ids)) == 3  # all unique
+    assert 1 not in ids  # existing nodes skipped
+    assert 2 not in ids
+    for node_id in ids:
+        assert not tracks.graph.has_node(node_id)
+
+    # second call must not overlap with first
+    ids2 = tracks._get_new_node_ids(2)
+    assert not set(ids) & set(ids2)
+
+
 def test_undo_redo(graph_2d_with_segmentation):
     """Test undo/redo functionality on Tracks."""
     tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)

@@ -478,56 +478,6 @@ def td_relabel_nodes(graph, mapping: dict[int, int]) -> td.graph.SQLGraph:
     return new_graph_sub
 
 
-def get_node_attr_defaults(graph) -> dict[str, Any]:
-    """Get node attribute keys and their default values from SQLGraph."""
-    # Unwrap GraphView if needed
-    actual_graph = graph._root if hasattr(graph, "_root") else graph
-
-    defaults = {}
-    for col in actual_graph.Node.__table__.columns:
-        col_name = col.name
-        # Skip system columns
-        if col_name in ["node_id", "t"]:
-            continue
-
-        # Extract default value from SQLAlchemy column
-        default_val = None
-        if (
-            hasattr(col, "default")
-            and col.default is not None
-            and hasattr(col.default, "arg")
-        ):
-            default_val = col.default.arg
-
-        defaults[col_name] = default_val
-    return defaults
-
-
-def get_edge_attr_defaults(graph) -> dict[str, Any]:
-    """Get edge attribute keys and their default values from SQLGraph."""
-    # Unwrap GraphView if needed
-    actual_graph = graph._root if hasattr(graph, "_root") else graph
-
-    defaults = {}
-    for col in actual_graph.Edge.__table__.columns:
-        col_name = col.name
-        # Skip system columns
-        if col_name in ["edge_id", "source_id", "target_id"]:
-            continue
-
-        # Extract default value
-        default_val = None
-        if (
-            hasattr(col, "default")
-            and col.default is not None
-            and hasattr(col.default, "arg")
-        ):
-            default_val = col.default.arg
-
-        defaults[col_name] = default_val
-    return defaults
-
-
 def convert_graph_nx_to_td(graph_nx: nx.DiGraph) -> td.graph.GraphView:
     """Convert a NetworkX DiGraph to a tracksdata SQLGraph.
 
