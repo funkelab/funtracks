@@ -2,6 +2,7 @@ import numpy as np
 
 from funtracks.actions import AddNode
 from funtracks.data_model import SolutionTracks, Tracks
+from funtracks.import_export import export_to_csv
 from funtracks.user_actions import UserUpdateSegmentation
 from funtracks.utils.tracksdata_utils import create_empty_graphview_graph
 
@@ -93,12 +94,28 @@ def test_next_track_id_empty():
     assert tracks.get_next_track_id() == 1
 
 
+def test_get_lineage_id_without_lineage_key(graph_2d_with_track_id):
+    """Test that get_lineage_id returns None when lineage_key is not set."""
+    graph = graph_2d_with_track_id
+    # TODO Teun: question: the original code added node 1, but this was already present?
+    # So, what was tested here exactly?
+    # graph.add_node(1, t=0, pos=[0, 0], track_id=1)
+    graph.add_node(
+        attrs={"t": 1, "pos": [0, 0], "track_id": 1}, index=7, validate_keys=False
+    )
+    tracks = SolutionTracks(graph, ndim=3, **track_attrs)
+
+    # Unset lineage_key to test the None path
+    tracks.features.lineage_key = None
+
+    # get_lineage_id should return None when lineage_key is not set
+    assert tracks.get_lineage_id(1) is None
+
+
 def test_export_to_csv_with_display_names(
     graph_2d_with_segmentation, graph_3d_with_segmentation, tmp_path
 ):
     """Test CSV export with use_display_names=True option."""
-    from funtracks.import_export import export_to_csv
-
     # Test 2D with display names
     tracks = SolutionTracks(graph_2d_with_segmentation, **track_attrs, ndim=3)
     temp_file = tmp_path / "test_export_2d_display.csv"
@@ -108,8 +125,8 @@ def test_export_to_csv_with_display_names(
 
     assert len(lines) == tracks.graph.num_nodes() + 1  # add header
 
-    # With display names: ID, Parent ID, Time, y, x, Area, Tracklet ID
-    header = ["ID", "Parent ID", "Time", "y", "x", "Area", "Tracklet ID"]
+    # With display names: ID, Parent ID, Time, y, x, Tracklet ID, Lineage ID
+    header = ["ID", "Parent ID", "Time", "y", "x", "Area", "Tracklet ID", "Lineage ID"]
     assert lines[0].strip().split(",") == header
 
     # Test 3D with display names
@@ -121,6 +138,16 @@ def test_export_to_csv_with_display_names(
 
     assert len(lines) == tracks.graph.num_nodes() + 1  # add header
 
-    # With display names: ID, Parent ID, Time, z, y, x, Tracklet ID
-    header = ["ID", "Parent ID", "Time", "z", "y", "x", "Volume", "Tracklet ID"]
+    # With display names: ID, Parent ID, Time, z, y, x, Tracklet ID, Lineage ID
+    header = [
+        "ID",
+        "Parent ID",
+        "Time",
+        "z",
+        "y",
+        "x",
+        "Volume",
+        "Tracklet ID",
+        "Lineage ID",
+    ]
     assert lines[0].strip().split(",") == header

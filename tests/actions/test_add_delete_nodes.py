@@ -29,6 +29,7 @@ def test_add_delete_nodes(get_tracks, ndim, with_seg):
     node_attributes = [
         tracks.features.time_key,
         tracks.features.tracklet_key,
+        tracks.features.lineage_key,
         tracks.features.position_key,
     ]
     edge_attributes = ["iou"] if with_seg else []
@@ -73,6 +74,9 @@ def test_add_delete_nodes(get_tracks, ndim, with_seg):
             ]
         attrs[tracks.features.tracklet_key] = reference_graph.nodes[node][
             tracks.features.tracklet_key
+        ]
+        attrs[tracks.features.lineage_key] = reference_graph.nodes[node][
+            tracks.features.lineage_key
         ]
         if with_seg:
             attrs["bbox"] = reference_graph.nodes[node]["bbox"]

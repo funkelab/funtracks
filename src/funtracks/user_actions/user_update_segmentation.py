@@ -43,7 +43,7 @@ class UserUpdateSegmentation(ActionGroup):
         """
         super().__init__(tracks, actions=[])
         self.tracks: SolutionTracks  # Narrow type from base class
-        self.nodes_added = []
+        node_to_select = None
         if self.tracks.segmentation is None:
             raise ValueError("Cannot update non-existing segmentation.")
         for pixels, old_value in updated_pixels:
@@ -61,7 +61,7 @@ class UserUpdateSegmentation(ActionGroup):
                 self.actions.append(
                     UpdateNodeSeg(tracks, old_value, mask_pixels, added=False)
                 )
-        if new_value != 0:
+        if new_value != 0 and updated_pixels:
             all_pixels = tuple(
                 np.concatenate([pixels[dim] for pixels, _ in updated_pixels])
                 for dim in range(ndim)
@@ -91,6 +91,10 @@ class UserUpdateSegmentation(ActionGroup):
                         attributes=attrs,
                         pixels=all_pixels,
                         force=force,
+                        _top_level=False,
                     )
                 )
-                self.nodes_added.append(new_value)
+                node_to_select = new_value
+
+        self.tracks.action_history.add_new_action(self)
+        self.tracks.refresh.emit(node_to_select)

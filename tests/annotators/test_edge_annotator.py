@@ -1,6 +1,6 @@
 import pytest
 
-from funtracks.actions import UpdateNodeSeg, UpdateTrackID
+from funtracks.actions import UpdateNodeSeg, UpdateTrackIDs
 from funtracks.annotators import EdgeAnnotator
 from funtracks.data_model import SolutionTracks, Tracks
 from funtracks.utils.tracksdata_utils import pixels_to_td_mask
@@ -143,15 +143,15 @@ class TestEdgeAnnotator:
         initial_iou = tracks.get_edge_attr(edge, "iou", required=True)
 
         # If we recomputed IoU now, it would be different
-        # But we won't - we'll just call UpdateTrackID on node 1
+        # But we won't - we'll just call UpdateTrackIDs on node 1
 
-        # UpdateTrackID should not trigger edge update
+        # UpdateTrackIDs should not trigger edge update
         node_id = 1
         original_track_id = tracks.get_track_id(node_id)
         new_track_id = original_track_id + 100
 
-        # Perform UpdateTrackID action
-        UpdateTrackID(tracks, node_id, new_track_id)
+        # Perform UpdateTrackIDs action
+        UpdateTrackIDs(tracks, node_id, new_track_id)
 
         # IoU should remain unchanged (no recomputation happened despite seg change)
         assert tracks.graph.edges[edge_id]["iou"] == initial_iou

@@ -23,6 +23,7 @@ class SolutionTracks(Tracks):
         time_attr: str | None = None,
         pos_attr: str | tuple[str] | list[str] | None = None,
         tracklet_attr: str | None = None,
+        lineage_attr: str | None = None,
         scale: list[float] | None = None,
         ndim: int | None = None,
         features: FeatureDict | None = None,
@@ -45,6 +46,8 @@ class SolutionTracks(Tracks):
                 Defaults to "pos" if None.
             tracklet_attr (str | None): Graph attribute name for tracklet/track IDs.
                 Defaults to "track_id" if None.
+            lineage_attr (str | None): Graph attribute name for lineage IDs.
+                Defaults to "lineage_id" if None.
             scale (list[float] | None): Scaling factors for each dimension (including
                 time). If None, all dimensions scaled by 1.0.
             ndim (int | None): Number of dimensions (3 for 2D+time, 4 for 3D+time).
@@ -62,6 +65,7 @@ class SolutionTracks(Tracks):
             time_attr=time_attr,
             pos_attr=pos_attr,
             tracklet_attr=tracklet_attr,
+            lineage_attr=lineage_attr,
             scale=scale,
             ndim=ndim,
             features=features,
@@ -112,7 +116,12 @@ class SolutionTracks(Tracks):
             _segmentation=tracks.segmentation,
         )
         if force_recompute:
-            soln_tracks.enable_features([soln_tracks.features.tracklet_key])  # type: ignore
+            soln_tracks.enable_features(
+                [
+                    soln_tracks.features.tracklet_key,  # type: ignore[list-item]
+                    soln_tracks.features.lineage_key,  # type: ignore[list-item]
+                ]
+            )
         return soln_tracks
 
     @property
@@ -124,20 +133,39 @@ class SolutionTracks(Tracks):
         return self.track_annotator.tracklet_id_to_nodes
 
     def get_next_track_id(self) -> int:
-        """Return the next available track_id and update max_tracklet_id in TrackAnnotator
+        """Return the next available track_id.
 
-        # TODO: I don't think we need to update the max here, it will get updated if we
-        actually add a node automatically.
+        The max_tracklet_id in TrackAnnotator is updated automatically when
+        a node is added or track IDs are updated via UpdateTrackIDs.
         """
-        annotator = self.track_annotator
-        annotator.max_tracklet_id = annotator.max_tracklet_id + 1
-        return annotator.max_tracklet_id
+        return self.track_annotator.max_tracklet_id + 1
+
+    def get_next_lineage_id(self) -> int:
+        """Return the next available lineage_id.
+
+        The max_lineage_id in TrackAnnotator is updated automatically when
+        a node is added or lineage IDs are updated via UpdateTrackIDs.
+        """
+        return self.track_annotator.max_lineage_id + 1
 
     def get_track_id(self, node) -> int:
         if self.features.tracklet_key is None:
             raise ValueError("Tracklet key not initialized in features")
         track_id = self.get_node_attr(node, self.features.tracklet_key, required=True)
         return track_id
+
+    def get_lineage_id(self, node) -> int | None:
+        """Get the lineage ID for a node.
+
+        Args:
+            node: The node to get lineage ID for
+
+        Returns:
+            The lineage ID, or None if lineage feature is not enabled
+        """
+        if self.features.lineage_key is None:
+            return None
+        return self.get_node_attr(node, self.features.lineage_key)
 
     def get_track_neighbors(
         self, track_id: int, time: int

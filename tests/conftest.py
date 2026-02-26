@@ -163,6 +163,7 @@ def _make_graph(
         node_attributes.append("pos")
     if with_track_id:
         node_attributes.append("track_id")
+        node_attributes.append("lineage_id")
     if with_area:
         node_attributes.append("area")
     if with_iou:
@@ -238,6 +239,8 @@ def _make_graph(
             6: make_3d_cube_mask(start_corner=(96, 96, 96), width=4),
         }
         segmentation_shape = (5, 100, 100, 100)
+    # Lineage IDs
+    lineage_ids = {1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 2}
 
     # Build nodes with requested features
     nodes_id_list = []
@@ -250,6 +253,7 @@ def _make_graph(
             node_attrs["pos"] = positions[node_id]
         if with_track_id:
             node_attrs["track_id"] = track_ids[node_id]
+            node_attrs["lineage_id"] = lineage_ids[node_id]
         if with_area:
             node_attrs["area"] = float(areas[node_id])
             # I think this is necessary, to keep the dtype the same,
@@ -365,7 +369,15 @@ def get_tracks(get_graph) -> Callable[..., "Tracks | SolutionTracks"]:
         exist in the test graph fixtures.
     """
     from funtracks.data_model import SolutionTracks, Tracks
-    from funtracks.features import Area, FeatureDict, IoU, Position, Time, TrackletID
+    from funtracks.features import (
+        Area,
+        FeatureDict,
+        IoU,
+        LineageID,
+        Position,
+        Time,
+        TrackletID,
+    )
 
     def _make_tracks(
         ndim: int,
@@ -400,15 +412,18 @@ def get_tracks(get_graph) -> Callable[..., "Tracks | SolutionTracks"]:
             features_dict["area"] = Area(ndim=ndim)
             features_dict["iou"] = IoU()
             features_dict["track_id"] = TrackletID()
+            features_dict["lineage_id"] = LineageID()
         elif is_solution:
             # SolutionTracks without seg: has track_id but not area/iou/mask/bbox
             features_dict["track_id"] = TrackletID()
+            features_dict["lineage_id"] = LineageID()
 
         feature_dict = FeatureDict(
             features=features_dict,
             time_key="t",
             position_key="pos",
             tracklet_key="track_id" if (with_seg or is_solution) else None,
+            lineage_key="lineage_id" if is_solution else None,
         )
 
         # Create the appropriate Tracks type with pre-built FeatureDict
@@ -440,6 +455,7 @@ def graph_2d_list(tmp_path) -> td.graph.GraphView:
             "t": 0,
             "area": 1245,
             "track_id": 1,
+            "lineage_id": 1,
         },
         {
             "y": 20,
@@ -447,6 +463,7 @@ def graph_2d_list(tmp_path) -> td.graph.GraphView:
             "t": 1,
             "area": 500,
             "track_id": 2,
+            "lineage_id": 2,
         },
     ]
     graph.add_node_attr_key("y", default_value=0.0, dtype=pl.Float64)
@@ -475,7 +492,8 @@ def get_graph(request) -> Callable[..., td.graph.GraphView]:
         with_features: Feature level to include:
             - "clean": time only
             - "position": time + pos
-            - "track_id": time + pos + track_id (for SolutionTracks without seg)
+            - "track_id": time + pos + track_id and lineage_id (for SolutionTracks
+                without seg)
             - "segmentation": time + pos + track_id + area + iou + mask + bbox
 
     Returns:

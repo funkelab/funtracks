@@ -1,6 +1,6 @@
 import pytest
 
-from funtracks.features import FeatureDict, Position, Time
+from funtracks.features import FeatureDict, LineageID, Position, Time, TrackletID
 
 
 class TestFeatureDict:
@@ -183,3 +183,31 @@ class TestFeatureDict:
         # Can check membership
         assert "time" in fd
         assert "nonexistent" not in fd
+
+    def test_register_tracklet_feature(self):
+        """Test registering a tracklet feature sets the tracklet_key."""
+        features = {"time": Time(), "pos": Position(("y", "x"))}
+        fd = FeatureDict(features, time_key="time", position_key="pos", tracklet_key=None)
+
+        assert fd.tracklet_key is None
+        assert "track_id" not in fd
+
+        fd.register_tracklet_feature("track_id", TrackletID())
+
+        assert fd.tracklet_key == "track_id"
+        assert "track_id" in fd
+        assert fd["track_id"] == TrackletID()
+
+    def test_register_lineage_feature(self):
+        """Test registering a lineage feature sets the lineage_key."""
+        features = {"time": Time(), "pos": Position(("y", "x"))}
+        fd = FeatureDict(features, time_key="time", position_key="pos", tracklet_key=None)
+
+        assert fd.lineage_key is None
+        assert "lineage_id" not in fd
+
+        fd.register_lineage_feature("lineage_id", LineageID())
+
+        assert fd.lineage_key == "lineage_id"
+        assert "lineage_id" in fd
+        assert fd["lineage_id"] == LineageID()

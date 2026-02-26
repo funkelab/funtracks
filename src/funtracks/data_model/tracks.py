@@ -16,6 +16,7 @@ from psygnal import Signal
 from tracksdata.array import GraphArrayView
 from tracksdata.nodes._mask import Mask
 
+from funtracks.actions.action_history import ActionHistory
 from funtracks.features import Feature, FeatureDict, Position, Time
 from funtracks.utils.tracksdata_utils import (
     to_polars_dtype,
@@ -60,6 +61,7 @@ class Tracks:
         time_attr: str | None = None,
         pos_attr: str | tuple[str, ...] | list[str] | None = None,
         tracklet_attr: str | None = None,
+        lineage_attr: str | None = None,
         scale: list[float] | None = None,
         ndim: int | None = None,
         features: FeatureDict | None = None,
@@ -79,6 +81,8 @@ class Tracks:
                 Defaults to "pos" if None.
             tracklet_attr (str | None): Graph attribute name for tracklet/track IDs.
                 Defaults to "track_id" if None.
+            lineage_attr (str | None): Graph attribute name for lineage IDs.
+                Defaults to "lineage_id" if None.
             scale (list[float] | None): Scaling factors for each dimension (including
                 time). If None, all dimensions scaled by 1.0.
             ndim (int | None): Number of dimensions (3 for 2D+time, 4 for 3D+time).
@@ -119,6 +123,8 @@ class Tracks:
             ndim,
         )
         self.axis_names = ["z", "y", "x"] if self.ndim == 4 else ["y", "x"]
+        self.action_history = ActionHistory()
+        self.node_id_counter = 1
 
         # initialization steps:
         # 1. set up feature dict (or use provided)
@@ -131,12 +137,14 @@ class Tracks:
             time_attr is not None or pos_attr is not None or tracklet_attr is not None
         ):
             warn(
-                "Provided both FeatureDict and pos, time, or tracklet attr: ignoring attr"
-                f" arguments ({pos_attr=}, {time_attr=}, {tracklet_attr=}).",
+                "Provided both FeatureDict and pos, time, tracklet, or lineage attr: "
+                "ignoring attr"
+                f" arguments ({pos_attr=}, {time_attr=}, {tracklet_attr=}, "
+                f"{lineage_attr=}).",
                 stacklevel=2,
             )
         self.features = (
-            self._get_feature_set(time_attr, pos_attr, tracklet_attr)
+            self._get_feature_set(time_attr, pos_attr, tracklet_attr, lineage_attr)
             if features is None
             else features
         )
@@ -155,6 +163,7 @@ class Tracks:
         time_attr: str | None,
         pos_attr: str | tuple[str, ...] | list[str] | None,
         tracklet_key: str | None,
+        lineage_key: str | None,
     ) -> FeatureDict:
         """Create a FeatureDict with static (user-provided) features only.
 
@@ -171,6 +180,8 @@ class Tracks:
                 - None: defaults to "pos"
             tracklet_key: Graph attribute name for tracklet/track IDs (e.g., "track_id").
                 If None, defaults to "track_id"
+            lineage_key: Graph attribute name for lineage IDs (e.g., "lineage_id").
+                if None, defaults to "lineage_id"
 
         Returns:
             FeatureDict initialized with time feature and position if no segmentation
@@ -181,6 +192,8 @@ class Tracks:
             pos_attr = "pos"
         if tracklet_key is None:
             tracklet_key = "track_id"
+        if lineage_key is None:
+            lineage_key = "lineage_id"
 
         # Build static features dict - always include time
         features: dict[str, Feature] = {time_key: Time()}
@@ -192,6 +205,7 @@ class Tracks:
             time_key=time_key,
             position_key=None,
             tracklet_key=tracklet_key,
+            lineage_key=lineage_key,
         )
 
         # Register position feature if no segmentation (static position)
@@ -259,7 +273,11 @@ class Tracks:
         # TrackAnnotator: requires SolutionTracks (checked in can_annotate)
         if TrackAnnotator.can_annotate(self):
             annotator_list.append(
-                TrackAnnotator(self, tracklet_key=self.features.tracklet_key)  # type: ignore
+                TrackAnnotator(
+                    self,  # type: ignore[arg-type]
+                    tracklet_key=self.features.tracklet_key,
+                    lineage_key=self.features.lineage_key,
+                )
             )
         return AnnotatorRegistry(annotator_list)
 
@@ -313,6 +331,9 @@ class Tracks:
                 tracklet_key = annotator.tracklet_key
                 self.features.tracklet_key = tracklet_key
                 core_computed_features.append(tracklet_key)
+                lineage_key = annotator.lineage_key
+                self.features.lineage_key = lineage_key
+                core_computed_features.append(lineage_key)
         for key in core_computed_features:
             if self._check_existing_feature(key):
                 # Add to FeatureDict if not already there
@@ -533,6 +554,47 @@ class Tracks:
                     )
                 )
                 cache_entry.buffer[chunk_slc] = 0
+
+    def undo(self) -> bool:
+        """Undo the last performed action from the action history.
+
+        Returns:
+            bool: True if an action was undone, False if there were no actions to undo
+        """
+        if self.action_history.undo():
+            self.refresh.emit()
+            return True
+        return False
+
+    def redo(self) -> bool:
+        """Redo the last undone action from the action history.
+
+        Returns:
+            bool: True if an action was redone, False if there were no actions to redo
+        """
+        if self.action_history.redo():
+            self.refresh.emit()
+            return True
+        return False
+
+    def _get_new_node_ids(self, n: int) -> list[Node]:
+        """Get a list of new node ids for creating new nodes.
+        They will be unique from all existing nodes, but have no other guarantees.
+
+        Args:
+            n (int): The number of new node ids to return
+
+        Returns:
+            list[Node]: A list of new node ids.
+        """
+        ids = [self.node_id_counter + i for i in range(n)]
+        self.node_id_counter += n
+        for idx, _id in enumerate(ids):
+            while self.graph.has_node(_id):
+                _id = self.node_id_counter
+                self.node_id_counter += 1
+            ids[idx] = _id
+        return ids
 
     def _compute_ndim(
         self,

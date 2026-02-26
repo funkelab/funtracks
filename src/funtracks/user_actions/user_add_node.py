@@ -34,6 +34,7 @@ class UserAddNode(ActionGroup):
         attributes: dict[str, Any],
         pixels: tuple[np.ndarray, ...] | None = None,
         force: bool = False,
+        _top_level: bool = True,
     ):
         """
         Args:
@@ -45,6 +46,9 @@ class UserAddNode(ActionGroup):
                 segmentation to add to the tracks. Defaults to None.
             force (bool, optional): Whether to force the action by removing any
                 conflicting edges. Defaults to False.
+            _top_level (bool): If True, add this action to the history and emit
+                refresh. Set to False when used as a sub-action inside a compound
+                action. Defaults to True.
 
         Raises:
             InvalidActionError: If the action cannot be completed because of one of
@@ -101,8 +105,12 @@ class UserAddNode(ActionGroup):
             else:
                 # Delete both conflicting edges in the upstream division.
                 succ_of_pred1, succ_of_pred2 = self.tracks.successors(pred)
-                self.actions.append(UserDeleteEdge(tracks, (pred, succ_of_pred1)))
-                self.actions.append(UserDeleteEdge(tracks, (pred, succ_of_pred2)))
+                self.actions.append(
+                    UserDeleteEdge(tracks, (pred, succ_of_pred1), _top_level=False)
+                )
+                self.actions.append(
+                    UserDeleteEdge(tracks, (pred, succ_of_pred2), _top_level=False)
+                )
 
         # check if you are adding a node to a track of which the parent track will divide
         # downstream
@@ -121,7 +129,22 @@ class UserAddNode(ActionGroup):
                     )
                 else:
                     # Delete the conflicting edge
-                    self.actions.append(UserDeleteEdge(tracks, (pred_of_succ, succ)))
+                    self.actions.append(
+                        UserDeleteEdge(tracks, (pred_of_succ, succ), _top_level=False)
+                    )
+
+        # Determine lineage_id from existing track nodes (if any)
+        lineage_key = tracks.features.lineage_key
+        if lineage_key is not None and lineage_key not in attributes:
+            if pred is not None:
+                lineage_id = tracks.get_lineage_id(pred)
+            elif succ is not None:
+                lineage_id = tracks.get_lineage_id(succ)
+            else:
+                # New track with no existing nodes - assign new lineage
+                lineage_id = tracks.get_next_lineage_id()
+            if lineage_id is not None:
+                attributes[lineage_key] = lineage_id
 
         # remove skip edge that will be replaced by new edges after adding nodes
         if pred is not None and succ is not None:
@@ -133,3 +156,7 @@ class UserAddNode(ActionGroup):
             self.actions.append(AddEdge(tracks, (pred, node)))
         if succ is not None:
             self.actions.append(AddEdge(tracks, (node, succ)))
+
+        if _top_level:
+            self.tracks.action_history.add_new_action(self)
+            self.tracks.refresh.emit(node)

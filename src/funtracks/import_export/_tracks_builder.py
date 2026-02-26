@@ -202,8 +202,24 @@ class TracksBuilder(ABC):
         Empty lists and None values have no semantic meaning and should be
         treated the same as being absent from the mapping.
 
+        Also converts legacy separate coordinate mappings (x, y, z) to the
+        composite "pos" format for backward compatibility.
+
         Modifies self.node_name_map and self.edge_name_map in place.
         """
+        # Convert legacy separate coordinate mappings to "pos" format
+        if "pos" not in self.node_name_map:
+            pos_components: list[str] = []
+            coord_keys = ["z", "y", "x"]  # Order matters: z, y, x
+            for coord in coord_keys:
+                if coord in self.node_name_map:
+                    source_col = self.node_name_map[coord]
+                    if source_col is not None and isinstance(source_col, str):
+                        pos_components.append(source_col)
+                    del self.node_name_map[coord]
+            if len(pos_components) >= 2:
+                self.node_name_map["pos"] = pos_components
+
         # Remove empty lists and None values from node_name_map
         keys_to_remove = [
             k for k, v in self.node_name_map.items() if v is None or v == []

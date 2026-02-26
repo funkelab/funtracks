@@ -109,3 +109,4 @@ class DeleteEdge(BasicAction):
 
     def _apply(self) -> None:
         self.tracks.graph.remove_edge(*self.edge)
+        self.tracks.notify_annotators(self)
