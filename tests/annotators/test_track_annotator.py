@@ -8,6 +8,7 @@ from funtracks.user_actions import (
     UserDeleteEdge,
     UserDeleteNode,
 )
+from funtracks.utils.tracksdata_utils import pixels_to_td_mask
 
 
 @pytest.mark.parametrize("ndim", [3, 4])
@@ -32,16 +33,16 @@ class TestTrackAnnotator:
     def test_compute_all(self, get_tracks, ndim, with_seg) -> None:
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
 
-        ann = TrackAnnotator(tracks)
+        ann = TrackAnnotator(tracks, tracklet_key=tracks.features.tracklet_key)
         # Enable features
         ann.activate_features(list(ann.all_features.keys()))
         all_features = ann.features
 
         # Compute values
         ann.compute()
-        for node in tracks.nodes():
+        for node in tracks.graph.node_ids():
             for key in all_features:
-                assert key in tracks.graph.nodes[node]
+                assert tracks.graph.nodes[node][key] is not None
 
         lineages = [
             [1, 2, 3, 4, 5],
@@ -68,7 +69,7 @@ class TestTrackAnnotator:
 
     def test_add_remove_feature(self, get_tracks, ndim, with_seg):
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
-        ann = TrackAnnotator(tracks)
+        ann = TrackAnnotator(tracks, tracklet_key=tracks.features.tracklet_key)
         # Enable features
         ann.activate_features(list(ann.all_features.keys()))
         # compute the original tracklet and lineage ids
@@ -76,7 +77,8 @@ class TestTrackAnnotator:
         # add an edge
         node_id = 6
         edge_id = (4, 6)
-        tracks.graph.add_edge(*edge_id)
+        attrs = {"iou": 0, "solution": 1} if with_seg else {"solution": 1}
+        tracks.graph.add_edge(source_id=edge_id[0], target_id=edge_id[1], attrs=attrs)
         to_remove_key = ann.lineage_key
         orig_lin = tracks.get_node_attr(node_id, ann.lineage_key, required=True)
         orig_tra = tracks.get_node_attr(node_id, ann.tracklet_key, required=True)
@@ -118,9 +120,10 @@ class TestTrackAnnotator:
         orig_pixels = tracks.get_pixels(node_id)
         assert orig_pixels is not None
         pixels_to_remove = tuple(orig_pixels[d][1:] for d in range(len(orig_pixels)))
+        mask_to_remove = pixels_to_td_mask(pixels_to_remove, ndim=ndim)
 
         # Perform UpdateNodeSeg action
-        UpdateNodeSeg(tracks, node_id, pixels_to_remove, added=False)
+        UpdateNodeSeg(tracks, node_id, mask_to_remove, added=False)
 
         # Track ID should remain unchanged (no track update happened)
         assert tracks.get_track_id(node_id) == initial_track_id
@@ -152,7 +155,7 @@ class TestTrackAnnotator:
         source_node = 3
         target_node = 4
 
-        edge = next(e for e in tracks.graph.edges if set(e) == {3, 4})
+        edge = next(e for e in tracks.graph.edge_list() if set(e) == {3, 4})
 
         expected_lineage_id = ann.max_lineage_id + 1
         UserDeleteEdge(tracks, edge=edge)

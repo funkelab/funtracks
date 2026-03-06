@@ -1,18 +1,14 @@
 from __future__ import annotations
 
-import warnings
 from typing import TYPE_CHECKING
 
-import networkx as nx
-import numpy as np
+import tracksdata as td
 
 from funtracks.features import FeatureDict
 
 from .tracks import Tracks
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from funtracks.annotators import TrackAnnotator
 
     from .tracks import Node
@@ -23,8 +19,7 @@ class SolutionTracks(Tracks):
 
     def __init__(
         self,
-        graph: nx.DiGraph,
-        segmentation: np.ndarray | None = None,
+        graph: td.graph.GraphView,
         time_attr: str | None = None,
         pos_attr: str | tuple[str] | list[str] | None = None,
         tracklet_attr: str | None = None,
@@ -32,6 +27,7 @@ class SolutionTracks(Tracks):
         scale: list[float] | None = None,
         ndim: int | None = None,
         features: FeatureDict | None = None,
+        _segmentation: td.array.GraphArrayView | None = None,
     ):
         """Initialize a SolutionTracks object.
 
@@ -39,10 +35,8 @@ class SolutionTracks(Tracks):
         TrackAnnotator is automatically added to manage track IDs.
 
         Args:
-            graph (nx.DiGraph): NetworkX directed graph with nodes as detections and
-                edges as links.
-            segmentation (np.ndarray | None): Optional segmentation array where labels
-                match node IDs. Required for computing region properties (area, etc.).
+            graph (td.graph.GraphView): NetworkX directed graph with nodes as detections
+                and edges as links.
             time_attr (str | None): Graph attribute name for time. Defaults to "time"
                 if None.
             pos_attr (str | tuple[str, ...] | list[str] | None): Graph attribute
@@ -63,10 +57,11 @@ class SolutionTracks(Tracks):
                 Assumes that all features in the dict already exist on the graph (will
                 be activated but not recomputed). If None, core computed features (pos,
                 area, track_id) are auto-detected by checking if they exist on the graph.
+            _segmentation (GraphArrayView | None): Internal parameter for reusing an
+                existing GraphArrayView instance. Not intended for public use.
         """
         super().__init__(
             graph,
-            segmentation=segmentation,
             time_attr=time_attr,
             pos_attr=pos_attr,
             tracklet_attr=tracklet_attr,
@@ -74,24 +69,10 @@ class SolutionTracks(Tracks):
             scale=scale,
             ndim=ndim,
             features=features,
+            _segmentation=_segmentation,
         )
 
         self.track_annotator = self._get_track_annotator()
-
-    def _initialize_track_ids(self) -> None:
-        """Initialize track IDs for all nodes.
-
-        Deprecated:
-            This method is deprecated and will be removed in funtracks v2.0.
-            Track IDs are now auto-computed during SolutionTracks initialization.
-        """
-        warnings.warn(
-            "`_initialize_track_ids` is deprecated and will be removed in funtracks v2.0."
-            " Track IDs are now auto-computed during SolutionTracks initialization.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self.enable_features([self.features.tracklet_key, self.features.lineage_key])  # type: ignore
 
     def _get_track_annotator(self) -> TrackAnnotator:
         """Get the TrackAnnotator instance from the annotator registry.
@@ -114,22 +95,25 @@ class SolutionTracks(Tracks):
     @classmethod
     def from_tracks(cls, tracks: Tracks):
         force_recompute = False
-        if (tracklet_key := tracks.features.tracklet_key) is not None:
-            # Check if all nodes have track_id before trusting existing track IDs
-            # Short circuit on first missing track_id
-            for node in tracks.graph.nodes():
-                if (
-                    tracks.get_node_attr(node, tracklet_key) is None
-                    or tracks.get_node_attr(node, tracks.features.lineage_key) is None  # type: ignore[arg-type]
-                ):
-                    force_recompute = True
-                    break
+        # Check if all nodes have track_id before trusting existing track IDs
+        if (
+            tracks.features.tracklet_key is not None
+            and (
+                tracks.graph.node_attrs(attr_keys=tracks.features.tracklet_key)[
+                    tracks.features.tracklet_key
+                ]
+                == -1
+            ).any()
+            # Attributes are no longer None, so 0 now means non-computed
+        ):
+            force_recompute = True
+
         soln_tracks = cls(
             tracks.graph,
-            segmentation=tracks.segmentation,
             scale=tracks.scale,
             ndim=tracks.ndim,
             features=tracks.features,
+            _segmentation=tracks.segmentation,
         )
         if force_recompute:
             soln_tracks.enable_features(
@@ -147,16 +131,6 @@ class SolutionTracks(Tracks):
     @property
     def track_id_to_node(self) -> dict[int, list[int]]:
         return self.track_annotator.tracklet_id_to_nodes
-
-    @property
-    def node_id_to_track_id(self) -> dict[Node, int]:
-        warnings.warn(
-            "node_id_to_track_id property will be removed in funtracks v2. "
-            "Use `get_track_id` instead for better performance.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return nx.get_node_attributes(self.graph, self.features.tracklet_key)
 
     def get_next_track_id(self) -> int:
         """Return the next available track_id.
@@ -193,35 +167,6 @@ class SolutionTracks(Tracks):
             return None
         return self.get_node_attr(node, self.features.lineage_key)
 
-    def export_tracks(
-        self, outfile: Path | str, node_ids: set[int] | None = None
-    ) -> None:
-        """Export the tracks from this run to a csv with the following columns:
-        t,[z],y,x,id,parent_id,track_id
-        Cells without a parent_id will have an empty string for the parent_id.
-        Whether or not to include z is inferred from self.ndim
-
-        Args:
-            outfile (Path): path to output csv file
-            node_ids (set[int], optional): nodes to be included. If provided, only these
-            nodes and their ancestors will be included in the output.
-
-        .. deprecated:: 1.0
-            `SolutionTracks.export_tracks()` is deprecated and will be removed in v2.0.
-            Use :func:`funtracks.import_export.export_to_csv` instead.
-        """
-        warnings.warn(
-            "SolutionTracks.export_tracks() is deprecated and will be removed in v2.0. "
-            "Use funtracks.import_export.export_to_csv() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-
-        # Import here to avoid circular imports
-        from funtracks.import_export.csv._export import export_to_csv
-
-        export_to_csv(self, outfile=outfile, node_ids=node_ids)
-
     def get_track_neighbors(
         self, track_id: int, time: int
     ) -> tuple[Node | None, Node | None]:
@@ -256,7 +201,10 @@ class SolutionTracks(Tracks):
             elif self.get_time(cand) > time:
                 succ = cand
                 break
-        return pred, succ
+        return (
+            int(pred) if pred is not None else None,
+            int(succ) if succ is not None else None,
+        )
 
     def has_track_id_at_time(self, track_id: int, time: int) -> bool:
         """Function to check if a node with given track id exists at given time point.

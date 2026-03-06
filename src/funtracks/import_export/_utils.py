@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import networkx as nx
 import numpy as np
+import tracksdata as td
 
 from funtracks.data_model.tracks import Tracks
 
@@ -70,7 +70,9 @@ def infer_dtype_from_array(arr: ArrayLike) -> ValueType:
         return "str"
 
 
-def filter_graph_with_ancestors(graph: nx.DiGraph, nodes_to_keep: set[int]) -> list[int]:
+def filter_graph_with_ancestors(
+    graph: td.graph.GraphView, nodes_to_keep: set[int]
+) -> list[int]:
     """Filter a graph to keep only the nodes in `nodes_to_keep` and their ancestors.
 
     Args:
@@ -82,10 +84,20 @@ def filter_graph_with_ancestors(graph: nx.DiGraph, nodes_to_keep: set[int]) -> l
         in `nodes_to_keep` and their ancestors.
     """
     all_nodes_to_keep = set(nodes_to_keep)
+    import rustworkx as rx
 
-    for node in nodes_to_keep:
-        ancestors = nx.ancestors(graph, node)
-        all_nodes_to_keep.update(ancestors)
+    # Map external node ID to internal RustWorkX index
+    nodes_to_keep_internal = graph._vectorized_map_to_local(list(nodes_to_keep))
+
+    # Collect all internal ancestor IDs
+    all_ancestors_internal = set()
+    for internal_node in nodes_to_keep_internal:
+        ancestors = rx.ancestors(graph.rx_graph, internal_node)
+        all_ancestors_internal.update(ancestors)
+
+    # Convert ancestor indices back to external node IDs
+    ancestors_external = graph._vectorized_map_to_external(list(all_ancestors_internal))
+    all_nodes_to_keep.update(int(a) for a in ancestors_external)
 
     return list(all_nodes_to_keep)
 
@@ -108,7 +120,7 @@ def rename_feature(tracks: Tracks, old_key: str, new_key: str) -> None:
     # Register it to the feature dictionary, removing old key if necessary
     if old_key in tracks.features:
         tracks.features.pop(old_key)
-    tracks.features[new_key] = feature_dict
+    tracks.add_feature(new_key, feature_dict)
 
     # Update FeatureDict special key attributes if we renamed position or tracklet
     if tracks.features.position_key == old_key:

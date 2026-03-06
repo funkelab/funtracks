@@ -10,10 +10,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import dask.array as da
-import networkx as nx
 import numpy as np
+import tracksdata as td
 
 from funtracks.import_export.magic_imread import magic_imread
+from funtracks.utils.tracksdata_utils import td_relabel_nodes
 
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike
@@ -45,11 +46,11 @@ def load_segmentation(segmentation: Path | np.ndarray | da.Array) -> da.Array:
 
 def relabel_segmentation(
     seg_array: da.Array | np.ndarray,
-    graph: nx.DiGraph,
+    graph: td.graph.GraphView,
     node_ids: ArrayLike,
     seg_ids: ArrayLike,
     time_values: ArrayLike,
-) -> np.ndarray:
+) -> tuple[np.ndarray, td.graph.GraphView]:
     """Relabel segmentation from seg_id to node_id.
 
     Handles the case where node_id 0 exists by offsetting all node IDs by 1,
@@ -57,13 +58,14 @@ def relabel_segmentation(
 
     Args:
         seg_array: Segmentation array (dask or numpy)
-        graph: NetworkX graph (modified in-place if node_id 0 exists)
+        graph: tracksdata GraphView (will be relabeled if node_id 0 exists)
         node_ids: Array of node IDs
         seg_ids: Array of segmentation IDs corresponding to each node
         time_values: Array of time values for each node
 
     Returns:
-        Relabeled segmentation as numpy array with dtype uint64
+        Tuple of (relabeled segmentation as numpy array with dtype uint64,
+                 graph (potentially relabeled if node_id 0 existed))
     """
     # Convert to numpy arrays for processing
     node_ids = np.asarray(node_ids)
@@ -77,8 +79,9 @@ def relabel_segmentation(
     # in segmentation arrays. We also need to relabel the graph nodes.
     offset = 1 if 0 in node_ids else 0
     if offset:
-        mapping = {old_id: old_id + offset for old_id in graph.nodes()}
-        nx.relabel_nodes(graph, mapping, copy=False)
+        mapping = {old_id: old_id + offset for old_id in graph.node_ids()}
+        # nx.relabel_nodes modified graph in-place, but td_relabel_nodes returns new graph
+        graph = td_relabel_nodes(graph, mapping)
         # Update node_ids array to match
         node_ids = node_ids + offset
 
@@ -98,7 +101,7 @@ def relabel_segmentation(
         for seg_id, node_id in seg_to_node.items():
             new_segmentation[t][computed_seg[t] == seg_id] = node_id
 
-    return new_segmentation
+    return new_segmentation, graph
 
 
 # TODO: export segmentation with check to relabel to track_id

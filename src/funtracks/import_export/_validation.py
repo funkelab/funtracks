@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from warnings import warn
 
-import networkx as nx
+import tracksdata as td
 from geff._typing import InMemoryGeff
 from geff.validate.graph import (
     validate_no_repeated_edges,
@@ -22,7 +22,7 @@ SEG_KEY = "seg_id"
 
 
 def validate_graph_seg_match(
-    graph: nx.DiGraph,
+    graph: td.graph.GraphView,
     segmentation: da.Array,
     scale: list[float],
     position_attr: list[str],
@@ -34,7 +34,7 @@ def validate_graph_seg_match(
     of the segmentation to match node id values is required.
 
     Args:
-        graph: NetworkX graph with standard keys
+        graph: tracksdata graph with standard keys
         segmentation: Segmentation data (dask array)
         scale: Scaling information (pixel to world coordinates)
         position_attr: Position keys (e.g., ["y", "x"] or ["z", "y", "x"])
@@ -51,7 +51,7 @@ def validate_graph_seg_match(
         )
 
     # Get the last node for validation
-    node_ids = list(graph.nodes())
+    node_ids = list(graph.node_ids())
     if not node_ids:
         raise ValueError("Graph has no nodes")
 
@@ -59,12 +59,12 @@ def validate_graph_seg_match(
     last_node_data = graph.nodes[last_node_id]
 
     # Check if seg_id exists; if not, assume it matches node_id
-    seg_id = last_node_data.get(SEG_KEY, last_node_id)
+    seg_id = last_node_data["seg_id"]
 
     # Get the coordinates for the last node (using standard keys)
     # Position may be stored as composite "pos" attribute or separate y/x/z attributes
-    coord = [int(last_node_data["time"])]
-    if "pos" in last_node_data:
+    coord = [int(last_node_data["t"])]
+    if "pos" in graph.node_attr_keys():
         # Composite position: [z, y, x] or [y, x]
         pos = last_node_data["pos"]
         coord.extend(pos)
