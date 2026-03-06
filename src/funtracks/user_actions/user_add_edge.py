@@ -82,6 +82,13 @@ class UserAddEdge(ActionGroup):
             self.actions.append(
                 UpdateTrackIDs(self.tracks, successor, self.tracks.get_next_track_id())
             )
+            # Assign source's lineage id to the new child (target joins source's lineage)
+            self.actions.append(
+                UpdateTrackIDs(
+                    self.tracks, target, lineage_id=self.tracks.get_lineage_id(source)
+                )
+            )
+
         else:
             raise InvalidActionError(
                 f"Expected degree of 0 or 1 before adding edge, got {out_degree_source}"

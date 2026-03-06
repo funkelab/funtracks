@@ -33,7 +33,7 @@ class UpdateTrackIDs(BasicAction):
         self,
         tracks: SolutionTracks,
         start_node: Node,
-        tracklet_id: int,
+        tracklet_id: int | None = None,
         lineage_id: int | None = None,
     ):
         super().__init__(tracks)
