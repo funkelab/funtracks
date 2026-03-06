@@ -14,7 +14,7 @@ from ..user_actions import (
     UserAddEdge,
     UserAddNode,
     UserDeleteEdge,
-    UserDeleteNode,
+    UserDeleteNodes,
     UserSwapPredecessors,
     UserUpdateSegmentation,
 )
@@ -118,43 +118,12 @@ class TracksController:
         return ActionGroup(self.tracks, actions), nodes_added
 
     def delete_nodes(self, nodes: Iterable[Node]) -> None:
-        """Calls the _delete_nodes function and then emits the refresh signal
+        """Delete the provided nodes from the graph.
 
         Args:
             nodes (Iterable[Node]): array of node_ids to be deleted
         """
-
-        self._delete_nodes(nodes)
-
-    def _delete_nodes(
-        self, nodes: Iterable[Node], pixels: Iterable[SegMask] | None = None
-    ) -> Action:
-        """Delete the nodes provided by the array from the graph but maintain successor
-        track_ids. Reconnect to the nearest predecessor and/or nearest successor
-        on the same track, if any.
-
-        Function logic:
-        - delete all edges incident to the nodes
-        - delete the nodes
-        - add edges to preds and succs of nodes if they have the same track id
-        - update track ids if we removed a division by deleting the dge
-
-        Args:
-            nodes (Iterable[Node]): array of node_ids to be deleted
-            pixels (Iterable[SegMask] | None): pixels of the nodes to be deleted, if
-                known already. Will be computed if not provided.
-        """
-        actions: list[ActionGroup | Action] = []
-        pixels = list(pixels) if pixels is not None else None
-        for i, node in enumerate(nodes):
-            actions.append(
-                UserDeleteNode(
-                    self.tracks,
-                    node,
-                    pixels=pixels[i] if pixels is not None else None,
-                )
-            )
-        return ActionGroup(self.tracks, actions)
+        UserDeleteNodes(self.tracks, list(nodes))
 
     def swap_predecessors(self, nodes: tuple[Node, Node]) -> None:
         """Swap the predecessors (incoming edges) of two nodes."""
