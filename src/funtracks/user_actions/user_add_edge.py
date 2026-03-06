@@ -76,10 +76,11 @@ class UserAddEdge(ActionGroup):
             self.actions.append(
                 UpdateTrackIDs(self.tracks, successor, self.tracks.get_next_track_id())
             )
-            # Also assign a new lineage id to the new c
+            # Assign source's lineage id to the new child (target joins source's lineage)
             self.actions.append(
-                UpdateTrackIDs(self.tracks, target, None, self.tracks.get_next_lineage_id())
-                # this is currently illegal to have None for track id, but we should change the action
+                UpdateTrackIDs(
+                    self.tracks, target, lineage_id=self.tracks.get_lineage_id(source)
+                )
             )
 
         else:

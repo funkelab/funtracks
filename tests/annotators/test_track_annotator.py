@@ -195,6 +195,48 @@ class TestTrackAnnotator:
         UserDeleteNode(tracks, node=8)
         assert expected_lineage_id not in ann.lineage_id_to_nodes  # whole list removed
 
+    def test_lineage_id_updated_on_division(self, get_tracks, ndim, with_seg) -> None:
+        """Test that creating a division correctly updates track and lineage IDs.
+
+        When adding edge (4, 6) to create a division at node 4:
+        - Existing child (5): gets a new track_id, keeps same lineage_id
+        - New child (6): keeps same track_id, gets source's lineage_id
+        """
+        # Graph structure: 1 → 2, 1 → 3 → 4 → 5, and 6 (separate)
+        tracks = get_tracks(ndim=3, with_seg=False, is_solution=True)
+        tracks.enable_features(["lineage_id"])
+        ann = next(a for a in tracks.annotators if isinstance(a, TrackAnnotator))
+
+        source_node = 4
+        existing_child = 5
+        target_node = 6
+        source_lineage = tracks.get_node_attr(source_node, ann.lineage_key)
+        target_lineage_before = tracks.get_node_attr(target_node, ann.lineage_key)
+        existing_child_track_id_before = tracks.get_track_id(existing_child)
+        target_track_id_before = tracks.get_track_id(target_node)
+        assert source_lineage != target_lineage_before
+
+        action = UserAddEdge(tracks, edge=(source_node, target_node))
+
+        # Existing child (5): new track_id, same lineage_id
+        assert tracks.get_track_id(existing_child) != existing_child_track_id_before
+        assert tracks.get_node_attr(existing_child, ann.lineage_key) == source_lineage
+
+        # New child (6): same track_id, source's lineage_id
+        assert tracks.get_track_id(target_node) == target_track_id_before
+        assert tracks.get_node_attr(target_node, ann.lineage_key) == source_lineage
+
+        # All nodes in the lineage tree should share the same lineage id
+        for node in [1, 2, 3, 4, 5, 6]:
+            assert tracks.get_node_attr(node, ann.lineage_key) == source_lineage
+
+        # Undo should restore original IDs
+        action.inverse()
+        assert tracks.get_track_id(existing_child) == existing_child_track_id_before
+        assert tracks.get_track_id(target_node) == target_track_id_before
+        assert tracks.get_node_attr(target_node, ann.lineage_key) == target_lineage_before
+        assert tracks.get_node_attr(source_node, ann.lineage_key) == source_lineage
+
     def test_disabled_tracklet_key_does_nothing(self, get_tracks, ndim, with_seg) -> None:
         """Test that TrackAnnotator does nothing when tracklet_key is disabled."""
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
