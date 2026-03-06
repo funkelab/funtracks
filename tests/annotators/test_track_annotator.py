@@ -213,6 +213,7 @@ class TestTrackAnnotator:
         source_lineage = tracks.get_node_attr(source_node, ann.lineage_key)
         target_lineage_before = tracks.get_node_attr(target_node, ann.lineage_key)
         existing_child_track_id_before = tracks.get_track_id(existing_child)
+        existing_child_lineage_id_before = tracks.get_lineage_id(existing_child)
         target_track_id_before = tracks.get_track_id(target_node)
         assert source_lineage != target_lineage_before
 
@@ -236,6 +237,50 @@ class TestTrackAnnotator:
         assert tracks.get_track_id(target_node) == target_track_id_before
         assert tracks.get_node_attr(target_node, ann.lineage_key) == target_lineage_before
         assert tracks.get_node_attr(source_node, ann.lineage_key) == source_lineage
+        assert (
+            tracks.get_node_attr(existing_child, ann.lineage_key)
+            == existing_child_lineage_id_before
+        )
+
+    def test_lineage_id_updated_on_delete_division_edge(
+        self, get_tracks, ndim, with_seg
+    ) -> None:
+        """Test that deleting a division edge correctly updates track and lineage IDs.
+
+        When deleting edge (1, 2) from a division at node 1:
+        - Sibling (3): gets parent's track_id, keeps same lineage_id
+        - Orphaned child (2): keeps same track_id, gets new lineage_id
+        """
+        # Graph structure: 1 → 2, 1 → 3 → 4 → 5, and 6 (separate)
+        tracks = get_tracks(ndim=3, with_seg=False, is_solution=True)
+        tracks.enable_features(["lineage_id"])
+        ann = next(a for a in tracks.annotators if isinstance(a, TrackAnnotator))
+
+        parent = 1
+        orphaned_child = 2
+        sibling = 3
+        parent_track_id = tracks.get_track_id(parent)
+        parent_lineage = tracks.get_node_attr(parent, ann.lineage_key)
+        orphaned_track_id_before = tracks.get_track_id(orphaned_child)
+        orphaned_lineage_before = tracks.get_node_attr(orphaned_child, ann.lineage_key)
+        sibling_track_id_before = tracks.get_track_id(sibling)
+        assert parent_lineage == orphaned_lineage_before  # same lineage before
+
+        action = UserDeleteEdge(tracks, edge=(parent, orphaned_child))
+
+        # Sibling (3): gets parent's track_id, keeps same lineage_id
+        assert tracks.get_track_id(sibling) == parent_track_id
+        assert tracks.get_node_attr(sibling, ann.lineage_key) == parent_lineage
+
+        # Orphaned child (2): keeps same track_id, gets new lineage_id
+        assert tracks.get_track_id(orphaned_child) == orphaned_track_id_before
+        assert tracks.get_node_attr(orphaned_child, ann.lineage_key) != parent_lineage
+
+        # Undo should restore original IDs
+        action.inverse()
+        assert tracks.get_track_id(sibling) == sibling_track_id_before
+        assert tracks.get_track_id(orphaned_child) == orphaned_track_id_before
+        assert tracks.get_node_attr(orphaned_child, ann.lineage_key) == parent_lineage
 
     def test_disabled_tracklet_key_does_nothing(self, get_tracks, ndim, with_seg) -> None:
         """Test that TrackAnnotator does nothing when tracklet_key is disabled."""

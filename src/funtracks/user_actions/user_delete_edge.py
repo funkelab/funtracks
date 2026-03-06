@@ -37,6 +37,12 @@ class UserDeleteEdge(ActionGroup):
             sibling = next(iter(self.tracks.graph.successors(edge[0])))
             new_track_id = self.tracks.get_track_id(edge[0])
             self.actions.append(UpdateTrackIDs(self.tracks, sibling, new_track_id))
+            # orphaned child gets a new lineage id (now a separate component)
+            self.actions.append(
+                UpdateTrackIDs(
+                    self.tracks, edge[1], lineage_id=self.tracks.get_next_lineage_id()
+                )
+            )
         else:
             raise InvalidActionError(
                 f"Expected degree of 0 or 1 after removing edge, got {out_degree}"
