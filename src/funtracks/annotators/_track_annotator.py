@@ -286,6 +286,9 @@ class TrackAnnotator(GraphAnnotator):
         new_tracklet_id = action.new_tracklet_id
         new_lineage_id = action.new_lineage_id
         old_lineage_id = action.old_lineage_id
+        update_tracklet = (
+            new_tracklet_id is not None and self.tracklet_key in self.features
+        )
         update_lineage = new_lineage_id is not None and self.lineage_key in self.features
 
         # Single traversal from start_node following all successors
@@ -305,7 +308,7 @@ class TrackAnnotator(GraphAnnotator):
                     lineage_nodes.append(node)
 
                 # Tracklet only updates while ID matches old_tracklet_id
-                if still_in_tracklet:
+                if still_in_tracklet and update_tracklet:
                     if self.tracks.get_track_id(node) == old_tracklet_id:
                         self.tracks._set_node_attr(
                             node, self.tracklet_key, new_tracklet_id
@@ -320,9 +323,10 @@ class TrackAnnotator(GraphAnnotator):
             curr_nodes = next_nodes
 
         # Update bookkeeping
-        self._update_tracklet_bookkeeping(
-            tracklet_nodes, old_tracklet_id, new_tracklet_id
-        )
+        if update_tracklet:
+            self._update_tracklet_bookkeeping(
+                tracklet_nodes, old_tracklet_id, new_tracklet_id
+            )
         if update_lineage:
             assert new_lineage_id is not None  # Ensured by update_lineage check
             self._update_lineage_bookkeeping(
