@@ -3183,7 +3183,7 @@ values for the given nodes.</p>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">UpdateTrackIDs</span><span class="p">(</span>
     <span class="n">tracks</span><span class="p">:</span> <span class="n">SolutionTracks</span><span class="p">,</span>
     <span class="n">start_node</span><span class="p">:</span> <span class="n">Node</span><span class="p">,</span>
-    <span class="n">tracklet_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">tracklet_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">lineage_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span>
 </code></pre></div>
@@ -3252,7 +3252,7 @@ The actual ID updates are performed by TrackAnnotator via notify_annotators().</
                 <code>tracklet_id</code>
             </td>
             <td>
-                  <code><span title="int">int</span></code>
+                  <code><span title="int">int</span> | None</code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -3260,7 +3260,7 @@ The actual ID updates are performed by TrackAnnotator via notify_annotators().</
               </div>
             </td>
             <td>
-                <em>required</em>
+                  <code>None</code>
             </td>
           </tr>
           <tr class="doc-section-item">
