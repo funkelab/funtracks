@@ -50,6 +50,15 @@ def test_graph_from_segmentation_3d(segmentation_3d, graph_3d):
         assert pytest.approx(cand_graph.edges[edge], abs=0.01) == graph_3d.edges[edge]
 
 
+def test_graph_from_segmentation_with_duplicate_nodes(segmentation_2d):
+    segmentation_2d[1][20:25, 20:25] = 1  # add a duplicate label to another time point
+    with pytest.raises(ValueError, match="Duplicate values found among nodes"):
+        compute_graph_from_seg(
+            segmentation=segmentation_2d,
+            max_edge_distance=100,
+        )
+
+
 def test_graph_from_points_list():
     points_list = np.array(
         [

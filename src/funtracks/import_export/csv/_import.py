@@ -110,9 +110,11 @@ class CSVTracksBuilder(TracksBuilder):
         for col in df.columns:
             if col not in node_name_map:  # custom attributes
                 df[col] = df[col].apply(
-                    lambda x: ast.literal_eval(x)
-                    if isinstance(x, str) and x.startswith("[") and x.endswith("]")
-                    else x
+                    lambda x: (
+                        ast.literal_eval(x)
+                        if isinstance(x, str) and x.startswith("[") and x.endswith("]")
+                        else x
+                    )
                 )
 
         # Determine dimensionality from position mapping (if not already set)

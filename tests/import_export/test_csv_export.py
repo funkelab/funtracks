@@ -1,4 +1,6 @@
+import numpy as np
 import pytest
+import tifffile
 
 from funtracks.import_export import export_to_csv
 
@@ -25,10 +27,39 @@ def test_export_solution_to_csv(get_tracks, tmp_path, ndim, expected_header):
 
     # Check first data line (node 1: t=0, pos=[50, 50] or [50, 50, 50], track_id=1)
     if ndim == 3:
-        expected_line1 = ["0", "50", "50", "1", "", "1"]
+        expected_line1 = ["0", "50.0", "50.0", "1", "", "1"]
     else:
-        expected_line1 = ["0", "50", "50", "50", "1", "", "1"]
+        expected_line1 = ["0", "50.0", "50.0", "50.0", "1", "", "1"]
     assert lines[1].strip().split(",") == expected_line1
+
+
+@pytest.mark.parametrize(
+    ("ndim", "expected_header"),
+    [
+        (3, ["t", "y", "x", "id", "parent_id", "track_id"]),
+        (4, ["t", "z", "y", "x", "id", "parent_id", "track_id"]),
+    ],
+    ids=["2d", "3d"],
+)
+def test_export_solution_to_csv_with_seg(get_tracks, tmp_path, ndim, expected_header):
+    """Test exporting tracks to CSV + relabeled segmentation."""
+    tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
+    temp_file = tmp_path / "test_export.csv"
+    seg_file = tmp_path / "test_export.tif"
+    export_to_csv(tracks, temp_file, export_seg=True, seg_path=seg_file)
+
+    with open(temp_file) as f:
+        lines = f.readlines()
+
+    assert len(lines) == tracks.graph.number_of_nodes() + 1  # add header
+    assert lines[0].strip().split(",") == expected_header
+
+    # check the segmentation
+    seg = tifffile.imread(seg_file)
+    if ndim == 3:
+        np.all(seg[2, 0:4, 0:4] == 3)  # node id was 4, should be relabeled to track id 3
+    if ndim == 4:
+        np.all(seg[2, 0:4, 0:4, 0:4] == 3)
 
 
 def test_export_with_display_names(get_tracks, tmp_path):
