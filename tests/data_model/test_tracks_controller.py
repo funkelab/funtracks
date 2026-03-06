@@ -2,6 +2,7 @@ import numpy as np
 
 from funtracks.data_model.solution_tracks import SolutionTracks
 from funtracks.data_model.tracks_controller import TracksController
+from funtracks.user_actions import UserDeleteNodes
 
 
 def test__add_nodes_no_seg(graph_2d_with_computed_features):
@@ -179,26 +180,25 @@ def test__delete_nodes_no_seg(graph_2d_with_computed_features):
         time_attr="t",
         tracklet_attr="track_id",
     )
-    controller = TracksController(tracks)
     num_edges = tracks.graph.number_of_edges()
 
     # delete unconnected node
     node = 6
-    action = controller._delete_nodes([node])
+    action = UserDeleteNodes(tracks, [node])
     assert not tracks.graph.has_node(node)
     assert tracks.graph.number_of_edges() == num_edges
     action.inverse()
 
     # delete end node
     node = 5
-    action = controller._delete_nodes([node])
+    action = UserDeleteNodes(tracks, [node])
     assert not tracks.graph.has_node(node)
     assert not tracks.graph.has_edge(4, node)
     action.inverse()
 
     # delete continuation node
     node = 4
-    action = controller._delete_nodes([node])
+    action = UserDeleteNodes(tracks, [node])
     assert not tracks.graph.has_node(node)
     assert not tracks.graph.has_edge(3, node)
     assert not tracks.graph.has_edge(node, 5)
@@ -208,7 +208,7 @@ def test__delete_nodes_no_seg(graph_2d_with_computed_features):
 
     # delete div parent
     node = 1
-    action = controller._delete_nodes([node])
+    action = UserDeleteNodes(tracks, [node])
     assert not tracks.graph.has_node(node)
     assert not tracks.graph.has_edge(node, 2)
     assert not tracks.graph.has_edge(node, 3)
@@ -216,7 +216,7 @@ def test__delete_nodes_no_seg(graph_2d_with_computed_features):
 
     # delete div child
     node = 3
-    action = controller._delete_nodes([node])
+    action = UserDeleteNodes(tracks, [node])
     assert not tracks.graph.has_node(node)
     assert tracks.get_track_id(2) == 1  # update track id for other child
 
@@ -228,14 +228,13 @@ def test__delete_nodes_with_seg(graph_2d_with_computed_features, segmentation_2d
         time_attr="t",
         tracklet_attr="track_id",
     )
-    controller = TracksController(tracks)
     num_edges = tracks.graph.number_of_edges()
 
     # delete unconnected node
     node = 6
     track_id = 6
     time = 4
-    action = controller._delete_nodes([node])
+    action = UserDeleteNodes(tracks, [node])
     assert not tracks.graph.has_node(node)
     assert track_id not in np.unique(tracks.segmentation[time])
     assert tracks.graph.number_of_edges() == num_edges
@@ -245,7 +244,7 @@ def test__delete_nodes_with_seg(graph_2d_with_computed_features, segmentation_2d
     node = 5
     track_id = 3
     time = 4
-    action = controller._delete_nodes([node])
+    action = UserDeleteNodes(tracks, [node])
     assert not tracks.graph.has_node(node)
     assert track_id not in np.unique(tracks.segmentation[time])
     assert not tracks.graph.has_edge(4, node)
@@ -255,7 +254,7 @@ def test__delete_nodes_with_seg(graph_2d_with_computed_features, segmentation_2d
     node = 4
     track_id = 3
     time = 2
-    action = controller._delete_nodes([node])
+    action = UserDeleteNodes(tracks, [node])
     assert not tracks.graph.has_node(node)
     assert track_id not in np.unique(tracks.segmentation[time])
     assert not tracks.graph.has_edge(3, node)
@@ -268,7 +267,7 @@ def test__delete_nodes_with_seg(graph_2d_with_computed_features, segmentation_2d
     node = 1
     track_id = 1
     time = 0
-    action = controller._delete_nodes([node])
+    action = UserDeleteNodes(tracks, [node])
     assert not tracks.graph.has_node(node)
     assert track_id not in np.unique(tracks.segmentation[time])
     assert not tracks.graph.has_edge(node, 2)
@@ -279,7 +278,7 @@ def test__delete_nodes_with_seg(graph_2d_with_computed_features, segmentation_2d
     node = 2
     track_id = 2
     time = 1
-    action = controller._delete_nodes([node])
+    action = UserDeleteNodes(tracks, [node])
     assert not tracks.graph.has_node(node)
     assert track_id not in np.unique(tracks.segmentation[time])
     assert tracks.get_track_id(3) == 1  # update track id for other child

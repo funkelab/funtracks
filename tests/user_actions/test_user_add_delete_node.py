@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from funtracks.exceptions import InvalidActionError
-from funtracks.user_actions import UserAddNode, UserDeleteNode
+from funtracks.user_actions import UserAddNode, UserDeleteNode, UserDeleteNodes
 
 
 @pytest.mark.parametrize("ndim", [3, 4])
@@ -147,3 +147,42 @@ class TestUserAddDeleteNode:
         assert not graph.has_node(node_id)
         assert graph.has_edge(parent_node, sib)
         assert tracks.get_track_id(sib) == parent_track_id
+
+    def test_user_delete_nodes(self, get_tracks, ndim, with_seg):
+        """Test bulk deletion of multiple nodes in a single action."""
+        # Graph structure: 1 → 2, 1 → 3 → 4 → 5, and 6 (separate)
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        graph = tracks.graph
+
+        # Save original state
+        original_nodes = set(graph.nodes)
+        original_edges = set(graph.edges)
+        original_track_ids = {n: tracks.get_track_id(n) for n in original_nodes}
+
+        # Delete nodes 4 and 6 (mid-track node and isolated node)
+        nodes_to_delete = [4, 6]
+        action = UserDeleteNodes(tracks, nodes_to_delete)
+
+        # Both nodes removed
+        assert not graph.has_node(4)
+        assert not graph.has_node(6)
+        # Track reconnected: 3 → 5 (skip edge replacing 3 → 4 → 5)
+        assert graph.has_edge(3, 5)
+        assert not graph.has_edge(3, 4)
+        assert not graph.has_edge(4, 5)
+
+        # Single history entry
+        assert tracks.action_history.undo_stack[-1] is action
+
+        # Undo restores all nodes and edges
+        inverse = action.inverse()
+        assert set(graph.nodes) == original_nodes
+        assert set(graph.edges) == original_edges
+        for node in original_nodes:
+            assert tracks.get_track_id(node) == original_track_ids[node]
+
+        # Redo re-deletes
+        inverse.inverse()
+        assert not graph.has_node(4)
+        assert not graph.has_node(6)
+        assert graph.has_edge(3, 5)
