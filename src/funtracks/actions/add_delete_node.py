@@ -149,6 +149,11 @@ class DeleteNode(BasicAction):
         - Remove nodes from graph
         - Update annotators
         """
-
         self.tracks.graph.remove_node(self.node)
+
+        # Invalidate cache for the deleted node's region so the GraphArrayView reflects it
+        if self.tracks.segmentation is not None and self.mask is not None:
+            time = self.attributes[self.tracks.features.time_key]
+            self.tracks._update_segmentation_cache(mask=self.mask, time=time)
+
         self.tracks.notify_annotators(self)

@@ -7,6 +7,7 @@ from tracksdata.array import GraphArrayView
 from funtracks.actions import (
     ActionGroup,
     AddNode,
+    DeleteNode,
 )
 from funtracks.utils.tracksdata_utils import (
     assert_node_attrs_equal_with_masks,
@@ -153,10 +154,38 @@ def test_add_node_invalidates_cache(get_tracks, ndim):
     }
     AddNode(tracks, new_node, attributes=attrs, mask=mask)
 
-    # The segmentation must reflect the new node despite the pre-populated cache
-    result = np.asarray(tracks.segmentation)
-    assert new_node in result, (
-        "New node label not found in segmentation after AddNode with pre-populated cache"
+    # Reading through the cache must reflect the new node (not return stale zeros)
+    center_pixel = (15, 45) if ndim == 3 else (15, 45, 75)
+    assert np.asarray(tracks.segmentation[time])[center_pixel] == new_node, (
+        "New node label not found in cached slice after AddNode"
+    )
+
+
+@pytest.mark.parametrize("ndim", [3, 4])
+def test_delete_node_invalidates_cache(get_tracks, ndim):
+    """Test that DeleteNode invalidates the GraphArrayView cache for the deleted node.
+
+    Regression test: when the cache is pre-populated before a node is deleted,
+    reading the segmentation afterwards must return zeros (not the stale label value).
+    """
+    tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
+    node = 1
+    time = tracks.get_time(node)
+    # Node 1 center: (50, 50) for ndim=3, (50, 50, 50) for ndim=4
+    center_pixel = (50, 50) if ndim == 3 else (50, 50, 50)
+
+    # Pre-populate the cache by reading the time slice
+    _ = np.asarray(tracks.segmentation[time])
+    assert time in tracks.segmentation._cache._store
+
+    # Confirm node's label is visible at its center pixel via the cached slice
+    assert np.asarray(tracks.segmentation[time])[center_pixel] == node
+
+    DeleteNode(tracks, node)
+
+    # Reading through the cache must reflect the deletion (not return the stale label)
+    assert np.asarray(tracks.segmentation[time])[center_pixel] == 0, (
+        "Deleted node label still found in cached slice after DeleteNode"
     )
 
 
