@@ -89,6 +89,11 @@ class AddNode(BasicAction):
 
         self.tracks.graph.add_node(attrs=attrs, index=self.node, validate_keys=False)
 
+        # Invalidate cache for the new node's region so the GraphArrayView reflects it
+        if self.tracks.segmentation is not None and self.mask is not None:
+            time = self.tracks.get_time(self.node)
+            self.tracks._update_segmentation_cache(mask=self.mask, time=time)
+
         # Always notify annotators - they will check their own preconditions
         self.tracks.notify_annotators(self)
 

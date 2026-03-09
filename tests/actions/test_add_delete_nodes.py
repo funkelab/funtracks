@@ -124,6 +124,42 @@ def test_add_delete_nodes(get_tracks, ndim, with_seg):
         )
 
 
+@pytest.mark.parametrize("ndim", [3, 4])
+def test_add_node_invalidates_cache(get_tracks, ndim):
+    """Test that AddNode invalidates the GraphArrayView cache for the new node's region.
+
+    Regression test: when the cache is pre-populated before a new node is added,
+    reading the segmentation afterwards must reflect the new node (not stale zeros).
+    """
+    tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
+
+    # Pick a new node id and time point that doesn't already exist
+    new_node = max(tracks.graph.node_ids()) + 1
+    time = 3
+    if ndim == 3:
+        mask = make_2d_disk_mask(center=(15, 45), radius=5)
+    else:
+        mask = make_3d_sphere_mask(center=(15, 45, 75), radius=5)
+
+    # Pre-populate the cache by reading the segmentation at the target time point
+    _ = np.asarray(tracks.segmentation[time])
+    assert time in tracks.segmentation._cache._store
+
+    # Add a new node with segmentation
+    attrs = {
+        tracks.features.time_key: time,
+        tracks.features.tracklet_key: new_node,
+        tracks.features.lineage_key: new_node,
+    }
+    AddNode(tracks, new_node, attributes=attrs, mask=mask)
+
+    # The segmentation must reflect the new node despite the pre-populated cache
+    result = np.asarray(tracks.segmentation)
+    assert new_node in result, (
+        "New node label not found in segmentation after AddNode with pre-populated cache"
+    )
+
+
 def test_add_node_missing_time(get_tracks):
     tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
     with pytest.raises(ValueError, match="Must provide a time attribute for node"):
