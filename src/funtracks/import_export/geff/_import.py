@@ -202,6 +202,38 @@ class GeffTracksBuilder(TracksBuilder):
         # Fall back to fuzzy matching when axes metadata is absent or incomplete
         return super().infer_node_name_map()
 
+    def build(self, *args, **kwargs):
+        """Build SolutionTracks and reconstruct Mask objects from raw arrays.
+
+        The geff format serialises mask data as plain numeric arrays (zarr cannot
+        store arbitrary Python objects). After loading we post-process every node
+        that carries both a ``mask`` and a ``bbox`` attribute and wrap the raw array
+        back into a :class:`tracksdata.nodes._mask.Mask` instance, exactly as
+        tracksdata's own ``from_geff`` does.
+        """
+        import tracksdata as td
+        from tracksdata.nodes._mask import Mask
+
+        tracks = super().build(*args, **kwargs)
+
+        mask_key = td.DEFAULT_ATTR_KEYS.MASK
+        bbox_key = td.DEFAULT_ATTR_KEYS.BBOX
+        graph = tracks.graph
+
+        if mask_key in graph.node_attr_keys() and bbox_key in graph.node_attr_keys():
+            df = graph.node_attrs(attr_keys=[mask_key, bbox_key])
+            node_ids = list(graph.node_ids())
+            for node_id, mask_val, bbox_val in zip(
+                node_ids, df[mask_key], df[bbox_key], strict=True
+            ):
+                if not isinstance(mask_val, Mask):
+                    graph.update_node_attrs(
+                        attrs={mask_key: [Mask(mask_val.astype(bool), bbox=bbox_val)]},
+                        node_ids=[node_id],
+                    )
+
+        return tracks
+
     def load_source(
         self,
         source_path: Path,

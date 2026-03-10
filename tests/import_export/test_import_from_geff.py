@@ -527,25 +527,25 @@ def _make_mask(bbox):
 
 
 def test_import_from_geff_roundtrip_auto_axes(tmp_path):
-    """Test that import_from_geff correctly infers time/pos from geff axes metadata,
-    and that a graph with mask/bbox attrs but no segmentation round-trips cleanly.
+    """Round-trip export_to_geff / import_from_geff for a graph with mask/bbox node
+    attributes but no accompanying segmentation array.
 
-    Two bugs are covered:
+    This is the typical shape of a motile-tracker candidate graph: each node carries
+    a per-node Mask (local boolean array + bounding box) without a full dense
+    segmentation volume being stored.
 
-    Bug 1 — axes metadata ignored:
-        Without the fix, fuzzy matching greedily assigns pos -> ['bbox'] (the actual
-        tracksdata bbox array), leaving the spatial axes 'y'/'x' unmapped entirely.
-
-    Bug 2 — Tracks.__init__ raises when mask is present but segmentation_shape absent:
-        A geff file saved without a segmentation array contains no segmentation_shape
-        in its metadata. When loaded back, the graph carries mask node attributes but
-        no segmentation_shape. Before the fix, Tracks.__init__ would raise ValueError;
-        after the fix it sets segmentation=None.
+    Checks:
+    - The time and spatial axes are inferred correctly from the geff axes metadata,
+      not from fuzzy string matching (which would misassign 'pos' -> ['bbox']).
+    - import_from_geff succeeds and sets segmentation=None when the geff file was
+      saved without a segmentation array (i.e. no segmentation_shape in metadata).
+    - Positions and scalar attributes are preserved through the round-trip.
+    - The mask attribute comes back as a Mask object, not a raw numpy array.
+    - The bbox values are preserved correctly through the round-trip.
     """
     import tracksdata as td
+    from tracksdata.nodes._mask import Mask
 
-    # Exact reproducer from the bug report: mask + bbox attrs, no segmentation.
-    # These are the attributes present in motile-tracker candidate graphs.
     graph = create_empty_graphview_graph(
         node_attributes=[
             "pos",
@@ -574,52 +574,56 @@ def test_import_from_geff_roundtrip_auto_axes(tmp_path):
         ],
         indices=[1],
     )
-    # segmentation_shape in metadata matches the original use case (motile-tracker)
+    # The graph carries segmentation_shape in its metadata (set by motile-tracker),
+    # but no dense segmentation array is attached to the SolutionTracks object.
     graph.update_metadata(segmentation_shape=(5, 100, 100))
 
     run_dir = tmp_path / "run"
     run_dir.mkdir()
 
-    # Export WITHOUT a segmentation array attached to the tracks object.
-    # This means export_to_geff does NOT write segmentation_shape into the geff store.
     st = SolutionTracks(graph, ndim=3, time_attr="t")
     export_to_geff(st, run_dir)
 
     tracks_path = run_dir / "tracks"
 
-    # --- Bug 1 check: axes-based inference gives correct mapping ---
-    # Without the fix, fuzzy matching assigns pos -> ['bbox'] (wrong) and leaves
-    # the actual spatial axes 'y'/'x' unmapped.
+    # The geff file contains typed axis metadata (type="time" / type="space").
+    # The builder should use that directly instead of fuzzy string matching,
+    # which would assign pos -> ['bbox'] and leave 'y'/'x' unmapped.
     builder = GeffTracksBuilder()
     builder.prepare(tracks_path)
 
-    assert "time" in builder.node_name_map, "time must be in node_name_map"
-    assert builder.node_name_map["time"] == "t", (
-        f"time should map to 't', got {builder.node_name_map['time']}"
-    )
-    assert "pos" in builder.node_name_map, "pos must be in node_name_map"
+    assert "time" in builder.node_name_map
+    assert builder.node_name_map["time"] == "t"
+    assert "pos" in builder.node_name_map
     pos_mapping = builder.node_name_map["pos"]
     assert isinstance(pos_mapping, list), (
         f"pos should map to a list of axis names, got {pos_mapping!r}"
     )
     assert pos_mapping == ["y", "x"], f"pos should map to ['y', 'x'], got {pos_mapping}"
 
-    # --- Bug 2 check: Tracks.__init__ does not raise when segmentation_shape absent ---
-    # import_from_geff must succeed and produce segmentation=None (not raise ValueError).
+    # The geff file has no segmentation_shape (export_to_geff only writes it when
+    # a dense segmentation array is attached). import_from_geff must succeed and
+    # return segmentation=None rather than raising.
     tracks = import_from_geff(tracks_path)
     assert tracks.graph.num_nodes() == 1
-    assert tracks.segmentation is None, (
-        "segmentation should be None when geff was saved without a segmentation array"
-    )
+    assert tracks.segmentation is None
 
-    # Positions must be correctly loaded (not garbled by wrong mapping)
     node1 = tracks.graph.nodes[1]
-    assert node1["pos"] is not None
-    np.testing.assert_array_almost_equal(
-        node1["pos"],
-        [50.0, 50.0],
-        err_msg="pos should be [50.0, 50.0] after round-trip",
-    )
 
-    # area should pass through unchanged
+    assert node1["pos"] is not None
+    np.testing.assert_array_almost_equal(node1["pos"], [50.0, 50.0])
     assert node1["area"] == pytest.approx(1681.0)
+
+    # The geff format stores mask data as a plain numeric array; funtracks must
+    # reconstruct the Mask wrapper from the raw array + bbox after loading.
+    loaded_mask = node1[td.DEFAULT_ATTR_KEYS.MASK]
+    loaded_bbox = node1[td.DEFAULT_ATTR_KEYS.BBOX]
+
+    assert isinstance(loaded_mask, Mask), (
+        f"mask should be a Mask object after round-trip, got {type(loaded_mask)}"
+    )
+    # bbox is stored as an array column in the SQL-backed graph so it comes back
+    # as a polars Series rather than a numpy array; check values only.
+    np.testing.assert_array_equal(
+        np.array(loaded_bbox, dtype=np.int64), np.array(bbox, dtype=np.int64)
+    )
