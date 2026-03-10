@@ -108,6 +108,25 @@ class TestSegmentationHandling:
         assert tracks.segmentation is not None
         assert tracks.segmentation.shape == (3, 100, 100)
 
+    def test_with_2d_segmentation_no_seg_id(self, simple_df_2d):
+        """Test importing with 2D segmentation but no seg_id column.
+
+        When no seg_id is provided, segmentation labels are assumed to match
+        node IDs, so no relabeling is needed.
+        """
+        # simple_df_2d has position but no seg_id — node IDs equal seg labels
+        seg = np.zeros((3, 100, 100), dtype=np.uint16)
+        seg[0, 10, 15] = 1
+        seg[1, 20, 25] = 2
+        seg[1, 30, 35] = 3
+        seg[2, 40, 45] = 4
+
+        tracks = tracks_from_df(simple_df_2d, seg)
+
+        assert tracks.segmentation is not None
+        assert tracks.segmentation.shape == (3, 100, 100)
+        assert np.asarray(tracks.segmentation)[0, 10, 15] == 1
+
     def test_seg_id_matches_id(self, simple_df_2d):
         """Test when seg_id matches id (no relabeling needed)."""
         # Add seg_id column matching id

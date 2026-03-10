@@ -59,7 +59,10 @@ def validate_graph_seg_match(
     last_node_data = graph.nodes[last_node_id]
 
     # Check if seg_id exists; if not, assume it matches node_id
-    seg_id = last_node_data["seg_id"]
+    if "seg_id" in graph.node_attr_keys():
+        seg_id = last_node_data["seg_id"]
+    else:
+        seg_id = last_node_data["node_id"]
 
     # Get the coordinates for the last node (using standard keys)
     # Position may be stored as composite "pos" attribute or separate y/x/z attributes
