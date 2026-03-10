@@ -418,6 +418,7 @@ class TracksBuilder(ABC):
         if self.in_memory_geff is None:
             raise ValueError("No data loaded. Call load_source() first.")
 
+        node_default_values: list[Any] | None = None
         if node_name_map is not None:
             node_attributes = list(self.in_memory_geff["node_props"].keys())
             node_first_values = [

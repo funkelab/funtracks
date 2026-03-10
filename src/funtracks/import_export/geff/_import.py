@@ -161,6 +161,47 @@ class GeffTracksBuilder(TracksBuilder):
         self.importable_node_props = list(metadata.node_props_metadata.keys())
         self.importable_edge_props = list(metadata.edge_props_metadata.keys())
 
+        # Store axes metadata for use in infer_node_name_map
+        self._geff_axes = metadata.axes or []
+
+    def infer_node_name_map(self) -> dict[str, str | list[str]]:
+        """Derive time and position mapping from geff axes metadata.
+
+        When axes with typed metadata (type="time" / type="space") are present,
+        uses them directly instead of falling back to fuzzy string matching, which
+        can misassign properties when many non-spatiotemporal properties are present.
+
+        Falls back to the base-class fuzzy matching when axes metadata is absent.
+
+        Returns:
+            Inferred node_name_map mapping standard keys to source property names
+        """
+        import tracksdata as td
+
+        # Tracksdata-internal attributes are added by the builder and should not
+        # appear in the node name map (avoids collision with edge-side solution attr).
+        internal_attrs = {td.DEFAULT_ATTR_KEYS.SOLUTION}
+
+        geff_axes = getattr(self, "_geff_axes", [])
+        if geff_axes:
+            time_axes = [ax.name for ax in geff_axes if ax.type == "time"]
+            space_axes = [ax.name for ax in geff_axes if ax.type == "space"]
+
+            if time_axes and space_axes:
+                axis_props = set(time_axes + space_axes)
+                node_name_map: dict[str, str | list[str]] = {
+                    "time": time_axes[0],
+                    "pos": space_axes,
+                }
+                # Pass all remaining non-internal properties through unchanged
+                for prop in self.importable_node_props:
+                    if prop not in axis_props and prop not in internal_attrs:
+                        node_name_map[prop] = prop
+                return node_name_map
+
+        # Fall back to fuzzy matching when axes metadata is absent or incomplete
+        return super().infer_node_name_map()
+
     def load_source(
         self,
         source_path: Path,

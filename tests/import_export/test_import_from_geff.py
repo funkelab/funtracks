@@ -4,8 +4,10 @@ import pytest
 import tifffile
 from geff.testing.data import create_mock_geff
 
-from funtracks.import_export import import_from_geff
-from funtracks.import_export.geff._import import import_graph_from_geff
+from funtracks.data_model import SolutionTracks
+from funtracks.import_export import export_to_geff, import_from_geff
+from funtracks.import_export.geff._import import GeffTracksBuilder, import_graph_from_geff
+from funtracks.utils.tracksdata_utils import create_empty_graphview_graph
 
 
 @pytest.fixture
@@ -513,3 +515,107 @@ def test_compute_features_without_segmentation(valid_geff):
             scale=scale,
             node_features=node_features,
         )
+
+
+def test_import_from_geff_roundtrip_auto_axes(tmp_path):
+    """Test that import_from_geff correctly infers time/pos from geff axes metadata.
+
+    When a geff file is exported by funtracks (with typed axes), importing without
+    an explicit node_name_map should correctly map time and spatial coordinates using
+    the axes metadata rather than fuzzy string matching.
+
+    The test includes a "bbox" property to reproduce the fuzzy-matching failure: without
+    axis-aware inference, fuzzy matching greedily assigns pos -> ['bbox'] and leaves
+    the actual spatial axes "y" and "x" unmapped.
+
+    Regression test for: GeffTracksBuilder.read_header ignoring axes metadata,
+    causing wrong property mapping via fuzzy matching.
+    """
+    import polars as pl
+
+    # Build a 2D+time graph with extra properties (mimics motile-tracker output).
+    # "bbox" is deliberately included — it confuses fuzzy matching into assigning
+    # pos -> ['bbox'] instead of pos -> ['y', 'x'].
+    graph = create_empty_graphview_graph(
+        node_attributes=["pos", "area", "track_id", "lineage_id"],
+        edge_attributes=[],
+        ndim=3,
+    )
+    # Add bbox as a separate node attribute (4 values: y_min, x_min, y_max, x_max)
+    graph.add_node_attr_key("bbox_y_min", default_value=0.0, dtype=pl.Float64)
+    graph.add_node_attr_key("bbox_x_min", default_value=0.0, dtype=pl.Float64)
+    graph.add_node_attr_key("bbox_y_max", default_value=0.0, dtype=pl.Float64)
+    graph.add_node_attr_key("bbox_x_max", default_value=0.0, dtype=pl.Float64)
+
+    graph.bulk_add_nodes(
+        nodes=[
+            {
+                "t": 0,
+                "pos": np.array([50.0, 60.0]),
+                "area": 100.0,
+                "track_id": 1,
+                "lineage_id": 1,
+                "solution": 1,
+                "bbox_y_min": 40.0,
+                "bbox_x_min": 50.0,
+                "bbox_y_max": 60.0,
+                "bbox_x_max": 70.0,
+            },
+            {
+                "t": 1,
+                "pos": np.array([51.0, 61.0]),
+                "area": 110.0,
+                "track_id": 1,
+                "lineage_id": 1,
+                "solution": 1,
+                "bbox_y_min": 41.0,
+                "bbox_x_min": 51.0,
+                "bbox_y_max": 61.0,
+                "bbox_x_max": 71.0,
+            },
+        ],
+        indices=[1, 2],
+    )
+
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+
+    st = SolutionTracks(graph, ndim=3, time_attr="t")
+    export_to_geff(st, run_dir)
+
+    tracks_path = run_dir / "tracks"
+
+    # Verify GeffTracksBuilder.read_header stores axes and infers correct map.
+    # Without the fix, fuzzy matching with bbox* properties present causes
+    # pos to map to something other than ['y', 'x'].
+    builder = GeffTracksBuilder()
+    builder.prepare(tracks_path)
+
+    # The inferred map must have "time" and "pos" correctly derived from axes metadata
+    assert "time" in builder.node_name_map, "time must be in node_name_map"
+    assert builder.node_name_map["time"] == "t", (
+        f"time should map to 't', got {builder.node_name_map['time']}"
+    )
+    assert "pos" in builder.node_name_map, "pos must be in node_name_map"
+    pos_mapping = builder.node_name_map["pos"]
+    assert isinstance(pos_mapping, list), (
+        f"pos should map to a list of axis names, got {pos_mapping!r}"
+    )
+    assert pos_mapping == ["y", "x"], f"pos should map to ['y', 'x'], got {pos_mapping}"
+
+    # Full round-trip: import without explicit node_name_map succeeds
+    tracks = import_from_geff(tracks_path)
+    assert tracks.graph.num_nodes() == 2
+
+    # Positions must be correctly loaded (not garbled by fuzzy matching)
+    node1 = tracks.graph.nodes[1]
+    assert node1["pos"] is not None
+    np.testing.assert_array_almost_equal(
+        node1["pos"],
+        [50.0, 60.0],
+        err_msg="pos of node 1 should be [50.0, 60.0] after round-trip",
+    )
+
+    # track_id and area should pass through unchanged
+    assert node1["track_id"] == 1
+    assert node1["area"] == pytest.approx(100.0)
