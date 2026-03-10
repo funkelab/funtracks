@@ -2,8 +2,13 @@
 
 import numpy as np
 import pytest
+import tracksdata as td
 
-from funtracks.utils.tracksdata_utils import pixels_to_td_mask, td_mask_to_pixels
+from funtracks.utils.tracksdata_utils import (
+    create_empty_graphview_graph,
+    pixels_to_td_mask,
+    td_mask_to_pixels,
+)
 
 # Import from conftest
 from ..conftest import (
@@ -133,3 +138,23 @@ def test_pixels_coordinate_offset(ndim):
         assert np.max(pixels[2]) == 32  # max y
         assert np.min(pixels[3]) == 40  # min x
         assert np.max(pixels[3]) == 42  # max x
+
+
+def test_create_empty_graphview_graph_with_solution_attr():
+    """Test that passing 'solution' as a node/edge attribute does not raise.
+
+    Regression test: create_empty_graphview_graph unconditionally added the
+    solution attribute at the end, even when it was already added via the
+    node_attributes / edge_attributes loop, causing a ValueError.
+    """
+    solution_key = td.DEFAULT_ATTR_KEYS.SOLUTION
+
+    # Should not raise ValueError even though solution is listed explicitly
+    graph = create_empty_graphview_graph(
+        node_attributes=[solution_key],
+        edge_attributes=[solution_key],
+        node_default_values=[1],
+        edge_default_values=[1],
+    )
+
+    assert graph is not None

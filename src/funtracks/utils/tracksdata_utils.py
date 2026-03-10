@@ -175,12 +175,14 @@ def create_empty_graphview_graph(
                 default_value=default_value,
                 dtype=to_polars_dtype(default_value),
             )
-    graph_sql.add_node_attr_key(
-        td.DEFAULT_ATTR_KEYS.SOLUTION, default_value=1, dtype=pl.Int64
-    )
-    graph_sql.add_edge_attr_key(
-        td.DEFAULT_ATTR_KEYS.SOLUTION, default_value=1, dtype=pl.Int64
-    )
+    if td.DEFAULT_ATTR_KEYS.SOLUTION not in graph_sql.node_attr_keys():
+        graph_sql.add_node_attr_key(
+            td.DEFAULT_ATTR_KEYS.SOLUTION, default_value=1, dtype=pl.Int64
+        )
+    if td.DEFAULT_ATTR_KEYS.SOLUTION not in graph_sql.edge_attr_keys():
+        graph_sql.add_edge_attr_key(
+            td.DEFAULT_ATTR_KEYS.SOLUTION, default_value=1, dtype=pl.Int64
+        )
 
     graph_td_sub = graph_sql.filter(
         td.NodeAttr(td.DEFAULT_ATTR_KEYS.SOLUTION) == 1,
