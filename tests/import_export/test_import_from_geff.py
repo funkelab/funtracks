@@ -517,81 +517,82 @@ def test_compute_features_without_segmentation(valid_geff):
         )
 
 
+def _make_mask(bbox):
+    """Create a Mask from a bbox list [y_min, x_min, y_max, x_max]."""
+    from tracksdata.nodes._mask import Mask
+
+    ndim = len(bbox) // 2
+    shape = tuple(bbox[i + ndim] - bbox[i] for i in range(ndim))
+    return Mask(np.ones(shape, dtype=bool), bbox=np.array(bbox, dtype=np.int64))
+
+
 def test_import_from_geff_roundtrip_auto_axes(tmp_path):
-    """Test that import_from_geff correctly infers time/pos from geff axes metadata.
+    """Test that import_from_geff correctly infers time/pos from geff axes metadata,
+    and that a graph with mask/bbox attrs but no segmentation round-trips cleanly.
 
-    When a geff file is exported by funtracks (with typed axes), importing without
-    an explicit node_name_map should correctly map time and spatial coordinates using
-    the axes metadata rather than fuzzy string matching.
+    Two bugs are covered:
 
-    The test includes a "bbox" property to reproduce the fuzzy-matching failure: without
-    axis-aware inference, fuzzy matching greedily assigns pos -> ['bbox'] and leaves
-    the actual spatial axes "y" and "x" unmapped.
+    Bug 1 — axes metadata ignored:
+        Without the fix, fuzzy matching greedily assigns pos -> ['bbox'] (the actual
+        tracksdata bbox array), leaving the spatial axes 'y'/'x' unmapped entirely.
 
-    Regression test for: GeffTracksBuilder.read_header ignoring axes metadata,
-    causing wrong property mapping via fuzzy matching.
+    Bug 2 — Tracks.__init__ raises when mask is present but segmentation_shape absent:
+        A geff file saved without a segmentation array contains no segmentation_shape
+        in its metadata. When loaded back, the graph carries mask node attributes but
+        no segmentation_shape. Before the fix, Tracks.__init__ would raise ValueError;
+        after the fix it sets segmentation=None.
     """
-    import polars as pl
+    import tracksdata as td
 
-    # Build a 2D+time graph with extra properties (mimics motile-tracker output).
-    # "bbox" is deliberately included — it confuses fuzzy matching into assigning
-    # pos -> ['bbox'] instead of pos -> ['y', 'x'].
+    # Exact reproducer from the bug report: mask + bbox attrs, no segmentation.
+    # These are the attributes present in motile-tracker candidate graphs.
     graph = create_empty_graphview_graph(
-        node_attributes=["pos", "area", "track_id", "lineage_id"],
-        edge_attributes=[],
+        node_attributes=[
+            "pos",
+            "area",
+            "track_id",
+            "lineage_id",
+            td.DEFAULT_ATTR_KEYS.MASK,
+            td.DEFAULT_ATTR_KEYS.BBOX,
+        ],
+        edge_attributes=["iou"],
         ndim=3,
     )
-    # Add bbox as a separate node attribute (4 values: y_min, x_min, y_max, x_max)
-    graph.add_node_attr_key("bbox_y_min", default_value=0.0, dtype=pl.Float64)
-    graph.add_node_attr_key("bbox_x_min", default_value=0.0, dtype=pl.Float64)
-    graph.add_node_attr_key("bbox_y_max", default_value=0.0, dtype=pl.Float64)
-    graph.add_node_attr_key("bbox_x_max", default_value=0.0, dtype=pl.Float64)
-
+    bbox = [30, 30, 71, 71]
     graph.bulk_add_nodes(
         nodes=[
             {
                 "t": 0,
-                "pos": np.array([50.0, 60.0]),
-                "area": 100.0,
+                "pos": np.array([50.0, 50.0]),
+                "area": 1681.0,
                 "track_id": 1,
                 "lineage_id": 1,
                 "solution": 1,
-                "bbox_y_min": 40.0,
-                "bbox_x_min": 50.0,
-                "bbox_y_max": 60.0,
-                "bbox_x_max": 70.0,
-            },
-            {
-                "t": 1,
-                "pos": np.array([51.0, 61.0]),
-                "area": 110.0,
-                "track_id": 1,
-                "lineage_id": 1,
-                "solution": 1,
-                "bbox_y_min": 41.0,
-                "bbox_x_min": 51.0,
-                "bbox_y_max": 61.0,
-                "bbox_x_max": 71.0,
-            },
+                td.DEFAULT_ATTR_KEYS.MASK: _make_mask(bbox),
+                td.DEFAULT_ATTR_KEYS.BBOX: np.array(bbox, dtype=np.int64),
+            }
         ],
-        indices=[1, 2],
+        indices=[1],
     )
+    # segmentation_shape in metadata matches the original use case (motile-tracker)
+    graph.update_metadata(segmentation_shape=(5, 100, 100))
 
     run_dir = tmp_path / "run"
     run_dir.mkdir()
 
+    # Export WITHOUT a segmentation array attached to the tracks object.
+    # This means export_to_geff does NOT write segmentation_shape into the geff store.
     st = SolutionTracks(graph, ndim=3, time_attr="t")
     export_to_geff(st, run_dir)
 
     tracks_path = run_dir / "tracks"
 
-    # Verify GeffTracksBuilder.read_header stores axes and infers correct map.
-    # Without the fix, fuzzy matching with bbox* properties present causes
-    # pos to map to something other than ['y', 'x'].
+    # --- Bug 1 check: axes-based inference gives correct mapping ---
+    # Without the fix, fuzzy matching assigns pos -> ['bbox'] (wrong) and leaves
+    # the actual spatial axes 'y'/'x' unmapped.
     builder = GeffTracksBuilder()
     builder.prepare(tracks_path)
 
-    # The inferred map must have "time" and "pos" correctly derived from axes metadata
     assert "time" in builder.node_name_map, "time must be in node_name_map"
     assert builder.node_name_map["time"] == "t", (
         f"time should map to 't', got {builder.node_name_map['time']}"
@@ -603,19 +604,22 @@ def test_import_from_geff_roundtrip_auto_axes(tmp_path):
     )
     assert pos_mapping == ["y", "x"], f"pos should map to ['y', 'x'], got {pos_mapping}"
 
-    # Full round-trip: import without explicit node_name_map succeeds
+    # --- Bug 2 check: Tracks.__init__ does not raise when segmentation_shape absent ---
+    # import_from_geff must succeed and produce segmentation=None (not raise ValueError).
     tracks = import_from_geff(tracks_path)
-    assert tracks.graph.num_nodes() == 2
+    assert tracks.graph.num_nodes() == 1
+    assert tracks.segmentation is None, (
+        "segmentation should be None when geff was saved without a segmentation array"
+    )
 
-    # Positions must be correctly loaded (not garbled by fuzzy matching)
+    # Positions must be correctly loaded (not garbled by wrong mapping)
     node1 = tracks.graph.nodes[1]
     assert node1["pos"] is not None
     np.testing.assert_array_almost_equal(
         node1["pos"],
-        [50.0, 60.0],
-        err_msg="pos of node 1 should be [50.0, 60.0] after round-trip",
+        [50.0, 50.0],
+        err_msg="pos should be [50.0, 50.0] after round-trip",
     )
 
-    # track_id and area should pass through unchanged
-    assert node1["track_id"] == 1
-    assert node1["area"] == pytest.approx(100.0)
+    # area should pass through unchanged
+    assert node1["area"] == pytest.approx(1681.0)

@@ -100,20 +100,27 @@ class Tracks:
             # Reuse provided segmentation instance (internal use only)
             self.segmentation = _segmentation
         elif "mask" in graph.node_attr_keys():
-            # Create new GraphArrayView from graph metadata
-            try:
-                array_view = GraphArrayView(
-                    graph=graph,
-                    shape=graph.metadata()["segmentation_shape"],
-                    attr_key="node_id",
-                    offset=0,
-                )
-                self.segmentation = array_view
-            except (ValueError, KeyError) as err:
-                raise ValueError(
-                    "segmentation_shape is incompatible with graph, "
-                    "check if mask and bbox attrs exist on nodes"
-                ) from err
+            # Create new GraphArrayView from graph metadata, but only if
+            # segmentation_shape is present. A graph can carry per-node mask
+            # attributes without a full dense segmentation array (e.g. after a
+            # geff round-trip that was saved without segmentation).
+            seg_shape = graph.metadata().get("segmentation_shape")
+            if seg_shape is not None:
+                try:
+                    array_view = GraphArrayView(
+                        graph=graph,
+                        shape=seg_shape,
+                        attr_key="node_id",
+                        offset=0,
+                    )
+                    self.segmentation = array_view
+                except (ValueError, KeyError) as err:
+                    raise ValueError(
+                        "segmentation_shape is incompatible with graph, "
+                        "check if mask and bbox attrs exist on nodes"
+                    ) from err
+            else:
+                self.segmentation = None
         else:
             self.segmentation = None
         self.scale = scale
