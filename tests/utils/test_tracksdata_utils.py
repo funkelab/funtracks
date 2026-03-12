@@ -1,5 +1,7 @@
 """Tests for tracksdata utility functions."""
 
+import threading
+
 import numpy as np
 import pytest
 import tracksdata as td
@@ -138,6 +140,37 @@ def test_pixels_coordinate_offset(ndim):
         assert np.max(pixels[2]) == 32  # max y
         assert np.min(pixels[3]) == 40  # min x
         assert np.max(pixels[3]) == 42  # max x
+
+
+def test_memory_graph_survives_thread_boundary():
+    """A GraphView created in a worker thread must remain accessible from the main thread.
+
+    Regression test: nodes_from_segmentation previously used database=':memory:',
+    which caused 'no such table: Metadata' when the graph crossed a thread boundary
+    (SQLite in-memory DBs are connection-scoped; a new thread gets a fresh empty DB).
+    Fix: use the default temp-file database instead of ':memory:'.
+    """
+    result = {}
+
+    def worker():
+        graph = create_empty_graphview_graph(
+            node_attributes=["pos"],
+            ndim=3,
+        )
+        graph.bulk_add_nodes([{"t": 0, "pos": [1.0, 2.0], "solution": 1}], indices=[1])
+        result["graph"] = graph
+
+    t = threading.Thread(target=worker)
+    t.start()
+    t.join()
+
+    graph = result["graph"]
+
+    # This calls graph.metadata() internally via BaseGraph.from_other().
+    # With :memory: + default connection pool it opens a new empty DB → crash.
+    detached = graph.detach()
+
+    assert detached.num_nodes() == 1
 
 
 def test_create_empty_graphview_graph_with_solution_attr():

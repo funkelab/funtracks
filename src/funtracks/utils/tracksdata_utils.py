@@ -429,9 +429,10 @@ def td_relabel_nodes(graph, mapping: dict[int, int]) -> td.graph.SQLGraph:
     # For IndexedRXGraph or SQLGraph
     old_graph = graph
 
+    database = f"{tempfile.gettempdir()}/funtracks_{uuid.uuid4().hex[:8]}.db"
     kwargs = {
         "drivername": "sqlite",
-        "database": ":memory:",
+        "database": database,
         "overwrite": True,
     }
     new_graph = td.graph.SQLGraph(**kwargs)
@@ -491,9 +492,10 @@ def convert_graph_nx_to_td(graph_nx: nx.DiGraph) -> td.graph.GraphView:
     """
 
     # Initialize an empty tracksdata SQLGraph
+    database = f"{tempfile.gettempdir()}/funtracks_{uuid.uuid4().hex[:8]}.db"
     kwargs = {
         "drivername": "sqlite",
-        "database": ":memory:",
+        "database": database,
         "overwrite": True,
     }
     graph_td = td.graph.SQLGraph(**kwargs)

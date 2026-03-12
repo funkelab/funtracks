@@ -51,7 +51,6 @@ def nodes_from_segmentation(
 
     cand_graph = create_empty_graphview_graph(
         node_attributes=["pos", "area"],
-        database=":memory:",
         position_attrs=["pos"],
         ndim=segmentation.ndim,
     )
@@ -121,7 +120,6 @@ def nodes_from_points_list(
 
     cand_graph = create_empty_graphview_graph(
         node_attributes=["pos"],
-        database=":memory:",
         position_attrs=["pos"],
         ndim=ndim,
     )

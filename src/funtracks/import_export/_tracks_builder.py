@@ -446,7 +446,6 @@ class TracksBuilder(ABC):
             node_attributes=list(self.in_memory_geff["node_props"].keys()),
             edge_attributes=list(self.in_memory_geff["edge_props"].keys()),
             node_default_values=node_default_values,
-            database=":memory:",
         )
 
         node_ids = [int(i) for i in self.in_memory_geff["node_ids"]]
