@@ -475,6 +475,10 @@ class Tracks:
     def get_mask(self, node: Node) -> Mask | None:
         """Get the segmentation mask associated with a given node.
 
+        .. deprecated:: 1.0
+            `set_time` will be removed in funtracks v2.0.
+            Use `update_node_attrs([node], {tracks.features.time_key: [time]})` instead.
+
         Args:
             node (Node): The node to get the mask for.
 
