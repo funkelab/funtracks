@@ -463,6 +463,22 @@ class Tracks:
         return int(self.get_times([node])[0])
 
     def set_times(self, nodes: Iterable[Node], times: Iterable[int]):
+        """Set the time frames of the given nodes.
+
+        .. deprecated:: 1.0
+            `set_times` will be removed in funtracks v2.0.
+            Use `update_node_attrs(nodes, {tracks.features.time_key: times})` instead.
+
+        Args:
+            nodes (Iterable[Node]): The node ids to set the time frames for
+            times (Iterable[int]): The time frames to set
+        """
+        warnings.warn(
+            "`set_times` is deprecated and will be removed in funtracks v2.0. "
+            "Use `update_node_attrs(nodes, {tracks.features.time_key: times})` instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         times = [int(t) for t in times]
         self._set_nodes_attr(nodes, self.features.time_key, times)
 
@@ -470,12 +486,22 @@ class Tracks:
         """Set the time frame of a given node. Raises an error if the node
         is not in the graph.
 
+        .. deprecated:: 1.0
+            `set_time` will be removed in funtracks v2.0.
+            Use `update_node_attrs([node], {tracks.features.time_key: [time]})` instead.
+
         Args:
             node (Any): The node id to set the time frame for
             time (int): The time to set
-
         """
-        self.set_times([node], [int(time)])
+        warnings.warn(
+            "`set_time` is deprecated and will be removed in funtracks v2.0. "
+            "Use `update_node_attrs([node], {tracks.features.time_key: [time]})` instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        times_list = [int(time)]
+        self._set_nodes_attr([node], self.features.time_key, times_list)
 
     def get_areas(self, nodes: Iterable[Node]) -> Sequence[int | None]:
         """Get the area/volume of a given node. Raises a KeyError if the node
