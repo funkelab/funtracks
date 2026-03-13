@@ -124,7 +124,7 @@ def export_to_csv(
 
     # Determine which nodes to export
     if node_ids is None:
-        node_to_keep = tracks.graph.nodes()
+        node_to_keep = tracks.graph.node_ids()
     else:
         node_to_keep = filter_graph_with_ancestors(tracks.graph, node_ids)
 
@@ -146,7 +146,8 @@ def export_to_csv(
                 value = tracks.get_node_attr(node_id, feature_name)
                 cols = column_map[feature_name]
                 if isinstance(cols, list):
-                    assert isinstance(value, (list, tuple))
+                    if not isinstance(value, (list, tuple)):
+                        value = list(value)
                     for col, v in zip(cols, value, strict=True):
                         row[col] = convert_numpy_to_python(v)
                 else:
@@ -210,5 +211,7 @@ def export_to_csv(
 
         input_vals = np.array(df[column_map["id"]])
         output_vals = np.array(df[column_map["track_id"]], dtype=dtype)
-        relabeled_seg = map_array(tracks.segmentation, input_vals, output_vals)
+        relabeled_seg = map_array(
+            np.asarray(tracks.segmentation), input_vals, output_vals
+        )
         tifffile.imwrite(seg_path, relabeled_seg, compression="deflate")

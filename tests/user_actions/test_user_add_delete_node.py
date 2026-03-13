@@ -46,7 +46,7 @@ class TestUserAddDeleteNode:
             "t": time,
         }
         if with_seg:
-            seg_copy = tracks.segmentation.copy()
+            seg_copy = np.asarray(tracks.segmentation).copy()
             if ndim == 3:
                 seg_copy[time, position[0], position[1]] = node_id
             else:
@@ -155,8 +155,8 @@ class TestUserAddDeleteNode:
         graph = tracks.graph
 
         # Save original state
-        original_nodes = set(graph.nodes)
-        original_edges = set(graph.edges)
+        original_nodes = set(graph.node_ids())
+        original_edges = set(graph.edge_ids())
         original_track_ids = {n: tracks.get_track_id(n) for n in original_nodes}
 
         # Delete nodes 4 and 6 (mid-track node and isolated node)
@@ -176,8 +176,8 @@ class TestUserAddDeleteNode:
 
         # Undo restores all nodes and edges
         inverse = action.inverse()
-        assert set(graph.nodes) == original_nodes
-        assert set(graph.edges) == original_edges
+        assert set(graph.node_ids()) == original_nodes
+        assert set(graph.edge_ids()) == original_edges
         for node in original_nodes:
             assert tracks.get_track_id(node) == original_track_ids[node]
 

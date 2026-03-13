@@ -1,8 +1,9 @@
 import math
 
 import numpy as np
-from skimage.measure import marching_cubes, mesh_surface_area, regionprops
+from skimage.measure import marching_cubes, mesh_surface_area
 from skimage.measure._regionprops import RegionProperties
+from tracksdata.nodes._mask import Mask
 
 
 class ExtendedRegionProperties(RegionProperties):
@@ -104,12 +105,16 @@ class ExtendedRegionProperties(RegionProperties):
             float: The circularity (2D) or sphericity (3D) of the region.
         """
         if self._label_image.ndim == 2:
+            if self.perimeter == 0:  # single-pixel region
+                return 0.0
             return 4 * math.pi * self.area / self.perimeter**2
         else:  # 3D
             vol = self.volume
             r = (3 / 4 / np.pi * vol) ** (1 / 3)
             a_equiv = 4 * np.pi * r**2
             a_region = self.perimeter  # perimeter returns surface_area for 3D
+            if a_region == 0:  # single-pixel region
+                return 0.0
             return a_equiv / a_region
 
     @property
@@ -138,8 +143,15 @@ class ExtendedRegionProperties(RegionProperties):
         if self._label_image.ndim == 2:
             return super().perimeter
         else:  # 3D
+            # Create binary mask and pad with background to ensure a surface boundary
+            # exists. This prevents marching_cubes from failing when the mask fills
+            # the entire volume
+            binary_mask = self._label_image == self.label
+            padded_mask = np.pad(
+                binary_mask, pad_width=1, mode="constant", constant_values=False
+            )
             verts, faces, _, _ = marching_cubes(
-                self._label_image == self.label, level=0.5, spacing=self._spacing
+                padded_mask, level=0.5, spacing=self._spacing
             )
             return mesh_surface_area(verts, faces)
 
@@ -170,34 +182,32 @@ class ExtendedRegionProperties(RegionProperties):
 
 
 def regionprops_extended(
-    img: np.ndarray,
+    mask: Mask,
     spacing: tuple[float, ...] | None,
-    intensity_image: np.ndarray | None = None,
 ) -> list[ExtendedRegionProperties]:
     """
     Create instances of ExtendedRegionProperties that extend
     skimage.measure.RegionProperties.
 
     Args:
-        img (np.ndarray): The labeled image.
+        mask (Mask): The labeled mask.
         spacing (tuple[float, ...]| None): The spacing between voxels in each dimension.
             If None, each voxel is assumed to be 1 in all dimensions.
-        intensity_image (np.ndarray, optional): The intensity image.
 
     Returns:
         list[ExtendedRegionProperties]: A list of ExtendedRegionProperties instances.
     """
-    results = regionprops(img, intensity_image=intensity_image, spacing=spacing)
-    for i, _ in enumerate(results):
-        a = results[i]
-        b = ExtendedRegionProperties(
-            slice=a.slice,
-            label=a.label,
-            label_image=a._label_image,
-            intensity_image=a._intensity_image,
-            cache_active=a._cache_active,
-            spacing=a._spacing,
-        )
-        results[i] = b
 
-    return results
+    region = mask.regionprops(spacing=spacing)
+
+    extended_region = ExtendedRegionProperties(
+        slice=region.slice,
+        label=region.label,
+        label_image=region._label_image,
+        intensity_image=region._intensity_image,
+        cache_active=region._cache_active,
+        spacing=region._spacing,
+        offset=region._offset,
+    )
+
+    return [extended_region]

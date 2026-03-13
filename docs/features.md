@@ -150,7 +150,7 @@ classDiagram
     }
 
     class Tracks {
-        +graph: nx.DiGraph
+        +graph: td.graph.GraphView
         +segmentation: ndarray|None
         +features: FeatureDict
         +annotators: AnnotatorRegistry
@@ -203,23 +203,30 @@ These features are **automatically checked** during initialization:
 
 **Scenario 1: Loading tracks from CSV with pre-computed features**
 ```python
-# CSV has columns: id, time, y, x, area, track_id
-graph = load_graph_from_csv(df)  # Nodes already have area, track_id
-tracks = SolutionTracks(graph, segmentation=seg)
+from funtracks.import_export import tracks_from_df
+
+# CSV/DataFrame has columns: id, time, y, x, area, track_id, parent_id
+tracks = tracks_from_df(df, segmentation=seg)
 # Auto-detection: pos, area, track_id exist → activate without recomputing
 ```
 
 **Scenario 2: Creating tracks from raw segmentation**
 ```python
-# Graph has no features yet
-graph = nx.DiGraph()
-graph.add_node(1, time=0)
+from funtracks.utils import create_empty_graphview_graph
+from funtracks.data_model import Tracks
+
+# Create empty graph and add nodes
+graph = create_empty_graphview_graph()
+graph.add_node(index=1, attrs={"t": 0})
 tracks = Tracks(graph, segmentation=seg)
-# Auto-detection: pos, area don't exist → compute them
+# Auto-detection: pos, area don't exist → compute them from segmentation
 ```
 
 **Scenario 3: Explicit feature control with FeatureDict**
 ```python
+from funtracks.features import FeatureDict, Time, Position, Area
+from funtracks.data_model import Tracks
+
 # Bypass auto-detection entirely
 feature_dict = FeatureDict({"t": Time(), "pos": Position(), "area": Area()})
 tracks = Tracks(graph, segmentation=seg, features=feature_dict)
@@ -227,8 +234,9 @@ tracks = Tracks(graph, segmentation=seg, features=feature_dict)
 ```
 
 **Scenario 4: Enable a new feature**
-
 ```python
+from funtracks.data_model import Tracks
+
 tracks = Tracks(graph, segmentation)
 # Initially has: time, pos, area (auto-detected or computed)
 
@@ -240,8 +248,7 @@ print(tracks.features.keys())  # All features in FeatureDict (including static)
 print(tracks.annotators.features.keys())  # Only active computed features
 ```
 
-**Scenario 4: Disable a feature**
-
+**Scenario 5: Disable a feature**
 ```python
 tracks.disable_features(["area"])
 # Removes from FeatureDict, deactivates in annotators
@@ -272,9 +279,9 @@ tracks.disable_features(["area"])
         def compute(self, feature_keys=None):
             # Compute feature values in bulk
             if "custom" in self.features:
-                for node in self.tracks.graph.nodes():
+                for node in self.tracks.graph.node_ids():
                     value = self._compute_custom(node)
-                    self.tracks.graph.nodes[node]["custom"] = value
+                    self.tracks[node]["custom"] = value
 
         def update(self, action):
             # Incremental update when graph changes

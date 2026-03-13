@@ -4,8 +4,10 @@ import pytest
 import tifffile
 from geff.testing.data import create_mock_geff
 
-from funtracks.import_export import import_from_geff
-from funtracks.import_export.geff._import import import_graph_from_geff
+from funtracks.data_model import SolutionTracks
+from funtracks.import_export import export_to_geff, import_from_geff
+from funtracks.import_export.geff._import import GeffTracksBuilder, import_graph_from_geff
+from funtracks.utils.tracksdata_utils import create_empty_graphview_graph
 
 
 @pytest.fixture
@@ -253,15 +255,15 @@ def test_duplicate_values_in_name_map(valid_geff):
     store, _ = valid_geff
 
     # Duplicate values should be allowed - each standard key gets a copy of the data
-    name_map = {"time": "t", "pos": ["y", "x"], "seg_id": "t"}
+    node_name_map = {"time": "t", "pos": ["y", "x"], "seg_id": "t"}
 
     # Should not raise - seg_id maps to same source as time
-    tracks = import_from_geff(store, name_map)
+    tracks = import_from_geff(store, node_name_map)
 
     # Both time and seg_id should be present with same values
-    for node_id in tracks.graph.nodes():
+    for node_id in tracks.graph.node_ids():
         assert tracks.get_node_attr(node_id, "seg_id") == tracks.get_node_attr(
-            node_id, "time"
+            node_id, "t"
         )
 
 
@@ -313,11 +315,11 @@ def test_tracks_with_segmentation(valid_geff, invalid_geff, valid_segmentation, 
     assert hasattr(tracks, "segmentation")
     assert tracks.segmentation.shape == valid_segmentation.shape
     # Get last node by ID (don't rely on iteration order)
-    last_node = max(tracks.graph.nodes())
+    last_node = max(tracks.graph.node_ids())
     # With composite pos, position is stored as an array
     pos = tracks.graph.nodes[last_node]["pos"]
     coords = [
-        tracks.graph.nodes[last_node]["time"],
+        tracks.graph.nodes[last_node]["t"],
         pos[0],  # y
         pos[1],  # x
     ]
@@ -326,14 +328,14 @@ def test_tracks_with_segmentation(valid_geff, invalid_geff, valid_segmentation, 
         valid_segmentation[tuple(coords)] == 50
     )  # in original segmentation, the pixel value is equal to seg_id
     assert (
-        tracks.segmentation[tuple(coords)] == last_node
+        np.asarray(tracks.segmentation)[tuple(coords)] == last_node
     )  # test that the seg id has been relabeled
 
     # Check that only required/requested features are present, and that area is recomputed
     data = tracks.graph.nodes[last_node]
-    assert "random_feature" in data
-    assert "random_feature2" not in data
-    assert "area" in data
+    assert "random_feature" in tracks.graph.node_attr_keys()
+    assert "random_feature2" not in tracks.graph.node_attr_keys()
+    assert "area" in tracks.graph.node_attr_keys()
     assert (
         data["area"] == 0.01
     )  # recomputed area values should be 1 pixel, so 0.01 after applying the scaling.
@@ -352,9 +354,9 @@ def test_tracks_with_segmentation(valid_geff, invalid_geff, valid_segmentation, 
         node_features=node_features,
     )
     # Get last node by ID (don't rely on iteration order)
-    last_node = max(tracks.graph.nodes())
+    last_node = max(tracks.graph.node_ids())
     data = tracks.graph.nodes[last_node]
-    assert "area" in data
+    assert "area" in tracks.graph.node_attr_keys()
     assert data["area"] == 21
 
     # Test that import fails with ValueError when invalid seg_ids are provided.
@@ -417,7 +419,7 @@ def test_node_features_compute_vs_load(valid_geff, valid_segmentation, tmp_path)
     Features not in the geff can still be computed if marked True.
     """
     store, _ = valid_geff
-    name_map = {
+    node_name_map = {
         "time": "t",
         "pos": ["y", "x"],  # Composite position mapping
         "seg_id": "seg_id",
@@ -437,7 +439,7 @@ def test_node_features_compute_vs_load(valid_geff, valid_segmentation, tmp_path)
 
     tracks = import_from_geff(
         store,
-        name_map,
+        node_name_map,
         segmentation_path=valid_segmentation_path,
         scale=scale,
         node_features=node_features,
@@ -448,12 +450,12 @@ def test_node_features_compute_vs_load(valid_geff, valid_segmentation, tmp_path)
         assert key in tracks.features
 
     # Get last node by ID (don't rely on iteration order)
-    max_node_id = max(tracks.graph.nodes())
+    max_node_id = max(tracks.graph.node_ids())
     data = tracks.graph.nodes[max_node_id]
 
     # All requested features should be present
     for key in feature_keys:
-        assert key in data
+        assert data[key] is not None
 
     # Verify computed values (1 pixel = 0.01 after scaling)
     # Original geff had area=21 for last node
@@ -513,3 +515,115 @@ def test_compute_features_without_segmentation(valid_geff):
             scale=scale,
             node_features=node_features,
         )
+
+
+def _make_mask(bbox):
+    """Create a Mask from a bbox list [y_min, x_min, y_max, x_max]."""
+    from tracksdata.nodes._mask import Mask
+
+    ndim = len(bbox) // 2
+    shape = tuple(bbox[i + ndim] - bbox[i] for i in range(ndim))
+    return Mask(np.ones(shape, dtype=bool), bbox=np.array(bbox, dtype=np.int64))
+
+
+def test_import_from_geff_roundtrip_auto_axes(tmp_path):
+    """Round-trip export_to_geff / import_from_geff for a graph with mask/bbox node
+    attributes but no accompanying segmentation array.
+
+    This is the typical shape of a motile-tracker candidate graph: each node carries
+    a per-node Mask (local boolean array + bounding box) without a full dense
+    segmentation volume being stored.
+
+    Checks:
+    - The time and spatial axes are inferred correctly from the geff axes metadata,
+      not from fuzzy string matching (which would misassign 'pos' -> ['bbox']).
+    - import_from_geff succeeds and sets segmentation=None when the geff file was
+      saved without a segmentation array (i.e. no segmentation_shape in metadata).
+    - Positions and scalar attributes are preserved through the round-trip.
+    - The mask attribute comes back as a Mask object, not a raw numpy array.
+    - The bbox values are preserved correctly through the round-trip.
+    """
+    import tracksdata as td
+    from tracksdata.nodes._mask import Mask
+
+    graph = create_empty_graphview_graph(
+        node_attributes=[
+            "pos",
+            "area",
+            "track_id",
+            "lineage_id",
+            td.DEFAULT_ATTR_KEYS.MASK,
+            td.DEFAULT_ATTR_KEYS.BBOX,
+        ],
+        edge_attributes=["iou"],
+        ndim=3,
+    )
+    bbox = [30, 30, 71, 71]
+    graph.bulk_add_nodes(
+        nodes=[
+            {
+                "t": 0,
+                "pos": np.array([50.0, 50.0]),
+                "area": 1681.0,
+                "track_id": 1,
+                "lineage_id": 1,
+                "solution": 1,
+                td.DEFAULT_ATTR_KEYS.MASK: _make_mask(bbox),
+                td.DEFAULT_ATTR_KEYS.BBOX: np.array(bbox, dtype=np.int64),
+            }
+        ],
+        indices=[1],
+    )
+    # The graph carries segmentation_shape in its metadata (set by motile-tracker),
+    # but no dense segmentation array is attached to the SolutionTracks object.
+    graph.update_metadata(segmentation_shape=(5, 100, 100))
+
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+
+    st = SolutionTracks(graph, ndim=3, time_attr="t")
+    export_to_geff(st, run_dir)
+
+    tracks_path = run_dir / "tracks"
+
+    # The geff file contains typed axis metadata (type="time" / type="space").
+    # The builder should use that directly instead of fuzzy string matching,
+    # which would assign pos -> ['bbox'] and leave 'y'/'x' unmapped.
+    builder = GeffTracksBuilder()
+    builder.prepare(tracks_path)
+
+    assert "time" in builder.node_name_map
+    assert builder.node_name_map["time"] == "t"
+    assert "pos" in builder.node_name_map
+    pos_mapping = builder.node_name_map["pos"]
+    assert isinstance(pos_mapping, list), (
+        f"pos should map to a list of axis names, got {pos_mapping!r}"
+    )
+    assert pos_mapping == ["y", "x"], f"pos should map to ['y', 'x'], got {pos_mapping}"
+
+    # The geff file has no segmentation_shape (export_to_geff only writes it when
+    # a dense segmentation array is attached). import_from_geff must succeed and
+    # return segmentation=None rather than raising.
+    tracks = import_from_geff(tracks_path)
+    assert tracks.graph.num_nodes() == 1
+    assert tracks.segmentation is None
+
+    node1 = tracks.graph.nodes[1]
+
+    assert node1["pos"] is not None
+    np.testing.assert_array_almost_equal(node1["pos"], [50.0, 50.0])
+    assert node1["area"] == pytest.approx(1681.0)
+
+    # The geff format stores mask data as a plain numeric array; funtracks must
+    # reconstruct the Mask wrapper from the raw array + bbox after loading.
+    loaded_mask = node1[td.DEFAULT_ATTR_KEYS.MASK]
+    loaded_bbox = node1[td.DEFAULT_ATTR_KEYS.BBOX]
+
+    assert isinstance(loaded_mask, Mask), (
+        f"mask should be a Mask object after round-trip, got {type(loaded_mask)}"
+    )
+    # bbox is stored as an array column in the SQL-backed graph so it comes back
+    # as a polars Series rather than a numpy array; check values only.
+    np.testing.assert_array_equal(
+        np.array(loaded_bbox, dtype=np.int64), np.array(bbox, dtype=np.int64)
+    )
