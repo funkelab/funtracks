@@ -730,7 +730,6 @@ class TracksBuilder(ABC):
         # 6. Add segmentation to the graph
         if segmentation_array is not None:
             graph = add_masks_and_bboxes_to_graph(graph, segmentation_array)
-            graph.update_metadata(segmentation_shape=segmentation_array.shape)
 
         # 7. Create SolutionTracks
         tracks = SolutionTracks(

@@ -27,6 +27,14 @@ def test_graph_from_segmentation_2d(get_tracks):
                 np.array(tracks.graph.nodes[node][key]), abs=0.01
             )
 
+    # mask and bbox must be present on every node
+    for node in cand_graph.node_ids():
+        assert cand_graph.nodes[node]["mask"] is not None
+        assert cand_graph.nodes[node]["bbox"] is not None
+
+    # segmentation shape must be stored in graph metadata
+    assert tuple(cand_graph.metadata().get("segmentation_shape")) == segmentation_2d.shape
+
     # Only adjacent frames are connected; nodes 5,6 at t=4 are isolated
     # because t=3 has no nodes (add_cand_edges only links frame → frame+1)
     assert sorted(cand_graph.edge_list()) == [[1, 2], [1, 3], [2, 4], [3, 4]]
@@ -64,6 +72,14 @@ def test_graph_from_segmentation_3d(get_tracks):
             assert np.array(cand_graph.nodes[node][key]) == pytest.approx(
                 np.array(tracks.graph.nodes[node][key]), abs=0.01
             )
+
+    # mask and bbox must be present on every node
+    for node in cand_graph.node_ids():
+        assert cand_graph.nodes[node]["mask"] is not None
+        assert cand_graph.nodes[node]["bbox"] is not None
+
+    # segmentation shape must be stored in graph metadata
+    assert tuple(cand_graph.metadata().get("segmentation_shape")) == segmentation_3d.shape
 
     # Only adjacent frames connected; nodes 5,6 at t=4 isolated (gap at t=3)
     assert sorted(cand_graph.edge_list()) == [[1, 2], [1, 3], [2, 4], [3, 4]]

@@ -3,6 +3,7 @@ import logging
 import numpy as np
 import tracksdata as td
 
+from ..utils.tracksdata_utils import add_masks_and_bboxes_to_graph
 from .iou import add_iou
 from .utils import add_cand_edges, nodes_from_points_list, nodes_from_segmentation
 
@@ -50,6 +51,9 @@ def compute_graph_from_seg(
         add_iou(cand_graph, segmentation, node_frame_dict)
 
     logger.info("Candidate edges: %d", cand_graph.num_edges())
+
+    # add masks and bboxes (also stores segmentation_shape in graph metadata)
+    cand_graph = add_masks_and_bboxes_to_graph(cand_graph, segmentation)
 
     return cand_graph
 
