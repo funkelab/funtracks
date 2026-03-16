@@ -58,7 +58,7 @@ class AddEdge(BasicAction):
             raise ValueError(f"Edge {self.edge} already exists in the graph")
 
         # Add required solution attribute
-        attrs = self.attributes
+        attrs = dict(self.attributes)
         attrs[td.DEFAULT_ATTR_KEYS.SOLUTION] = 1
 
         required_attrs = self.tracks.graph.edge_attr_keys()

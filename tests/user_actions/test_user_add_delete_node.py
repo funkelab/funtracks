@@ -111,6 +111,13 @@ class TestUserAddDeleteNode:
         assert not graph.has_edge(3, node_id)
         assert not graph.has_edge(node_id, 5)
         assert graph.has_edge(3, 5)
+
+        # Regression: calling action.inverse() a second time (undo after redo after undo)
+        action.inverse()
+        assert graph.has_node(node_id)
+        assert graph.has_edge(3, node_id)
+        assert graph.has_edge(node_id, 5)
+        assert not graph.has_edge(3, 5)
         # TODO: error if node doesn't exist?
 
     def test_user_delete_node_after_division(self, get_tracks, ndim, with_seg):

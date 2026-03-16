@@ -81,7 +81,7 @@ class AddNode(BasicAction):
 
     def _apply(self) -> None:
         """Apply the action, and set segmentation if provided in self.mask"""
-        attrs = self.attributes
+        attrs = dict(self.attributes)
 
         if self.tracks.segmentation is not None and self.mask is not None:
             attrs[td.DEFAULT_ATTR_KEYS.MASK] = self.mask

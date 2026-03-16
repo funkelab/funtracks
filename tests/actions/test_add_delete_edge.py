@@ -48,7 +48,7 @@ def test_add_delete_edges(get_tracks, ndim, with_seg):
     if tracks.segmentation is not None:
         assert_array_almost_equal(tracks.segmentation, reference_seg)
 
-    inverse.inverse()
+    re_added = inverse.inverse()
     assert set(tracks.graph.node_ids()) == set(reference_graph.node_ids())
     assert set(tracks.graph.edge_ids()) == set(reference_graph.edge_ids())
     assert sorted(tracks.graph.edge_list()) == sorted(reference_graph.edge_list())
@@ -60,6 +60,18 @@ def test_add_delete_edges(get_tracks, ndim, with_seg):
     )
     if with_seg:
         assert_array_almost_equal(tracks.segmentation, reference_seg)
+
+    # Regression: calling inverse.inverse() a second time must not raise
+    # ValueError about 'edge_id'. AddEdge._apply() used to mutate
+    # DeleteEdge.attributes via aliasing,corrupting it for subsequent
+    # inverse() calls (mirrors ActionHistory calling .inverse()on the same
+    # stored action twice: undo → redo → undo). re_added.inverse() resets
+    # graph state (edges absent); it uses fresh DeleteEdge objects so it does
+    # NOT trigger the bug. The second inverse.inverse() calls the SAME DeleteEdge
+    # objects again — that's where the corruption surfaces.
+    re_added.inverse()  # reset state: edges absent (fresh objects, no bug here)
+    inverse.inverse()  # same DeleteEdge objects called again — must not crash
+    assert set(tracks.graph.edge_ids()) == set(reference_graph.edge_ids())
 
 
 def test_add_edge_missing_endpoint(get_tracks):
