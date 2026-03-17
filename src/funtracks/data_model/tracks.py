@@ -11,6 +11,7 @@ from typing import (
 from warnings import warn
 
 import numpy as np
+import polars as pl
 import tracksdata as td
 from psygnal import Signal
 from tracksdata.array import GraphArrayView
@@ -689,7 +690,7 @@ class Tracks:
         # Registry validates and activates features (will raise if invalid)
         self.annotators.activate_features(feature_keys)
 
-        # Add to FeatureDict
+        # Add to FeatureDict and graph schema
         for key in feature_keys:
             if key not in self.features:
                 feature, _ = self.annotators.all_features[key]
@@ -733,10 +734,14 @@ class Tracks:
 
         # Perform custom graph operations when a feature is added
         if feature["feature_type"] == "node" and key not in self.graph.node_attr_keys():
+            dtype = to_polars_dtype(feature["value_type"])
+            num_values = feature.get("num_values")
+            if num_values is not None and num_values > 1:
+                dtype = pl.Array(pl.Float64, num_values)
             self.graph.add_node_attr_key(
                 key,
                 default_value=feature["default_value"],
-                dtype=to_polars_dtype(feature["value_type"]),
+                dtype=dtype,
             )
         elif feature["feature_type"] == "edge" and key not in self.graph.edge_attr_keys():
             self.graph.add_edge_attr_key(
