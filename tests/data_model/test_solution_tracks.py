@@ -97,9 +97,6 @@ def test_next_track_id_empty():
 def test_get_lineage_id_without_lineage_key(graph_2d_with_track_id):
     """Test that get_lineage_id returns None when lineage_key is not set."""
     graph = graph_2d_with_track_id
-    # TODO Teun: question: the original code added node 1, but this was already present?
-    # So, what was tested here exactly?
-    # graph.add_node(1, t=0, pos=[0, 0], track_id=1)
     graph.add_node(
         attrs={"t": 1, "pos": [0, 0], "track_id": 1}, index=7, validate_keys=False
     )

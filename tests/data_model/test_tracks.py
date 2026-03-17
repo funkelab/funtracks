@@ -238,8 +238,6 @@ def test_undo_redo(graph_2d_with_segmentation):
     assert tracks.redo() is False
 
     # Perform an action - add a custom attribute
-    # TODO Teun: default value of string attribute is empty string, not None
-    # solved this by using 'object' as dtype, is this a problem in the code?
     tracks.graph.add_node_attr_key("custom_label", default_value=None, dtype=object)
 
     action1 = UpdateNodeAttrs(tracks, node=1, attrs={"custom_label": "test_value"})
