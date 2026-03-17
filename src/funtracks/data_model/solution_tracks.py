@@ -151,7 +151,7 @@ class SolutionTracks(Tracks):
     def get_track_id(self, node) -> int:
         if self.features.tracklet_key is None:
             raise ValueError("Tracklet key not initialized in features")
-        track_id = self.get_node_attr(node, self.features.tracklet_key, required=True)
+        track_id = self.get_node_attr(node, self.features.tracklet_key)
         return track_id
 
     def get_lineage_id(self, node) -> int | None:

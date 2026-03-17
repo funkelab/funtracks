@@ -59,7 +59,7 @@ class TestTrackAnnotator:
         ):
             # one unique id per component
             id_sets = [
-                list(set(tracks.get_nodes_attr(component, key, required=True)))
+                list(set(tracks.get_nodes_attr(component, key)))
                 for component in components
             ]
             for id_set in id_sets:
@@ -80,22 +80,22 @@ class TestTrackAnnotator:
         attrs = {"iou": 0, "solution": 1} if with_seg else {"solution": 1}
         tracks.graph.add_edge(source_id=edge_id[0], target_id=edge_id[1], attrs=attrs)
         to_remove_key = ann.lineage_key
-        orig_lin = tracks.get_node_attr(node_id, ann.lineage_key, required=True)
-        orig_tra = tracks.get_node_attr(node_id, ann.tracklet_key, required=True)
+        orig_lin = tracks.get_node_attr(node_id, ann.lineage_key)
+        orig_tra = tracks.get_node_attr(node_id, ann.tracklet_key)
 
         # remove one feature from computation (annotator level, not FeatureDict)
         ann.deactivate_features([to_remove_key])
         ann.compute()  # this should update tra but not lin
         # lineage_id is still in tracks.features but not recomputed
-        assert tracks.get_node_attr(node_id, ann.lineage_key, required=True) == orig_lin
-        assert tracks.get_node_attr(node_id, ann.tracklet_key, required=True) != orig_tra
+        assert tracks.get_node_attr(node_id, ann.lineage_key) == orig_lin
+        assert tracks.get_node_attr(node_id, ann.tracklet_key) != orig_tra
 
         # add it back in
         ann.activate_features([to_remove_key])
         ann.compute()
         # now both are updated
-        assert tracks.get_node_attr(node_id, ann.lineage_key, required=True) != orig_lin
-        assert tracks.get_node_attr(node_id, ann.tracklet_key, required=True) != orig_tra
+        assert tracks.get_node_attr(node_id, ann.lineage_key) != orig_lin
+        assert tracks.get_node_attr(node_id, ann.tracklet_key) != orig_tra
 
     def test_invalid(self, get_tracks, ndim, with_seg) -> None:
         # Create regular Tracks (not SolutionTracks) to test error handling

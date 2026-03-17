@@ -67,7 +67,7 @@ class TestEdgeAnnotator:
         # Use UpdateNodeSeg action to modify segmentation and update edge
         mask_to_remove = pixels_to_td_mask(pixels_to_remove, ndim=ndim)
         UpdateNodeSeg(tracks, node_id, mask_to_remove, added=False)
-        assert tracks.get_edge_attr(edge_id, "iou", required=True) == expected_iou
+        assert tracks.get_edge_attr(edge_id, "iou") == expected_iou
 
         # segmentation is fully erased and you try to update
         node_id = 1
@@ -106,7 +106,7 @@ class TestEdgeAnnotator:
             if isinstance(a, EdgeAnnotator):
                 a.compute()
         # IoU feature was deleted, so IoU is no longer present on the graph
-        # assert tracks.get_edge_attr(edge_id, to_remove_key, required=True) == orig_iou
+        # assert tracks.get_edge_attr(edge_id, to_remove_key) == orig_iou
 
         # add it back in
         tracks.enable_features([to_remove_key])
@@ -115,7 +115,7 @@ class TestEdgeAnnotator:
         UpdateNodeSeg(tracks, node_id, mask_to_remove, added=False)
         new_iou = pytest.approx(0.0, abs=0.001)
         # the feature is now updated
-        assert tracks.get_edge_attr(edge_id, to_remove_key, required=True) == new_iou
+        assert tracks.get_edge_attr(edge_id, to_remove_key) == new_iou
 
     def test_missing_seg(self, get_graph, ndim) -> None:
         """Test that EdgeAnnotator gracefully handles missing segmentation."""
@@ -140,7 +140,7 @@ class TestEdgeAnnotator:
         node_id = 3
         edge = (1, 3)
         edge_id = tracks.graph.edge_id(*edge)
-        initial_iou = tracks.get_edge_attr(edge, "iou", required=True)
+        initial_iou = tracks.get_edge_attr(edge, "iou")
 
         # If we recomputed IoU now, it would be different
         # But we won't - we'll just call UpdateTrackIDs on node 1
