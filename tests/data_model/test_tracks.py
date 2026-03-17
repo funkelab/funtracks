@@ -127,13 +127,13 @@ def test_get_set_node_attr(graph_2d_with_segmentation):
     tracks._set_node_attr(1, "area", 42)
 
     tracks._set_nodes_attr([1, 2], "track_id", [7, 8])
-    assert tracks.get_node_attr(1, "area", required=True) == 42
-    assert tracks.get_nodes_attr([1, 2], "track_id", required=True) == [7, 8]
-    assert tracks.get_nodes_attr([1, 2], "track_id", required=False) == [7, 8]
+    assert tracks.get_node_attr(1, "area") == 42
+    assert tracks.get_nodes_attr([1, 2], "track_id") == [7, 8]
+    assert tracks.get_nodes_attr([1, 2], "track_id") == [7, 8]
     with pytest.raises(KeyError):
-        tracks.get_node_attr(1, "not_present", required=True)
+        tracks.get_node_attr(1, "not_present")
     with pytest.raises(KeyError):
-        tracks.get_nodes_attr([1, 2], "not_present", required=True)
+        tracks.get_nodes_attr([1, 2], "not_present")
 
     # test array attributes
     tracks._set_node_attr(1, "pos", np.array([1, 2]))
@@ -144,19 +144,14 @@ def test_get_set_edge_attr(graph_2d_with_segmentation):
     tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
     tracks._set_edge_attr((1, 2), "iou", 99)
     assert tracks.get_edge_attr((1, 2), "iou") == 99
-    assert tracks.get_edge_attr((1, 2), "iou", required=True) == 99
+    assert tracks.get_edge_attr((1, 2), "iou") == 99
     tracks._set_edges_attr([(1, 2), (1, 3)], "iou", [123, 5])
-    assert tracks.get_edges_attr([(1, 2), (1, 3)], "iou", required=True) == [123, 5]
-    assert tracks.get_edges_attr([(1, 2), (1, 3)], "iou", required=False) == [123, 5]
-    with pytest.raises(KeyError):
-        tracks.get_edge_attr((1, 2), "not_present", required=True)
-    assert tracks.get_edge_attr((1, 2), "not_present", required=False) is None
-    with pytest.raises(KeyError):
-        tracks.get_edges_attr([(1, 2), (1, 3)], "not_present", required=True)
-    assert all(
-        x is None
-        for x in tracks.get_edges_attr(((1, 2), (1, 3)), "not_present", required=False)
-    )
+    assert tracks.get_edges_attr([(1, 2), (1, 3)], "iou") == [123, 5]
+    assert tracks.get_edges_attr([(1, 2), (1, 3)], "iou") == [123, 5]
+    assert tracks.get_edge_attr((1, 2), "not_present") is None
+    assert tracks.get_edge_attr((1, 2), "not_present") is None
+    assert tracks.get_edges_attr([(1, 2), (1, 3)], "not_present") == [None, None]
+    assert all(x is None for x in tracks.get_edges_attr(((1, 2), (1, 3)), "not_present"))
 
 
 def test_set_positions_str(graph_2d_with_segmentation):

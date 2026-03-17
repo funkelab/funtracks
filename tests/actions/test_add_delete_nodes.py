@@ -224,7 +224,6 @@ def test_custom_attributes_preserved(get_tracks, ndim, with_seg):
             value_type="str",
             num_values=1,
             display_name="Cell Type",
-            required=False,
             default_value=None,
         ),
         "confidence": Feature(
@@ -232,7 +231,6 @@ def test_custom_attributes_preserved(get_tracks, ndim, with_seg):
             value_type="float",
             num_values=1,
             display_name="Confidence",
-            required=False,
             default_value=None,
         ),
         "user_label": Feature(
@@ -240,7 +238,6 @@ def test_custom_attributes_preserved(get_tracks, ndim, with_seg):
             value_type="str",
             num_values=1,
             display_name="User Label",
-            required=False,
             default_value=None,
         ),
     }

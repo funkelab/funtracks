@@ -634,7 +634,6 @@ class TracksBuilder(ABC):
                 feature_type=feature_type,
                 value_type=infer_dtype_from_array(props[key]["values"]),
                 num_values=1,
-                required=False,
                 default_value=None,
             )
         tracks.features.update(static_features)

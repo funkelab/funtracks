@@ -227,7 +227,6 @@ class Tracks:
                         "feature_type": "node",
                         "value_type": "float",
                         "num_values": 1,
-                        "required": True,
                         "default_value": None,
                     }
                 # For multi-axis, set position_key directly
@@ -405,21 +404,14 @@ class Tracks:
 
         if isinstance(self.features.position_key, list):
             positions = np.stack(
-                [
-                    self.get_nodes_attr(nodes, key, required=True)
-                    for key in self.features.position_key
-                ],
+                [self.get_nodes_attr(nodes, key) for key in self.features.position_key],
                 axis=1,
             )
         else:
-            positions = np.array(
-                self.get_nodes_attr(nodes, self.features.position_key, required=True)
-            )
+            positions = np.array(self.get_nodes_attr(nodes, self.features.position_key))
 
         if incl_time:
-            times = np.array(
-                self.get_nodes_attr(nodes, self.features.time_key, required=True)
-            )
+            times = np.array(self.get_nodes_attr(nodes, self.features.time_key))
             positions = np.c_[times, positions]
 
         return positions
@@ -459,7 +451,7 @@ class Tracks:
         self.set_positions([node], np.expand_dims(np.array(position), axis=0))
 
     def get_times(self, nodes: Iterable[Node]) -> Sequence[int]:
-        return self.get_nodes_attr(nodes, self.features.time_key, required=True)
+        return self.get_nodes_attr(nodes, self.features.time_key)
 
     def get_time(self, node: Node) -> int:
         """Get the time frame of a given node. Raises an error if the node
@@ -636,11 +628,11 @@ class Tracks:
         for node, value in zip(nodes, values, strict=False):
             self.graph.nodes[node][attr] = [value]
 
-    def get_node_attr(self, node: Node, attr: str, required: bool = False):
+    def get_node_attr(self, node: Node, attr: str):
         return self.graph.nodes[int(node)][attr]
 
-    def get_nodes_attr(self, nodes: Iterable[Node], attr: str, required: bool = False):
-        return [self.get_node_attr(node, attr, required=required) for node in nodes]
+    def get_nodes_attr(self, nodes: Iterable[Node], attr: str):
+        return [self.get_node_attr(node, attr) for node in nodes]
 
     def _set_edge_attr(self, edge: Edge, attr: str, value: Any):
         edge_id = self.graph.edge_id(edge[0], edge[1])
@@ -651,16 +643,14 @@ class Tracks:
             edge_id = self.graph.edge_id(edge[0], edge[1])
             self.graph.update_edge_attrs(attrs={attr: value}, edge_ids=[edge_id])
 
-    def get_edge_attr(self, edge: Edge, attr: str, required: bool = False):
+    def get_edge_attr(self, edge: Edge, attr: str):
         if attr not in self.graph.edge_attr_keys():
-            if required:
-                raise KeyError(attr)
             return None
         edge_id = self.graph.edge_id(edge[0], edge[1])
         return self.graph.edges[edge_id][attr]
 
-    def get_edges_attr(self, edges: Iterable[Edge], attr: str, required: bool = False):
-        return [self.get_edge_attr(edge, attr, required=required) for edge in edges]
+    def get_edges_attr(self, edges: Iterable[Edge], attr: str):
+        return [self.get_edge_attr(edge, attr) for edge in edges]
 
     # ========== Feature Management ==========
 

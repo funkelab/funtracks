@@ -92,7 +92,6 @@ classDiagram
         +value_type: Literal
         +num_values: int
         +display_name: str|Sequence
-        +required: bool
         +default_value: Any
     }
 

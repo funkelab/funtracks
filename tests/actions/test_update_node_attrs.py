@@ -16,7 +16,6 @@ def test_update_node_attrs(get_tracks, ndim):
         value_type="float",
         num_values=1,
         display_name="Score",
-        required=False,
         default_value=None,
     )
     tracks.add_feature("score", new_feature)
