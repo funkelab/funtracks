@@ -28,6 +28,7 @@ def export_to_geff(
     overwrite: bool = False,
     node_ids: set[int] | None = None,
     zarr_format: Literal[2, 3] = 2,
+    save_segmentation: bool = True,
 ):
     """Export the Tracks graph to geff.
 
@@ -40,6 +41,8 @@ def export_to_geff(
             of the given nodes. All other nodes will NOT be saved.
         zarr_format (Literal[2, 3]): Zarr format version to use. Defaults to 2
             for maximum compatibility.
+        save_segmentation (bool): If True, saves the segmentation array alongside
+            the graph. Defaults to True.
     """
     directory = remove_tilde(directory)
     directory = directory.resolve(strict=False)
@@ -93,7 +96,7 @@ def export_to_geff(
     # Save segmentation if present
 
     # TODO: helper function in _export_segmentation file
-    if tracks.segmentation is not None:
+    if save_segmentation and tracks.segmentation is not None:
         seg_path = directory / "segmentation"
 
         seg_data = tracks.segmentation
