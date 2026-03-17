@@ -8,6 +8,9 @@ from funtracks.actions import (
     AddEdge,
     DeleteEdge,
 )
+from funtracks.data_model import SolutionTracks
+from funtracks.features import FeatureDict, LineageID, Position, Time, TrackletID
+from funtracks.utils.tracksdata_utils import create_empty_graphview_graph
 
 iou_key = "iou"
 
@@ -156,3 +159,59 @@ def test_custom_edge_attributes_preserved(get_tracks, ndim, with_seg):
         assert tracks.graph.edges[edge_id][key] == value, (
             f"Attribute {key} not preserved after delete/re-add cycle"
         )
+
+
+def test_add_edge_with_unregistered_edge_attr(tmp_path):
+    """AddEdge must not crash when the graph has edge attrs absent from tracks.features.
+
+    Reproduces the KeyError that occurs when a pre-built graph (e.g. from the motile
+    solver) carries edge attributes such as 'iou' or custom solver scores that were
+    written directly to the graph without going through tracks.add_feature().
+    The existing tests are blind to this bug because the get_tracks fixture explicitly
+    registers 'iou' in the FeatureDict, keeping both registries in sync.
+    """
+    db_path = str(tmp_path / "test.db")
+
+    # Build a graph with "custom_score" on every edge.
+    # This mirrors what the motile solver does: it writes edge attributes directly
+    # to the graph without going through tracks.add_feature().
+    graph = create_empty_graphview_graph(
+        node_attributes=["pos", "track_id", "lineage_id"],
+        edge_attributes=["custom_score"],
+        database=db_path,
+        position_attrs=["pos"],
+        ndim=3,
+    )
+
+    graph.bulk_add_nodes(
+        nodes=[
+            {"t": 0, "pos": [10.0, 10.0], "track_id": 1, "lineage_id": 1, "solution": 1},
+            {"t": 1, "pos": [11.0, 11.0], "track_id": 2, "lineage_id": 1, "solution": 1},
+        ],
+        indices=[1, 2],
+    )
+
+    # Wrap in SolutionTracks without registering "custom_score" in features —
+    # this is the scenario that triggers the bug.
+    features = FeatureDict(
+        features={
+            "t": Time(),
+            "pos": Position(axes=["y", "x"]),
+            "track_id": TrackletID(),
+            "lineage_id": LineageID(),
+        },
+        time_key="t",
+        position_key="pos",
+        tracklet_key="track_id",
+        lineage_key="lineage_id",
+    )
+    tracks = SolutionTracks(graph, ndim=3, features=features)
+
+    # Sanity: "custom_score" is in the graph schema but NOT in tracks.features.
+    assert "custom_score" in tracks.graph.edge_attr_keys()
+    assert "custom_score" not in tracks.features
+
+    # Before the fix this raises: KeyError: 'custom_score'
+    AddEdge(tracks, (1, 2))
+
+    assert tracks.graph.has_edge(1, 2)

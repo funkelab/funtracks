@@ -61,10 +61,10 @@ class AddEdge(BasicAction):
         attrs = dict(self.attributes)
         attrs[td.DEFAULT_ATTR_KEYS.SOLUTION] = 1
 
-        required_attrs = self.tracks.graph.edge_attr_keys()
-        for attr in required_attrs:
+        schemas = self.tracks.graph._edge_attr_schemas()
+        for attr in self.tracks.graph.edge_attr_keys():
             if attr not in attrs:
-                attrs[attr] = self.tracks.features[attr]["default_value"]
+                attrs[attr] = schemas[attr].default_value
 
         # Create edge attributes for this specific edge
         self.tracks.graph.add_edge(
