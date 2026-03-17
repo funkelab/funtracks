@@ -19,6 +19,7 @@ from tracksdata.nodes._mask import Mask
 from funtracks.actions.action_history import ActionHistory
 from funtracks.features import Feature, FeatureDict, Position, Time
 from funtracks.utils.tracksdata_utils import (
+    td_mask_to_pixels,
     to_polars_dtype,
 )
 
@@ -508,17 +509,13 @@ class Tracks:
             return None
 
         # Get time and mask for the node
-        time = self.get_time(node)
         mask = self.graph.nodes[node][td.DEFAULT_ATTR_KEYS.MASK]
+        time = self.get_time(node)
 
-        # Get local coordinates and convert to global using bbox offset
-        local_coords = np.nonzero(mask.mask)
-        global_coords = [coord + mask.bbox[dim] for dim, coord in enumerate(local_coords)]
+        # Convert to pixels
+        pixels = td_mask_to_pixels(mask, time, ndim=self.ndim)
 
-        # Create time array matching the number of points
-        time_array = np.full_like(global_coords[0], time)
-
-        return (time_array, *global_coords)
+        return pixels
 
     def _update_segmentation_cache(self, mask: td.Mask, time: int) -> None:
         """Invalidate cached chunks that overlap with the given mask.
