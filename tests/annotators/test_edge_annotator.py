@@ -12,7 +12,7 @@ track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
 class TestEdgeAnnotator:
     def test_init(self, get_graph, ndim):
         # Start with clean graph, no existing features
-        graph = get_graph(ndim, with_features="segmentation")
+        graph = get_graph(ndim, with_seg=True)
         tracks = Tracks(
             graph,
             ndim=ndim,
@@ -27,7 +27,7 @@ class TestEdgeAnnotator:
         assert len(ann.features) == 1
 
     def test_compute_all(self, get_graph, ndim):
-        graph = get_graph(ndim, with_features="segmentation")
+        graph = get_graph(ndim, with_seg=True)
         tracks = Tracks(
             graph,
             ndim=ndim,
@@ -44,7 +44,7 @@ class TestEdgeAnnotator:
             assert key in tracks.graph.edge_attr_keys()
 
     def test_update_all(self, get_graph, ndim) -> None:
-        graph = get_graph(ndim, with_features="segmentation")
+        graph = get_graph(ndim, with_seg=True)
         tracks = Tracks(
             graph,
             ndim=ndim,
@@ -79,7 +79,7 @@ class TestEdgeAnnotator:
         assert tracks.graph.edges[tracks.graph.edge_id(*edge_id)]["iou"] == 0
 
     def test_add_remove_feature(self, get_graph, ndim):
-        graph = get_graph(ndim, with_features="segmentation")
+        graph = get_graph(ndim, with_seg=True)
         tracks = Tracks(
             graph,
             ndim=ndim,
@@ -119,7 +119,7 @@ class TestEdgeAnnotator:
 
     def test_missing_seg(self, get_graph, ndim) -> None:
         """Test that EdgeAnnotator gracefully handles missing segmentation."""
-        graph = get_graph(ndim, with_features="clean")
+        graph = get_graph(ndim, with_seg=False)
         tracks = Tracks(graph, ndim=ndim, **track_attrs)  # type: ignore
 
         ann = EdgeAnnotator(tracks)
@@ -129,7 +129,7 @@ class TestEdgeAnnotator:
 
     def test_ignores_irrelevant_actions(self, get_graph, ndim):
         """Test that EdgeAnnotator ignores actions that don't affect edges."""
-        graph = get_graph(ndim, with_features="segmentation")
+        graph = get_graph(ndim, is_solution=True, with_seg=True)
         tracks = SolutionTracks(
             graph,
             ndim=ndim,

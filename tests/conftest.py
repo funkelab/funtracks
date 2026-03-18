@@ -214,8 +214,9 @@ def _make_graph(
         areas = {1: 33401, 2: 4169, 3: 14147, 4: 64, 5: 64, 6: 64}
         ious = {(1, 2): 0.0, (1, 3): 0.302, (3, 4): 0.0, (4, 5): 1.0}
 
-    # Track IDs
+    # Track and lineage IDs
     track_ids = {1: 1, 2: 2, 3: 3, 4: 3, 5: 3, 6: 5}
+    lineage_ids = {1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 2}
 
     # Mask data (matches segmentation structure)
     segmentation_shape: tuple[int, ...]
@@ -239,8 +240,6 @@ def _make_graph(
             6: make_3d_cube_mask(start_corner=(96, 96, 96), width=4),
         }
         segmentation_shape = (5, 100, 100, 100)
-    # Lineage IDs
-    lineage_ids = {1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 2}
 
     # Build nodes with requested features
     nodes_id_list = []
@@ -387,19 +386,7 @@ def get_tracks(get_graph) -> Callable[..., "Tracks | SolutionTracks"]:
         # Determine axis names based on ndim
         axis_names = ["z", "y", "x"] if ndim == 4 else ["y", "x"]
 
-        # Determine which graph to use based on requirements
-        if with_seg:
-            # With segmentation: use graph with mask/bbox node attrs
-            # and all computed features
-            graph = get_graph(ndim=ndim, with_features="segmentation")
-        else:
-            # Without segmentation
-            if is_solution:
-                # SolutionTracks needs track_id: use graph with pos + track_id
-                graph = get_graph(ndim=ndim, with_features="track_id")
-            else:
-                # Regular Tracks: use graph with just pos
-                graph = get_graph(ndim=ndim, with_features="position")
+        graph = get_graph(ndim=ndim, is_solution=is_solution, with_seg=with_seg)
 
         # Build FeatureDict based on what exists in the graph
         features_dict = {
@@ -408,13 +395,9 @@ def get_tracks(get_graph) -> Callable[..., "Tracks | SolutionTracks"]:
         }
 
         if with_seg:
-            # Graph has pre-computed features (area, iou, track_id, mask, bbox)
             features_dict["area"] = Area(ndim=ndim)
             features_dict["iou"] = IoU()
-            features_dict["track_id"] = TrackletID()
-            features_dict["lineage_id"] = LineageID()
-        elif is_solution:
-            # SolutionTracks without seg: has track_id but not area/iou/mask/bbox
+        if is_solution:
             features_dict["track_id"] = TrackletID()
             features_dict["lineage_id"] = LineageID()
 
@@ -422,7 +405,7 @@ def get_tracks(get_graph) -> Callable[..., "Tracks | SolutionTracks"]:
             features=features_dict,
             time_key="t",
             position_key="pos",
-            tracklet_key="track_id" if (with_seg or is_solution) else None,
+            tracklet_key="track_id" if is_solution else None,
             lineage_key="lineage_id" if is_solution else None,
         )
 
@@ -470,6 +453,7 @@ def graph_2d_list(tmp_path) -> td.graph.GraphView:
     graph.add_node_attr_key("x", default_value=0.0, dtype=pl.Float64)
     graph.add_node_attr_key("area", default_value=0.0, dtype=pl.Float64)
     graph.add_node_attr_key("track_id", default_value=0.0, dtype=pl.Float64)
+    # TODO Teun: why don't we add lineage_id here?
 
     graph.bulk_add_nodes(nodes=nodes, indices=[1, 2])
     return graph
@@ -484,50 +468,40 @@ def sphere(center, radius, shape):
 
 
 @pytest.fixture
-def get_graph(request) -> Callable[..., td.graph.GraphView]:
-    """Factory fixture to get graph by ndim and feature level.
+def get_graph(tmp_path) -> Callable[..., td.graph.GraphView]:
+    """Factory fixture to create a graph with configurable features.
 
     Args:
         ndim: 3 for 2D spatial + time, 4 for 3D spatial + time
-        with_features: Feature level to include:
-            - "clean": time only
-            - "position": time + pos
-            - "track_id": time + pos + track_id and lineage_id (for SolutionTracks
-                without seg)
-            - "segmentation": time + pos + track_id + area + iou + mask + bbox
+        with_pos: Include position attribute (default True)
+        is_solution: Include track_id and lineage_id (default False)
+        with_seg: Include mask, bbox, area, and iou (default False)
 
     Returns:
-        A deep copy of the requested graph
+        A newly created graph with the requested features
 
     Example:
-        graph = get_graph(ndim=3, with_features="segmentation")
+        graph = get_graph(ndim=3, with_seg=True)
+        graph = get_graph(ndim=4, is_solution=True, with_seg=True)
     """
+    counter = [0]
 
-    def _get_graph(ndim: int, with_features: str = "clean") -> td.graph.GraphView:
-        if with_features == "clean":
-            graph = request.getfixturevalue("graph_clean")
-        elif with_features == "position":
-            if ndim == 3:
-                graph = request.getfixturevalue("graph_2d_with_position")
-            else:  # ndim == 4
-                graph = request.getfixturevalue("graph_3d_with_position")
-        elif with_features == "track_id":
-            if ndim == 3:
-                graph = request.getfixturevalue("graph_2d_with_track_id")
-            else:  # ndim == 4
-                graph = request.getfixturevalue("graph_3d_with_track_id")
-        elif with_features == "segmentation":
-            if ndim == 3:
-                graph = request.getfixturevalue("graph_2d_with_segmentation")
-            else:  # ndim == 4
-                graph = request.getfixturevalue("graph_3d_with_segmentation")
-        else:
-            raise ValueError(
-                f"with_features must be 'clean', 'position', 'track_id', "
-                f"or 'segmentation', got {with_features}"
-            )
-
-        # Deepcopy alternative for tracksdata graph
-        return graph.detach().filter().subgraph()
+    def _get_graph(
+        ndim: int = 3,
+        with_pos: bool = True,
+        is_solution: bool = False,
+        with_seg: bool = False,
+    ) -> td.graph.GraphView:
+        counter[0] += 1
+        db_path = str(tmp_path / f"graph_{counter[0]}.db")
+        return _make_graph(
+            ndim=ndim,
+            with_pos=with_pos,
+            with_track_id=is_solution,
+            with_area=with_seg,
+            with_iou=with_seg,
+            with_masks=with_seg,
+            database=db_path,
+        )
 
     return _get_graph

@@ -1,19 +1,18 @@
 from __future__ import annotations
 
-import itertools
 from typing import (
     TYPE_CHECKING,
     Literal,
 )
 
 import geff_spec
-import numpy as np
 import polars as pl
 import tracksdata as td
 from geff_spec import GeffMetadata
 
-from funtracks.utils import remove_tilde, setup_zarr_array, setup_zarr_group
+from funtracks.utils import remove_tilde, setup_zarr_group
 
+from .._export_segmentation import export_segmentation
 from .._utils import filter_graph_with_ancestors
 
 if TYPE_CHECKING:
@@ -29,6 +28,7 @@ def export_to_geff(
     node_ids: set[int] | None = None,
     zarr_format: Literal[2, 3] = 2,
     save_segmentation: bool = True,
+    seg_label_attr: str | None = "track_id",
 ):
     """Export the Tracks graph to geff.
 
@@ -42,7 +42,10 @@ def export_to_geff(
         zarr_format (Literal[2, 3]): Zarr format version to use. Defaults to 2
             for maximum compatibility.
         save_segmentation (bool): If True, saves the segmentation array alongside
-            the graph. Defaults to True.
+            the graph when segmentation is present. Defaults to True.
+        seg_label_attr (str | None): Node attribute used to paint cell labels in the
+            exported segmentation. Defaults to "track_id". When None, original
+            segmentation labels (node IDs) are preserved.
     """
     directory = remove_tilde(directory)
     directory = directory.resolve(strict=False)
@@ -69,8 +72,6 @@ def export_to_geff(
             if tracks.ndim == 3
             else ["time", "space", "space", "space"]
         )
-    else:
-        axis_types = None
     if tracks.scale is None:
         tracks.scale = (1.0,) * tracks.ndim
 
@@ -93,58 +94,21 @@ def export_to_geff(
         axes=axes,
     )
 
-    # Save segmentation if present
-
-    # TODO: helper function in _export_segmentation file
+    # Save segmentation if present and requested
     if save_segmentation and tracks.segmentation is not None:
-        seg_path = directory / "segmentation"
-
-        seg_data = tracks.segmentation
-        shape = seg_data.shape
-        dtype = seg_data.dtype
-
-        # TODO: this probably isn't a good chunk size - time should be 1?
-        # TODO: export to tiffs
-        chunk_size: tuple[int, ...] = (64, 64, 64)
-        chunk_size = tuple(list(chunk_size) + [1] * (len(shape) - len(chunk_size)))
-        chunk_size = chunk_size[: len(shape)]
-
-        z = setup_zarr_array(
-            seg_path,
+        export_segmentation(
+            tracks,
+            directory / "segmentation",
+            file_format="zarr",
+            label_attr=seg_label_attr,
             zarr_format=zarr_format,
-            shape=shape,
-            dtype=dtype,
-            chunks=chunk_size,
+            node_ids=set(nodes_to_keep) if node_ids is not None else None,
         )
-
-        if node_ids is not None:
-            nodes_to_keep = np.asarray(nodes_to_keep)
-
-            # to avoid having to copy the segmentation array entirely, loop over chunks,
-            # and mask out the nodes that should be kept.
-            chunk_ranges = [
-                range(0, dim, chunk) for dim, chunk in zip(shape, chunk_size, strict=True)
-            ]
-
-            for starts in itertools.product(*chunk_ranges):
-                slices = tuple(
-                    slice(start, min(start + chunk, dim))
-                    for start, chunk, dim in zip(starts, chunk_size, shape, strict=True)
-                )
-
-                block = seg_data[slices]
-                mask = np.isin(block, nodes_to_keep)
-                filtered = np.where(mask, block, 0)
-                z[slices] = filtered
-
-        else:
-            z[:] = seg_data
-
         metadata.related_objects = [
             {
                 "path": "../segmentation",
                 "type": "labels",
-                "label_prop": "seg_id",
+                "label_prop": seg_label_attr or "node_id",
             }
         ]
 

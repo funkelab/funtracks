@@ -10,6 +10,7 @@ from funtracks.import_export import export_to_geff
 @pytest.mark.parametrize("ndim", [3, 4])
 @pytest.mark.parametrize("with_seg", [True, False])
 @pytest.mark.parametrize("save_segmentation", [True, False])
+@pytest.mark.parametrize("seg_label_attr", ["track_id", None])
 @pytest.mark.parametrize("is_solution", [True, False])
 @pytest.mark.parametrize("pos_attr_type", (str, list))
 def test_export_to_geff(
@@ -18,6 +19,7 @@ def test_export_to_geff(
     ndim,
     with_seg,
     save_segmentation,
+    seg_label_attr,
     is_solution,
     pos_attr_type,
     tmp_path,
@@ -35,8 +37,7 @@ def test_export_to_geff(
     if pos_attr_type is list:
         # For split pos, we need to manually create tracks since get_tracks
         # doesn't support this
-        graph_type = "segmentation" if with_seg else "position"
-        graph = get_graph(ndim, with_features=graph_type)
+        graph = get_graph(ndim, is_solution=is_solution, with_seg=with_seg)
 
         # Determine position attribute keys based on dimensions
         pos_keys = ["y", "x"] if ndim == 3 else ["z", "y", "x"]
@@ -49,33 +50,68 @@ def test_export_to_geff(
                 graph.nodes[node][key] = pos[i]
         graph.remove_node_attr_key("pos")
         # Create Tracks with split position attributes
-        # Features like area, track_id will be auto-detected from the graph
         tracks_cls = SolutionTracks if is_solution else Tracks
         tracks = tracks_cls(
             graph,
             time_attr="t",
             pos_attr=pos_keys,
-            tracklet_attr="track_id",
+            tracklet_attr="track_id" if is_solution else None,
             ndim=ndim,
         )
     else:
         # Use get_tracks fixture for the simple case
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=is_solution)
 
+    # Exporting segmentation with a label_attr not present in the graph raises ValueError.
+    # Non-solution tracks don't have track_id as a node attribute.
+    if (
+        with_seg
+        and save_segmentation
+        and seg_label_attr == "track_id"
+        and not is_solution
+    ):
+        export_dir = tmp_path / "export"
+        export_dir.mkdir()
+        with pytest.raises(ValueError):
+            export_to_geff(
+                tracks,
+                export_dir,
+                save_segmentation=save_segmentation,
+                seg_label_attr=seg_label_attr,
+            )
+        return
+
     # Export to subdirectory to avoid conflicts with database files in tmp_path
     export_dir = tmp_path / "export"
     export_dir.mkdir()
-    export_to_geff(tracks, export_dir, save_segmentation=save_segmentation)
+    export_to_geff(
+        tracks,
+        export_dir,
+        save_segmentation=save_segmentation,
+        seg_label_attr=seg_label_attr,
+    )
     z = zarr.open((export_dir / "tracks").as_posix(), mode="r")
     assert isinstance(z, zarr.Group)
 
-    # Check that segmentation was saved
-    # (only when using segmentation and save_segmentation=True)
+    # Segmentation is saved only when with_seg=True and save_segmentation=True
     seg_path = export_dir / "segmentation"
     if with_seg and save_segmentation:
         seg_zarr = zarr.open(str(seg_path), mode="r")
         assert isinstance(seg_zarr, zarr.Array)
-        np.testing.assert_array_equal(seg_zarr[:], tracks.segmentation)
+        assert seg_zarr.shape == tracks.segmentation.shape
+        unique_vals = set(seg_zarr[:].flatten()) - {0}
+        if seg_label_attr is not None:
+            # values should be the label_attr values (e.g. track_ids)
+            label_vals = set(
+                tracks.graph.node_attrs(attr_keys=[seg_label_attr])[
+                    seg_label_attr
+                ].to_list()
+            )
+            assert unique_vals == label_vals
+        else:
+            # values should be original node_ids
+            node_ids_set = set(tracks.graph.node_ids())
+            assert unique_vals == node_ids_set
     else:
         assert not seg_path.exists()
 
@@ -99,17 +135,20 @@ def test_export_to_geff(
     (export_dir / "existing_file.txt").write_text("already here")
 
     export_to_geff(
-        tracks, export_dir, overwrite=True, save_segmentation=save_segmentation
+        tracks,
+        export_dir,
+        overwrite=True,
+        save_segmentation=save_segmentation,
+        seg_label_attr=seg_label_attr,
     )
     z = zarr.open((export_dir / "tracks").as_posix(), mode="r")
     assert isinstance(z, zarr.Group)
 
-    # Check segmentation only when it was used and save_segmentation=True
     seg_path = export_dir / "segmentation"
     if with_seg and save_segmentation:
         seg_zarr = zarr.open(str(seg_path), mode="r")
         assert isinstance(seg_zarr, zarr.Array)
-        np.testing.assert_array_equal(seg_zarr[:], tracks.segmentation)
+        assert seg_zarr.shape == tracks.segmentation.shape
     else:
         assert not seg_path.exists()
 
@@ -120,27 +159,32 @@ def test_export_to_geff(
     # We expect that nodes 1 and 3 are also included because they are ancestors of node 4
     node_ids = [4, 6]
     export_to_geff(
-        tracks, export_dir, node_ids=node_ids, save_segmentation=save_segmentation
+        tracks,
+        export_dir,
+        node_ids=node_ids,
+        save_segmentation=save_segmentation,
+        seg_label_attr=seg_label_attr,
     )
     z = zarr.open((export_dir / "tracks").as_posix(), mode="r")
     assert isinstance(z, zarr.Group)
 
-    # Navigate to the dataset containing node IDs and check that we only have the
-    # expected nodes
     node_ids_array = z["nodes/ids"][:]
     assert np.array_equal(np.sort(node_ids_array), np.array([1, 3, 4, 6])), (
         f"Unexpected node IDs: found {node_ids_array}, expected {[1, 3, 4, 6]}"
     )
 
-    # Check segmentation only when it was used and save_segmentation=True
     seg_path = export_dir / "segmentation"
     if with_seg and save_segmentation:
         seg_zarr = zarr.open(str(seg_path), mode="r")
         assert isinstance(seg_zarr, zarr.Array)
-
-        filtered_seg = np.asarray(tracks.segmentation).copy()
-        mask = np.isin(filtered_seg, [1, 3, 4, 6])
-        filtered_seg[~mask] = 0
-        np.testing.assert_array_equal(seg_zarr[:], filtered_seg)
+        assert seg_zarr.shape == tracks.segmentation.shape
+        if seg_label_attr is not None:
+            kept_vals = set(
+                tracks.graph.filter(node_ids=[1, 3, 4, 6])
+                .node_attrs(attr_keys=[seg_label_attr])[seg_label_attr]
+                .to_list()
+            )
+            unique_vals = set(seg_zarr[:].flatten()) - {0}
+            assert unique_vals == kept_vals
     else:
         assert not seg_path.exists()

@@ -12,7 +12,7 @@ track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
 @pytest.mark.parametrize("ndim", [3, 4])
 class TestRegionpropsAnnotator:
     def test_init(self, get_graph, ndim):
-        graph = get_graph(ndim, with_features="segmentation")
+        graph = get_graph(ndim, with_seg=True)
         tracks = Tracks(
             graph,
             ndim=ndim,
@@ -29,7 +29,7 @@ class TestRegionpropsAnnotator:
         )  # pos, area, ellipse_axis_radii, circularity, perimeter
 
     def test_compute_all(self, get_graph, ndim):
-        graph = get_graph(ndim, with_features="segmentation")
+        graph = get_graph(ndim, with_seg=True)
         tracks = Tracks(
             graph,
             ndim=ndim,
@@ -45,7 +45,7 @@ class TestRegionpropsAnnotator:
                 assert value is not None
 
     def test_update_all(self, get_graph, ndim):
-        graph = get_graph(ndim, with_features="segmentation")
+        graph = get_graph(ndim, with_seg=True)
         tracks = Tracks(
             graph,
             ndim=ndim,
@@ -89,7 +89,7 @@ class TestRegionpropsAnnotator:
             assert np.array_equal(actual_np, expected_np)
 
     def test_add_remove_feature(self, get_graph, ndim):
-        graph = get_graph(ndim, with_features="segmentation")
+        graph = get_graph(ndim, with_seg=True)
         tracks = Tracks(
             graph,
             ndim=ndim,
@@ -125,7 +125,7 @@ class TestRegionpropsAnnotator:
 
     def test_missing_seg(self, get_graph, ndim):
         """Test that RegionpropsAnnotator gracefully handles missing segmentation."""
-        graph = get_graph(ndim, with_features="clean")
+        graph = get_graph(ndim, with_seg=False)
         tracks = Tracks(graph, ndim=ndim, **track_attrs)
         rp_ann = RegionpropsAnnotator(tracks)
         assert len(rp_ann.features) == 0
@@ -136,7 +136,7 @@ class TestRegionpropsAnnotator:
         """Test that RegionpropsAnnotator ignores actions that don't affect
         segmentation.
         """
-        graph = get_graph(ndim, with_features="segmentation")
+        graph = get_graph(ndim, is_solution=True, with_seg=True)
         tracks = SolutionTracks(
             graph,
             ndim=ndim,
