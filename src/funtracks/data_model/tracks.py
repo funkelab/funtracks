@@ -53,6 +53,7 @@ class Tracks:
     """
 
     refresh = Signal(object)
+    action_applied = Signal(object)
 
     def __init__(
         self,
@@ -782,6 +783,7 @@ class Tracks:
         Args:
             action: The action that triggered this notification
         """
+        self.action_applied.emit(action)
         self.annotators.update(action)
 
     def get_available_features(self) -> dict[str, Feature]:
