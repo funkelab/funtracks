@@ -100,9 +100,13 @@ def export_to_geff(
     # Save segmentation if present and requested
     if save_segmentation and tracks.segmentation is not None:
         seg_name = "segmentation.tif" if seg_file_format == "tiff" else "segmentation"
+        # Tiff is saved next to (sibling of) the geff directory to avoid napari
+        # misidentifying it as zarr when the geff directory has a .zarr extension.
+        seg_parent = directory.parent if seg_file_format == "tiff" else directory
+        rel_prefix = "../.." if seg_file_format == "tiff" else ".."
         export_segmentation(
             tracks,
-            directory / seg_name,
+            seg_parent / seg_name,
             file_format=seg_file_format,
             label_attr=seg_label_attr,
             zarr_format=zarr_format,
@@ -110,7 +114,7 @@ def export_to_geff(
         )
         metadata.related_objects = [
             {
-                "path": f"../{seg_name}",
+                "path": f"{rel_prefix}/{seg_name}",
                 "type": "labels",
                 "label_prop": seg_label_attr or "node_id",
             }

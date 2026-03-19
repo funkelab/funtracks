@@ -200,11 +200,12 @@ def test_export_to_geff_seg_tiff(get_tracks, ndim, tmp_path):
 
     export_to_geff(tracks, export_dir, seg_file_format="tiff")
 
-    # tiff file should exist, zarr segmentation directory should not
-    assert (export_dir / "segmentation.tif").exists()
+    # tiff is saved next to (sibling of) the geff directory, not inside it
+    assert (tmp_path / "segmentation.tif").exists()
+    assert not (export_dir / "segmentation.tif").exists()
     assert not (export_dir / "segmentation").exists()
 
-    seg_arr = tifffile.imread(str(export_dir / "segmentation.tif"))
+    seg_arr = tifffile.imread(str(tmp_path / "segmentation.tif"))
     assert seg_arr.shape == tracks.segmentation.shape
 
     # values should be track_ids (default seg_label_attr="track_id")
@@ -212,7 +213,7 @@ def test_export_to_geff_seg_tiff(get_tracks, ndim, tmp_path):
     track_ids = set(tracks.graph.node_attrs(attr_keys=["track_id"])["track_id"].to_list())
     assert unique_vals == track_ids
 
-    # Check metadata references the tiff path
+    # Check metadata references the tiff path with ../../ prefix (sibling of geff dir)
     z = zarr.open((export_dir / "tracks").as_posix(), mode="r")
     related = dict(z.attrs)["geff"].get("related_objects", [])
-    assert any("segmentation.tif" in obj["path"] for obj in related)
+    assert any(obj["path"] == "../../segmentation.tif" for obj in related)
