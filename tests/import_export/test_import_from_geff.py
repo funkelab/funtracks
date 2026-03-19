@@ -627,3 +627,27 @@ def test_import_from_geff_roundtrip_auto_axes(tmp_path):
     np.testing.assert_array_equal(
         np.array(loaded_bbox, dtype=np.int64), np.array(bbox, dtype=np.int64)
     )
+
+
+def test_get_time_works_after_import(valid_geff):
+    """Regression test: tracks.get_time() must work on a SolutionTracks returned by
+    import_from_geff().
+
+    Previously, TracksBuilder.build() stored time as "t" in the graph (tracksdata
+    convention) but created SolutionTracks(time_attr=TIME_ATTR) where TIME_ATTR="time".
+    This caused features.time_key="time" while the graph only had attribute "t",
+    making get_time() raise KeyError: 'time'.
+    """
+    store, _ = valid_geff
+    name_map = {"time": "t", "pos": ["y", "x"]}
+    tracks = import_from_geff(store, name_map)
+
+    for node_id in tracks.graph.node_ids():
+        # This must not raise KeyError: 'time'
+        t = tracks.get_time(node_id)
+        assert isinstance(t, int), f"get_time() should return int, got {type(t)}"
+
+    # get_times() on all nodes must also work
+    all_node_ids = list(tracks.graph.node_ids())
+    times = tracks.get_times(all_node_ids)
+    assert len(times) == len(all_node_ids)

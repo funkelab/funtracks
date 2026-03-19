@@ -731,10 +731,12 @@ class TracksBuilder(ABC):
             graph = add_masks_and_bboxes_to_graph(graph, segmentation_array)
 
         # 7. Create SolutionTracks
+        # construct_graph() always stores time as "t" (tracksdata convention),
+        # regardless of TIME_ATTR, so we pass "t" here explicitly.
         tracks = SolutionTracks(
             graph=graph,
             pos_attr="pos",
-            time_attr=self.TIME_ATTR,
+            time_attr="t",
             ndim=self.ndim,
             scale=scale,
         )
