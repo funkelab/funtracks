@@ -1,6 +1,7 @@
 import numpy as np
 import polars as pl
 import pytest
+import tifffile
 import zarr
 
 from funtracks.data_model import SolutionTracks, Tracks
@@ -188,3 +189,30 @@ def test_export_to_geff(
             assert unique_vals == kept_vals
     else:
         assert not seg_path.exists()
+
+
+@pytest.mark.parametrize("ndim", [3, 4], ids=["2d", "3d"])
+def test_export_to_geff_seg_tiff(get_tracks, ndim, tmp_path):
+    """Test that segmentation can be exported as tiff alongside the geff graph."""
+    tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
+    export_dir = tmp_path / "export"
+    export_dir.mkdir()
+
+    export_to_geff(tracks, export_dir, seg_file_format="tiff")
+
+    # tiff file should exist, zarr segmentation directory should not
+    assert (export_dir / "segmentation.tif").exists()
+    assert not (export_dir / "segmentation").exists()
+
+    seg_arr = tifffile.imread(str(export_dir / "segmentation.tif"))
+    assert seg_arr.shape == tracks.segmentation.shape
+
+    # values should be track_ids (default seg_label_attr="track_id")
+    unique_vals = set(seg_arr.flatten()) - {0}
+    track_ids = set(tracks.graph.node_attrs(attr_keys=["track_id"])["track_id"].to_list())
+    assert unique_vals == track_ids
+
+    # Check metadata references the tiff path
+    z = zarr.open((export_dir / "tracks").as_posix(), mode="r")
+    related = dict(z.attrs)["geff"].get("related_objects", [])
+    assert any("segmentation.tif" in obj["path"] for obj in related)

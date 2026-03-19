@@ -29,6 +29,7 @@ def export_to_geff(
     zarr_format: Literal[2, 3] = 2,
     save_segmentation: bool = True,
     seg_label_attr: str | None = "track_id",
+    seg_file_format: Literal["zarr", "tiff"] = "zarr",
 ):
     """Export the Tracks graph to geff.
 
@@ -46,6 +47,8 @@ def export_to_geff(
         seg_label_attr (str | None): Node attribute used to paint cell labels in the
             exported segmentation. Defaults to "track_id". When None, original
             segmentation labels (node IDs) are preserved.
+        seg_file_format: Output format for the segmentation, either "zarr" or "tiff".
+            Defaults to "zarr".
     """
     directory = remove_tilde(directory)
     directory = directory.resolve(strict=False)
@@ -96,17 +99,18 @@ def export_to_geff(
 
     # Save segmentation if present and requested
     if save_segmentation and tracks.segmentation is not None:
+        seg_name = "segmentation.tif" if seg_file_format == "tiff" else "segmentation"
         export_segmentation(
             tracks,
-            directory / "segmentation",
-            file_format="zarr",
+            directory / seg_name,
+            file_format=seg_file_format,
             label_attr=seg_label_attr,
             zarr_format=zarr_format,
             node_ids=set(nodes_to_keep) if node_ids is not None else None,
         )
         metadata.related_objects = [
             {
-                "path": "../segmentation",
+                "path": f"../{seg_name}",
                 "type": "labels",
                 "label_prop": seg_label_attr or "node_id",
             }
