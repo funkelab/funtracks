@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING
 from geff._typing import InMemoryGeff
 from geff.core_io._base_read import read_to_memory
 
+from funtracks.annotators import RegionpropsAnnotator
+
 from .._tracks_builder import TracksBuilder, flatten_name_map
 
 if TYPE_CHECKING:
@@ -153,6 +155,9 @@ class GeffTracksBuilder(TracksBuilder):
         Args:
             source_path: Path to GEFF zarr store
         """
+        import warnings
+
+        import zarr as _zarr
         from geff_spec import GeffMetadata
 
         metadata = GeffMetadata.read(source_path)
@@ -160,6 +165,139 @@ class GeffTracksBuilder(TracksBuilder):
         # Extract property names from metadata
         self.importable_node_props = list(metadata.node_props_metadata.keys())
         self.importable_edge_props = list(metadata.edge_props_metadata.keys())
+
+        # Store axes metadata for use in infer_node_name_map
+        self._geff_axes = metadata.axes or []
+
+        # Read segmentation_shape written by export_to_geff (stored as an extra
+        # zarr attribute alongside the geff metadata).
+        # source_path may be a filesystem Path or an in-memory zarr Store,
+        # so pass it directly without str() conversion.
+        try:
+            z = _zarr.open(source_path, mode="r")
+            raw = dict(z.attrs).get("segmentation_shape")
+        except (OSError, KeyError, ValueError):
+            raw = None
+        self._segmentation_shape = tuple(raw) if raw is not None else None
+
+        # Warn when masks/bboxes are present but segmentation_shape is absent.
+        # This happens with GEFFs written by older funtracks or external tools.
+        has_masks = (
+            "mask" in self.importable_node_props and "bbox" in self.importable_node_props
+        )
+        if has_masks and self._segmentation_shape is None:
+            warnings.warn(
+                "GEFF contains 'mask' and 'bbox' node attributes but no "
+                "'segmentation_shape' metadata. The segmentation cannot be "
+                "reconstructed. Re-export with an updated version of funtracks "
+                "to preserve the segmentation.",
+                UserWarning,
+                stacklevel=2,
+            )
+
+    def infer_node_name_map(self) -> dict[str, str | list[str]]:
+        """Derive time and position mapping from geff axes metadata.
+
+        When axes with typed metadata (type="time" / type="space") are present,
+        uses them directly instead of falling back to fuzzy string matching, which
+        can misassign properties when many non-spatiotemporal properties are present.
+
+        Falls back to the base-class fuzzy matching when axes metadata is absent.
+
+        Returns:
+            Inferred node_name_map mapping standard keys to source property names
+        """
+        import tracksdata as td
+
+        # Tracksdata-internal attributes are added by the builder and should not
+        # appear in the node name map (avoids collision with edge-side solution attr).
+        internal_attrs = {td.DEFAULT_ATTR_KEYS.SOLUTION}
+
+        geff_axes = getattr(self, "_geff_axes", [])
+        if geff_axes:
+            time_axes = [ax.name for ax in geff_axes if ax.type == "time"]
+            space_axes = [ax.name for ax in geff_axes if ax.type == "space"]
+
+            if time_axes and space_axes:
+                axis_props = set(time_axes + space_axes)
+                node_name_map: dict[str, str | list[str]] = {
+                    "time": time_axes[0],
+                    "pos": space_axes,
+                }
+                # Pass all remaining non-internal properties through unchanged
+                for prop in self.importable_node_props:
+                    if prop not in axis_props and prop not in internal_attrs:
+                        node_name_map[prop] = prop
+                return node_name_map
+
+        # Fall back to fuzzy matching when axes metadata is absent or incomplete
+        return super().infer_node_name_map()
+
+    def build(self, *args, **kwargs):
+        """Build SolutionTracks and reconstruct Mask objects and segmentation.
+
+        The geff format serialises mask data as plain numeric arrays (zarr cannot
+        store arbitrary Python objects). After loading we post-process every node
+        that carries both a ``mask`` and a ``bbox`` attribute and wrap the raw array
+        back into a :class:`tracksdata.nodes._mask.Mask` instance, exactly as
+        tracksdata's own ``from_geff`` does.
+
+        Additionally, if ``segmentation_shape`` was written to the zarr attrs during
+        export, restore it in the graph metadata and reconstruct the segmentation
+        as a :class:`tracksdata.array.GraphArrayView`.
+        """
+        import tracksdata as td
+        from tracksdata.array import GraphArrayView
+        from tracksdata.nodes._mask import Mask
+
+        tracks = super().build(*args, **kwargs)
+
+        mask_key = td.DEFAULT_ATTR_KEYS.MASK
+        bbox_key = td.DEFAULT_ATTR_KEYS.BBOX
+        graph = tracks.graph
+
+        if mask_key in graph.node_attr_keys() and bbox_key in graph.node_attr_keys():
+            df = graph.node_attrs(attr_keys=[mask_key, bbox_key])
+            node_ids = list(graph.node_ids())
+            for node_id, mask_val, bbox_val in zip(
+                node_ids, df[mask_key], df[bbox_key], strict=True
+            ):
+                if not isinstance(mask_val, Mask):
+                    graph.update_node_attrs(
+                        attrs={mask_key: [Mask(mask_val.astype(bool), bbox=bbox_val)]},
+                        node_ids=[node_id],
+                    )
+
+            # Reconstruct segmentation from segmentation_shape written by export_to_geff.
+            # Tracks.__init__ already ran (segmentation=None because graph metadata
+            # was not yet populated), so we create the GraphArrayView directly.
+            seg_shape = getattr(self, "_segmentation_shape", None)
+            if seg_shape is not None and tracks.segmentation is None:
+                graph.update_metadata(segmentation_shape=seg_shape)
+                tracks.segmentation = GraphArrayView(
+                    graph=graph,
+                    shape=seg_shape,
+                    attr_key="node_id",
+                    offset=0,
+                )
+                # RegionpropsAnnotator was not created during __init__ because
+                # segmentation was None at that point. Now that segmentation is
+                # available, add it so that newly painted cells get their position
+                # and area computed correctly.
+                if not any(
+                    isinstance(a, RegionpropsAnnotator) for a in tracks.annotators
+                ):
+                    pos_key = (
+                        tracks.features.position_key
+                        if isinstance(tracks.features.position_key, str)
+                        else None
+                    )
+                    tracks.annotators.append(
+                        RegionpropsAnnotator(tracks, pos_key=pos_key)
+                    )
+                    tracks._setup_core_computed_features()
+
+        return tracks
 
     def load_source(
         self,
@@ -287,4 +425,5 @@ def import_from_geff(
         scale=scale,
         node_features=node_features,
         edge_features=edge_features,
+        node_name_map=node_name_map,
     )

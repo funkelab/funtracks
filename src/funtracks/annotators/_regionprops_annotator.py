@@ -4,6 +4,7 @@ import warnings
 from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
+from tracksdata.nodes._mask import Mask
 
 from funtracks.actions.add_delete_node import AddNode
 from funtracks.actions.update_segmentation import UpdateNodeSeg
@@ -165,30 +166,37 @@ class RegionpropsAnnotator(GraphAnnotator):
         if not keys_to_compute:
             return
 
-        seg = self.tracks.segmentation
-        for t in range(seg.shape[0]):
-            self._regionprops_update(seg[t], keys_to_compute)
+        for node_id in self.tracks.graph.node_ids():
+            mask = self.tracks.graph.nodes[node_id]["mask"]
+            self._regionprops_update(node_id, mask, keys_to_compute)
 
-    def _regionprops_update(self, seg_frame: np.ndarray, feature_keys: list[str]) -> None:
+    def _regionprops_update(
+        self, node_id: int, mask: Mask, feature_keys: list[str]
+    ) -> None:
         """Perform the regionprops computation and update all feature values for a
-        single frame of segmentation data.
+        single mask.
 
         Args:
-            seg_frame (np.ndarray): A 2D or 3D numpy array representing one time point
+            node_id (int): The node ID to update features for.
+            mask (Mask): A Mask object representing one time point
                 of segmentation data.
-            feature_keys: List of feature keys to compute (already filtered to enabled).
+            feature_keys (list): List of feature keys to compute
+                (already filtered to enabled).
         """
         spacing = None if self.tracks.scale is None else tuple(self.tracks.scale[1:])
-        for region in regionprops_extended(seg_frame, spacing=spacing):
-            node = region.label
+        for region in regionprops_extended(mask, spacing=spacing):
             # Skip labels that aren't nodes in the graph (e.g., unselected detections)
-            if node not in self.tracks.graph:
+            if not self.tracks.graph.has_node(node_id):
                 continue
             for key in feature_keys:
                 value = getattr(region, self.regionprops_names[key])
                 if isinstance(value, tuple):
-                    value = list(value)
-                self.tracks._set_node_attr(node, key, value)
+                    value = [
+                        float(v) for v in value
+                    ]  # cannot be a list of np.arrays with single values
+                elif isinstance(value, np.floating):
+                    value = float(value)
+                self.tracks._set_node_attr(node_id, key, value)
 
     def update(self, action: BasicAction):
         """Update the regionprops features based on the action.
@@ -214,10 +222,8 @@ class RegionpropsAnnotator(GraphAnnotator):
             return
 
         time = self.tracks.get_time(node)
-        seg_frame = self.tracks.segmentation[time]
-        masked_frame = np.where(seg_frame == node, node, 0)
 
-        if np.max(masked_frame) == 0:
+        if self.tracks.graph.nodes[node]["mask"].mask.sum() == 0:
             warnings.warn(
                 f"Cannot find label {node} in frame {time}: "
                 "updating regionprops values to None",
@@ -227,7 +233,8 @@ class RegionpropsAnnotator(GraphAnnotator):
                 value = None
                 self.tracks._set_node_attr(node, key, value)
         else:
-            self._regionprops_update(masked_frame, keys_to_compute)
+            mask = self.tracks.graph.nodes[node]["mask"]
+            self._regionprops_update(node, mask, keys_to_compute)
 
     def change_key(self, old_key: str, new_key: str) -> None:
         """Rename a feature key in this annotator, and related mappings.

@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 
 from funtracks.exceptions import InvalidActionError
+from funtracks.utils.tracksdata_utils import pixels_to_td_mask
 
 from ..actions._base import ActionGroup
 from ..actions.add_delete_edge import AddEdge, DeleteEdge
@@ -95,7 +96,7 @@ class UserAddNode(ActionGroup):
         pred, succ = self.tracks.get_track_neighbors(track_id, time)
 
         # check if you are adding a node to a track that divided previously
-        if pred is not None and self.tracks.graph.out_degree(pred) == 2:
+        if pred is not None and self.tracks.graph.out_degree(int(pred)) == 2:
             if not force:
                 raise InvalidActionError(
                     "Cannot add node here - upstream division event detected.",
@@ -115,7 +116,8 @@ class UserAddNode(ActionGroup):
         # downstream
         elif succ is not None:
             # check pred of succ
-            pred_of_succ = next(self.tracks.graph.predecessors(succ), None)
+            preds = self.tracks.graph.predecessors(succ)
+            pred_of_succ = preds[0] if preds else None
             if (
                 pred_of_succ is not None
                 and self.tracks.graph.out_degree(pred_of_succ) == 2
@@ -148,7 +150,8 @@ class UserAddNode(ActionGroup):
         if pred is not None and succ is not None:
             self.actions.append(DeleteEdge(tracks, (pred, succ)))
         # add predecessor and successor edges
-        self.actions.append(AddNode(tracks, node, attributes, pixels))
+        mask = pixels_to_td_mask(pixels, self.tracks.ndim) if pixels is not None else None
+        self.actions.append(AddNode(tracks, node, attributes, mask))
         if pred is not None:
             self.actions.append(AddEdge(tracks, (pred, node)))
         if succ is not None:

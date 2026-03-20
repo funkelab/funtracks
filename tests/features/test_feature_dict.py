@@ -26,7 +26,6 @@ class TestFeatureDict:
                 "value_type": "float",
                 "num_values": 1,
                 "recompute": False,
-                "required": True,
                 "default_value": None,
             },
             "x": {
@@ -34,7 +33,6 @@ class TestFeatureDict:
                 "value_type": "float",
                 "num_values": 1,
                 "recompute": False,
-                "required": True,
                 "default_value": None,
             },
         }
@@ -82,7 +80,6 @@ class TestFeatureDict:
                 "num_values": 1,
                 "display_name": "IoU",
                 "recompute": True,
-                "required": False,
                 "default_value": None,
             },
         }
@@ -105,7 +102,6 @@ class TestFeatureDict:
                 "num_values": 1,
                 "display_name": "IoU",
                 "recompute": True,
-                "required": False,
                 "default_value": None,
             },
         }
@@ -131,7 +127,6 @@ class TestFeatureDict:
                     "value_type": "float",
                     "num_values": 1,
                     "recompute": False,
-                    "required": True,
                     "default_value": None,
                 },
                 "x": {
@@ -139,7 +134,6 @@ class TestFeatureDict:
                     "value_type": "float",
                     "num_values": 1,
                     "recompute": False,
-                    "required": True,
                     "default_value": None,
                 },
             }

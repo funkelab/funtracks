@@ -1,19 +1,18 @@
 from __future__ import annotations
 
-import itertools
 from typing import (
     TYPE_CHECKING,
     Literal,
 )
 
-import geff
 import geff_spec
-import networkx as nx
-import numpy as np
+import polars as pl
+import tracksdata as td
 from geff_spec import GeffMetadata
 
-from funtracks.utils import remove_tilde, setup_zarr_array, setup_zarr_group
+from funtracks.utils import remove_tilde, setup_zarr_group
 
+from .._export_segmentation import export_segmentation
 from .._utils import filter_graph_with_ancestors
 
 if TYPE_CHECKING:
@@ -28,8 +27,11 @@ def export_to_geff(
     overwrite: bool = False,
     node_ids: set[int] | None = None,
     zarr_format: Literal[2, 3] = 2,
+    save_segmentation: bool = True,
+    seg_label_attr: str | None = "track_id",
+    seg_file_format: Literal["zarr", "tiff"] = "zarr",
 ):
-    """Export the Tracks nxgraph to geff.
+    """Export the Tracks graph to geff.
 
     Args:
         tracks (Tracks): Tracks object containing a graph to save.
@@ -40,6 +42,13 @@ def export_to_geff(
             of the given nodes. All other nodes will NOT be saved.
         zarr_format (Literal[2, 3]): Zarr format version to use. Defaults to 2
             for maximum compatibility.
+        save_segmentation (bool): If True, saves the segmentation array alongside
+            the graph when segmentation is present. Defaults to True.
+        seg_label_attr (str | None): Node attribute used to paint cell labels in the
+            exported segmentation. Defaults to "track_id". When None, original
+            segmentation labels (node IDs) are preserved.
+        seg_file_format: Output format for the segmentation, either "zarr" or "tiff".
+            Defaults to "zarr".
     """
     directory = remove_tilde(directory)
     directory = directory.resolve(strict=False)
@@ -66,92 +75,74 @@ def export_to_geff(
             if tracks.ndim == 3
             else ["time", "space", "space", "space"]
         )
-    else:
-        axis_types = None
     if tracks.scale is None:
         tracks.scale = (1.0,) * tracks.ndim
 
-    metadata = GeffMetadata(
-        geff_version=geff_spec.__version__,
-        directed=isinstance(graph, nx.DiGraph),
-        node_props_metadata={},
-        edge_props_metadata={},
-    )
-
-    # Save segmentation if present
-
-    # TODO: helper function in _export_segmentation file
-    if tracks.segmentation is not None:
-        seg_path = directory / "segmentation"
-
-        seg_data = tracks.segmentation
-        shape = seg_data.shape
-        dtype = seg_data.dtype
-
-        # TODO: this probably isn't a good chunk size - time should be 1?
-        # TODO: export to tiffs
-        chunk_size: tuple[int, ...] = (64, 64, 64)
-        chunk_size = tuple(list(chunk_size) + [1] * (len(shape) - len(chunk_size)))
-        chunk_size = chunk_size[: len(shape)]
-
-        z = setup_zarr_array(
-            seg_path,
-            zarr_format=zarr_format,
-            shape=shape,
-            dtype=dtype,
-            chunks=chunk_size,
+    # Create axes metadata
+    axes = []
+    for name, axis_type, scale in zip(axis_names, axis_types, tracks.scale, strict=True):
+        axes.append(
+            {
+                "name": name,
+                "type": axis_type,
+                "scale": scale,
+            }
         )
 
-        if node_ids is not None:
-            nodes_to_keep = np.asarray(nodes_to_keep)
+    metadata = GeffMetadata(
+        geff_version=geff_spec.__version__,
+        directed=True,
+        node_props_metadata={},
+        edge_props_metadata={},
+        axes=axes,
+    )
 
-            # to avoid having to copy the segmentation array entirely, loop over chunks,
-            # and mask out the nodes that should be kept.
-            chunk_ranges = [
-                range(0, dim, chunk) for dim, chunk in zip(shape, chunk_size, strict=True)
-            ]
-
-            for starts in itertools.product(*chunk_ranges):
-                slices = tuple(
-                    slice(start, min(start + chunk, dim))
-                    for start, chunk, dim in zip(starts, chunk_size, shape, strict=True)
-                )
-
-                block = seg_data[slices]
-                mask = np.isin(block, nodes_to_keep)
-                filtered = np.where(mask, block, 0)
-                z[slices] = filtered
-
-        else:
-            z[:] = seg_data
-
+    # Save segmentation if present and requested
+    if save_segmentation and tracks.segmentation is not None:
+        seg_name = "segmentation.tif" if seg_file_format == "tiff" else "segmentation"
+        # Tiff is saved next to (sibling of) the geff directory to avoid napari
+        # misidentifying it as zarr when the geff directory has a .zarr extension.
+        seg_parent = directory.parent if seg_file_format == "tiff" else directory
+        rel_prefix = "../.." if seg_file_format == "tiff" else ".."
+        export_segmentation(
+            tracks,
+            seg_parent / seg_name,
+            file_format=seg_file_format,
+            label_attr=seg_label_attr,
+            zarr_format=zarr_format,
+            node_ids=set(nodes_to_keep) if node_ids is not None else None,
+        )
         metadata.related_objects = [
             {
-                "path": "../segmentation",
+                "path": f"{rel_prefix}/{seg_name}",
                 "type": "labels",
-                "label_prop": "seg_id",
+                "label_prop": seg_label_attr or "node_id",
             }
         ]
 
     # Filter the graph if node_ids is provided
     if node_ids is not None:
-        graph = graph.subgraph(nodes_to_keep).copy()
+        graph = graph.filter(node_ids=nodes_to_keep).subgraph()
 
-    # Save the graph in a 'tracks' folder
-    tracks_path = directory / "tracks"
-    geff.write(
-        graph=graph,
-        store=tracks_path,
-        metadata=metadata,
-        axis_names=axis_names,
-        axis_types=axis_types,
-        axis_scales=tracks.scale,
-        overwrite=overwrite,
-        zarr_format=zarr_format,
-    )
+    # Save the graph in a 'tracks.geff' folder
+    tracks_path = directory / "tracks.geff"
+    graph.to_geff(geff_store=tracks_path, geff_metadata=metadata, zarr_format=zarr_format)
+
+    # Write segmentation_shape as an extra zarr attribute when masks are present.
+    # GeffMetadata has no segmentation_shape field, so it must be stored separately.
+    # This allows import_from_geff to reconstruct the segmentation (GraphArrayView)
+    # without requiring an external segmentation file.
+    seg_shape = tracks.graph.metadata().get("segmentation_shape")
+    if seg_shape is not None:
+        import zarr as _zarr
+
+        z = _zarr.open(str(tracks_path), mode="a")
+        attrs = dict(z.attrs)
+        attrs["segmentation_shape"] = list(seg_shape)
+        z.attrs.update(attrs)
 
 
-def split_position_attr(tracks: Tracks) -> tuple[nx.DiGraph, list[str] | None]:
+def split_position_attr(tracks: Tracks) -> tuple[td.graph.GraphView, list[str] | None]:
     # TODO: this exists in unsqueeze in geff somehow?
     """Spread the spatial coordinates to separate node attrs in order to export to geff
     format.
@@ -161,23 +152,44 @@ def split_position_attr(tracks: Tracks) -> tuple[nx.DiGraph, list[str] | None]:
           converted.
 
     Returns:
-        tuple[nx.DiGraph, list[str]]: graph with a separate positional attribute for each
-            coordinate, and the axis names used to store the separate attributes
+        tuple[td.graph.GraphView, list[str] | None]: graph with a separate positional
+            attribute for each coordinate, and the axis names used to store the
+            separate attributes
 
     """
     pos_key = tracks.features.position_key
 
     if isinstance(pos_key, str):
         # Position is stored as a single attribute, need to split
-        new_graph = tracks.graph.copy()
-        new_keys = ["y", "x"]
-        if tracks.ndim == 4:
-            new_keys.insert(0, "z")
-        for _, attrs in new_graph.nodes(data=True):
-            pos = attrs.pop(pos_key)
-            for i in range(len(new_keys)):
-                attrs[new_keys[i]] = pos[i]
+        new_graph = tracks.graph.detach()
+        new_graph = new_graph.filter().subgraph()
 
+        # Register new attribute keys
+        new_graph.add_node_attr_key("x", default_value=0.0, dtype=pl.Float64)
+        new_graph.add_node_attr_key("y", default_value=0.0, dtype=pl.Float64)
+
+        # Get all position values at once
+        pos_values = new_graph.node_attrs()["pos"].to_numpy()
+        ndim = pos_values.shape[1]
+
+        if ndim == 2:
+            new_keys = ["y", "x"]
+            new_graph.update_node_attrs(
+                attrs={"x": pos_values[:, 1], "y": pos_values[:, 0]},
+                node_ids=new_graph.node_ids(),
+            )
+        elif ndim == 3:
+            new_keys = ["z", "y", "x"]
+            new_graph.add_node_attr_key("z", default_value=0.0, dtype=pl.Float64)
+            new_graph.update_node_attrs(
+                attrs={
+                    "x": pos_values[:, 2],
+                    "y": pos_values[:, 1],
+                    "z": pos_values[:, 0],
+                },
+                node_ids=new_graph.node_ids(),
+            )
+        new_graph.remove_node_attr_key(pos_key)
         return new_graph, new_keys
     elif pos_key is not None:
         # Position is already split into separate attributes

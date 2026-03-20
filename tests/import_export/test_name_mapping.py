@@ -148,7 +148,7 @@ class TestMatchFuzzy:
 class TestMatchDisplayNamesExact:
     """Test exact matching between properties and feature display names."""
 
-    def test_exact_display_name_match(self):
+    def test_exact_display_name_match(self) -> None:
         """Test exact matching with display names."""
         available_props = ["Area", "Circularity", "time"]
         display_name_to_key = {
@@ -164,7 +164,7 @@ class TestMatchDisplayNamesExact:
         assert mapping == {"area": "Area", "circularity": "Circularity"}
         assert remaining == ["time"]
 
-    def test_no_matches(self):
+    def test_no_matches(self) -> None:
         """Test when no properties match display names."""
         available_props = ["t", "x", "y"]
         display_name_to_key = {
@@ -180,14 +180,14 @@ class TestMatchDisplayNamesExact:
         assert mapping == {}
         assert remaining == ["t", "x", "y"]
 
-    def test_empty_inputs(self):
+    def test_empty_inputs(self) -> None:
         """Test with empty inputs."""
         mapping: dict = {}
         remaining = _match_display_names_exact([], {}, mapping)
         assert mapping == {}
         assert remaining == []
 
-    def test_case_sensitive(self):
+    def test_case_sensitive(self) -> None:
         """Test that exact matching is case-sensitive."""
         available_props = ["area", "AREA"]
         display_name_to_key = {"Area": ("area", 0)}
@@ -200,7 +200,7 @@ class TestMatchDisplayNamesExact:
         assert mapping == {}  # Neither "area" nor "AREA" matches "Area" exactly
         assert set(remaining) == {"area", "AREA"}
 
-    def test_multi_value_feature(self):
+    def test_multi_value_feature(self) -> None:
         """Test matching multi-value features by value_names."""
         available_props = ["major_axis", "minor_axis", "Area"]
         display_name_to_key = {
@@ -225,7 +225,7 @@ class TestMatchDisplayNamesExact:
 class TestMatchDisplayNamesFuzzy:
     """Test fuzzy matching between properties and feature display names."""
 
-    def test_case_insensitive_match(self):
+    def test_case_insensitive_match(self) -> None:
         """Test case-insensitive fuzzy matching."""
         available_props = ["area", "CIRC"]
         display_name_to_key = {
@@ -239,7 +239,7 @@ class TestMatchDisplayNamesFuzzy:
         assert "area" in mapping
         assert "circularity" in mapping
 
-    def test_abbreviation_match(self):
+    def test_abbreviation_match(self) -> None:
         """Test matching abbreviations to display names."""
         available_props = ["Circ", "Ecc"]
         display_name_to_key = {
@@ -253,7 +253,7 @@ class TestMatchDisplayNamesFuzzy:
         assert "circularity" in mapping
         assert "eccentricity" in mapping
 
-    def test_no_matches(self):
+    def test_no_matches(self) -> None:
         """Test when no fuzzy matches found."""
         available_props = ["xyz", "abc"]
         display_name_to_key = {"Area": ("area", 0)}
@@ -266,7 +266,7 @@ class TestMatchDisplayNamesFuzzy:
         assert mapping == {}
         assert set(remaining) == {"xyz", "abc"}
 
-    def test_empty_available_props(self):
+    def test_empty_available_props(self) -> None:
         """Test with empty available properties."""
         mapping: dict = {}
         remaining = _match_display_names_fuzzy([], {"Area": ("area", 0)}, mapping)
@@ -274,7 +274,7 @@ class TestMatchDisplayNamesFuzzy:
         assert mapping == {}
         assert remaining == []
 
-    def test_custom_cutoff(self):
+    def test_custom_cutoff(self) -> None:
         """Test with custom cutoff value."""
         available_props = ["Ar"]
         display_name_to_key = {"Area": ("area", 0)}
@@ -293,7 +293,7 @@ class TestMatchDisplayNamesFuzzy:
         )
         assert mapping_high == {}
 
-    def test_multi_value_feature(self):
+    def test_multi_value_feature(self) -> None:
         """Test fuzzy matching multi-value features by value_names."""
         available_props = ["Major_Axis", "Minor_Axis", "area"]
         display_name_to_key = {
