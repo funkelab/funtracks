@@ -91,7 +91,7 @@ def test_export_to_geff(
         save_segmentation=save_segmentation,
         seg_label_attr=seg_label_attr,
     )
-    z = zarr.open((export_dir / "tracks").as_posix(), mode="r")
+    z = zarr.open((export_dir / "tracks.geff").as_posix(), mode="r")
     assert isinstance(z, zarr.Group)
 
     # Segmentation is saved only when with_seg=True and save_segmentation=True
@@ -153,7 +153,7 @@ def test_export_to_geff(
         save_segmentation=save_segmentation,
         seg_label_attr=seg_label_attr,
     )
-    z = zarr.open((export_dir / "tracks").as_posix(), mode="r")
+    z = zarr.open((export_dir / "tracks.geff").as_posix(), mode="r")
     assert isinstance(z, zarr.Group)
 
     seg_path = export_dir / "segmentation"
@@ -177,7 +177,7 @@ def test_export_to_geff(
         save_segmentation=save_segmentation,
         seg_label_attr=seg_label_attr,
     )
-    z = zarr.open((export_dir / "tracks").as_posix(), mode="r")
+    z = zarr.open((export_dir / "tracks.geff").as_posix(), mode="r")
     assert isinstance(z, zarr.Group)
 
     node_ids_array = z["nodes/ids"][:]
@@ -225,6 +225,6 @@ def test_export_to_geff_seg_tiff(get_tracks, ndim, tmp_path):
     assert unique_vals == track_ids
 
     # Check metadata references the tiff path with ../../ prefix (sibling of geff dir)
-    z = zarr.open((export_dir / "tracks").as_posix(), mode="r")
+    z = zarr.open((export_dir / "tracks.geff").as_posix(), mode="r")
     related = dict(z.attrs)["geff"].get("related_objects", [])
     assert any(obj["path"] == "../../segmentation.tif" for obj in related)

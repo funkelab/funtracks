@@ -584,7 +584,7 @@ def test_import_from_geff_roundtrip_auto_axes(tmp_path):
     st = SolutionTracks(graph, ndim=3, time_attr="t")
     export_to_geff(st, run_dir)
 
-    tracks_path = run_dir / "tracks"
+    tracks_path = run_dir / "tracks.geff"
 
     # The geff file contains typed axis metadata (type="time" / type="space").
     # The builder should use that directly instead of fuzzy string matching,
@@ -684,7 +684,7 @@ def test_import_from_geff_warns_missing_segmentation_shape(tmp_path):
     st = SolutionTracks(graph, ndim=3, time_attr="t")
     export_to_geff(st, run_dir)
 
-    tracks_path = run_dir / "tracks"
+    tracks_path = run_dir / "tracks.geff"
 
     # Simulate old funtracks / external tool: remove segmentation_shape from zarr attrs.
     # Use put() (full replacement) rather than update() (merge) so the key is truly gone.

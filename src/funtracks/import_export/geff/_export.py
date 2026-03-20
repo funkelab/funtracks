@@ -124,8 +124,8 @@ def export_to_geff(
     if node_ids is not None:
         graph = graph.filter(node_ids=nodes_to_keep).subgraph()
 
-    # Save the graph in a 'tracks' folder
-    tracks_path = directory / "tracks"
+    # Save the graph in a 'tracks.geff' folder
+    tracks_path = directory / "tracks.geff"
     graph.to_geff(geff_store=tracks_path, geff_metadata=metadata, zarr_format=zarr_format)
 
     # Write segmentation_shape as an extra zarr attribute when masks are present.
