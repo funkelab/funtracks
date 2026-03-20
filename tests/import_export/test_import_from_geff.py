@@ -627,6 +627,24 @@ def test_import_from_geff_roundtrip_auto_axes(tmp_path):
     np.testing.assert_array_almost_equal(node1["pos"], [50.0, 50.0])
     assert node1["area"] == pytest.approx(1681.0)
 
+    # Regression test: RegionpropsAnnotator must be present and active after
+    # round-trip import of a GEFF with embedded segmentation. Without the fix,
+    # segmentation=None during Tracks.__init__ so the annotator was never
+    # created, causing newly painted cells to get position (0, 0) and area 0.
+    from funtracks.annotators import RegionpropsAnnotator
+
+    assert any(isinstance(a, RegionpropsAnnotator) for a in tracks.annotators), (
+        "RegionpropsAnnotator should be in the annotator registry after importing "
+        "a GEFF with embedded segmentation (mask + bbox + segmentation_shape)"
+    )
+    regionprops = next(
+        a for a in tracks.annotators if isinstance(a, RegionpropsAnnotator)
+    )
+    assert "pos" in regionprops.features, (
+        "'pos' should be activated in RegionpropsAnnotator so that newly "
+        "painted cells get their position computed correctly"
+    )
+
     # The geff format stores mask data as a plain numeric array; funtracks must
     # reconstruct the Mask wrapper from the raw array + bbox after loading.
     loaded_mask = node1[td.DEFAULT_ATTR_KEYS.MASK]

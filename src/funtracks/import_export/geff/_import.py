@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING
 from geff._typing import InMemoryGeff
 from geff.core_io._base_read import read_to_memory
 
+from funtracks.annotators import RegionpropsAnnotator
+
 from .._tracks_builder import TracksBuilder, flatten_name_map
 
 if TYPE_CHECKING:
@@ -278,6 +280,22 @@ class GeffTracksBuilder(TracksBuilder):
                     attr_key="node_id",
                     offset=0,
                 )
+                # RegionpropsAnnotator was not created during __init__ because
+                # segmentation was None at that point. Now that segmentation is
+                # available, add it so that newly painted cells get their position
+                # and area computed correctly.
+                if not any(
+                    isinstance(a, RegionpropsAnnotator) for a in tracks.annotators
+                ):
+                    pos_key = (
+                        tracks.features.position_key
+                        if isinstance(tracks.features.position_key, str)
+                        else None
+                    )
+                    tracks.annotators.append(
+                        RegionpropsAnnotator(tracks, pos_key=pos_key)
+                    )
+                    tracks._setup_core_computed_features()
 
         return tracks
 
