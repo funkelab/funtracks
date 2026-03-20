@@ -601,12 +601,25 @@ def test_import_from_geff_roundtrip_auto_axes(tmp_path):
     )
     assert pos_mapping == ["y", "x"], f"pos should map to ['y', 'x'], got {pos_mapping}"
 
-    # The geff file has no segmentation_shape (export_to_geff only writes it when
-    # a dense segmentation array is attached). import_from_geff must succeed and
-    # return segmentation=None rather than raising.
+    # export_to_geff writes segmentation_shape as an extra zarr attribute when the
+    # graph carries mask/bbox node attributes. Verify it is present in the zarr.
+    import zarr as _zarr
+
+    z = _zarr.open(str(tracks_path), mode="r")
+    zarr_attrs = dict(z.attrs)
+    assert "segmentation_shape" in zarr_attrs, (
+        "export_to_geff should write segmentation_shape to zarr attrs when masks present"
+    )
+    assert tuple(zarr_attrs["segmentation_shape"]) == (5, 100, 100)
+
+    # import_from_geff must read segmentation_shape back from zarr attrs and
+    # reconstruct a segmentation (GraphArrayView) — not return segmentation=None.
     tracks = import_from_geff(tracks_path)
     assert tracks.graph.num_nodes() == 1
-    assert tracks.segmentation is None
+    assert tracks.segmentation is not None, (
+        "segmentation should be reconstructed from masks after round-trip"
+    )
+    assert tracks.segmentation.shape == (5, 100, 100)
 
     node1 = tracks.graph.nodes[1]
 
@@ -627,6 +640,71 @@ def test_import_from_geff_roundtrip_auto_axes(tmp_path):
     np.testing.assert_array_equal(
         np.array(loaded_bbox, dtype=np.int64), np.array(bbox, dtype=np.int64)
     )
+
+
+def test_import_from_geff_warns_missing_segmentation_shape(tmp_path):
+    """import_from_geff should warn when masks/bboxes are present but
+    segmentation_shape is absent from the zarr attributes.
+
+    This simulates a GEFF written by an older version of funtracks (before the
+    export fix) or by an external tool that stores per-node masks without writing
+    segmentation_shape. The import must still succeed, return segmentation=None,
+    and emit a UserWarning so the user knows the segmentation cannot be shown.
+    """
+    import warnings
+
+    import tracksdata as td
+    import zarr as _zarr
+
+    graph = create_empty_graphview_graph(
+        node_attributes=[
+            "pos",
+            td.DEFAULT_ATTR_KEYS.MASK,
+            td.DEFAULT_ATTR_KEYS.BBOX,
+        ],
+        ndim=3,
+    )
+    bbox = [30, 30, 71, 71]
+    graph.bulk_add_nodes(
+        nodes=[
+            {
+                "t": 0,
+                "pos": np.array([50.0, 50.0]),
+                "solution": 1,
+                td.DEFAULT_ATTR_KEYS.MASK: _make_mask(bbox),
+                td.DEFAULT_ATTR_KEYS.BBOX: np.array(bbox, dtype=np.int64),
+            }
+        ],
+        indices=[1],
+    )
+    graph.update_metadata(segmentation_shape=(5, 100, 100))
+
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    st = SolutionTracks(graph, ndim=3, time_attr="t")
+    export_to_geff(st, run_dir)
+
+    tracks_path = run_dir / "tracks"
+
+    # Simulate old funtracks / external tool: remove segmentation_shape from zarr attrs.
+    # Use put() (full replacement) rather than update() (merge) so the key is truly gone.
+    z = _zarr.open(str(tracks_path), mode="a")
+    attrs = dict(z.attrs)
+    attrs.pop("segmentation_shape", None)
+    z.attrs.put(attrs)
+
+    # import_from_geff must warn and still succeed (segmentation=None)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        tracks = import_from_geff(tracks_path)
+
+    warning_messages = [
+        str(w.message) for w in caught if issubclass(w.category, UserWarning)
+    ]
+    assert any("segmentation_shape" in msg for msg in warning_messages), (
+        f"Expected a UserWarning mentioning segmentation_shape, got: {warning_messages}"
+    )
+    assert tracks.segmentation is None
 
 
 def test_get_time_works_after_import(valid_geff):

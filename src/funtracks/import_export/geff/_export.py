@@ -128,6 +128,19 @@ def export_to_geff(
     tracks_path = directory / "tracks"
     graph.to_geff(geff_store=tracks_path, geff_metadata=metadata, zarr_format=zarr_format)
 
+    # Write segmentation_shape as an extra zarr attribute when masks are present.
+    # GeffMetadata has no segmentation_shape field, so it must be stored separately.
+    # This allows import_from_geff to reconstruct the segmentation (GraphArrayView)
+    # without requiring an external segmentation file.
+    seg_shape = tracks.graph.metadata().get("segmentation_shape")
+    if seg_shape is not None:
+        import zarr as _zarr
+
+        z = _zarr.open(str(tracks_path), mode="a")
+        attrs = dict(z.attrs)
+        attrs["segmentation_shape"] = list(seg_shape)
+        z.attrs.update(attrs)
+
 
 def split_position_attr(tracks: Tracks) -> tuple[td.graph.GraphView, list[str] | None]:
     # TODO: this exists in unsqueeze in geff somehow?

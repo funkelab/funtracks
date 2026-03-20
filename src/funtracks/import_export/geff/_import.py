@@ -153,6 +153,9 @@ class GeffTracksBuilder(TracksBuilder):
         Args:
             source_path: Path to GEFF zarr store
         """
+        import warnings
+
+        import zarr as _zarr
         from geff_spec import GeffMetadata
 
         metadata = GeffMetadata.read(source_path)
@@ -163,6 +166,32 @@ class GeffTracksBuilder(TracksBuilder):
 
         # Store axes metadata for use in infer_node_name_map
         self._geff_axes = metadata.axes or []
+
+        # Read segmentation_shape written by export_to_geff (stored as an extra
+        # zarr attribute alongside the geff metadata).
+        # source_path may be a filesystem Path or an in-memory zarr Store,
+        # so pass it directly without str() conversion.
+        try:
+            z = _zarr.open(source_path, mode="r")
+            raw = dict(z.attrs).get("segmentation_shape")
+        except (OSError, KeyError, ValueError):
+            raw = None
+        self._segmentation_shape = tuple(raw) if raw is not None else None
+
+        # Warn when masks/bboxes are present but segmentation_shape is absent.
+        # This happens with GEFFs written by older funtracks or external tools.
+        has_masks = (
+            "mask" in self.importable_node_props and "bbox" in self.importable_node_props
+        )
+        if has_masks and self._segmentation_shape is None:
+            warnings.warn(
+                "GEFF contains 'mask' and 'bbox' node attributes but no "
+                "'segmentation_shape' metadata. The segmentation cannot be "
+                "reconstructed. Re-export with an updated version of funtracks "
+                "to preserve the segmentation.",
+                UserWarning,
+                stacklevel=2,
+            )
 
     def infer_node_name_map(self) -> dict[str, str | list[str]]:
         """Derive time and position mapping from geff axes metadata.
@@ -203,15 +232,20 @@ class GeffTracksBuilder(TracksBuilder):
         return super().infer_node_name_map()
 
     def build(self, *args, **kwargs):
-        """Build SolutionTracks and reconstruct Mask objects from raw arrays.
+        """Build SolutionTracks and reconstruct Mask objects and segmentation.
 
         The geff format serialises mask data as plain numeric arrays (zarr cannot
         store arbitrary Python objects). After loading we post-process every node
         that carries both a ``mask`` and a ``bbox`` attribute and wrap the raw array
         back into a :class:`tracksdata.nodes._mask.Mask` instance, exactly as
         tracksdata's own ``from_geff`` does.
+
+        Additionally, if ``segmentation_shape`` was written to the zarr attrs during
+        export, restore it in the graph metadata and reconstruct the segmentation
+        as a :class:`tracksdata.array.GraphArrayView`.
         """
         import tracksdata as td
+        from tracksdata.array import GraphArrayView
         from tracksdata.nodes._mask import Mask
 
         tracks = super().build(*args, **kwargs)
@@ -231,6 +265,19 @@ class GeffTracksBuilder(TracksBuilder):
                         attrs={mask_key: [Mask(mask_val.astype(bool), bbox=bbox_val)]},
                         node_ids=[node_id],
                     )
+
+            # Reconstruct segmentation from segmentation_shape written by export_to_geff.
+            # Tracks.__init__ already ran (segmentation=None because graph metadata
+            # was not yet populated), so we create the GraphArrayView directly.
+            seg_shape = getattr(self, "_segmentation_shape", None)
+            if seg_shape is not None and tracks.segmentation is None:
+                graph.update_metadata(segmentation_shape=seg_shape)
+                tracks.segmentation = GraphArrayView(
+                    graph=graph,
+                    shape=seg_shape,
+                    attr_key="node_id",
+                    offset=0,
+                )
 
         return tracks
 

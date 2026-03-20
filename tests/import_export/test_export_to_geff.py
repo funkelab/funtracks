@@ -123,6 +123,17 @@ def test_export_to_geff(
     for ax in attrs["geff"]["axes"]:
         assert ax["scale"] is not None
 
+    # segmentation_shape is written as an extra zarr attr when masks are present
+    if with_seg:
+        assert "segmentation_shape" in attrs, (
+            "segmentation_shape should be in zarr attrs when graph has masks/bboxes"
+        )
+        assert tuple(attrs["segmentation_shape"]) == tracks.segmentation.shape
+    else:
+        assert "segmentation_shape" not in attrs, (
+            "segmentation_shape should not be in zarr attrs when graph has no masks"
+        )
+
     # test that providing a nondirectory path raises error
     file_path = tmp_path / "not_a_dir"
     file_path.write_text("test")
