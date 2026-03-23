@@ -49,6 +49,15 @@ def load_v1_tracks(
     attrs_file = directory / ATTRS_FILE
     attrs = _load_attrs(attrs_file)
 
+    # Older saves used 'time' instead of 't'. Rename in place so
+    # convert_graph_nx_to_td sees the current expected key.
+    first_node_attrs: dict = next(iter(graph_nx.nodes(data=True)), (None, {}))[1]
+    if "time" in first_node_attrs and "t" not in first_node_attrs:
+        for node_id in graph_nx.nodes():
+            data = graph_nx.nodes[node_id]
+            data["t"] = data.pop("time")
+        attrs["time_attr"] = "t"  # override stale FeatureDict time_key
+
     graph_td = convert_graph_nx_to_td(graph_nx)
 
     # Add mask and bbox attributes to graph if segmentation is available
