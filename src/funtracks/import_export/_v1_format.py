@@ -56,7 +56,11 @@ def load_v1_tracks(
         for node_id in graph_nx.nodes():
             data = graph_nx.nodes[node_id]
             data["t"] = data.pop("time")
-        attrs["time_attr"] = "t"  # override stale FeatureDict time_key
+        # Keep the FeatureDict in sync: rename the feature entry and update time_key
+        if isinstance(attrs.get("features"), FeatureDict):
+            fd = attrs["features"]
+            fd["t"] = fd.pop(fd.time_key)
+            fd.time_key = "t"
 
     # Old graphs could have nodes/edges with inconsistent attributes. Fill gaps
     # with 0.0 so convert_graph_nx_to_td (which infers schema from the first
