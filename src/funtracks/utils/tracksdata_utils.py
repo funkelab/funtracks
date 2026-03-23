@@ -517,9 +517,11 @@ def convert_graph_nx_to_td(graph_nx: nx.DiGraph) -> td.graph.GraphView:
                 default_value = None
                 dtype = pl.Array(pl.Float64, len(value))
             else:
-                # Scalar type - always use Float64 for numeric types from NetworkX
-                # since NetworkX doesn't enforce type consistency across nodes
-                if isinstance(value, (int, float, np.integer, np.floating)):
+                # Scalar type - preserve int vs float distinction from NetworkX
+                if isinstance(value, (int, np.integer)):
+                    default_value = 0
+                    dtype = pl.Int64
+                elif isinstance(value, (float, np.floating)):
                     default_value = 0.0
                     dtype = pl.Float64
                 else:
