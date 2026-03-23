@@ -58,6 +58,25 @@ def load_v1_tracks(
             data["t"] = data.pop("time")
         attrs["time_attr"] = "t"  # override stale FeatureDict time_key
 
+    # Old graphs could have nodes/edges with inconsistent attributes. Fill gaps
+    # with 0.0 so convert_graph_nx_to_td (which infers schema from the first
+    # node/edge) doesn't fail when later entries are missing a key.
+    all_node_keys: dict[str, float] = {}
+    for _nid, ndata in graph_nx.nodes(data=True):
+        for k in ndata:
+            all_node_keys.setdefault(k, 0.0)
+    for _nid in graph_nx.nodes():
+        for k, default in all_node_keys.items():
+            graph_nx.nodes[_nid].setdefault(k, default)
+
+    all_edge_keys: dict[str, float] = {}
+    for _src, _dst, edata in graph_nx.edges(data=True):
+        for k in edata:
+            all_edge_keys.setdefault(k, 0.0)
+    for _src, _dst, edata in graph_nx.edges(data=True):
+        for k, default in all_edge_keys.items():
+            edata.setdefault(k, default)
+
     graph_td = convert_graph_nx_to_td(graph_nx)
 
     # Add mask and bbox attributes to graph if segmentation is available
