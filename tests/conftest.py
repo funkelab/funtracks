@@ -274,7 +274,7 @@ def _make_graph(
     graph.bulk_add_nodes(nodes=nodes_attrs_list, indices=nodes_id_list)
     graph.bulk_add_edges(edges)
     if with_masks:
-        graph.update_metadata(segmentation_shape=segmentation_shape)
+        graph._update_metadata(segmentation_shape=segmentation_shape)
 
     # Add IOUs to edges if requested
     if with_iou:

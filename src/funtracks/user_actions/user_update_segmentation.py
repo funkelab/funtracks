@@ -69,7 +69,7 @@ class UserUpdateSegmentation(ActionGroup):
             assert len(np.unique(all_pixels[0])) == 1, (
                 "Can only update one time point at a time"
             )
-            time = all_pixels[0][0]
+            time = int(all_pixels[0][0])
             if self.tracks.graph.has_node(new_value):
                 mask_pixels = pixels_to_td_mask(all_pixels, self.tracks.ndim)
                 self.actions.append(

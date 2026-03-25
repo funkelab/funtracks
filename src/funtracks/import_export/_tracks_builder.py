@@ -461,6 +461,10 @@ class TracksBuilder(ABC):
                 # set missing attribute to None
                 if prop.get("missing") is not None and prop["missing"][idx]:
                     value = None
+                elif isinstance(value, np.integer):
+                    value = int(value)
+                elif isinstance(value, np.floating):
+                    value = float(value)
                 node_attr[key] = value
             for key in graph.node_attr_keys():
                 if key not in node_attr:

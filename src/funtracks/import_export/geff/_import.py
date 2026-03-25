@@ -273,7 +273,7 @@ class GeffTracksBuilder(TracksBuilder):
             # was not yet populated), so we create the GraphArrayView directly.
             seg_shape = getattr(self, "_segmentation_shape", None)
             if seg_shape is not None and tracks.segmentation is None:
-                graph.update_metadata(segmentation_shape=seg_shape)
+                graph._update_metadata(segmentation_shape=seg_shape)
                 tracks.segmentation = GraphArrayView(
                     graph=graph,
                     shape=seg_shape,

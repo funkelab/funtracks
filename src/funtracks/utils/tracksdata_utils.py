@@ -412,7 +412,7 @@ def add_masks_and_bboxes_to_graph(
             graph.nodes[label]["mask"] = [mask]
             graph.nodes[label]["bbox"] = [mask.bbox]
 
-    graph.update_metadata(segmentation_shape=segmentation.shape)
+    graph._update_metadata(segmentation_shape=segmentation.shape)
 
     return graph
 

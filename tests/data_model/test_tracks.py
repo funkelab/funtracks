@@ -238,7 +238,7 @@ def test_undo_redo(graph_2d_with_segmentation):
     assert tracks.redo() is False
 
     # Perform an action - add a custom attribute
-    tracks.graph.add_node_attr_key("custom_label", default_value=None, dtype=object)
+    tracks.graph.add_node_attr_key("custom_label", default_value=None, dtype=pl.Object)
 
     action1 = UpdateNodeAttrs(tracks, node=1, attrs={"custom_label": "test_value"})
     tracks.action_history.add_new_action(action1)
@@ -259,7 +259,7 @@ def test_undo_redo(graph_2d_with_segmentation):
     assert tracks.redo() is False
 
     # Perform another action
-    tracks.graph.add_node_attr_key("another_label", default_value=None, dtype=object)
+    tracks.graph.add_node_attr_key("another_label", default_value=None, dtype=pl.Object)
     action2 = UpdateNodeAttrs(tracks, node=2, attrs={"another_label": "second_value"})
     tracks.action_history.add_new_action(action2)
     assert tracks.get_node_attr(2, "another_label") == "second_value"

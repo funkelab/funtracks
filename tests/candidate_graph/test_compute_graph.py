@@ -33,7 +33,7 @@ def test_graph_from_segmentation_2d(get_tracks):
         assert cand_graph.nodes[node]["bbox"] is not None
 
     # segmentation shape must be stored in graph metadata
-    assert tuple(cand_graph.metadata().get("segmentation_shape")) == segmentation_2d.shape
+    assert tuple(cand_graph.metadata["segmentation_shape"]) == segmentation_2d.shape
 
     # Only adjacent frames are connected; nodes 5,6 at t=4 are isolated
     # because t=3 has no nodes (add_cand_edges only links frame → frame+1)
@@ -79,7 +79,7 @@ def test_graph_from_segmentation_3d(get_tracks):
         assert cand_graph.nodes[node]["bbox"] is not None
 
     # segmentation shape must be stored in graph metadata
-    assert tuple(cand_graph.metadata().get("segmentation_shape")) == segmentation_3d.shape
+    assert tuple(cand_graph.metadata["segmentation_shape"]) == segmentation_3d.shape
 
     # Only adjacent frames connected; nodes 5,6 at t=4 isolated (gap at t=3)
     assert sorted(cand_graph.edge_list()) == [[1, 2], [1, 3], [2, 4], [3, 4]]

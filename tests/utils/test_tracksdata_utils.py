@@ -166,7 +166,7 @@ def test_memory_graph_survives_thread_boundary():
 
     graph = result["graph"]
 
-    # This calls graph.metadata() internally via BaseGraph.from_other().
+    # This calls graph.metadata internally via BaseGraph.from_other().
     # With :memory: + default connection pool it opens a new empty DB → crash.
     detached = graph.detach()
 
