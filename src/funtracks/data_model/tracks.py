@@ -106,7 +106,7 @@ class Tracks:
             # segmentation_shape is present. A graph can carry per-node mask
             # attributes without a full dense segmentation array (e.g. after a
             # geff round-trip that was saved without segmentation).
-            seg_shape = graph.metadata().get("segmentation_shape")
+            seg_shape = graph.metadata.get("segmentation_shape")
             if seg_shape is not None:
                 try:
                     array_view = GraphArrayView(

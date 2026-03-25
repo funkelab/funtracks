@@ -39,7 +39,8 @@ dependencies =[
     "pandas>=2.3.3",
     "zarr>=2.18,<4",
     "numcodecs>=0.13,<0.16",
-    "tracksdata[spatial]==0.1.0rc1",
+    #TODO Teun: replace by tracksdata release when available
+    "tracksdata[spatial] @ git+https://github.com/royerlab/tracksdata@1564427ed3952c065b2c94c57925fbf1f66c0c47",
     "tqdm>=4.66.1",
 ]
 
