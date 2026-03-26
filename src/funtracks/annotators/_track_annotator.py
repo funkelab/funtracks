@@ -5,6 +5,7 @@ from collections import defaultdict
 from typing import TYPE_CHECKING
 
 import rustworkx as rx
+import tracksdata as td
 
 from funtracks.actions import AddNode, DeleteNode, UpdateTrackIDs
 from funtracks.data_model import SolutionTracks
@@ -132,17 +133,15 @@ class TrackAnnotator(GraphAnnotator):
             tuple[int, dict[int, list[int]]]: The maximum id value, and a mapping from
                 ids to a list of nodes with that id.
         """
+        if key not in self.tracks.graph.node_attr_keys():
+            return 0, {}
+        df = self.tracks.graph.node_attrs(attr_keys=[td.DEFAULT_ATTR_KEYS.NODE_ID, key])
         id_to_nodes = defaultdict(list)
-        max_id = 0
-        for node in self.tracks.graph.node_ids():
-            if key not in self.tracks.graph.node_attr_keys():
-                continue
-            _id: int = self.tracks.get_node_attr(node, key)
+        for node, _id in zip(df[td.DEFAULT_ATTR_KEYS.NODE_ID], df[key], strict=True):
             if _id is None:
                 continue
             id_to_nodes[_id].append(node)
-            if _id > max_id:
-                max_id = _id
+        max_id = max(id_to_nodes.keys(), default=0)
         return max_id, dict(id_to_nodes)
 
     def compute(self, feature_keys: list[str] | None = None) -> None:
