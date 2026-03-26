@@ -259,14 +259,20 @@ class GeffTracksBuilder(TracksBuilder):
         if mask_key in graph.node_attr_keys() and bbox_key in graph.node_attr_keys():
             df = graph.node_attrs(attr_keys=[mask_key, bbox_key])
             node_ids = list(graph.node_ids())
+            nodes_to_update = []
+            new_masks = []
             for node_id, mask_val, bbox_val in zip(
                 node_ids, df[mask_key], df[bbox_key], strict=True
             ):
                 if not isinstance(mask_val, Mask):
-                    graph.update_node_attrs(
-                        attrs={mask_key: [Mask(mask_val.astype(bool), bbox=bbox_val)]},
-                        node_ids=[node_id],
-                    )
+                    nodes_to_update.append(node_id)
+                    new_masks.append(Mask(mask_val.astype(bool), bbox=bbox_val))
+
+            if nodes_to_update:
+                graph.update_node_attrs(
+                    attrs={mask_key: new_masks},
+                    node_ids=nodes_to_update,
+                )
 
             # Reconstruct segmentation from segmentation_shape written by export_to_geff.
             # Tracks.__init__ already ran (segmentation=None because graph metadata
