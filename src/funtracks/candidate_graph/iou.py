@@ -107,7 +107,7 @@ def add_iou(
 
     frames = sorted(node_frame_dict.keys())
     ious = _get_iou_dict(segmentation, multiseg=multiseg)
-    for frame in tqdm(frames):
+    for frame in tqdm(frames, desc="Adding IOU to edges"):
         if frame + 1 not in node_frame_dict:
             continue
         next_nodes = node_frame_dict[frame + 1]

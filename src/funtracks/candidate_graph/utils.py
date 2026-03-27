@@ -60,7 +60,7 @@ def nodes_from_segmentation(
     nodes_attrs_list: list[dict] = []
     nodes_id_list: list[int] = []
 
-    for t in tqdm(range(len(segmentation))):
+    for t in tqdm(range(len(segmentation)), desc="Extracting nodes from segmentation"):
         segs = segmentation[t]
         nodes_in_frame: list[int] = []
         props = regionprops(segs, spacing=tuple(scale[1:]))
@@ -203,7 +203,7 @@ def add_cand_edges(
     frames = sorted(node_frame_dict.keys())
     prev_node_ids = node_frame_dict[frames[0]]
     prev_kdtree = create_kdtree(cand_graph, prev_node_ids)
-    for frame in tqdm(frames):
+    for frame in tqdm(frames, desc="Adding candidate edges"):
         if frame + 1 not in node_frame_dict:
             continue
         next_node_ids = node_frame_dict[frame + 1]

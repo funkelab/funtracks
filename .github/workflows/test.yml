@@ -48,3 +48,69 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: funkelab/funtracks
+
+  benchmark:
+    name: Benchmark (${{ matrix.platform }})
+    runs-on: ${{ matrix.platform }}
+    if: github.event_name == 'pull_request'
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [ubuntu-latest, macos-latest, windows-latest]
+    env:
+      UV_NO_SYNC: "1"
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 50
+
+      - name: Set up Python
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.13"
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --no-dev --group testing
+
+      - name: Retrieve cached baseline if available
+        uses: actions/cache/restore@v5
+        id: cache_baseline
+        with:
+          path: baseline.json
+          key: benchmark-${{ matrix.platform }}-${{ github.event.pull_request.base.sha }}
+
+      - name: Run baseline benchmark if not in cache
+        if: steps.cache_baseline.outputs.cache-hit != 'true'
+        run: |
+          git checkout ${{ github.event.pull_request.base.sha }}
+          uv run pytest tests/benchmarks/bench_candidate_graph.py --benchmark-json baseline.json
+
+      - name: Cache baseline results
+        uses: actions/cache/save@v5
+        if: steps.cache_baseline.outputs.cache-hit != 'true'
+        with:
+          path: baseline.json
+          key: benchmark-${{ matrix.platform }}-${{ github.event.pull_request.base.sha }}
+
+      - name: Run benchmark on PR head
+        run: |
+          git checkout ${{ github.event.pull_request.head.sha }}
+          uv run pytest tests/benchmarks/bench_candidate_graph.py --benchmark-json pr.json
+
+      - name: Generate report
+        id: report
+        run: |
+          uv run --with pandas --with tabulate python .github/workflows/benchmark_pr.py baseline.json pr.json report.md "Benchmark: ${{ matrix.platform }}"
+        continue-on-error: true
+
+      - name: Comment on commit with report
+        uses: peter-evans/commit-comment@v3
+        if: github.event.pull_request.head.repo.fork == false
+        with:
+          body-path: report.md
+
+      - name: Fail if regression detected
+        if: steps.report.outcome == 'failure'
+        run: exit 1
