@@ -13,21 +13,21 @@ class TestUserSwapPredecessors:
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
 
         # Node 5 (t=4) has pred 4, node 6 (t=4) has no pred
-        assert (4, 5) in tracks.graph.edges
+        assert tracks.graph.has_edge(4, 5)
         assert list(tracks.graph.predecessors(6)) == []
         old_track_id_5 = tracks.get_track_id(5)
         old_track_id_6 = tracks.get_track_id(6)
 
         action = UserSwapPredecessors(tracks, order)
 
-        assert (4, 6) in tracks.graph.edges
-        assert (4, 5) not in tracks.graph.edges
+        assert tracks.graph.has_edge(4, 6)
+        assert not tracks.graph.has_edge(4, 5)
         assert tracks.get_track_id(6) == old_track_id_5
         assert tracks.get_track_id(5) != old_track_id_5
 
         action.inverse()
-        assert (4, 5) in tracks.graph.edges
-        assert (4, 6) not in tracks.graph.edges
+        assert tracks.graph.has_edge(4, 5)
+        assert not tracks.graph.has_edge(4, 6)
         assert tracks.get_track_id(5) == old_track_id_5
         assert tracks.get_track_id(6) == old_track_id_6
 
@@ -51,14 +51,14 @@ class TestUserSwapPredecessors:
 
         action = UserSwapPredecessors(tracks, (5, 6))
 
-        assert (4, 6) in tracks.graph.edges
-        assert (2, 5) in tracks.graph.edges
-        assert (4, 5) not in tracks.graph.edges
-        assert (2, 6) not in tracks.graph.edges
+        assert tracks.graph.has_edge(4, 6)
+        assert tracks.graph.has_edge(2, 5)
+        assert not tracks.graph.has_edge(4, 5)
+        assert not tracks.graph.has_edge(2, 6)
 
         action.inverse()
-        assert (4, 5) in tracks.graph.edges
-        assert (2, 6) in tracks.graph.edges
+        assert tracks.graph.has_edge(4, 5)
+        assert tracks.graph.has_edge(2, 6)
         assert tracks.get_track_id(5) == old_track_id_5
         assert tracks.get_track_id(6) == old_track_id_6
 
@@ -73,14 +73,14 @@ class TestUserSwapPredecessors:
 
         action = UserSwapPredecessors(tracks, (4, 6))
 
-        assert (3, 6) in tracks.graph.edges
-        assert (2, 4) in tracks.graph.edges
-        assert (3, 4) not in tracks.graph.edges
-        assert (2, 6) not in tracks.graph.edges
+        assert tracks.graph.has_edge(3, 6)
+        assert tracks.graph.has_edge(2, 4)
+        assert not tracks.graph.has_edge(3, 4)
+        assert not tracks.graph.has_edge(2, 6)
 
         action.inverse()
-        assert (3, 4) in tracks.graph.edges
-        assert (2, 6) in tracks.graph.edges
+        assert tracks.graph.has_edge(3, 4)
+        assert tracks.graph.has_edge(2, 6)
 
     def test_different_times_invalid_raises(self, get_tracks, ndim, with_seg):
         """Test error when predecessor would not be before swapped node."""

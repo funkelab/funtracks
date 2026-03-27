@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
 import pandas as pd
-import tifffile
-from skimage.util import map_array
 
+from .._export_segmentation import export_segmentation
 from .._utils import filter_graph_with_ancestors
 
 if TYPE_CHECKING:
@@ -24,15 +23,17 @@ def export_to_csv(
     use_display_names: bool = False,
     export_seg: bool = False,
     seg_path: Path | str | None = None,
+    seg_label_attr: str | None = "track_id",
+    seg_file_format: Literal["zarr", "tiff"] = "zarr",
+    zarr_format: Literal[2, 3] = 2,
 ) -> None:
     """Export tracks to a CSV file.
     TODO: export_all = False for backward compatibility - display names option shouldn't
     change which columns are exported, just using which names
 
     Exports tracking data to CSV format with columns for node ID, parent ID,
-    and all registered features. Optionally also exports the segmentation, relabeled by
-    tracklet ID, as tif. If a color dictionary is provided, it will also export the
-    tracklet colors.
+    and all registered features. Optionally also exports the segmentation as zarr or
+    tiff. If a color dictionary is provided, it will also export the tracklet colors.
 
     Args:
         tracks: SolutionTracks object containing the tracking data to export
@@ -43,8 +44,15 @@ def export_to_csv(
             nodes and their ancestors will be included in the output.
         use_display_names: If True, use feature display names as column headers.
             If False (default), use raw feature keys for backward compatibility.
-        export_seg (bool): whether to export the segmentation, relabeled by tracklet ID
-        seg_path (Path | str, optional): path to save segmentation file to, if requested.
+        export_seg: Whether to export the segmentation alongside the CSV.
+        seg_path: Path to save the segmentation to. Required when export_seg=True.
+        seg_label_attr: Node attribute used to paint cell labels in the exported
+            segmentation. Defaults to "track_id". When None, original segmentation
+            labels (node IDs) are preserved.
+        seg_file_format: Output format for the segmentation, either "zarr" or "tiff".
+            Defaults to "zarr".
+        zarr_format: Zarr format version. Only used when seg_file_format="zarr".
+            Defaults to 2.
 
     Example:
         >>> from funtracks.import_export import export_to_csv
@@ -53,8 +61,11 @@ def export_to_csv(
         >>> export_to_csv(tracks, "output.csv", use_display_names=True)
         >>> # Export only specific nodes
         >>> export_to_csv(tracks, "filtered.csv", node_ids={1, 2, 3})
-        >>> # Export with segmentation
-        >>> export_to_csv(tracks, "filtered.csv", export_seg=True, seg_path="seg.tif")
+        >>> # Export with segmentation as zarr painted by track_id
+        >>> export_to_csv(tracks, "out.csv", export_seg=True, seg_path="seg_zarr")
+        >>> # Export with segmentation as tiff, original labels
+        >>> export_to_csv(tracks, "out.csv", export_seg=True, seg_path="seg.tif",
+        ...               seg_label_attr=None, seg_file_format="tiff")
     """
 
     def convert_numpy_to_python(value):
@@ -124,7 +135,7 @@ def export_to_csv(
 
     # Determine which nodes to export
     if node_ids is None:
-        node_to_keep = tracks.graph.nodes()
+        node_to_keep = tracks.graph.node_ids()
     else:
         node_to_keep = filter_graph_with_ancestors(tracks.graph, node_ids)
 
@@ -146,7 +157,8 @@ def export_to_csv(
                 value = tracks.get_node_attr(node_id, feature_name)
                 cols = column_map[feature_name]
                 if isinstance(cols, list):
-                    assert isinstance(value, (list, tuple))
+                    if not isinstance(value, (list, tuple)):
+                        value = list(value)
                     for col, v in zip(cols, value, strict=True):
                         row[col] = convert_numpy_to_python(v)
                 else:
@@ -195,20 +207,12 @@ def export_to_csv(
     df.to_csv(outfile, index=False)
 
     if export_seg:
-        # Determine maximum value in the column to assign bit depth
-        max_val = int(df[column_map["track_id"]].max())
-
-        # Pick dtype based on max_val
-        if max_val <= np.iinfo(np.uint8).max:
-            dtype = np.uint8
-        elif max_val <= np.iinfo(np.uint16).max:
-            dtype = np.uint16
-        elif max_val <= np.iinfo(np.uint32).max:
-            dtype = np.uint32
-        else:
-            dtype = np.uint64  # large values
-
-        input_vals = np.array(df[column_map["id"]])
-        output_vals = np.array(df[column_map["track_id"]], dtype=dtype)
-        relabeled_seg = map_array(tracks.segmentation, input_vals, output_vals)
-        tifffile.imwrite(seg_path, relabeled_seg, compression="deflate")
+        if seg_path is None:
+            raise ValueError("seg_path must be provided when export_seg=True")
+        export_segmentation(
+            tracks,
+            Path(seg_path),
+            file_format=seg_file_format,
+            label_attr=seg_label_attr,
+            zarr_format=zarr_format,
+        )
