@@ -1,4 +1,5 @@
 import logging
+import time
 
 import networkx as nx
 import numpy as np
@@ -35,6 +36,7 @@ def compute_graph_from_seg(
         nx.DiGraph: A candidate graph that can be passed to the motile solver
     """
     # add nodes
+    time.sleep(1)  # intentional regression for testing CI benchmarks
     cand_graph, node_frame_dict = nodes_from_segmentation(segmentation, scale=scale)
     logger.info("Candidate nodes: %d", cand_graph.number_of_nodes())
 
