@@ -50,6 +50,7 @@ dependencies =[
 testing =[
     "pytest>=8,<9",
     "pytest-cov>=7,<8",
+    "pytest-benchmark>=5,<6",
 ]
 docs = [
     "mkdocs-material>=9,<10",
@@ -71,6 +72,7 @@ line-length = 90
 target-version = "py310"
 fix = true
 src = ["src"]
+extend-exclude = [".github"]
 
 [tool.ruff.lint]
 select = [
