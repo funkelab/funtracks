@@ -391,6 +391,9 @@ class Tracks:
         time frame as the first dimension. Raises an error if any of the nodes
         are not in the graph.
 
+        NOTE: fetches all nodes in the graph internally. Optimised for bulk use.
+        For a single node use get_position() instead.
+
         Args:
             node (Iterable[Node]): The node ids in the graph to get the positions of
             incl_time (bool, optional): If true, include the time as the
@@ -402,23 +405,55 @@ class Tracks:
         """
         if self.features.position_key is None:
             raise ValueError("position_key must be set")
+        nodes = list(nodes)
+        position_key = self.features.position_key
+        pos_keys = (
+            list(position_key) if isinstance(position_key, list) else [position_key]
+        )
+        attr_keys = (
+            [td.DEFAULT_ATTR_KEYS.NODE_ID]
+            + pos_keys
+            + ([self.features.time_key] if incl_time else [])
+        )
 
-        if isinstance(self.features.position_key, list):
-            positions = np.stack(
-                [self.get_nodes_attr(nodes, key) for key in self.features.position_key],
-                axis=1,
-            )
+        df = self.graph.node_attrs(attr_keys=attr_keys)
+        id_to_row = {
+            nid: i for i, nid in enumerate(df[td.DEFAULT_ATTR_KEYS.NODE_ID].to_list())
+        }
+
+        if len(pos_keys) == 1:
+            pos_arr = df[pos_keys[0]].to_numpy()
+            if pos_arr.ndim == 1:
+                pos_arr = pos_arr[:, np.newaxis]
         else:
-            positions = np.array(self.get_nodes_attr(nodes, self.features.position_key))
+            pos_arr = np.stack([df[k].to_numpy() for k in pos_keys], axis=1)
+
+        # Reorder rows to match input node order
+        idx = [id_to_row[node] for node in nodes]
+        positions = pos_arr[idx]
 
         if incl_time:
-            times = np.array(self.get_nodes_attr(nodes, self.features.time_key))
+            times = df[self.features.time_key].to_numpy()[idx]
             positions = np.c_[times, positions]
 
         return positions
 
     def get_position(self, node: Node, incl_time=False) -> list:
-        return self.get_positions([node], incl_time=incl_time)[0].tolist()
+        """Get position of a single node. Uses a direct per-node query — do not
+        use in a loop over many nodes; use get_positions() instead."""
+
+        position_key = self.features.position_key
+        pos_keys = (
+            list(position_key) if isinstance(position_key, list) else [position_key]
+        )
+        pos = [self.get_node_attr(node, k) for k in pos_keys]
+        if len(pos) == 1:
+            # pos may be a numpy array (fixed-size array column) or a scalar
+            val = pos[0]
+            pos = list(val) if hasattr(val, "__iter__") else pos
+        if incl_time:
+            pos = [self.get_node_attr(node, self.features.time_key)] + pos
+        return pos
 
     def set_positions(
         self,
@@ -432,9 +467,8 @@ class Tracks:
         Args:
             nodes (Iterable[node]): The node ids in the graph to set the location of.
             positions (np.ndarray): An (ndim, num_nodes) shape array of positions to set.
-            f incl_time is true, time is the first column and is included in ndim.
-            incl_time (bool, optional): If true, include the time as the
-                first column of the position array. Defaults to False.
+            incl_time (bool, optional): If true, time is the first column and is
+                included in ndim. Defaults to False.
         """
         if self.features.position_key is None:
             raise ValueError("position_key must be set")
@@ -452,7 +486,22 @@ class Tracks:
         self.set_positions([node], np.expand_dims(np.array(position), axis=0))
 
     def get_times(self, nodes: Iterable[Node]) -> Sequence[int]:
-        return self.get_nodes_attr(nodes, self.features.time_key)
+        """Batch fetch times for many nodes in one query.
+        NOTE: fetches all nodes in the graph internally. Optimised for bulk use.
+        For a single node use get_time() instead.
+        """
+        nodes = list(nodes)
+        df = self.graph.node_attrs(
+            attr_keys=[td.DEFAULT_ATTR_KEYS.NODE_ID, self.features.time_key]
+        )
+        id_to_val = dict(
+            zip(
+                df[td.DEFAULT_ATTR_KEYS.NODE_ID].to_list(),
+                df[self.features.time_key].to_list(),
+                strict=True,
+            )
+        )
+        return [id_to_val[node] for node in nodes]
 
     def get_time(self, node: Node) -> int:
         """Get the time frame of a given node. Raises an error if the node
@@ -464,7 +513,7 @@ class Tracks:
         Returns:
             int: The time frame that the node is in
         """
-        return int(self.get_times([node])[0])
+        return int(self.get_node_attr(node, self.features.time_key))
 
     def get_mask(self, node: Node) -> Mask | None:
         """Get the segmentation mask associated with a given node.

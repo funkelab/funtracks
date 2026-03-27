@@ -58,7 +58,7 @@ def test_create_tracks(graph_3d_with_segmentation: td.graph.GraphView):
         time_attr="test",
     )
     with pytest.raises(KeyError):  # raises error at access if time is wrong
-        tracks_wrong_attr.get_times([1])
+        tracks_wrong_attr.get_time(1)
 
     with pytest.raises(ValueError):
         # Raise error is segmentation shape does not match provided ndim

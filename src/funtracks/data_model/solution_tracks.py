@@ -154,6 +154,24 @@ class SolutionTracks(Tracks):
         track_id = self.get_node_attr(node, self.features.tracklet_key)
         return track_id
 
+    def get_track_ids(self, nodes) -> list[int]:
+        """Batch version of get_track_id — one SQL query fetching all nodes in the graph.
+        NOTE: always fetches the entire graph internally. Optimised for bulk (all-node)
+        calls. For small subsets or single nodes use get_track_id() instead."""
+
+        if self.features.tracklet_key is None:
+            raise ValueError("Tracklet key not initialized in features")
+        tracklet_key = self.features.tracklet_key
+        df = self.graph.node_attrs(attr_keys=[td.DEFAULT_ATTR_KEYS.NODE_ID, tracklet_key])
+        id_to_val = dict(
+            zip(
+                df[td.DEFAULT_ATTR_KEYS.NODE_ID].to_list(),
+                df[tracklet_key].to_list(),
+                strict=True,
+            )
+        )
+        return [id_to_val[node] for node in nodes]
+
     def get_lineage_id(self, node) -> int | None:
         """Get the lineage ID for a node.
 
@@ -221,4 +239,4 @@ class SolutionTracks(Tracks):
         if not nodes:
             return False
 
-        return time in self.get_times(nodes)
+        return time in [self.get_time(node) for node in nodes]
