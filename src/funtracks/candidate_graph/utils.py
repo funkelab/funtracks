@@ -1,5 +1,4 @@
 import logging
-from collections.abc import Iterable
 from typing import Any
 
 import numpy as np
@@ -7,6 +6,7 @@ import tracksdata as td
 from scipy.spatial import KDTree
 from skimage.measure import regionprops
 from tqdm import tqdm
+from tracksdata.nodes._mask import Mask
 
 from ..utils.tracksdata_utils import create_empty_graphview_graph
 
@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 def nodes_from_segmentation(
     segmentation: np.ndarray,
     scale: list[float] | None = None,
+    mask: bool = False,
 ) -> tuple[td.graph.GraphView, dict[int, list[Any]]]:
     """Extract candidate nodes from a segmentation. Returns a tracksdata graph
     with only nodes, and also a dictionary from frames to node_ids for
@@ -25,6 +26,8 @@ def nodes_from_segmentation(
         - t
         - pos
         - area
+        - mask (if mask=True): cropped boolean mask (tracksdata Mask object)
+        - bbox (if mask=True): bounding box as [min_0, ..., max_0, ...] int array
 
     Args:
         segmentation (np.ndarray): A numpy array with integer labels and dimensions
@@ -35,6 +38,10 @@ def nodes_from_segmentation(
             dimensions (including time, which should have a dummy 1 value).
             Will be used to rescale the point locations and attribute computations.
             Defaults to None, which implies the data is isotropic.
+        mask (bool, optional): Whether to include mask and bbox attributes for each
+            node. Uses regionprop.image (already computed by regionprops at no extra
+            cost) and regionprop.bbox. Including them here avoids a separate write
+            pass over all nodes later. Defaults to False.
 
     Returns:
         tuple[td.graph.GraphView, dict[int, list[Any]]]: A candidate graph with only
@@ -49,8 +56,9 @@ def nodes_from_segmentation(
             f"Scale {scale} should have {segmentation.ndim} dims"
         )
 
+    node_attributes = ["pos", "area", "mask", "bbox"] if mask else ["pos", "area"]
     cand_graph = create_empty_graphview_graph(
-        node_attributes=["pos", "area"],
+        node_attributes=node_attributes,
         position_attrs=["pos"],
         ndim=segmentation.ndim,
     )
@@ -69,11 +77,19 @@ def nodes_from_segmentation(
             if node_id in seen_ids:
                 raise ValueError("Duplicate values found among nodes")
             seen_ids.add(node_id)
-            attrs = {
+            attrs: dict[str, Any] = {
                 "t": t,
                 "pos": list(regionprop.centroid),
                 "area": float(regionprop.area),
             }
+            if mask:
+                # regionprop.image is the cropped boolean mask within the bbox,
+                # already computed by regionprops at no extra cost.
+                # regionprop.bbox format: (min_0, ..., min_n, max_0, ..., max_n),
+                # which matches the Mask bbox convention.
+                bbox = np.array(regionprop.bbox, dtype=np.int64)
+                attrs["mask"] = Mask(np.ascontiguousarray(regionprop.image), bbox=bbox)
+                attrs["bbox"] = bbox
             nodes_attrs_list.append(attrs)
             nodes_id_list.append(node_id)
             nodes_in_frame.append(node_id)
@@ -162,19 +178,27 @@ def _compute_node_frame_dict(cand_graph: td.graph.GraphView) -> dict[int, list[A
     return node_frame_dict
 
 
-def create_kdtree(cand_graph: td.graph.GraphView, node_ids: Iterable[Any]) -> KDTree:
+def create_kdtree(cand_graph: td.graph.GraphView, node_ids: list[Any]) -> KDTree:
     """Create a kdtree with the given nodes from the candidate graph.
     Will fail if provided node ids are not in the candidate graph.
 
     Args:
         cand_graph (td.graph.GraphView): A candidate graph
-        node_ids (Iterable[Any]): The nodes within the candidate graph to
+        node_ids (list[Any]): The nodes within the candidate graph to
             include in the KDTree. Useful for limiting to one time frame.
+            Must be a list (not a generic iterable) to preserve order for
+            correct mapping of query_ball_tree results back to node ids.
 
     Returns:
-        KDTree: A KDTree containing the positions of the given nodes.
+        KDTree: A KDTree containing the positions of the given nodes,
+            in the same order as node_ids.
     """
-    positions = [cand_graph.nodes[node]["pos"] for node in node_ids]
+    # Fetch all positions in one batch query instead of one SQL lookup per node.
+    # Per-node access via cand_graph.nodes[node]["pos"] deserializes the full
+    # graph attribute schema on every call, which dominates runtime at scale.
+    df = cand_graph.filter(node_ids=node_ids).node_attrs(attr_keys=["node_id", "pos"])
+    pos_by_id = dict(zip(df["node_id"].to_list(), df["pos"].to_list(), strict=True))
+    positions = [pos_by_id[nid] for nid in node_ids]
     return KDTree(positions)
 
 

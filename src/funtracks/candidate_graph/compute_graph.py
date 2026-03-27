@@ -3,7 +3,6 @@ import logging
 import numpy as np
 import tracksdata as td
 
-from ..utils.tracksdata_utils import add_masks_and_bboxes_to_graph
 from .iou import add_iou
 from .utils import add_cand_edges, nodes_from_points_list, nodes_from_segmentation
 
@@ -35,8 +34,10 @@ def compute_graph_from_seg(
     Returns:
         td.graph.GraphView: A candidate graph that can be passed to the motile solver
     """
-    # add nodes
-    cand_graph, node_frame_dict = nodes_from_segmentation(segmentation, scale=scale)
+    # add nodes (including mask and bbox in the same bulk_add_nodes call)
+    cand_graph, node_frame_dict = nodes_from_segmentation(
+        segmentation, scale=scale, mask=True
+    )
     logger.info("Candidate nodes: %d", cand_graph.num_nodes())
 
     # add edges
@@ -52,8 +53,8 @@ def compute_graph_from_seg(
 
     logger.info("Candidate edges: %d", cand_graph.num_edges())
 
-    # add masks and bboxes (also stores segmentation_shape in graph metadata)
-    cand_graph = add_masks_and_bboxes_to_graph(cand_graph, segmentation)
+    # store segmentation shape in graph metadata
+    cand_graph._update_metadata(segmentation_shape=segmentation.shape)
 
     return cand_graph
 
