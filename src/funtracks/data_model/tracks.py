@@ -675,8 +675,10 @@ class Tracks:
         self.graph.nodes[node][attr] = [value]
 
     def _set_nodes_attr(self, nodes: Iterable[Node], attr: str, values: Iterable[Any]):
-        for node, value in zip(nodes, values, strict=False):
-            self.graph.nodes[node][attr] = [value]
+        nodes_list = list(nodes)
+        values_list = list(values)
+        if nodes_list:
+            self.graph.update_node_attrs(attrs={attr: values_list}, node_ids=nodes_list)
 
     def get_node_attr(self, node: Node, attr: str):
         return self.graph.nodes[int(node)][attr]
