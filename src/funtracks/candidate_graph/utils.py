@@ -1,12 +1,13 @@
 import logging
-from collections.abc import Iterable
 from typing import Any
 
 import numpy as np
+import polars as pl
 import tracksdata as td
 from scipy.spatial import KDTree
 from skimage.measure import regionprops
 from tqdm import tqdm
+from tracksdata.nodes._mask import Mask
 
 from ..utils.tracksdata_utils import create_empty_graphview_graph
 
@@ -16,6 +17,7 @@ logger = logging.getLogger(__name__)
 def nodes_from_segmentation(
     segmentation: np.ndarray,
     scale: list[float] | None = None,
+    mask: bool = False,
 ) -> tuple[td.graph.GraphView, dict[int, list[Any]]]:
     """Extract candidate nodes from a segmentation. Returns a tracksdata graph
     with only nodes, and also a dictionary from frames to node_ids for
@@ -25,6 +27,8 @@ def nodes_from_segmentation(
         - t
         - pos
         - area
+        - mask (if mask=True): cropped boolean mask (tracksdata Mask object)
+        - bbox (if mask=True): bounding box as [min_0, ..., max_0, ...] int array
 
     Args:
         segmentation (np.ndarray): A numpy array with integer labels and dimensions
@@ -35,6 +39,10 @@ def nodes_from_segmentation(
             dimensions (including time, which should have a dummy 1 value).
             Will be used to rescale the point locations and attribute computations.
             Defaults to None, which implies the data is isotropic.
+        mask (bool, optional): Whether to include mask and bbox attributes for each
+            node. Uses regionprop.image (already computed by regionprops at no extra
+            cost) and regionprop.bbox. Including them here avoids a separate write
+            pass over all nodes later. Defaults to False.
 
     Returns:
         tuple[td.graph.GraphView, dict[int, list[Any]]]: A candidate graph with only
@@ -49,8 +57,9 @@ def nodes_from_segmentation(
             f"Scale {scale} should have {segmentation.ndim} dims"
         )
 
+    node_attributes = ["pos", "area", "mask", "bbox"] if mask else ["pos", "area"]
     cand_graph = create_empty_graphview_graph(
-        node_attributes=["pos", "area"],
+        node_attributes=node_attributes,
         position_attrs=["pos"],
         ndim=segmentation.ndim,
     )
@@ -69,11 +78,19 @@ def nodes_from_segmentation(
             if node_id in seen_ids:
                 raise ValueError("Duplicate values found among nodes")
             seen_ids.add(node_id)
-            attrs = {
+            attrs: dict[str, Any] = {
                 "t": t,
                 "pos": list(regionprop.centroid),
                 "area": float(regionprop.area),
             }
+            if mask:
+                # regionprop.image is the cropped boolean mask within the bbox,
+                # already computed by regionprops at no extra cost.
+                # regionprop.bbox format: (min_0, ..., min_n, max_0, ..., max_n),
+                # which matches the Mask bbox convention.
+                bbox = np.array(regionprop.bbox, dtype=np.int64)
+                attrs["mask"] = Mask(np.ascontiguousarray(regionprop.image), bbox=bbox)
+                attrs["bbox"] = bbox
             nodes_attrs_list.append(attrs)
             nodes_id_list.append(node_id)
             nodes_in_frame.append(node_id)
@@ -162,19 +179,27 @@ def _compute_node_frame_dict(cand_graph: td.graph.GraphView) -> dict[int, list[A
     return node_frame_dict
 
 
-def create_kdtree(cand_graph: td.graph.GraphView, node_ids: Iterable[Any]) -> KDTree:
+def create_kdtree(cand_graph: td.graph.GraphView, node_ids: list[Any]) -> KDTree:
     """Create a kdtree with the given nodes from the candidate graph.
     Will fail if provided node ids are not in the candidate graph.
 
     Args:
         cand_graph (td.graph.GraphView): A candidate graph
-        node_ids (Iterable[Any]): The nodes within the candidate graph to
+        node_ids (list[Any]): The nodes within the candidate graph to
             include in the KDTree. Useful for limiting to one time frame.
+            Must be a list (not a generic iterable) to preserve order for
+            correct mapping of query_ball_tree results back to node ids.
 
     Returns:
-        KDTree: A KDTree containing the positions of the given nodes.
+        KDTree: A KDTree containing the positions of the given nodes,
+            in the same order as node_ids.
     """
-    positions = [cand_graph.nodes[node]["pos"] for node in node_ids]
+    # Fetch all positions in one batch query instead of one SQL lookup per node.
+    # Per-node access via cand_graph.nodes[node]["pos"] deserializes the full
+    # graph attribute schema on every call, which dominates runtime at scale.
+    df = cand_graph.filter(node_ids=node_ids).node_attrs(attr_keys=["node_id", "pos"])
+    pos_by_id = dict(zip(df["node_id"].to_list(), df["pos"].to_list(), strict=True))
+    positions = [pos_by_id[nid] for nid in node_ids]
     return KDTree(positions)
 
 
@@ -182,6 +207,7 @@ def add_cand_edges(
     cand_graph: td.graph.GraphView,
     max_edge_distance: float,
     node_frame_dict: None | dict[int, list[Any]] = None,
+    iou_dict: dict[int, dict[int, float]] | None = None,
 ) -> None:
     """Add candidate edges to a candidate graph by connecting all nodes in adjacent
     frames that are closer than max_edge_distance.
@@ -195,10 +221,18 @@ def add_cand_edges(
         node_frame_dict (dict[int, list[Any]] | None, optional): A mapping from frames
             to node ids. If not provided, it will be computed from cand_graph. Defaults
             to None.
+        iou_dict (dict[int, dict[int, float]] | None, optional): Pre-computed IOU
+            values as a map from source node_id -> {target node_id -> iou}. When
+            provided, the iou value is included directly in each edge dict passed to
+            bulk_add_edges, avoiding a separate per-edge update pass after insertion.
+            Defaults to None (no iou attribute added).
     """
     logger.info("Extracting candidate edges")
     if not node_frame_dict:
         node_frame_dict = _compute_node_frame_dict(cand_graph)
+
+    if iou_dict is not None:
+        cand_graph.add_edge_attr_key("iou", default_value=0.0, dtype=pl.Float64)
 
     frames = sorted(node_frame_dict.keys())
     prev_node_ids = node_frame_dict[frames[0]]
@@ -217,7 +251,13 @@ def add_cand_edges(
         ):
             for next_node_index in next_node_indices:
                 next_node_id = next_node_ids[next_node_index]
-                new_edges.append({"source_id": prev_node_id, "target_id": next_node_id})
+                edge: dict[str, Any] = {
+                    "source_id": prev_node_id,
+                    "target_id": next_node_id,
+                }
+                if iou_dict is not None:
+                    edge["iou"] = iou_dict.get(prev_node_id, {}).get(next_node_id, 0.0)
+                new_edges.append(edge)
 
         if new_edges:
             cand_graph.bulk_add_edges(new_edges)

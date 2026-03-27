@@ -3,8 +3,7 @@ import logging
 import numpy as np
 import tracksdata as td
 
-from ..utils.tracksdata_utils import add_masks_and_bboxes_to_graph
-from .iou import add_iou
+from .iou import _get_iou_dict
 from .utils import add_cand_edges, nodes_from_points_list, nodes_from_segmentation
 
 logger = logging.getLogger(__name__)
@@ -35,25 +34,32 @@ def compute_graph_from_seg(
     Returns:
         td.graph.GraphView: A candidate graph that can be passed to the motile solver
     """
-    # add nodes
-    cand_graph, node_frame_dict = nodes_from_segmentation(segmentation, scale=scale)
+    # add nodes (including mask and bbox in the same bulk_add_nodes call)
+    cand_graph, node_frame_dict = nodes_from_segmentation(
+        segmentation, scale=scale, mask=True
+    )
     logger.info("Candidate nodes: %d", cand_graph.num_nodes())
 
-    # add edges
+    # pre-compute IOU dict before edge insertion so values can be included
+    # directly in bulk_add_edges, avoiding a separate per-edge update pass
+    iou_dict = None
+    if iou:
+        # Scale does not matter to IOU, because both numerator and denominator
+        # are scaled by the anisotropy.
+        iou_dict = _get_iou_dict(segmentation)
+
+    # add edges (iou values included in bulk_add_edges if iou_dict is provided)
     add_cand_edges(
         cand_graph,
         max_edge_distance=max_edge_distance,
         node_frame_dict=node_frame_dict,
+        iou_dict=iou_dict,
     )
-    if iou:
-        # Scale does not matter to IOU, because both numerator and denominator
-        # are scaled by the anisotropy.
-        add_iou(cand_graph, segmentation, node_frame_dict)
 
     logger.info("Candidate edges: %d", cand_graph.num_edges())
 
-    # add masks and bboxes (also stores segmentation_shape in graph metadata)
-    cand_graph = add_masks_and_bboxes_to_graph(cand_graph, segmentation)
+    # store segmentation shape in graph metadata
+    cand_graph._update_metadata(segmentation_shape=segmentation.shape)
 
     return cand_graph
 

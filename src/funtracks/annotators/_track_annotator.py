@@ -303,15 +303,11 @@ class TrackAnnotator(GraphAnnotator):
             for node in curr_nodes:
                 # Lineage updates all downstream nodes
                 if update_lineage:
-                    self.tracks._set_node_attr(node, self.lineage_key, new_lineage_id)
                     lineage_nodes.append(node)
 
                 # Tracklet only updates while ID matches old_tracklet_id
                 if still_in_tracklet and update_tracklet:
                     if self.tracks.get_track_id(node) == old_tracklet_id:
-                        self.tracks._set_node_attr(
-                            node, self.tracklet_key, new_tracklet_id
-                        )
                         tracklet_nodes.append(node)
                     else:
                         still_in_tracklet = False
@@ -320,6 +316,18 @@ class TrackAnnotator(GraphAnnotator):
                 next_nodes.extend(self.tracks.graph.successors(node))
 
             curr_nodes = next_nodes
+
+        # Bulk-write all collected node attribute changes in one call each
+        if update_tracklet and tracklet_nodes:
+            self.tracks.graph.update_node_attrs(
+                attrs={self.tracklet_key: [new_tracklet_id] * len(tracklet_nodes)},
+                node_ids=tracklet_nodes,
+            )
+        if update_lineage and lineage_nodes:
+            self.tracks.graph.update_node_attrs(
+                attrs={self.lineage_key: [new_lineage_id] * len(lineage_nodes)},
+                node_ids=lineage_nodes,
+            )
 
         # Update bookkeeping
         if update_tracklet:
