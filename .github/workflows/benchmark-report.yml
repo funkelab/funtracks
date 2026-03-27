@@ -1,0 +1,41 @@
+name: Benchmark
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  deployments: write
+  contents: write
+
+jobs:
+  benchmark:
+    name: Report benchmarks on gh-pages
+    runs-on: ubuntu-latest
+    env:
+      UV_NO_SYNC: "1"
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.13"
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --no-dev --group testing
+
+      - name: Run benchmarks
+        run: uv run pytest tests/benchmarks/bench_candidate_graph.py --benchmark-json output.json
+
+      - name: Store benchmark results
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          name: Python Benchmark with pytest-benchmark
+          tool: 'pytest'
+          output-file-path: output.json
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-push: true
