@@ -101,13 +101,9 @@ jobs:
 
       - name: Generate report
         id: report
-        run: uv run --with pandas --with tabulate python .github/workflows/benchmark_pr.py baseline.json pr.json report.md
-        continue-on-error: true
-
-      - name: Add platform header to report
         run: |
-          echo "## Benchmark: ${{ matrix.platform }}" | cat - report.md > tmp.md
-          mv tmp.md report.md
+          uv run --with pandas --with tabulate python .github/workflows/benchmark_pr.py baseline.json pr.json report.md "Benchmark: ${{ matrix.platform }}"
+        continue-on-error: true
 
       - name: Comment on commit with report
         uses: peter-evans/commit-comment@v3
