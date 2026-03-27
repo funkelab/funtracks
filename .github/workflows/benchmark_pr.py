@@ -1,7 +1,7 @@
 """Compare two pytest-benchmark JSON files and produce a markdown table.
 
 Usage:
-    python benchmark_pr.py <old.json> <new.json> <output.md>
+    python benchmark_pr.py <old.json> <new.json> <output.md> [header]
 
 Exits with code 1 if any benchmark regresses by more than REGRESSION_THRESHOLD.
 """
@@ -27,7 +27,7 @@ def load_stats(path):
     return commit, pd.DataFrame(rows)
 
 
-def make_report(old_path, new_path, out_file):
+def make_report(old_path, new_path, out_file, header=None):
     old = load_stats(old_path)
     new = load_stats(new_path)
 
@@ -49,10 +49,15 @@ def make_report(old_path, new_path, out_file):
         }
     )
 
-    df.to_markdown(out_file, index=False)
+    report = df.to_markdown(index=False)
+    if header:
+        report = f"## {header}\n\n{report}"
+
+    with open(out_file, "w") as f:
+        f.write(report)
 
     # Print report to logs
-    print(df.to_markdown(index=False))  # noqa: T201
+    print(report)  # noqa: T201
 
     # Fail if any benchmark regressed beyond threshold
     if (pct_change > REGRESSION_THRESHOLD).any():
@@ -63,4 +68,5 @@ def make_report(old_path, new_path, out_file):
 
 
 if __name__ == "__main__":
-    make_report(sys.argv[1], sys.argv[2], sys.argv[3])
+    header = sys.argv[4] if len(sys.argv) > 4 else None
+    make_report(sys.argv[1], sys.argv[2], sys.argv[3], header)
