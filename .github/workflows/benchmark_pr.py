@@ -1,13 +1,17 @@
 """Compare two pytest-benchmark JSON files and produce a markdown table.
 
 Usage:
-    python benchmark-pr.py <old.json> <new.json> <output.md>
+    python benchmark_pr.py <old.json> <new.json> <output.md>
+
+Exits with code 1 if any benchmark regresses by more than REGRESSION_THRESHOLD.
 """
 
 import json
 import sys
 
 import pandas as pd
+
+REGRESSION_THRESHOLD = 50  # percent
 
 
 def load_stats(path):
@@ -30,8 +34,8 @@ def make_report(old_path, new_path, out_file):
     # Merge on benchmark name
     df = old[-1].merge(new[-1], on="Benchmark", suffixes=("_old", "_new"))
 
-    df["Percent Change"] = 100 * (df["mean_new"] - df["mean_old"]) / df["mean_old"]
-    df["Percent Change"] = df["Percent Change"].map("{:+.2f}".format)
+    pct_change = 100 * (df["mean_new"] - df["mean_old"]) / df["mean_old"]
+    df["Percent Change"] = pct_change.map("{:+.2f}".format)
 
     # Format runtimes
     df["mean_old"] = df["mean_old"].map("{:.5f}".format)
@@ -49,6 +53,13 @@ def make_report(old_path, new_path, out_file):
 
     # Print report to logs
     print(df.to_markdown(index=False))  # noqa: T201
+
+    # Fail if any benchmark regressed beyond threshold
+    if (pct_change > REGRESSION_THRESHOLD).any():
+        print(  # noqa: T201
+            f"\nFAILED: Regression exceeds {REGRESSION_THRESHOLD}% threshold"
+        )
+        sys.exit(1)
 
 
 if __name__ == "__main__":
