@@ -2,6 +2,7 @@ import logging
 from typing import Any
 
 import numpy as np
+import polars as pl
 import tracksdata as td
 from scipy.spatial import KDTree
 from skimage.measure import regionprops
@@ -206,6 +207,7 @@ def add_cand_edges(
     cand_graph: td.graph.GraphView,
     max_edge_distance: float,
     node_frame_dict: None | dict[int, list[Any]] = None,
+    iou_dict: dict[int, dict[int, float]] | None = None,
 ) -> None:
     """Add candidate edges to a candidate graph by connecting all nodes in adjacent
     frames that are closer than max_edge_distance.
@@ -219,10 +221,18 @@ def add_cand_edges(
         node_frame_dict (dict[int, list[Any]] | None, optional): A mapping from frames
             to node ids. If not provided, it will be computed from cand_graph. Defaults
             to None.
+        iou_dict (dict[int, dict[int, float]] | None, optional): Pre-computed IOU
+            values as a map from source node_id -> {target node_id -> iou}. When
+            provided, the iou value is included directly in each edge dict passed to
+            bulk_add_edges, avoiding a separate per-edge update pass after insertion.
+            Defaults to None (no iou attribute added).
     """
     logger.info("Extracting candidate edges")
     if not node_frame_dict:
         node_frame_dict = _compute_node_frame_dict(cand_graph)
+
+    if iou_dict is not None:
+        cand_graph.add_edge_attr_key("iou", default_value=0.0, dtype=pl.Float64)
 
     frames = sorted(node_frame_dict.keys())
     prev_node_ids = node_frame_dict[frames[0]]
@@ -241,7 +251,13 @@ def add_cand_edges(
         ):
             for next_node_index in next_node_indices:
                 next_node_id = next_node_ids[next_node_index]
-                new_edges.append({"source_id": prev_node_id, "target_id": next_node_id})
+                edge: dict[str, Any] = {
+                    "source_id": prev_node_id,
+                    "target_id": next_node_id,
+                }
+                if iou_dict is not None:
+                    edge["iou"] = iou_dict.get(prev_node_id, {}).get(next_node_id, 0.0)
+                new_edges.append(edge)
 
         if new_edges:
             cand_graph.bulk_add_edges(new_edges)

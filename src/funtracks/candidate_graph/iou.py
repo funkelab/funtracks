@@ -87,6 +87,10 @@ def add_iou(
 ) -> None:
     """Add IOU to the candidate graph.
 
+    NOTE: compute_graph_from_seg no longer calls this function directly — IOU is now
+    embedded during add_cand_edges for efficiency. Call this function if you need to
+    add IOU to an existing graph after the fact.
+
     Args:
         cand_graph (td.graph.GraphView): Candidate graph with nodes and edges already
             populated.
