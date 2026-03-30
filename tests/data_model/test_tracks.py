@@ -92,7 +92,8 @@ def test_create_tracks(graph_3d_with_segmentation: td.graph.GraphView):
 def test_nodes_edges(graph_2d_with_segmentation):
     tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
     assert set(tracks.nodes()) == {1, 2, 3, 4, 5, 6}
-    assert set(tracks.edges()) == {1, 2, 3, 4}
+    assert len(tracks.edges()) == 4  # rx graph starts from 0, sql from 1,
+    # so direct comparison of edges depends on backend
     assert set(map(tuple, tracks.graph.edge_list())) == {
         (1, 2),
         (1, 3),
