@@ -127,13 +127,12 @@ def create_empty_graphview_graph(
     else:
         edge_default_values = [0.0] * len(edge_attributes or [])
 
-    # kwargs = {
-    #     "drivername": "sqlite",
-    #     "database": database,
-    #     "overwrite": True,
-    # }
-    # graph_sql = td.graph.SQLGraph(**kwargs)
-    graph_sql = td.graph.IndexedRXGraph()
+    kwargs = {
+        "drivername": "sqlite",
+        "database": database,
+        "overwrite": True,
+    }
+    graph_sql = td.graph.SQLGraph(**kwargs)
 
     # Add standard node and edge attributes
     if "pos" in (node_attributes or []) or any(
