@@ -347,6 +347,7 @@ def import_from_geff(
     edge_name_map: dict[str, str | list[str]] | None = None,
     edge_prop_filter: list[str] | None = None,
     name_map: dict[str, str | list[str]] | None = None,  # deprecated
+    database: str | None = None,
 ) -> SolutionTracks:
     """Import tracks from GEFF format.
 
@@ -370,6 +371,8 @@ def import_from_geff(
         edge_prop_filter: (Deprecated) Use edge_name_map instead. Kept for
             backward compatibility.
         name_map: Deprecated. Use node_name_map instead.
+        database: Optional path to a SQLite database file for backing storage.
+            If None (default), an in-memory/temp graph is used.
 
     Returns:
         SolutionTracks object
@@ -432,4 +435,5 @@ def import_from_geff(
         node_features=node_features,
         edge_features=edge_features,
         node_name_map=node_name_map,
+        database=database,
     )

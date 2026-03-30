@@ -403,11 +403,19 @@ class TracksBuilder(ABC):
         validate_in_memory_geff(self.in_memory_geff)
 
     def construct_graph(
-        self, node_name_map: dict[str, str | list[str]] | None = None
+        self,
+        node_name_map: dict[str, str | list[str]] | None = None,
+        database: str | None = None,
     ) -> td.graph.GraphView:
         """Construct NetworkX graph from validated InMemoryGeff data.
 
         Common logic shared across all formats.
+
+        Args:
+            node_name_map: Optional node name map used to infer default values per
+                attribute dtype.
+            database: Optional path to a SQLite database file for backing storage.
+                If None (default), an in-memory/temp graph is used.
 
         Returns:
             NetworkX DiGraph with standard keys
@@ -446,6 +454,7 @@ class TracksBuilder(ABC):
             node_attributes=list(self.in_memory_geff["node_props"].keys()),
             edge_attributes=list(self.in_memory_geff["edge_props"].keys()),
             node_default_values=node_default_values,
+            database=database,
         )
 
         node_ids = [int(i) for i in self.in_memory_geff["node_ids"]]
@@ -650,6 +659,7 @@ class TracksBuilder(ABC):
         node_features: dict[str, bool] | None = None,
         edge_features: dict[str, bool] | None = None,
         node_name_map: dict[str, str | list[str]] | None = None,
+        database: str | None = None,
     ) -> SolutionTracks:
         """Orchestrate the full construction process.
 
@@ -660,6 +670,8 @@ class TracksBuilder(ABC):
             node_features: Optional node features to enable/load
             edge_features: Optional edge features to enable/load
             node_name_map: Optional node_name_map to override self.node_name_map
+            database: Optional path to a SQLite database file for backing storage.
+                If None (default), an in-memory/temp graph is used.
 
         Returns:
             Fully constructed SolutionTracks object
@@ -723,7 +735,7 @@ class TracksBuilder(ABC):
         self.validate()
 
         # 4. Construct graph
-        graph = self.construct_graph(node_name_map)
+        graph = self.construct_graph(node_name_map, database=database)
 
         # 5. Handle segmentation
         segmentation_array, scale, graph = self.handle_segmentation(
