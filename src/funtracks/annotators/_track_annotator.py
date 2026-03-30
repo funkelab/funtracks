@@ -179,16 +179,17 @@ class TrackAnnotator(GraphAnnotator):
                 to lists of nodes with that id
         """
         id_to_node = {}
+        all_nodes = []
+        all_ids = []
         _id = 1
         for component in components:
             nodes = list(component)
-            ids = [
-                _id,
-            ] * len(nodes)
-            self.tracks._set_nodes_attr(nodes, key, ids)
-
+            all_nodes.extend(nodes)
+            all_ids.extend([_id] * len(nodes))
             id_to_node[_id] = nodes
             _id += 1
+        if all_nodes:
+            self.tracks._set_nodes_attr(all_nodes, key, all_ids)
         return _id - 1, id_to_node
 
     def _assign_lineage_ids(self) -> None:
@@ -236,17 +237,20 @@ class TrackAnnotator(GraphAnnotator):
                 graph_copy.remove_edge(parent, daughter)
 
         track_id = 1
+        all_node_ids = []
+        all_track_ids = []
         for tracklet in rx.weakly_connected_components(graph_copy.rx_graph):
             node_ids_internal = list(tracklet)
             node_ids_external = [graph_copy.node_ids()[nid] for nid in node_ids_internal]
-            self.tracks.graph.update_node_attrs(
-                attrs={
-                    self.tracks.features.tracklet_key: [track_id] * len(node_ids_external)
-                },
-                node_ids=node_ids_external,
-            )
+            all_node_ids.extend(node_ids_external)
+            all_track_ids.extend([track_id] * len(node_ids_external))
             self.tracklet_id_to_nodes[track_id] = node_ids_external
             track_id += 1
+        if all_node_ids:
+            self.tracks.graph.update_node_attrs(
+                attrs={self.tracks.features.tracklet_key: all_track_ids},
+                node_ids=all_node_ids,
+            )
         self.max_tracklet_id = track_id - 1
 
     def update(self, action: BasicAction) -> None:
