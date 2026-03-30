@@ -117,6 +117,11 @@ class CSVTracksBuilder(TracksBuilder):
                     )
                 )
 
+        # Fill None values with False for boolean columns.
+        for col in df.columns:
+            if df[col].dropna().isin([True, False]).all():
+                df[col] = df[col].fillna(False).astype(bool)
+
         # Determine dimensionality from position mapping (if not already set)
         if self.ndim is None:
             pos_mapping = node_name_map.get("pos", [])
