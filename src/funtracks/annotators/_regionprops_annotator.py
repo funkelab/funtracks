@@ -166,9 +166,26 @@ class RegionpropsAnnotator(GraphAnnotator):
         if not keys_to_compute:
             return
 
+        spacing = None if self.tracks.scale is None else tuple(self.tracks.scale[1:])
+        all_node_ids = []
+        all_values: dict[str, list] = {key: [] for key in keys_to_compute}
+
         for node_id in self.tracks.graph.node_ids():
+            if not self.tracks.graph.has_node(node_id):
+                continue
             mask = self.tracks.graph.nodes[node_id]["mask"]
-            self._regionprops_update(node_id, mask, keys_to_compute)
+            for region in regionprops_extended(mask, spacing=spacing):
+                all_node_ids.append(node_id)
+                for key in keys_to_compute:
+                    value = getattr(region, self.regionprops_names[key])
+                    if isinstance(value, tuple):
+                        value = [float(v) for v in value]
+                    elif isinstance(value, np.floating):
+                        value = float(value)
+                    all_values[key].append(value)
+
+        for key in keys_to_compute:
+            self.tracks._set_nodes_attr(all_node_ids, key, all_values[key])
 
     def _regionprops_update(
         self, node_id: int, mask: Mask, feature_keys: list[str]
