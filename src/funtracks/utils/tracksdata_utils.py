@@ -127,37 +127,39 @@ def create_empty_graphview_graph(
     else:
         edge_default_values = [0.0] * len(edge_attributes or [])
 
-    kwargs = {
-        "drivername": "sqlite",
-        "database": database,
-        "overwrite": True,
-    }
-    graph_sql = td.graph.SQLGraph(**kwargs)
+    # Initialize an empty graph
+    # kwargs = {
+    #     "drivername": "sqlite",
+    #     "database": database,
+    #     "overwrite": True,
+    # }
+    # graph_td = td.graph.SQLGraph(**kwargs)
+    graph_td = td.graph.IndexedRXGraph()
 
     # Add standard node and edge attributes
     if "pos" in (node_attributes or []) or any(
         attr in (node_attributes or []) for attr in position_attrs
     ):
         if "pos" in position_attrs:
-            graph_sql.add_node_attr_key("pos", pl.Array(pl.Float64, ndim - 1))
+            graph_td.add_node_attr_key("pos", pl.Array(pl.Float64, ndim - 1))
         else:
             if "x" in position_attrs:
-                graph_sql.add_node_attr_key("x", default_value=0.0, dtype=pl.Float64)
+                graph_td.add_node_attr_key("x", default_value=0.0, dtype=pl.Float64)
             if "y" in position_attrs:
-                graph_sql.add_node_attr_key("y", default_value=0.0, dtype=pl.Float64)
+                graph_td.add_node_attr_key("y", default_value=0.0, dtype=pl.Float64)
             if "z" in position_attrs:
-                graph_sql.add_node_attr_key("z", default_value=0.0, dtype=pl.Float64)
+                graph_td.add_node_attr_key("z", default_value=0.0, dtype=pl.Float64)
     if "mask" in (node_attributes or []):
-        graph_sql.add_node_attr_key("mask", pl.Object)
+        graph_td.add_node_attr_key("mask", pl.Object)
     if "bbox" in (node_attributes or []):
-        graph_sql.add_node_attr_key("bbox", pl.Array(pl.Int64, 2 * (ndim - 1)))
+        graph_td.add_node_attr_key("bbox", pl.Array(pl.Int64, 2 * (ndim - 1)))
     if "track_id" in (node_attributes or []):
-        graph_sql.add_node_attr_key("track_id", default_value=-1, dtype=pl.Int64)
+        graph_td.add_node_attr_key("track_id", default_value=-1, dtype=pl.Int64)
 
     for attr in node_attributes or []:
-        if attr not in graph_sql.node_attr_keys():
+        if attr not in graph_td.node_attr_keys():
             default_value = node_default_values[(node_attributes or []).index(attr)]
-            graph_sql.add_node_attr_key(
+            graph_td.add_node_attr_key(
                 attr,
                 default_value=default_value
                 if not isinstance(default_value, np.ndarray)
@@ -168,23 +170,23 @@ def create_empty_graphview_graph(
             )
 
     for attr in edge_attributes or []:
-        if attr not in graph_sql.edge_attr_keys():
+        if attr not in graph_td.edge_attr_keys():
             default_value = edge_default_values[(edge_attributes or []).index(attr)]
-            graph_sql.add_edge_attr_key(
+            graph_td.add_edge_attr_key(
                 attr,
                 default_value=default_value,
                 dtype=to_polars_dtype(default_value),
             )
-    if td.DEFAULT_ATTR_KEYS.SOLUTION not in graph_sql.node_attr_keys():
-        graph_sql.add_node_attr_key(
+    if td.DEFAULT_ATTR_KEYS.SOLUTION not in graph_td.node_attr_keys():
+        graph_td.add_node_attr_key(
             td.DEFAULT_ATTR_KEYS.SOLUTION, default_value=1, dtype=pl.Int64
         )
-    if td.DEFAULT_ATTR_KEYS.SOLUTION not in graph_sql.edge_attr_keys():
-        graph_sql.add_edge_attr_key(
+    if td.DEFAULT_ATTR_KEYS.SOLUTION not in graph_td.edge_attr_keys():
+        graph_td.add_edge_attr_key(
             td.DEFAULT_ATTR_KEYS.SOLUTION, default_value=1, dtype=pl.Int64
         )
 
-    graph_td_sub = graph_sql.filter(
+    graph_td_sub = graph_td.filter(
         td.NodeAttr(td.DEFAULT_ATTR_KEYS.SOLUTION) == 1,
         td.EdgeAttr(td.DEFAULT_ATTR_KEYS.SOLUTION) == 1,
     ).subgraph()
@@ -417,7 +419,7 @@ def add_masks_and_bboxes_to_graph(
     return graph
 
 
-def td_relabel_nodes(graph, mapping: dict[int, int]) -> td.graph.SQLGraph:
+def td_relabel_nodes(graph, mapping: dict[int, int]) -> td.graph.IndexedRXGraph:
     """Relabel nodes in a tracksdata graph according to a mapping.
 
     Args:
@@ -425,19 +427,20 @@ def td_relabel_nodes(graph, mapping: dict[int, int]) -> td.graph.SQLGraph:
         mapping: Dictionary mapping old node IDs to new node IDs
 
     Returns:
-        A new SQLGraph with relabeled nodes
+        A new tracksdata graph with relabeled nodes
     """
 
     # For IndexedRXGraph or SQLGraph
     old_graph = graph
 
-    database = f"{tempfile.gettempdir()}/funtracks_{uuid.uuid4().hex[:8]}.db"
-    kwargs = {
-        "drivername": "sqlite",
-        "database": database,
-        "overwrite": True,
-    }
-    new_graph = td.graph.SQLGraph(**kwargs)
+    # database = f"{tempfile.gettempdir()}/funtracks_{uuid.uuid4().hex[:8]}.db"
+    # kwargs = {
+    #     "drivername": "sqlite",
+    #     "database": database,
+    #     "overwrite": True,
+    # }
+    # new_graph = td.graph.SQLGraph(**kwargs)
+    new_graph = td.graph.IndexedRXGraph()
 
     # Copy attribute key registrations with defaults and dtypes
     node_schemas = graph._node_attr_schemas()
@@ -484,23 +487,24 @@ def td_relabel_nodes(graph, mapping: dict[int, int]) -> td.graph.SQLGraph:
 
 
 def convert_graph_nx_to_td(graph_nx: nx.DiGraph) -> td.graph.GraphView:
-    """Convert a NetworkX DiGraph to a tracksdata SQLGraph.
+    """Convert a NetworkX DiGraph to a tracksdata graph.
 
     Args:
         graph_nx: The NetworkX DiGraph to convert.
 
     Returns:
-        A tracksdata SQLGraph representing the same graph.
+        A tracksdata graph representing the same graph.
     """
 
-    # Initialize an empty tracksdata SQLGraph
-    database = f"{tempfile.gettempdir()}/funtracks_{uuid.uuid4().hex[:8]}.db"
-    kwargs = {
-        "drivername": "sqlite",
-        "database": database,
-        "overwrite": True,
-    }
-    graph_td = td.graph.SQLGraph(**kwargs)
+    # Initialize an empty tracksdata graph
+    # database = f"{tempfile.gettempdir()}/funtracks_{uuid.uuid4().hex[:8]}.db"
+    # kwargs = {
+    #     "drivername": "sqlite",
+    #     "database": database,
+    #     "overwrite": True,
+    # }
+    # graph_td = td.graph.SQLGraph(**kwargs)
+    graph_td = td.graph.IndexedRXGraph()
 
     # Get all nodes and edges with attributes
     all_nodes = list(graph_nx.nodes(data=True))
@@ -566,8 +570,7 @@ def convert_graph_nx_to_td(graph_nx: nx.DiGraph) -> td.graph.GraphView:
     # Add node attributes
     for node_id, attrs in all_nodes:
         attrs_copy = dict(attrs)
-        # Convert lists to numpy arrays to work around tracksdata SQLGraph bug
-        # where Python lists with floats get truncated
+        # Convert lists to numpy arrays
         for key, value in attrs_copy.items():
             if isinstance(value, list):
                 attrs_copy[key] = np.array(value, dtype=np.float64)
@@ -577,7 +580,7 @@ def convert_graph_nx_to_td(graph_nx: nx.DiGraph) -> td.graph.GraphView:
     # Add edges
     for source_id, target_id, attrs in all_edges:
         attrs_copy = dict(attrs)
-        # Convert lists to numpy arrays to work around tracksdata SQLGraph bug
+        # Convert lists to numpy arrays
         for key, value in attrs_copy.items():
             if isinstance(value, list):
                 attrs_copy[key] = np.array(value, dtype=np.float64)
