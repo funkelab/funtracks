@@ -40,7 +40,7 @@ dependencies =[
     "zarr>=2.18,<4",
     "numcodecs>=0.13,<0.16",
     #TODO Teun: replace after release
-    "tracksdata[spatial] @ git+https://github.com/TeunHuijben/tracksdata@3433d8a7d48b33a0f34473b902a80e675d814718",
+    "tracksdata[spatial] @ git+https://github.com/TeunHuijben/tracksdata@fcd424de378e9f7d49c580547ed4c1ee9b240c61",
     "tqdm>=4.66.1",
 ]
 
