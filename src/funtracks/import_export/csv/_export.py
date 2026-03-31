@@ -63,6 +63,8 @@ def export_to_csv(
             return float(value)
         elif isinstance(value, (np.int64, np.int32, np.int16)):
             return int(value)
+        elif isinstance(value, (np.bool_, bool)):
+            return bool(value)
         return value
 
     header: list[str] = []
