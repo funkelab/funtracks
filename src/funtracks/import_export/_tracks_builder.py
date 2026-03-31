@@ -455,6 +455,7 @@ class TracksBuilder(ABC):
             edge_attributes=list(self.in_memory_geff["edge_props"].keys()),
             node_default_values=node_default_values,
             database=database,
+            ndim=self.ndim,
         )
 
         node_ids = [int(i) for i in self.in_memory_geff["node_ids"]]

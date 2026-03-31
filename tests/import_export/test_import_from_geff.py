@@ -747,3 +747,49 @@ def test_get_time_works_after_import(valid_geff):
     all_node_ids = list(tracks.graph.node_ids())
     times = tracks.get_times(all_node_ids)
     assert len(times) == len(all_node_ids)
+
+
+def test_3d_pos_survives_sql_roundtrip(tmp_path):
+    """Regression test: 3D pos (z, y, x) must keep Array dtype through SQL roundtrip.
+
+    The construct_graph() method must pass the correct ndim to
+    create_empty_graphview_graph() so the pos schema is Array(Float64, 3) not
+    Array(Float64, 2). A schema mismatch causes SQLGraph.from_other() to
+    downgrade the column to List(Float64), which breaks downstream callers that
+    rely on to_numpy() returning a 2D float64 array.
+    """
+    import polars as pl
+    import tracksdata as td
+
+    store, _ = create_mock_geff(
+        node_id_dtype="uint",
+        node_axis_dtypes={"position": "float64", "time": "int64"},
+        directed=True,
+        num_nodes=5,
+        num_edges=2,
+        include_t=True,
+        include_z=True,
+        include_y=True,
+        include_x=True,
+        extra_node_props={"track_id": np.arange(5)},
+    )
+    name_map = {"time": "t", "pos": ["z", "y", "x"]}
+    tracks = import_from_geff(store, name_map)
+
+    # Verify the RX graph has correct Array dtype for 3D pos
+    df_rx = tracks.graph.node_attrs(attr_keys=["pos"])
+    assert df_rx["pos"].dtype == pl.Array(pl.Float64, 3), (
+        f"RX graph pos should be Array(Float64, 3), got {df_rx['pos'].dtype}"
+    )
+
+    # Convert to SQL and reload — this is where the schema mismatch used to surface
+    db_path = str(tmp_path / "test.db")
+    td.graph.SQLGraph.from_other(tracks.graph, drivername="sqlite", database=db_path)
+    sql_graph2 = td.graph.SQLGraph("sqlite", db_path)
+
+    df_sql = sql_graph2.node_attrs(attr_keys=["pos"])
+    assert df_sql["pos"].dtype == pl.Array(pl.Float64, 3), (
+        f"Reloaded SQL pos should be Array(Float64, 3), got {df_sql['pos'].dtype}. "
+        "This likely means construct_graph() used the wrong ndim when registering "
+        "the pos schema, causing a mismatch with the actual 3-element data."
+    )
