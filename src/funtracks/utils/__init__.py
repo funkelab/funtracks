@@ -10,8 +10,10 @@ from ._zarr_compat import (
     setup_zarr_array,
     setup_zarr_group,
 )
+from .pyramid import create_pyramid
 
 __all__ = [
+    "create_pyramid",
     "detect_zarr_spec_version",
     "get_store_path",
     "is_zarr_v3",

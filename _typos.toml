@@ -1,0 +1,4 @@
+[default.extend-words]
+# OME is the Open Microscopy Environment, not a typo for "some"
+ome = "ome"
+OME = "OME"
