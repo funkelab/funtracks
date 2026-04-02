@@ -157,6 +157,9 @@ class TestRegionpropsAnnotator:
         pos = np.array(tracks.graph.nodes[6]["pos"])
         expected = pixel_centroid * np.array(scale[1:])
 
+        bug_value = np.array([1.5] * len(pixel_centroid)) * np.array(
+            scale[1:]
+        ) + np.array([96.0] * len(pixel_centroid))
         np.testing.assert_allclose(
             pos,
             expected,
@@ -164,11 +167,7 @@ class TestRegionpropsAnnotator:
             err_msg=(
                 f"World centroid must be pixel_centroid * scale. "
                 f"Got {pos}, expected {expected}. "
-                f"Bug value would be local_centroid * scale + bbox_min = "
-                f"{
-                    np.array([1.5] * len(pixel_centroid)) * np.array(scale[1:])
-                    + np.array([96.0] * len(pixel_centroid))
-                }"
+                f"Bug value would be local_centroid * scale + bbox_min = {bug_value}"
             ),
         )
 
