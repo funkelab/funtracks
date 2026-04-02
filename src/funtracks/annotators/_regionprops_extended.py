@@ -7,9 +7,37 @@ from tracksdata.nodes._mask import Mask
 
 
 class ExtendedRegionProperties(RegionProperties):
-    """Adding additional properties to skimage.measure._regionprops following the logic
-    from the porespy package with some modifications to include the spacing information.
+    """Adding additional properties to skimage.measure._regionprops
+    with some modifications to include the spacing information.
     """
+
+    def __init__(
+        self,
+        *args,
+        bbox_min: np.ndarray | None = None,
+        ext_spacing: tuple[float, ...] | None = None,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self._bbox_min = bbox_min
+        self._ext_spacing = ext_spacing
+
+    @property
+    def centroid(self):
+        """Global centroid in world units.
+
+        skimage computes: local_centroid * spacing + bbox_min_pixel  (mixed units)
+        We need:         (local_centroid + bbox_min_pixel) * spacing (world units)
+        Correction:      + bbox_min_pixel * (spacing - 1)
+        """
+        raw = super().centroid
+        if self._bbox_min is not None and self._ext_spacing is not None:
+            spacing = np.asarray(self._ext_spacing)
+            correction = self._bbox_min * (spacing - 1.0)
+            return tuple(
+                float(c) + float(corr) for c, corr in zip(raw, correction, strict=True)
+            )
+        return raw
 
     @property
     def axes(self):
@@ -200,6 +228,8 @@ def regionprops_extended(
 
     region = mask.regionprops(spacing=spacing)
 
+    bbox_min = np.array(mask.bbox[: mask._mask.ndim]) if spacing is not None else None
+
     extended_region = ExtendedRegionProperties(
         slice=region.slice,
         label=region.label,
@@ -208,6 +238,8 @@ def regionprops_extended(
         cache_active=region._cache_active,
         spacing=region._spacing,
         offset=region._offset,
+        bbox_min=bbox_min,
+        ext_spacing=spacing,
     )
 
     return [extended_region]

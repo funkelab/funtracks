@@ -132,6 +132,46 @@ class TestRegionpropsAnnotator:
         # Should not raise an error, just return silently
         rp_ann.compute()  # No error expected
 
+    def test_centroid_world_coords_with_scale(self, get_graph, ndim):
+        """Centroid in 'pos' must be pixel_centroid * scale (world units).
+
+        Without the fix, skimage returns local_centroid * spacing + bbox_min_pixel
+        (mixed units). The correct formula is (local_centroid + bbox_min_pixel) *
+        spacing = pixel_centroid * spacing.
+
+        Node 6 has a cube/square at corner (96, 96, ...) with width 4,
+        so pixel centroid = 97.5 in each spatial axis.
+        """
+        graph = get_graph(ndim, with_seg=True)
+        if ndim == 3:
+            scale = [1.0, 2.0, 3.0]
+            pixel_centroid = np.array([97.5, 97.5])
+        else:
+            scale = [1.0, 2.0, 3.0, 4.0]
+            pixel_centroid = np.array([97.5, 97.5, 97.5])
+
+        tracks = Tracks(graph, ndim=ndim, scale=scale, **track_attrs)
+        # Force recomputation so regionprops runs with the given scale as spacing
+        tracks.enable_features(["pos"])
+
+        pos = np.array(tracks.graph.nodes[6]["pos"])
+        expected = pixel_centroid * np.array(scale[1:])
+
+        np.testing.assert_allclose(
+            pos,
+            expected,
+            atol=0.1,
+            err_msg=(
+                f"World centroid must be pixel_centroid * scale. "
+                f"Got {pos}, expected {expected}. "
+                f"Bug value would be local_centroid * scale + bbox_min = "
+                f"{
+                    np.array([1.5] * len(pixel_centroid)) * np.array(scale[1:])
+                    + np.array([96.0] * len(pixel_centroid))
+                }"
+            ),
+        )
+
     def test_ignores_irrelevant_actions(self, get_graph, ndim):
         """Test that RegionpropsAnnotator ignores actions that don't affect
         segmentation.
