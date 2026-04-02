@@ -1,4 +1,5 @@
 import numpy as np
+import polars as pl
 
 from funtracks.actions import AddNode
 from funtracks.data_model import SolutionTracks, Tracks
@@ -148,3 +149,44 @@ def test_export_to_csv_with_display_names(
         "Lineage ID",
     ]
     assert lines[0].strip().split(",") == header
+
+
+def test_multi_axis_pos_attr_with_segmentation(graph_3d_with_segmentation):
+    """pos_attr as list should be respected even when segmentation is present.
+
+    Scenario: graph has both a "pos" column AND individual z/y/x columns with
+    distinct values. SolutionTracks(pos_attr=['z','y','x']) should use z/y/x
+    as the position_key, not fall back to "pos".
+    """
+    graph = graph_3d_with_segmentation
+    # Add individual axis columns with values offset from "pos" so we can
+    # distinguish which column is being used.
+    offset = 99.0
+    graph.add_node_attr_key("z", default_value=0.0, dtype=pl.Float64)
+    graph.add_node_attr_key("y", default_value=0.0, dtype=pl.Float64)
+    graph.add_node_attr_key("x", default_value=0.0, dtype=pl.Float64)
+    for node in graph.node_ids():
+        pos = graph.nodes[node]["pos"]
+        graph.nodes[node]["z"] = float(pos[0]) + offset
+        graph.nodes[node]["y"] = float(pos[1]) + offset
+        graph.nodes[node]["x"] = float(pos[2]) + offset
+
+    tracks = SolutionTracks(
+        graph=graph,
+        pos_attr=["z", "y", "x"],
+        ndim=4,
+        **track_attrs,
+    )
+
+    # position_key should be the user-specified list, not "pos"
+    assert tracks.features.position_key == ["z", "y", "x"]
+
+    # positions should come from z/y/x (offset values), not from "pos"
+    node_id = next(iter(graph.node_ids()))
+    pos_from_tracks = tracks.get_position(node_id)
+    original_pos = graph.nodes[node_id]["pos"]
+    expected = [float(original_pos[i]) + offset for i in range(3)]
+    assert list(pos_from_tracks) == expected, (
+        f"Expected positions from z/y/x ({expected}), "
+        f"got {list(pos_from_tracks)} — SolutionTracks used 'pos' instead"
+    )
