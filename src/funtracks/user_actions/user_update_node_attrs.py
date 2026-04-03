@@ -24,6 +24,7 @@ class UserUpdateNodeAttrs(ActionGroup):
         tracks: SolutionTracks,
         node: int,
         attrs: dict[str, Any],
+        _top_level: bool = True,
     ):
         """
         Args:
@@ -31,6 +32,9 @@ class UserUpdateNodeAttrs(ActionGroup):
             node (int): The node to update the attributes for
             attrs (dict[str, Any]): A mapping from attribute name to new attribute
                 values for the given node.
+            _top_level (bool): If True, add this action to the history and emit
+                refresh. Set to False when used as a sub-action inside a compound
+                action. Defaults to True.
 
         Raises:
             ValueError: If a protected attribute is in the given attribute mapping.
@@ -41,5 +45,6 @@ class UserUpdateNodeAttrs(ActionGroup):
         # Call the basic UpdateNodeAttrs action
         self.actions.append(UpdateNodeAttrs(tracks, node, attrs))
 
-        self.tracks.action_history.add_new_action(self)
-        self.tracks.refresh.emit()
+        if _top_level:
+            self.tracks.action_history.add_new_action(self)
+            self.tracks.refresh.emit()
