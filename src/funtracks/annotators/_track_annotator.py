@@ -4,7 +4,8 @@ import warnings
 from collections import defaultdict
 from typing import TYPE_CHECKING
 
-import networkx as nx
+import rustworkx as rx
+import tracksdata as td
 
 from funtracks.actions import AddNode, DeleteNode, UpdateTrackIDs
 from funtracks.data_model import SolutionTracks
@@ -111,13 +112,13 @@ class TrackAnnotator(GraphAnnotator):
         self.max_lineage_id = 0
 
         # Initialize tracklet bookkeeping if track IDs already exist in the graph
-        if tracks.graph.number_of_nodes() > 0:
+        if tracks.graph.num_nodes() > 0:
             max_id, id_to_nodes = self._get_max_id_and_map(self.tracklet_key)
             self.max_tracklet_id = max_id
             self.tracklet_id_to_nodes = id_to_nodes
 
         # Initialize lineage bookkeeping if lineage IDs already exist
-        if lineage_key is not None and tracks.graph.number_of_nodes() > 0:
+        if lineage_key is not None and tracks.graph.num_nodes() > 0:
             max_id, id_to_nodes = self._get_max_id_and_map(self.lineage_key)
             self.max_lineage_id = max_id
             self.lineage_id_to_nodes = id_to_nodes
@@ -132,15 +133,15 @@ class TrackAnnotator(GraphAnnotator):
             tuple[int, dict[int, list[int]]]: The maximum id value, and a mapping from
                 ids to a list of nodes with that id.
         """
+        if key not in self.tracks.graph.node_attr_keys():
+            return 0, {}
+        df = self.tracks.graph.node_attrs(attr_keys=[td.DEFAULT_ATTR_KEYS.NODE_ID, key])
         id_to_nodes = defaultdict(list)
-        max_id = 0
-        for node in self.tracks.nodes():
-            _id: int = self.tracks.get_node_attr(node, key)
+        for node, _id in zip(df[td.DEFAULT_ATTR_KEYS.NODE_ID], df[key], strict=True):
             if _id is None:
                 continue
             id_to_nodes[_id].append(node)
-            if _id > max_id:
-                max_id = _id
+        max_id = max(id_to_nodes.keys(), default=0)
         return max_id, dict(id_to_nodes)
 
     def compute(self, feature_keys: list[str] | None = None) -> None:
@@ -178,16 +179,17 @@ class TrackAnnotator(GraphAnnotator):
                 to lists of nodes with that id
         """
         id_to_node = {}
+        all_nodes = []
+        all_ids = []
         _id = 1
         for component in components:
             nodes = list(component)
-            ids = [
-                _id,
-            ] * len(nodes)
-            self.tracks._set_nodes_attr(nodes, key, ids)
-
+            all_nodes.extend(nodes)
+            all_ids.extend([_id] * len(nodes))
             id_to_node[_id] = nodes
             _id += 1
+        if all_nodes:
+            self.tracks._set_nodes_attr(all_nodes, key, all_ids)
         return _id - 1, id_to_node
 
     def _assign_lineage_ids(self) -> None:
@@ -196,8 +198,17 @@ class TrackAnnotator(GraphAnnotator):
         Each connected component will get a unique id, and the relevant class
         attributes will be updated.
         """
-        lineages = nx.weakly_connected_components(self.tracks.graph)
-        max_id, ids_to_nodes = self._assign_ids(lineages, self.lineage_key)
+
+        lineages_internal = rx.weakly_connected_components(self.tracks.graph.rx_graph)
+        lineages_external = []
+        for lin in lineages_internal:
+            node_ids_internal = list(lin)
+            node_ids_external = [
+                self.tracks.graph.node_ids()[nid] for nid in node_ids_internal
+            ]
+            lineages_external.append(node_ids_external)
+
+        max_id, ids_to_nodes = self._assign_ids(lineages_external, self.lineage_key)
         self.max_lineage_id = max_id
         self.lineage_id_to_nodes = ids_to_nodes
 
@@ -207,19 +218,40 @@ class TrackAnnotator(GraphAnnotator):
         After removing division edges, each connected component will get a unique ID,
         and the relevant class attributes will be updated.
         """
-        graph_copy = self.tracks.graph.copy()
-        parents = [node for node, degree in self.tracks.graph.out_degree() if degree >= 2]
+        graph_copy = self.tracks.graph.detach().filter().subgraph()
+
+        parents = [
+            node
+            for node, degree in zip(
+                self.tracks.graph.node_ids(), self.tracks.graph.out_degree(), strict=True
+            )
+            if degree >= 2
+        ]
 
         # Remove all intertrack edges from a copy of the original graph
         for parent in parents:
-            daughters = self.tracks.successors(parent)
+            all_edges = self.tracks.graph.edge_list()
+            daughters = [edge[1] for edge in all_edges if edge[0] == parent]
+
             for daughter in daughters:
                 graph_copy.remove_edge(parent, daughter)
 
-        tracklets = nx.weakly_connected_components(graph_copy)
-        max_id, ids_to_nodes = self._assign_ids(tracklets, self.tracklet_key)
-        self.max_tracklet_id = max_id
-        self.tracklet_id_to_nodes = ids_to_nodes
+        track_id = 1
+        all_node_ids = []
+        all_track_ids = []
+        for tracklet in rx.weakly_connected_components(graph_copy.rx_graph):
+            node_ids_internal = list(tracklet)
+            node_ids_external = [graph_copy.node_ids()[nid] for nid in node_ids_internal]
+            all_node_ids.extend(node_ids_external)
+            all_track_ids.extend([track_id] * len(node_ids_external))
+            self.tracklet_id_to_nodes[track_id] = node_ids_external
+            track_id += 1
+        if all_node_ids:
+            self.tracks.graph.update_node_attrs(
+                attrs={self.tracks.features.tracklet_key: all_track_ids},
+                node_ids=all_node_ids,
+            )
+        self.max_tracklet_id = track_id - 1
 
     def update(self, action: BasicAction) -> None:
         """Update track-level features based on the action.
@@ -275,15 +307,11 @@ class TrackAnnotator(GraphAnnotator):
             for node in curr_nodes:
                 # Lineage updates all downstream nodes
                 if update_lineage:
-                    self.tracks._set_node_attr(node, self.lineage_key, new_lineage_id)
                     lineage_nodes.append(node)
 
                 # Tracklet only updates while ID matches old_tracklet_id
                 if still_in_tracklet and update_tracklet:
                     if self.tracks.get_track_id(node) == old_tracklet_id:
-                        self.tracks._set_node_attr(
-                            node, self.tracklet_key, new_tracklet_id
-                        )
                         tracklet_nodes.append(node)
                     else:
                         still_in_tracklet = False
@@ -292,6 +320,18 @@ class TrackAnnotator(GraphAnnotator):
                 next_nodes.extend(self.tracks.graph.successors(node))
 
             curr_nodes = next_nodes
+
+        # Bulk-write all collected node attribute changes in one call each
+        if update_tracklet and tracklet_nodes:
+            self.tracks.graph.update_node_attrs(
+                attrs={self.tracklet_key: [new_tracklet_id] * len(tracklet_nodes)},
+                node_ids=tracklet_nodes,
+            )
+        if update_lineage and lineage_nodes:
+            self.tracks.graph.update_node_attrs(
+                attrs={self.lineage_key: [new_lineage_id] * len(lineage_nodes)},
+                node_ids=lineage_nodes,
+            )
 
         # Update bookkeeping
         if update_tracklet:

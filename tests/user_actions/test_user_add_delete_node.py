@@ -46,7 +46,7 @@ class TestUserAddDeleteNode:
             "t": time,
         }
         if with_seg:
-            seg_copy = tracks.segmentation.copy()
+            seg_copy = np.asarray(tracks.segmentation).copy()
             if ndim == 3:
                 seg_copy[time, position[0], position[1]] = node_id
             else:
@@ -111,6 +111,13 @@ class TestUserAddDeleteNode:
         assert not graph.has_edge(3, node_id)
         assert not graph.has_edge(node_id, 5)
         assert graph.has_edge(3, 5)
+
+        # Regression: calling action.inverse() a second time (undo after redo after undo)
+        action.inverse()
+        assert graph.has_node(node_id)
+        assert graph.has_edge(3, node_id)
+        assert graph.has_edge(node_id, 5)
+        assert not graph.has_edge(3, 5)
         # TODO: error if node doesn't exist?
 
     def test_user_delete_node_after_division(self, get_tracks, ndim, with_seg):
@@ -155,8 +162,8 @@ class TestUserAddDeleteNode:
         graph = tracks.graph
 
         # Save original state
-        original_nodes = set(graph.nodes)
-        original_edges = set(graph.edges)
+        original_nodes = set(graph.node_ids())
+        original_edges = set(graph.edge_ids())
         original_track_ids = {n: tracks.get_track_id(n) for n in original_nodes}
 
         # Delete nodes 4 and 6 (mid-track node and isolated node)
@@ -176,8 +183,8 @@ class TestUserAddDeleteNode:
 
         # Undo restores all nodes and edges
         inverse = action.inverse()
-        assert set(graph.nodes) == original_nodes
-        assert set(graph.edges) == original_edges
+        assert set(graph.node_ids()) == original_nodes
+        assert set(graph.edge_ids()) == original_edges
         for node in original_nodes:
             assert tracks.get_track_id(node) == original_track_ids[node]
 
