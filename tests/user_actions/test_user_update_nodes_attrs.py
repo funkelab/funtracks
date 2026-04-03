@@ -45,6 +45,23 @@ class TestUserUpdateNodesAttrs:
         for node in [1, 2]:
             assert tracks.get_node_attr(node, "score") == 0.9
 
+    def test_per_node_attrs(self, get_tracks, ndim, with_seg):
+        """Test bulk update with a different attr dict per node."""
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+
+        per_node = [{"score": 0.1}, {"score": 0.9}]
+        UserUpdateNodesAttrs(tracks, nodes=[1, 2], attrs=per_node)
+
+        assert tracks.get_node_attr(1, "score") == 0.1
+        assert tracks.get_node_attr(2, "score") == 0.9
+
+    def test_per_node_attrs_length_mismatch_raises(self, get_tracks, ndim, with_seg):
+        """Mismatched list length raises ValueError."""
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+
+        with pytest.raises(ValueError, match="attrs list length"):
+            UserUpdateNodesAttrs(tracks, nodes=[1, 2], attrs=[{"score": 0.1}])
+
     def test_protected_attr_raises(self, get_tracks, ndim, with_seg):
         """Passing a protected attribute raises ValueError."""
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
