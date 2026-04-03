@@ -54,6 +54,7 @@ class TestUserUpdateNodesAttrs:
     def test_per_node_attrs(self, get_tracks, ndim, with_seg):
         """Test bulk update with a different attr dict per node."""
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        tracks.graph.add_node_attr_key("score", default_value=0, dtype=pl.Float64)
 
         per_node = [{"score": 0.1}, {"score": 0.9}]
         UserUpdateNodesAttrs(tracks, nodes=[1, 2], attrs=per_node)
