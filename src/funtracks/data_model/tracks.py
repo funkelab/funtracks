@@ -218,27 +218,27 @@ class Tracks:
             lineage_key=lineage_key,
         )
 
-        # Register position feature if no segmentation (static position)
-        if self.segmentation is None:
-            # No segmentation - position is provided by user (static)
-            if isinstance(pos_attr, tuple | list):
-                # Multiple position attributes (one per axis)
-                multi_position_key = list(pos_attr)
-                for attr in pos_attr:
-                    features[attr] = {
-                        "feature_type": "node",
-                        "value_type": "float",
-                        "num_values": 1,
-                        "default_value": None,
-                    }
-                # For multi-axis, set position_key directly
-                # (not a single feature to register)
-                feature_dict.position_key = multi_position_key
-            else:
-                # Single position attribute
-                single_position_key = pos_attr
-                pos_feature = Position(axes=self.axis_names)
-                feature_dict.register_position_feature(single_position_key, pos_feature)
+        # Register position feature
+        if isinstance(pos_attr, tuple | list):
+            # Multiple position attributes (one per axis) -
+            # always static, already on nodes
+            multi_position_key = list(pos_attr)
+            for attr in pos_attr:
+                feature_dict[attr] = {
+                    "feature_type": "node",
+                    "value_type": "float",
+                    "num_values": 1,
+                    "default_value": None,
+                }
+            # For multi-axis, set position_key directly
+            # (not a single feature to register)
+            feature_dict.position_key = multi_position_key
+        elif self.segmentation is None:
+            # Single position attribute without segmentation - static, provided by user
+            single_position_key = pos_attr
+            pos_feature = Position(axes=self.axis_names)
+            feature_dict.register_position_feature(single_position_key, pos_feature)
+        # else: single pos_attr with segmentation - RegionpropsAnnotator will handle it
 
         return feature_dict
 
@@ -332,7 +332,8 @@ class Tracks:
         for annotator in self.annotators:
             if isinstance(annotator, RegionpropsAnnotator):
                 pos_key = annotator.pos_key
-                self.features.position_key = pos_key
+                if self.features.position_key is None:
+                    self.features.position_key = pos_key
                 core_computed_features.append(pos_key)
                 # special case for backward compatibility
                 core_computed_features.append("area")
