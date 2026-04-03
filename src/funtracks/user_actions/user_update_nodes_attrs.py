@@ -20,21 +20,30 @@ class UserUpdateNodesAttrs(ActionGroup):
     Args:
         tracks: The tracks to update node attributes for.
         nodes: The node ids to update.
-        attrs: A mapping from attribute name to new attribute values,
-            applied to all nodes.
+        attrs: Either a single dict applied to all nodes, or a list of dicts
+            with one entry per node (must match the length of nodes).
     """
 
     def __init__(
         self,
         tracks: SolutionTracks,
         nodes: list[int],
-        attrs: dict[str, Any],
+        attrs: dict[str, Any] | list[dict[str, Any]],
     ):
         super().__init__(tracks, actions=[])
         self.tracks: SolutionTracks  # Narrow type from base class
-        for node in nodes:
+        if isinstance(attrs, list):
+            if len(attrs) != len(nodes):
+                raise ValueError(
+                    f"attrs list length ({len(attrs)}) must match "
+                    f"nodes length ({len(nodes)})"
+                )
+            per_node_attrs = attrs
+        else:
+            per_node_attrs = [attrs] * len(nodes)
+        for node, node_attrs in zip(nodes, per_node_attrs, strict=True):
             self.actions.append(
-                UserUpdateNodeAttrs(tracks, node, attrs, _top_level=False)
+                UserUpdateNodeAttrs(tracks, node, node_attrs, _top_level=False)
             )
 
         self.tracks.action_history.add_new_action(self)
