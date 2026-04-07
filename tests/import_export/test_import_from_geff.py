@@ -749,6 +749,71 @@ def test_get_time_works_after_import(valid_geff):
     assert len(times) == len(all_node_ids)
 
 
+@pytest.fixture
+def geff_with_bool_prop():
+    """A minimal GEFF store that contains a np.bool_ node property."""
+    store, _ = create_mock_geff(
+        node_id_dtype="uint",
+        node_axis_dtypes={"position": "float64", "time": "int64"},
+        directed=True,
+        num_nodes=5,
+        num_edges=2,
+        include_t=True,
+        include_z=False,
+        include_y=True,
+        include_x=True,
+        extra_node_props={
+            "is_dividing": np.array([True, False, True, False, True], dtype=np.bool_),
+        },
+    )
+    return store
+
+
+def test_bool_node_property_schema(geff_with_bool_prop):
+    """Fix 1: np.bool_ columns must produce a pl.Boolean schema, not pl.Int64.
+
+    In numpy 2.x, np.bool_ is no longer a subtype of np.integer.  Before the
+    fix, construct_graph() fell through to ``else: default_value = 0`` (Python
+    int), making polars infer a pl.Int64 schema.  Building a pl.Series of type
+    Int64 from np.bool_ values then raised:
+        TypeError: unexpected value while building Series of type Int64;
+                   found value of type Float64: 1.0
+    """
+    import polars as pl
+
+    name_map = {"time": "t", "pos": ["y", "x"], "is_dividing": "is_dividing"}
+    tracks = import_from_geff(geff_with_bool_prop, name_map)
+
+    df = tracks.graph.node_attrs(attr_keys=["is_dividing"])
+    assert df["is_dividing"].dtype == pl.Boolean, (
+        f"Expected pl.Boolean schema for 'is_dividing', got {df['is_dividing'].dtype}. "
+        "Likely cause: np.bool_ default_value fell through to int in construct_graph()."
+    )
+
+
+def test_bool_node_property_values(geff_with_bool_prop):
+    """Fix 2: np.bool_ values must be converted to Python bool in construct_graph.
+
+    Even when the polars schema is correctly pl.Boolean (Fix 1), individual
+    np.bool_ values in the node-attrs dict must be explicitly cast to Python
+    bool.  Without the cast, the value stored in the graph node dict is an
+    np.bool_ object, which is not an instance of Python bool and can cause
+    type errors in downstream code that calls isinstance(val, bool).
+    """
+    name_map = {"time": "t", "pos": ["y", "x"], "is_dividing": "is_dividing"}
+    tracks = import_from_geff(geff_with_bool_prop, name_map)
+
+    node_ids = sorted(tracks.graph.node_ids())
+    expected = [True, False, True, False, True]
+    for node_id, exp in zip(node_ids, expected, strict=True):
+        val = tracks.graph.nodes[node_id]["is_dividing"]
+        assert type(val) is bool, (
+            f"Expected Python bool for 'is_dividing', got {type(val)} for node {node_id}"
+            "Likely cause: np.bool_ value not cast to bool in construct_graph()."
+        )
+        assert val == exp, f"Wrong value for node {node_id}: expected {exp}, got {val}"
+
+
 def test_3d_pos_survives_sql_roundtrip(tmp_path):
     """Regression test: 3D pos (z, y, x) must keep Array dtype through SQL roundtrip.
 

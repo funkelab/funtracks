@@ -438,7 +438,9 @@ class TracksBuilder(ABC):
             node_default_values = []
             for i, dtype in enumerate(node_default_dtypes):
                 default_value: Any
-                if issubclass(dtype, np.integer):
+                if issubclass(dtype, (bool, np.bool_)):
+                    default_value = False
+                elif issubclass(dtype, np.integer):
                     default_value = -1
                 elif issubclass(dtype, np.floating):
                     default_value = 0.0
@@ -471,10 +473,6 @@ class TracksBuilder(ABC):
                 # set missing attribute to None
                 if prop.get("missing") is not None and prop["missing"][idx]:
                     value = None
-                elif isinstance(value, np.integer):
-                    value = int(value)
-                elif isinstance(value, np.floating):
-                    value = float(value)
                 node_attr[key] = value
             for key in graph.node_attr_keys():
                 if key not in node_attr:
