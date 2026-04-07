@@ -14,7 +14,7 @@
         <link rel="prev" href="../user_delete_nodes/">
       
       
-        <link rel="next" href="../user_update_segmentation/">
+        <link rel="next" href="../user_update_nodes_attrs/">
       
       
         
@@ -1446,6 +1446,8 @@
       
         
       
+        
+      
     
     
     
@@ -1728,6 +1730,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../user_update_nodes_attrs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>user_update_nodes_attrs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../user_update_segmentation/" class="md-nav__link">
         
   
@@ -1895,7 +1925,10 @@
 
 </h2>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">UserUpdateNodeAttrs</span><span class="p">(</span>
-    <span class="n">tracks</span><span class="p">:</span> <span class="n">SolutionTracks</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">attrs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
+    <span class="n">tracks</span><span class="p">:</span> <span class="n">SolutionTracks</span><span class="p">,</span>
+    <span class="n">node</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">attrs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="n">_top_level</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span>
 </code></pre></div>
 
@@ -1970,6 +2003,24 @@ values for the given node.</p>
             </td>
             <td>
                 <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>_top_level</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If True, add this action to the history and emit
+refresh. Set to False when used as a sub-action inside a compound
+action. Defaults to True.</p>
+              </div>
+            </td>
+            <td>
+                  <code>True</code>
             </td>
           </tr>
       </tbody>
