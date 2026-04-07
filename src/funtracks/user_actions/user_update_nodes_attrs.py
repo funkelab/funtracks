@@ -20,28 +20,33 @@ class UserUpdateNodesAttrs(ActionGroup):
     Args:
         tracks: The tracks to update node attributes for.
         nodes: The node ids to update.
-        attrs: Either a single dict applied to all nodes, or a list of dicts
-            with one entry per node (must match the length of nodes).
+        attrs: A dict mapping attribute names to a list of values, one per node.
+            For scalar attributes: ``{"score": [0.1, 0.9]}``.
+            For array attributes: ``{"pos": [[1, 2], [3, 4]]}``.
+            All lists must have the same length as nodes.
     """
 
     def __init__(
         self,
         tracks: SolutionTracks,
         nodes: list[int],
-        attrs: dict[str, Any] | list[dict[str, Any]],
+        attrs: dict[str, list[Any]],
     ):
         super().__init__(tracks, actions=[])
         self.tracks: SolutionTracks  # Narrow type from base class
-        if isinstance(attrs, list):
-            if len(attrs) != len(nodes):
+        for key, values in attrs.items():
+            if not isinstance(values, list):
                 raise ValueError(
-                    f"attrs list length ({len(attrs)}) must match "
-                    f"nodes length ({len(nodes)})"
+                    f"Values for attribute '{key}' must be a list, "
+                    f"got {type(values).__name__}"
                 )
-            per_node_attrs = attrs
-        else:
-            per_node_attrs = [attrs] * len(nodes)
-        for node, node_attrs in zip(nodes, per_node_attrs, strict=True):
+            if len(values) != len(nodes):
+                raise ValueError(
+                    f"Values list for attribute '{key}' has length {len(values)}, "
+                    f"expected {len(nodes)}"
+                )
+        for i, node in enumerate(nodes):
+            node_attrs = {key: values[i] for key, values in attrs.items()}
             self.actions.append(
                 UserUpdateNodeAttrs(tracks, node, node_attrs, _top_level=False)
             )

@@ -118,8 +118,12 @@ class CSVTracksBuilder(TracksBuilder):
                 )
 
         # Fill None values with False for boolean columns.
+        # Only apply to object/bool dtype columns to avoid converting integer columns
+        # like time=[0, 1, 1] to bool (since 0==False and 1==True in Python).
         for col in df.columns:
-            if df[col].dropna().isin([True, False]).all():
+            if (
+                df[col].dtype == object or pd.api.types.is_bool_dtype(df[col].dtype)
+            ) and df[col].dropna().isin([True, False]).all():
                 df[col] = df[col].fillna(False).astype(bool)
 
         # Determine dimensionality from position mapping (if not already set)
