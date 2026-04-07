@@ -10,7 +10,7 @@ class TestUserUpdateNodesAttrs:
         """Test basic bulk node attribute update functionality."""
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
 
-        attrs = {"label": "my_label", "confidence": 0.95}
+        attrs = {"label": ["my_label", "my_label"], "confidence": [0.95, 0.95]}
         UserUpdateNodesAttrs(tracks, nodes=[1, 2], attrs=attrs)
 
         for node in [1, 2]:
@@ -21,7 +21,9 @@ class TestUserUpdateNodesAttrs:
         """Updating multiple nodes creates only one history entry."""
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
 
-        action = UserUpdateNodesAttrs(tracks, nodes=[1, 2, 3], attrs={"label": "x"})
+        action = UserUpdateNodesAttrs(
+            tracks, nodes=[1, 2, 3], attrs={"label": ["x", "x", "x"]}
+        )
 
         assert len(tracks.action_history.undo_stack) == 1
         assert tracks.action_history.undo_stack[-1] is action
@@ -30,7 +32,7 @@ class TestUserUpdateNodesAttrs:
         """Undo restores all nodes' attrs; redo re-applies them."""
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
 
-        action = UserUpdateNodesAttrs(tracks, nodes=[1, 2], attrs={"score": 0.9})
+        action = UserUpdateNodesAttrs(tracks, nodes=[1, 2], attrs={"score": [0.9, 0.9]})
 
         for node in [1, 2]:
             assert tracks.get_node_attr(node, "score") == 0.9
@@ -46,21 +48,38 @@ class TestUserUpdateNodesAttrs:
             assert tracks.get_node_attr(node, "score") == 0.9
 
     def test_per_node_attrs(self, get_tracks, ndim, with_seg):
-        """Test bulk update with a different attr dict per node."""
+        """Test bulk update with different values per node."""
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
 
-        per_node = [{"score": 0.1}, {"score": 0.9}]
-        UserUpdateNodesAttrs(tracks, nodes=[1, 2], attrs=per_node)
+        UserUpdateNodesAttrs(tracks, nodes=[1, 2], attrs={"score": [0.1, 0.9]})
 
         assert tracks.get_node_attr(1, "score") == 0.1
         assert tracks.get_node_attr(2, "score") == 0.9
 
-    def test_per_node_attrs_length_mismatch_raises(self, get_tracks, ndim, with_seg):
-        """Mismatched list length raises ValueError."""
+    def test_array_attr(self, get_tracks, ndim, with_seg):
+        """Test bulk update with array-valued attributes."""
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        spatial_dims = ndim - 1
+
+        positions = [[float(i)] * spatial_dims for i in range(2)]
+        UserUpdateNodesAttrs(tracks, nodes=[1, 2], attrs={"custom_pos": positions})
+
+        assert tracks.get_node_attr(1, "custom_pos") == positions[0]
+        assert tracks.get_node_attr(2, "custom_pos") == positions[1]
+
+    def test_values_not_list_raises(self, get_tracks, ndim, with_seg):
+        """Non-list values raise ValueError."""
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
 
-        with pytest.raises(ValueError, match="attrs list length"):
-            UserUpdateNodesAttrs(tracks, nodes=[1, 2], attrs=[{"score": 0.1}])
+        with pytest.raises(ValueError, match="must be a list"):
+            UserUpdateNodesAttrs(tracks, nodes=[1, 2], attrs={"score": 0.9})
+
+    def test_values_length_mismatch_raises(self, get_tracks, ndim, with_seg):
+        """List length not matching nodes length raises ValueError."""
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+
+        with pytest.raises(ValueError, match="length"):
+            UserUpdateNodesAttrs(tracks, nodes=[1, 2], attrs={"score": [0.1]})
 
     def test_protected_attr_raises(self, get_tracks, ndim, with_seg):
         """Passing a protected attribute raises ValueError."""
@@ -68,4 +87,4 @@ class TestUserUpdateNodesAttrs:
         time_key = tracks.features.time_key
 
         with pytest.raises(ValueError, match="Cannot update attribute"):
-            UserUpdateNodesAttrs(tracks, nodes=[1, 2], attrs={time_key: 999})
+            UserUpdateNodesAttrs(tracks, nodes=[1, 2], attrs={time_key: [0, 1]})
