@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 def nodes_from_segmentation(
     segmentation: np.ndarray,
     scale: list[float] | None = None,
-    mask: bool = False,
+    mask: bool = True,
 ) -> tuple[td.graph.GraphView, dict[int, list[Any]]]:
     """Extract candidate nodes from a segmentation. Returns a tracksdata graph
     with only nodes, and also a dictionary from frames to node_ids for
@@ -42,7 +42,7 @@ def nodes_from_segmentation(
         mask (bool, optional): Whether to include mask and bbox attributes for each
             node. Uses regionprop.image (already computed by regionprops at no extra
             cost) and regionprop.bbox. Including them here avoids a separate write
-            pass over all nodes later. Defaults to False.
+            pass over all nodes later. Defaults to True.
 
     Returns:
         tuple[td.graph.GraphView, dict[int, list[Any]]]: A candidate graph with only
