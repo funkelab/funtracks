@@ -8,7 +8,6 @@ from funtracks.actions.add_delete_edge import AddEdge
 from funtracks.actions.update_segmentation import UpdateNodeSeg
 from funtracks.features import Feature, IoU
 
-from ._compute_ious import _compute_iou
 from ._graph_annotator import GraphAnnotator
 
 if TYPE_CHECKING:
@@ -108,7 +107,7 @@ class EdgeAnnotator(GraphAnnotator):
             source, target = edge
             mask1 = self.tracks.graph.nodes[source]["mask"]
             mask2 = self.tracks.graph.nodes[target]["mask"]
-            iou = _compute_iou(mask1, mask2)
+            iou = mask1.iou(mask2)
             self.tracks._set_edge_attr(edge, self.iou_key, iou)
 
     def update(self, action: BasicAction):
@@ -157,7 +156,7 @@ class EdgeAnnotator(GraphAnnotator):
                 )
                 self.tracks._set_edge_attr(edge, self.iou_key, 0.0)
             else:
-                iou = _compute_iou(mask1, mask2)
+                iou = mask1.iou(mask2)
                 self.tracks._set_edge_attr(edge, self.iou_key, iou)
 
     def change_key(self, old_key: str, new_key: str) -> None:
