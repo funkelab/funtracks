@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from funtracks.data_model.tracks import Node
 
 import tracksdata as td
-from tracksdata.nodes._mask import Mask
+from tracksdata.nodes import Mask
 
 
 class AddNode(BasicAction):

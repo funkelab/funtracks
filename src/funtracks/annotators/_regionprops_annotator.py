@@ -4,7 +4,7 @@ import warnings
 from typing import TYPE_CHECKING, NamedTuple
 
 import numpy as np
-from tracksdata.nodes._mask import Mask
+from tracksdata.nodes import Mask
 
 from funtracks.actions.add_delete_node import AddNode
 from funtracks.actions.update_segmentation import UpdateNodeSeg

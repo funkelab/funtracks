@@ -15,7 +15,7 @@ import polars as pl
 import tracksdata as td
 from psygnal import Signal
 from tracksdata.array import GraphArrayView
-from tracksdata.nodes._mask import Mask
+from tracksdata.nodes import Mask
 
 from funtracks.actions.action_history import ActionHistory
 from funtracks.features import Feature, FeatureDict, Position, Time

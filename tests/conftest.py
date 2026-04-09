@@ -6,7 +6,7 @@ import polars as pl
 import pytest
 import tracksdata as td
 from skimage.draw import disk
-from tracksdata.nodes._mask import Mask
+from tracksdata.nodes import Mask
 
 from funtracks.utils.tracksdata_utils import (
     create_empty_graphview_graph,

@@ -519,7 +519,7 @@ def test_compute_features_without_segmentation(valid_geff):
 
 def _make_mask(bbox):
     """Create a Mask from a bbox list [y_min, x_min, y_max, x_max]."""
-    from tracksdata.nodes._mask import Mask
+    from tracksdata.nodes import Mask
 
     ndim = len(bbox) // 2
     shape = tuple(bbox[i + ndim] - bbox[i] for i in range(ndim))
@@ -544,7 +544,7 @@ def test_import_from_geff_roundtrip_auto_axes(tmp_path):
     - The bbox values are preserved correctly through the round-trip.
     """
     import tracksdata as td
-    from tracksdata.nodes._mask import Mask
+    from tracksdata.nodes import Mask
 
     graph = create_empty_graphview_graph(
         node_attributes=[

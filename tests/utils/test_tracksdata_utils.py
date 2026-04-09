@@ -95,7 +95,7 @@ def test_mask_pixels_roundtrip_with_scale(ndim):
 
 def test_td_mask_to_pixels_empty_mask():
     """Test converting an empty mask to pixels."""
-    from tracksdata.nodes._mask import Mask
+    from tracksdata.nodes import Mask
 
     # Create a truly empty mask (all False)
     empty_mask_array = np.zeros((2, 2), dtype=bool)

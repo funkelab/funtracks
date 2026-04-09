@@ -7,7 +7,7 @@ import tracksdata as td
 from scipy.spatial import KDTree
 from skimage.measure import regionprops
 from tqdm import tqdm
-from tracksdata.nodes._mask import Mask
+from tracksdata.nodes import Mask
 
 from ..utils.tracksdata_utils import create_empty_graphview_graph
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import tracksdata as td
-from tracksdata.nodes._mask import Mask
+from tracksdata.nodes import Mask
 
 from ._base import BasicAction
 

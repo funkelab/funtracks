@@ -3,7 +3,7 @@ import math
 import numpy as np
 from skimage.measure import marching_cubes, mesh_surface_area
 from skimage.measure._regionprops import RegionProperties
-from tracksdata.nodes._mask import Mask
+from tracksdata.nodes import Mask
 
 
 class ExtendedRegionProperties(RegionProperties):

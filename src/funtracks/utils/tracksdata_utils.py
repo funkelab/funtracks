@@ -8,7 +8,7 @@ import polars as pl
 import scipy.ndimage as ndi
 import tracksdata as td
 from polars.testing import assert_frame_equal
-from tracksdata.nodes._mask import Mask
+from tracksdata.nodes import Mask
 
 
 def to_polars_dtype(dtype_or_value: str | Any) -> pl.DataType:

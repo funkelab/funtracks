@@ -239,7 +239,7 @@ class GeffTracksBuilder(TracksBuilder):
         The geff format serialises mask data as plain numeric arrays (zarr cannot
         store arbitrary Python objects). After loading we post-process every node
         that carries both a ``mask`` and a ``bbox`` attribute and wrap the raw array
-        back into a :class:`tracksdata.nodes._mask.Mask` instance, exactly as
+        back into a :class:`tracksdata.nodes.Mask` instance, exactly as
         tracksdata's own ``from_geff`` does.
 
         Additionally, if ``segmentation_shape`` was written to the zarr attrs during
@@ -248,7 +248,7 @@ class GeffTracksBuilder(TracksBuilder):
         """
         import tracksdata as td
         from tracksdata.array import GraphArrayView
-        from tracksdata.nodes._mask import Mask
+        from tracksdata.nodes import Mask
 
         tracks = super().build(*args, **kwargs)
 
