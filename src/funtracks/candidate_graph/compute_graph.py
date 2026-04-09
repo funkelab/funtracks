@@ -35,9 +35,7 @@ def compute_graph_from_seg(
         td.graph.GraphView: A candidate graph that can be passed to the motile solver
     """
     # add nodes (including mask and bbox in the same bulk_add_nodes call)
-    cand_graph, node_frame_dict = nodes_from_segmentation(
-        segmentation, scale=scale, mask=True
-    )
+    cand_graph, node_frame_dict = nodes_from_segmentation(segmentation, scale=scale)
     logger.info("Candidate nodes: %d", cand_graph.num_nodes())
 
     # pre-compute IOU dict before edge insertion so values can be included
