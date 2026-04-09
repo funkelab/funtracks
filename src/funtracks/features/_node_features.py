@@ -19,7 +19,6 @@ def Time() -> Feature:
         "value_type": "int",
         "num_values": 1,
         "display_name": "Time",
-        "required": True,
         "default_value": None,
     }
 
@@ -40,7 +39,6 @@ def Position(axes: Sequence[str]) -> Feature:
         "num_values": len(axes),
         "display_name": "position",
         "value_names": list(axes),
-        "required": True,
         "default_value": None,
         "spatial_dims": True,
     }

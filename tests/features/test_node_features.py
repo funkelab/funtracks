@@ -15,7 +15,6 @@ def test_time_feature():
     assert feat["value_type"] == "int"
     assert feat["num_values"] == 1
     assert feat["display_name"] == "Time"
-    assert feat["required"] is True
     assert feat["default_value"] is None
 
 
@@ -27,7 +26,6 @@ def test_position_feature():
     assert feat["num_values"] == 2
     assert feat["display_name"] == "position"
     assert feat["value_names"] == ["y", "x"]
-    assert feat["required"] is True
     assert feat["default_value"] is None
 
 
@@ -38,7 +36,6 @@ def test_area_feature():
     assert feat["value_type"] == "float"
     assert feat["num_values"] == 1
     assert feat["display_name"] == "Area"
-    assert feat["required"] is True
     assert feat["default_value"] is None
 
     feat = Area(ndim=4)

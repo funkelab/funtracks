@@ -118,8 +118,12 @@ class CSVTracksBuilder(TracksBuilder):
                 )
 
         # Fill None values with False for boolean columns.
+        # Only apply to object/bool dtype columns to avoid converting integer columns
+        # like time=[0, 1, 1] to bool (since 0==False and 1==True in Python).
         for col in df.columns:
-            if df[col].dropna().isin([True, False]).all():
+            if (
+                df[col].dtype == object or pd.api.types.is_bool_dtype(df[col].dtype)
+            ) and df[col].dropna().isin([True, False]).all():
                 df[col] = df[col].fillna(False).astype(bool)
 
         # Determine dimensionality from position mapping (if not already set)
@@ -263,8 +267,17 @@ def tracks_from_df(
                 # Recompute from segmentation
                 node_features[feature_key] = True
             else:
-                # Load from column specified by feature_value
-                node_features[feature_value] = False
+                # Use the lowercase standard key (feature_key) so that core features
+                # like "area" are stored with a consistent lowercase key in the graph,
+                # avoiding SQLite duplicate-column errors when SolutionTracks later tries
+                # to register the same feature under its canonical lowercase name.
+                node_features[feature_key] = False
+                # Ensure node_name_map maps the standard key to the actual column name.
+                # Without this, load_source would look for a column named "area" when
+                # the CSV actually has "Area".
+                if node_name_map is not None and feature_key not in node_name_map:
+                    node_name_map = dict(node_name_map)  # copy to avoid mutating caller
+                    node_name_map[feature_key] = feature_value
 
     builder = CSVTracksBuilder()
 
@@ -275,9 +288,12 @@ def tracks_from_df(
         # Auto-infer name mapping from DataFrame columns
         builder.prepare(df)
 
+    # instead of a separate segmentation array
+
     return builder.build(
         df,
         segmentation,
         scale=scale,
         node_features=node_features,
+        node_name_map=builder.node_name_map,
     )

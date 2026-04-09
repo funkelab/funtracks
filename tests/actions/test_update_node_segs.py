@@ -1,49 +1,66 @@
-import copy
-
 import numpy as np
 import pytest
 from numpy.testing import assert_array_almost_equal
+from polars.testing import assert_series_equal
 
-from funtracks.actions import (
-    UpdateNodeSeg,
-)
+from funtracks.actions import UpdateNodeSeg
+from funtracks.utils.tracksdata_utils import pixels_to_td_mask
 
 
 @pytest.mark.parametrize("ndim", [3, 4])
 def test_update_node_segs(get_tracks, ndim):
     # Get tracks with segmentation
     tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
-    reference_graph = copy.deepcopy(tracks.graph)
+    reference_graph = tracks.graph.detach().filter().subgraph()
 
-    original_seg = tracks.segmentation.copy()
+    node = 1
+    time = tracks.get_time(node)
+
+    # Populate the cache by accessing segmentation at the node's time
+    # This ensures _update_segmentation_cache will test the cache invalidation logic
+    _ = np.asarray(tracks.segmentation[time])
+
+    # Verify cache is populated
+    assert time in tracks.segmentation._cache._store
+
+    original_seg = np.asarray(tracks.segmentation).copy()
     original_area = tracks.graph.nodes[1]["area"]
     original_pos = tracks.graph.nodes[1]["pos"]
 
     # Add a couple pixels to the first node
-    new_seg = tracks.segmentation.copy()
+    new_seg = np.asarray(tracks.segmentation).copy()
     if ndim == 3:
-        new_seg[0][0][0] = 1  # 2D spatial
+        new_seg[time][0][0] = node  # Use node time and node ID
     else:
-        new_seg[0][0][0][0] = 1  # 3D spatial
-    node = 1
+        new_seg[time][0][0][0] = node  # Use node time and node ID
 
     pixels = np.nonzero(original_seg != new_seg)
-    action = UpdateNodeSeg(tracks, node, pixels=pixels, added=True)
+    mask = pixels_to_td_mask(pixels, ndim=ndim)
 
-    assert set(tracks.graph.nodes()) == set(reference_graph.nodes())
+    action = UpdateNodeSeg(tracks, node, mask=mask, added=True)
+
+    assert set(tracks.graph.node_ids()) == set(reference_graph.node_ids())
     assert tracks.graph.nodes[1]["area"] == original_area + 1
-    assert tracks.graph.nodes[1]["pos"] != original_pos
+    assert not np.allclose(tracks.graph.nodes[1]["pos"], original_pos)
     assert_array_almost_equal(tracks.segmentation, new_seg)
 
+    # Re-populate cache for inverse action test
+    _ = np.asarray(tracks.segmentation[time])
+
     inverse = action.inverse()
-    assert set(tracks.graph.nodes()) == set(reference_graph.nodes())
-    for node, data in tracks.graph.nodes(data=True):
-        assert data == reference_graph.nodes[node]
+    assert set(tracks.graph.node_ids()) == set(reference_graph.node_ids())
+    assert_series_equal(
+        reference_graph.nodes[1]["pos"],
+        tracks.graph.nodes[1]["pos"],
+    )
     assert_array_almost_equal(tracks.segmentation, original_seg)
+
+    # Re-populate cache for second inverse test
+    _ = np.asarray(tracks.segmentation[time])
 
     inverse.inverse()
 
-    assert set(tracks.graph.nodes()) == set(reference_graph.nodes())
+    assert set(tracks.graph.node_ids()) == set(reference_graph.node_ids())
     assert tracks.graph.nodes[1]["area"] == original_area + 1
-    assert tracks.graph.nodes[1]["pos"] != original_pos
+    assert not np.allclose(tracks.graph.nodes[1]["pos"], original_pos)
     assert_array_almost_equal(tracks.segmentation, new_seg)

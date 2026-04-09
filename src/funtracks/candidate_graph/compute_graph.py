@@ -1,9 +1,9 @@
 import logging
 
-import networkx as nx
 import numpy as np
+import tracksdata as td
 
-from .iou import add_iou
+from .iou import _get_iou_dict
 from .utils import add_cand_edges, nodes_from_points_list, nodes_from_segmentation
 
 logger = logging.getLogger(__name__)
@@ -14,7 +14,7 @@ def compute_graph_from_seg(
     max_edge_distance: float,
     iou: bool = False,
     scale: list[float] | None = None,
-) -> nx.DiGraph:
+) -> td.graph.GraphView:
     """Construct a candidate graph from a segmentation array. Nodes are placed at the
     centroid of each segmentation and edges are added for all nodes in adjacent frames
     within max_edge_distance.
@@ -32,24 +32,32 @@ def compute_graph_from_seg(
             Defaults to None, which implies the data is isotropic.
 
     Returns:
-        nx.DiGraph: A candidate graph that can be passed to the motile solver
+        td.graph.GraphView: A candidate graph that can be passed to the motile solver
     """
-    # add nodes
+    # add nodes (including mask and bbox in the same bulk_add_nodes call)
     cand_graph, node_frame_dict = nodes_from_segmentation(segmentation, scale=scale)
-    logger.info("Candidate nodes: %d", cand_graph.number_of_nodes())
+    logger.info("Candidate nodes: %d", cand_graph.num_nodes())
 
-    # add edges
+    # pre-compute IOU dict before edge insertion so values can be included
+    # directly in bulk_add_edges, avoiding a separate per-edge update pass
+    iou_dict = None
+    if iou:
+        # Scale does not matter to IOU, because both numerator and denominator
+        # are scaled by the anisotropy.
+        iou_dict = _get_iou_dict(segmentation)
+
+    # add edges (iou values included in bulk_add_edges if iou_dict is provided)
     add_cand_edges(
         cand_graph,
         max_edge_distance=max_edge_distance,
         node_frame_dict=node_frame_dict,
+        iou_dict=iou_dict,
     )
-    if iou:
-        # Scale does not matter to IOU, because both numerator and denominator
-        # are scaled by the anisotropy.
-        add_iou(cand_graph, segmentation, node_frame_dict)
 
-    logger.info("Candidate edges: %d", cand_graph.number_of_edges())
+    logger.info("Candidate edges: %d", cand_graph.num_edges())
+
+    # store segmentation shape in graph metadata
+    cand_graph._update_metadata(segmentation_shape=segmentation.shape)
 
     return cand_graph
 
@@ -58,7 +66,7 @@ def compute_graph_from_points_list(
     points_list: np.ndarray,
     max_edge_distance: float,
     scale: list[float] | None = None,
-) -> nx.DiGraph:
+) -> td.graph.GraphView:
     """Construct a candidate graph from a points list.
 
     Args:
@@ -73,11 +81,11 @@ def compute_graph_from_points_list(
             isotropic.
 
     Returns:
-        nx.DiGraph: A candidate graph that can be passed to the motile solver.
+        td.graph.GraphView: A candidate graph that can be passed to the motile solver.
     """
     # add nodes
     cand_graph, node_frame_dict = nodes_from_points_list(points_list, scale=scale)
-    logger.info("Candidate nodes: %d", cand_graph.number_of_nodes())
+    logger.info("Candidate nodes: %d", cand_graph.num_nodes())
     # add edges
     add_cand_edges(
         cand_graph,
