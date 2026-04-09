@@ -23,7 +23,7 @@ graph LR
         ValidateMap["validate_name_map<br/><small>check required mappings</small>"]
         LoadSource["load_source<br/><small>load into InMemoryGeff</small>"]
         Validate["validate<br/><small>check graph structure</small>"]
-        ConstructGraph["construct_graph<br/><small>build NetworkX graph</small>"]
+        ConstructGraph["construct_graph<br/><small>build tracksdata graph</small>"]
         HandleSeg["handle_segmentation<br/><small>load & relabel if needed</small>"]
         CreateTracks[Create SolutionTracks]
         EnableFeatures["enable_features<br/><small>register & compute</small>"]

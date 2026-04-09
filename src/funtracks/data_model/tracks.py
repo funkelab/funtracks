@@ -73,7 +73,7 @@ class Tracks:
         """Initialize a Tracks object.
 
         Args:
-            graph (td.graph.GraphView): NetworkX directed graph with nodes as detections
+            graph (td.graph.GraphView): tracksdata directed graph with nodes as detections
                 and edges as links.
             time_attr (str | None): Graph attribute name for time. Defaults to "time"
                 if None.

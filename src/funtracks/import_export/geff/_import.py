@@ -27,7 +27,7 @@ def import_graph_from_geff(
 ) -> tuple[InMemoryGeff, list[str], int]:
     """Load GEFF data and rename property keys to standard names.
 
-    All property keys are renamed before NetworkX graph construction.
+    All property keys are renamed before Tracksdata graph construction.
 
     Args:
         directory: Path to GEFF data directory or zarr store

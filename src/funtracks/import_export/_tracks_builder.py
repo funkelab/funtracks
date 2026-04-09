@@ -407,7 +407,7 @@ class TracksBuilder(ABC):
         node_name_map: dict[str, str | list[str]] | None = None,
         database: str | None = None,
     ) -> td.graph.GraphView:
-        """Construct NetworkX graph from validated InMemoryGeff data.
+        """Construct Tracksdata graph from validated InMemoryGeff data.
 
         Common logic shared across all formats.
 
@@ -418,7 +418,7 @@ class TracksBuilder(ABC):
                 If None (default), an in-memory/temp graph is used.
 
         Returns:
-            NetworkX DiGraph with standard keys
+            Tracksdata GraphView with standard keys
 
         Raises:
             ValueError: If data not loaded or validated
@@ -514,7 +514,7 @@ class TracksBuilder(ABC):
         Common logic shared across all formats.
 
         Args:
-            graph: Constructed NetworkX graph for validation
+            graph: Constructed Tracksdata graph for validation
             segmentation: Path to segmentation data or pre-loaded segmentation array
             scale: Spatial scale for coordinate transformation
 
