@@ -998,10 +998,6 @@
       
         
       
-        
-      
-        
-      
     
     
     
@@ -1058,34 +1054,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../../data_model/graph_attributes/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>graph_attributes
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../../data_model/solution_tracks/" class="md-nav__link">
         
   
@@ -1122,34 +1090,6 @@
     
   
     <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>tracks
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../data_model/tracks_controller/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>tracks_controller
   
 
     
@@ -1238,8 +1178,6 @@
       
         
           
-        
-      
         
       
         
@@ -1400,34 +1338,6 @@
     
   
     <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>import_from_geff
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../import_export/internal_format/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>internal_format
   
 
     
@@ -1793,9 +1703,29 @@
   
   
   
-    <li class="md-nav__item">
-      <a href="../../utils/" class="md-nav__link">
+    
+    
+      
         
+          
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1_10" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../utils/" class="md-nav__link ">
+              
   
   
   <span class="md-ellipsis">
@@ -1809,7 +1739,59 @@
   
   
 
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_1_10" id="__nav_3_1_10_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_1_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_1_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>utils
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../utils/tracksdata_utils/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>tracksdata_utils
+  
+
+    
+  </span>
+  
+  
+
       </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -1925,7 +1907,7 @@
 
 </h2>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">add_iou</span><span class="p">(</span>
-    <span class="n">cand_graph</span><span class="p">:</span> <span class="n">DiGraph</span><span class="p">,</span>
+    <span class="n">cand_graph</span><span class="p">:</span> <span class="n">GraphView</span><span class="p">,</span>
     <span class="n">segmentation</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span>
     <span class="n">node_frame_dict</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">multiseg</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
@@ -1935,6 +1917,9 @@
     <div class="doc doc-contents ">
 
         <p>Add IOU to the candidate graph.</p>
+<p>NOTE: compute_graph_from_seg no longer calls this function directly — IOU is now
+embedded during add_cand_edges for efficiency. Call this function if you need to
+add IOU to an existing graph after the fact.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -1953,11 +1938,12 @@
                 <code>cand_graph</code>
             </td>
             <td>
-                  <code><span title="networkx.DiGraph">DiGraph</span></code>
+                  <code><span title="tracksdata.graph.GraphView">GraphView</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Candidate graph with nodes and edges already populated</p>
+                <p>Candidate graph with nodes and edges already
+populated.</p>
               </div>
             </td>
             <td>

@@ -938,10 +938,6 @@
       
         
       
-        
-      
-        
-      
     
     
     
@@ -998,34 +994,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../../data_model/graph_attributes/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>graph_attributes
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../../data_model/solution_tracks/" class="md-nav__link">
         
   
@@ -1062,34 +1030,6 @@
     
   
     <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>tracks
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../data_model/tracks_controller/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>tracks_controller
   
 
     
@@ -1180,8 +1120,6 @@
       
         
           
-        
-      
         
       
         
@@ -1400,34 +1338,6 @@
     
   
     <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>import_from_geff
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../internal_format/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>internal_format
   
 
     
@@ -1793,9 +1703,29 @@
   
   
   
-    <li class="md-nav__item">
-      <a href="../../utils/" class="md-nav__link">
+    
+    
+      
         
+          
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1_10" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../utils/" class="md-nav__link ">
+              
   
   
   <span class="md-ellipsis">
@@ -1809,7 +1739,59 @@
   
   
 
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_1_10" id="__nav_3_1_10_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_1_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_1_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>utils
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../utils/tracksdata_utils/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>tracksdata_utils
+  
+
+    
+  </span>
+  
+  
+
       </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -1937,12 +1919,15 @@ Use: from funtracks.import_export import export_to_geff</p>
     <span class="n">overwrite</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">node_ids</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">zarr_format</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+    <span class="n">save_segmentation</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">seg_label_attr</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="s2">&quot;track_id&quot;</span><span class="p">,</span>
+    <span class="n">seg_file_format</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;zarr&quot;</span><span class="p">,</span> <span class="s2">&quot;tiff&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;zarr&quot;</span><span class="p">,</span>
 <span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Export the Tracks nxgraph to geff.</p>
+        <p>Export the Tracks graph to geff.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -2037,6 +2022,58 @@ for maximum compatibility.</p>
             </td>
             <td>
                   <code>2</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>save_segmentation</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If True, saves the segmentation array alongside
+the graph when segmentation is present. Defaults to True.</p>
+              </div>
+            </td>
+            <td>
+                  <code>True</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>seg_label_attr</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Node attribute used to paint cell labels in the
+exported segmentation. Defaults to "track_id". When None, original
+segmentation labels (node IDs) are preserved.</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;track_id&#39;</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>seg_file_format</code>
+            </td>
+            <td>
+                  <code><span title="typing.Literal">Literal</span>[&#39;zarr&#39;, &#39;tiff&#39;]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Output format for the segmentation, either "zarr" or "tiff".
+Defaults to "zarr".</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;zarr&#39;</code>
             </td>
           </tr>
       </tbody>

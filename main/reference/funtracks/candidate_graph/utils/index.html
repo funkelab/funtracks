@@ -1031,10 +1031,6 @@
       
         
       
-        
-      
-        
-      
     
     
     
@@ -1091,34 +1087,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../../data_model/graph_attributes/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>graph_attributes
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../../data_model/solution_tracks/" class="md-nav__link">
         
   
@@ -1155,34 +1123,6 @@
     
   
     <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>tracks
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../data_model/tracks_controller/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>tracks_controller
   
 
     
@@ -1271,8 +1211,6 @@
       
         
           
-        
-      
         
       
         
@@ -1433,34 +1371,6 @@
     
   
     <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>import_from_geff
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../import_export/internal_format/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>internal_format
   
 
     
@@ -1826,9 +1736,29 @@
   
   
   
-    <li class="md-nav__item">
-      <a href="../../utils/" class="md-nav__link">
+    
+    
+      
         
+          
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1_10" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../utils/" class="md-nav__link ">
+              
   
   
   <span class="md-ellipsis">
@@ -1842,7 +1772,59 @@
   
   
 
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_1_10" id="__nav_3_1_10_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_1_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_1_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>utils
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../utils/tracksdata_utils/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>tracksdata_utils
+  
+
+    
+  </span>
+  
+  
+
       </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -1991,16 +1973,17 @@
 
 </h2>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">add_cand_edges</span><span class="p">(</span>
-    <span class="n">cand_graph</span><span class="p">:</span> <span class="n">DiGraph</span><span class="p">,</span>
+    <span class="n">cand_graph</span><span class="p">:</span> <span class="n">GraphView</span><span class="p">,</span>
     <span class="n">max_edge_distance</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">node_frame_dict</span><span class="p">:</span> <span class="kc">None</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">iou_dict</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
         <p>Add candidate edges to a candidate graph by connecting all nodes in adjacent
-frames that are closer than max_edge_distance. Also adds attributes to the edges.</p>
+frames that are closer than max_edge_distance.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -2019,12 +2002,12 @@ frames that are closer than max_edge_distance. Also adds attributes to the edges
                 <code>cand_graph</code>
             </td>
             <td>
-                  <code><span title="networkx.DiGraph">DiGraph</span></code>
+                  <code><span title="tracksdata.graph.GraphView">GraphView</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Candidate graph with only nodes populated. Will
-be modified in-place to add edges.</p>
+                <p>Candidate graph with only nodes populated.
+Will be modified in-place to add edges.</p>
               </div>
             </td>
             <td>
@@ -2067,6 +2050,26 @@ to None.</p>
                   <code>None</code>
             </td>
           </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>iou_dict</code>
+            </td>
+            <td>
+                  <code><span title="dict">dict</span>[<span title="int">int</span>, <span title="dict">dict</span>[<span title="int">int</span>, <span title="float">float</span>]] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Pre-computed IOU
+values as a map from source node_id -&gt; {target node_id -&gt; iou}. When
+provided, the iou value is included directly in each edge dict passed to
+bulk_add_edges, avoiding a separate per-edge update pass after insertion.
+Defaults to None (no iou attribute added).</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
       </tbody>
     </table>
 
@@ -2084,7 +2087,7 @@ to None.</p>
 
 </h2>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">create_kdtree</span><span class="p">(</span>
-    <span class="n">cand_graph</span><span class="p">:</span> <span class="n">DiGraph</span><span class="p">,</span> <span class="n">node_ids</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span>
+    <span class="n">cand_graph</span><span class="p">:</span> <span class="n">GraphView</span><span class="p">,</span> <span class="n">node_ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">KDTree</span>
 </code></pre></div>
 
@@ -2110,7 +2113,7 @@ Will fail if provided node ids are not in the candidate graph.</p>
                 <code>cand_graph</code>
             </td>
             <td>
-                  <code><span title="networkx.DiGraph">DiGraph</span></code>
+                  <code><span title="tracksdata.graph.GraphView">GraphView</span></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -2126,12 +2129,14 @@ Will fail if provided node ids are not in the candidate graph.</p>
                 <code>node_ids</code>
             </td>
             <td>
-                  <code><span title="collections.abc.Iterable">Iterable</span>[<span title="typing.Any">Any</span>]</code>
+                  <code><span title="list">list</span>[<span title="typing.Any">Any</span>]</code>
             </td>
             <td>
               <div class="doc-md-description">
                 <p>The nodes within the candidate graph to
-include in the KDTree. Useful for limiting to one time frame.</p>
+include in the KDTree. Useful for limiting to one time frame.
+Must be a list (not a generic iterable) to preserve order for
+correct mapping of query_ball_tree results back to node ids.</p>
               </div>
             </td>
             <td>
@@ -2157,7 +2162,8 @@ include in the KDTree. Useful for limiting to one time frame.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>A KDTree containing the positions of the given nodes.</p>
+                <p>A KDTree containing the positions of the given nodes,
+in the same order as node_ids.</p>
               </div>
             </td>
           </tr>
@@ -2179,14 +2185,14 @@ include in the KDTree. Useful for limiting to one time frame.</p>
 </h2>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">nodes_from_points_list</span><span class="p">(</span>
     <span class="n">points_list</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span> <span class="n">scale</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]]]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">td</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">GraphView</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]]]</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
         <p>Extract candidate nodes from a list of points. Uses the index of the
 point in the list as its unique id.
-Returns a networkx graph with only nodes, and also a dictionary from frames to
+Returns a tracksdata graph with only nodes, and also a dictionary from frames to
 node_ids for efficient edge adding.</p>
 
 
@@ -2252,12 +2258,12 @@ implies the data is isotropic.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><span title="tuple">tuple</span>[<span title="networkx.DiGraph">DiGraph</span>, <span title="dict">dict</span>[<span title="int">int</span>, <span title="list">list</span>[<span title="typing.Any">Any</span>]]]</code>
+                  <code><span title="tuple">tuple</span>[<span title="tracksdata.graph.GraphView">GraphView</span>, <span title="dict">dict</span>[<span title="int">int</span>, <span title="list">list</span>[<span title="typing.Any">Any</span>]]]</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>tuple[nx.DiGraph, dict[int, list[Any]]]: A candidate graph with only nodes,
-and a mapping from time frames to node ids.</p>
+                <p>tuple[td.graph.GraphView, dict[int, list[Any]]]: A candidate graph with only
+nodes, and a mapping from time frames to node ids.</p>
               </div>
             </td>
           </tr>
@@ -2278,21 +2284,29 @@ and a mapping from time frames to node ids.</p>
 
 </h2>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">nodes_from_segmentation</span><span class="p">(</span>
-    <span class="n">segmentation</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span> <span class="n">scale</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">nx</span><span class="o">.</span><span class="n">DiGraph</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]]]</span>
+    <span class="n">segmentation</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">scale</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">mask</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">td</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">GraphView</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]]]</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Extract candidate nodes from a segmentation. Returns a networkx graph
+        <p>Extract candidate nodes from a segmentation. Returns a tracksdata graph
 with only nodes, and also a dictionary from frames to node_ids for
 efficient edge adding.</p>
-<p>Each node will have the following attributes (named as in NodeAttrs):
-    - time
-    - position
-    - segmentation id
-    - area</p>
 
+
+<details class="each-node-will-have-the-following-attributes" open>
+  <summary>Each node will have the following attributes</summary>
+  <ul>
+<li>t</li>
+<li>pos</li>
+<li>area</li>
+<li>mask (if mask=True): cropped boolean mask (tracksdata Mask object)</li>
+<li>bbox (if mask=True): bounding box as [min_0, ..., max_0, ...] int array</li>
+</ul>
+</details>
 
 <p><span class="doc-section-title">Parameters:</span></p>
     <table>
@@ -2317,7 +2331,7 @@ efficient edge adding.</p>
                 <p>A numpy array with integer labels and dimensions
 (t, [z], y, x). Labels must be unique across time, and the label
 will be used as the node id. If the labels are not unique, preprocess
-with funtracks.utils.ensure_ensure_unique_labels before calling this function.</p>
+with funtracks.utils.ensure_unique_labels before calling this function.</p>
               </div>
             </td>
             <td>
@@ -2343,6 +2357,25 @@ Defaults to None, which implies the data is isotropic.</p>
                   <code>None</code>
             </td>
           </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>mask</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Whether to include mask and bbox attributes for each
+node. Uses regionprop.image (already computed by regionprops at no extra
+cost) and regionprop.bbox. Including them here avoids a separate write
+pass over all nodes later. Defaults to True.</p>
+              </div>
+            </td>
+            <td>
+                  <code>True</code>
+            </td>
+          </tr>
       </tbody>
     </table>
 
@@ -2358,12 +2391,12 @@ Defaults to None, which implies the data is isotropic.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><span title="tuple">tuple</span>[<span title="networkx.DiGraph">DiGraph</span>, <span title="dict">dict</span>[<span title="int">int</span>, <span title="list">list</span>[<span title="typing.Any">Any</span>]]]</code>
+                  <code><span title="tuple">tuple</span>[<span title="tracksdata.graph.GraphView">GraphView</span>, <span title="dict">dict</span>[<span title="int">int</span>, <span title="list">list</span>[<span title="typing.Any">Any</span>]]]</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>tuple[nx.DiGraph, dict[int, list[Any]]]: A candidate graph with only nodes,
-and a mapping from time frames to node ids.</p>
+                <p>tuple[td.graph.GraphView, dict[int, list[Any]]]: A candidate graph with only
+nodes, and a mapping from time frames to node ids.</p>
               </div>
             </td>
           </tr>

@@ -1015,10 +1015,6 @@
       
         
       
-        
-      
-        
-      
     
     
     
@@ -1075,34 +1071,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../../data_model/graph_attributes/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>graph_attributes
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../../data_model/solution_tracks/" class="md-nav__link">
         
   
@@ -1139,34 +1107,6 @@
     
   
     <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>tracks
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../data_model/tracks_controller/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>tracks_controller
   
 
     
@@ -1255,8 +1195,6 @@
       
         
           
-        
-      
         
       
         
@@ -1417,34 +1355,6 @@
     
   
     <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>import_from_geff
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../import_export/internal_format/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>internal_format
   
 
     
@@ -1810,9 +1720,29 @@
   
   
   
-    <li class="md-nav__item">
-      <a href="../../utils/" class="md-nav__link">
+    
+    
+      
         
+          
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1_10" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../utils/" class="md-nav__link ">
+              
   
   
   <span class="md-ellipsis">
@@ -1826,7 +1756,59 @@
   
   
 
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_1_10" id="__nav_3_1_10_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_1_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_1_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>utils
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../utils/tracksdata_utils/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>tracksdata_utils
+  
+
+    
+  </span>
+  
+  
+
       </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -1961,7 +1943,7 @@
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">UpdateNodeSeg</span><span class="p">(</span>
     <span class="n">tracks</span><span class="p">:</span> <span class="n">Tracks</span><span class="p">,</span>
     <span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">,</span>
-    <span class="n">pixels</span><span class="p">:</span> <span class="n">SegMask</span><span class="p">,</span>
+    <span class="n">mask</span><span class="p">:</span> <span class="n">Mask</span><span class="p">,</span>
     <span class="n">added</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span>
 </code></pre></div>
@@ -1973,7 +1955,7 @@
 
 
         <p>Action for updating the segmentation associated with a node.</p>
-<p>New nodes call AddNode with pixels instead of this action.</p>
+<p>New nodes call AddNode with mask instead of this action.</p>
 
 
 
@@ -1997,7 +1979,7 @@
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The tracks to update the segmenatations for</p>
+                <p>The tracks to update the segmentations for</p>
               </div>
             </td>
             <td>
@@ -2013,7 +1995,7 @@
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The node with updated segmenatation</p>
+                <p>The node with updated segmentation</p>
               </div>
             </td>
             <td>
@@ -2022,14 +2004,14 @@
           </tr>
           <tr class="doc-section-item">
             <td>
-                <code>pixels</code>
+                <code>mask</code>
             </td>
             <td>
-                  <code><span title="funtracks.data_model.tracks.SegMask">SegMask</span></code>
+                  <code><span title="tracksdata.nodes.Mask">Mask</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The pixels that were updated for the node</p>
+                <p>The mask that was updated for the node</p>
               </div>
             </td>
             <td>
@@ -2045,7 +2027,7 @@
             </td>
             <td>
               <div class="doc-md-description">
-                <p>If the provided pixels were added (True) or deleted
+                <p>If the provided mask were added (True) or deleted
 (False) from this node. Defaults to True</p>
               </div>
             </td>

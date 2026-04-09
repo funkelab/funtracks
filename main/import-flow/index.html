@@ -1408,10 +1408,6 @@
       
         
       
-        
-      
-        
-      
     
     
     
@@ -1468,34 +1464,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../reference/funtracks/data_model/graph_attributes/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>graph_attributes
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../reference/funtracks/data_model/solution_tracks/" class="md-nav__link">
         
   
@@ -1532,34 +1500,6 @@
     
   
     <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>tracks
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../reference/funtracks/data_model/tracks_controller/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>tracks_controller
   
 
     
@@ -1648,8 +1588,6 @@
       
         
           
-        
-      
         
       
         
@@ -1810,34 +1748,6 @@
     
   
     <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>import_from_geff
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../reference/funtracks/import_export/internal_format/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>internal_format
   
 
     
@@ -2203,9 +2113,29 @@
   
   
   
-    <li class="md-nav__item">
-      <a href="../reference/funtracks/utils/" class="md-nav__link">
+    
+    
+      
         
+          
+        
+      
+        
+      
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1_10" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../reference/funtracks/utils/" class="md-nav__link ">
+              
   
   
   <span class="md-ellipsis">
@@ -2219,7 +2149,59 @@
   
   
 
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3_1_10" id="__nav_3_1_10_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_1_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_1_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>utils
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/funtracks/utils/tracksdata_utils/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>tracksdata_utils
+  
+
+    
+  </span>
+  
+  
+
       </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -2728,7 +2710,7 @@ graph LR
         ValidateMap["validate_name_map&lt;br/&gt;&lt;small&gt;check required mappings&lt;/small&gt;"]
         LoadSource["load_source&lt;br/&gt;&lt;small&gt;load into InMemoryGeff&lt;/small&gt;"]
         Validate["validate&lt;br/&gt;&lt;small&gt;check graph structure&lt;/small&gt;"]
-        ConstructGraph["construct_graph&lt;br/&gt;&lt;small&gt;build NetworkX graph&lt;/small&gt;"]
+        ConstructGraph["construct_graph&lt;br/&gt;&lt;small&gt;build tracksdata graph&lt;/small&gt;"]
         HandleSeg["handle_segmentation&lt;br/&gt;&lt;small&gt;load &amp; relabel if needed&lt;/small&gt;"]
         CreateTracks[Create SolutionTracks]
         EnableFeatures["enable_features&lt;br/&gt;&lt;small&gt;register &amp; compute&lt;/small&gt;"]
@@ -3209,8 +3191,57 @@ Validates:
 <a id="funtracks.import_export._tracks_builder.TracksBuilder.construct_graph"></a>
     <div class="doc doc-contents first">
 
-        <p>Construct NetworkX graph from validated InMemoryGeff data.</p>
+        <p>Construct Tracksdata graph from validated InMemoryGeff data.</p>
 <p>Common logic shared across all formats.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>node_name_map</code>
+            </td>
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="str">str</span> | <span title="list">list</span>[<span title="str">str</span>]] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional node name map used to infer default values per
+attribute dtype.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>database</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional path to a SQLite database file for backing storage.
+If None (default), an in-memory/temp graph is used.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     <p><span class="doc-section-title">Returns:</span></p>
@@ -3224,11 +3255,11 @@ Validates:
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><span title="networkx.DiGraph">DiGraph</span></code>
+                  <code><span title="tracksdata.graph.GraphView">GraphView</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>NetworkX DiGraph with standard keys</p>
+                <p>Tracksdata GraphView with standard keys</p>
               </div>
             </td>
           </tr>
@@ -3294,11 +3325,11 @@ Validates:
                 <code>graph</code>
             </td>
             <td>
-                  <code><span title="networkx.DiGraph">DiGraph</span></code>
+                  <code><span title="tracksdata.graph.GraphView">GraphView</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Constructed NetworkX graph for validation</p>
+                <p>Constructed Tracksdata graph for validation</p>
               </div>
             </td>
             <td>
@@ -3352,11 +3383,21 @@ Validates:
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><span title="tuple">tuple</span>[<span title="numpy.ndarray">ndarray</span> | None, <span title="list">list</span>[<span title="float">float</span>] | None]</code>
+                  <code><span title="numpy.ndarray">ndarray</span> | None</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Tuple of (segmentation array, scale) or (None, scale)</p>
+                <p>Tuple of (segmentation array, scale, graph). The graph may be relabeled</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="list">list</span>[<span title="float">float</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>if node_id 0 exists in the original graph.</p>
               </div>
             </td>
           </tr>
@@ -3572,6 +3613,39 @@ Validates:
             <td>
               <div class="doc-md-description">
                 <p>Optional edge features to enable/load</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>node_name_map</code>
+            </td>
+            <td>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="str">str</span> | <span title="list">list</span>[<span title="str">str</span>]] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional node_name_map to override self.node_name_map</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>database</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional path to a SQLite database file for backing storage.
+If None (default), an in-memory/temp graph is used.</p>
               </div>
             </td>
             <td>
