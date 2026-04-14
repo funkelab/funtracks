@@ -535,6 +535,7 @@ class TracksBuilder(ABC):
         seg_array = load_segmentation(segmentation)
 
         # Validate dimensions match graph
+        assert self.ndim is not None, "ndim must be set before loading segmentation"
         if seg_array.ndim != self.ndim:
             raise ValueError(
                 f"Segmentation has {seg_array.ndim} dimensions but graph has "
