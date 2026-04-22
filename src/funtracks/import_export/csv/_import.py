@@ -267,8 +267,12 @@ def tracks_from_df(
                 # Recompute from segmentation
                 node_features[feature_key] = True
             else:
-                # Load from column specified by feature_value
-                node_features[feature_value] = False
+                # Load from column — use feature_key as the feature name,
+                # and add the key -> column mapping to node_name_map so the
+                # builder knows which column to read from.
+                node_features[feature_key] = False
+                if node_name_map is not None:
+                    node_name_map[feature_key] = feature_value
 
     builder = CSVTracksBuilder()
 
