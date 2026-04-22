@@ -300,17 +300,17 @@ def test_tracks_with_segmentation(valid_geff, invalid_geff, valid_segmentation, 
 
     # Test that a tracks object is produced and that the seg_id has been relabeled.
     scale = [1, 1, (1 / 100)]
-    node_features = {
-        "area": True,  # In geff, but should be recomputed
-        "random_feature": False,  # Static feature - load from geff
+    name_map_with_features = {
+        **name_map,
+        "area": "area",
+        "random_feature": "random_feature",
     }
 
     tracks = import_from_geff(
         store,
-        name_map,
+        name_map_with_features,
         segmentation_path=valid_segmentation_path,
         scale=scale,
-        node_features=node_features,
     )
     assert hasattr(tracks, "segmentation")
     assert tracks.segmentation.shape == valid_segmentation.shape
@@ -331,33 +331,12 @@ def test_tracks_with_segmentation(valid_geff, invalid_geff, valid_segmentation, 
         np.asarray(tracks.segmentation)[tuple(coords)] == last_node
     )  # test that the seg id has been relabeled
 
-    # Check that only required/requested features are present, and that area is recomputed
+    # Check that only requested features are present and area is loaded from geff
     data = tracks.graph.nodes[last_node]
     assert "random_feature" in tracks.graph.node_attr_keys()
     assert "random_feature2" not in tracks.graph.node_attr_keys()
     assert "area" in tracks.graph.node_attr_keys()
-    assert (
-        data["area"] == 0.01
-    )  # recomputed area values should be 1 pixel, so 0.01 after applying the scaling.
-
-    # Check that area is not recomputed but taken directly from the graph
-    node_features = {
-        "area": False,  # Load from geff, don't recompute
-        "random_feature": False,  # Static feature - load from geff
-    }
-
-    tracks = import_from_geff(
-        store,
-        name_map,
-        segmentation_path=valid_segmentation_path,
-        scale=scale,
-        node_features=node_features,
-    )
-    # Get last node by ID (don't rely on iteration order)
-    last_node = max(tracks.graph.node_ids())
-    data = tracks.graph.nodes[last_node]
-    assert "area" in tracks.graph.node_attr_keys()
-    assert data["area"] == 21
+    assert data["area"] == 21  # loaded directly from geff, not recomputed
 
     # Test that import fails with ValueError when invalid seg_ids are provided.
     store, _ = invalid_geff
@@ -394,58 +373,46 @@ def test_segmentation_loading_formats(
     else:
         raise ValueError(f"Unknown format: {segmentation_format}")
 
-    node_features = {
-        "area": False,  # Load from geff, don't recompute
-        "random_feature": False,  # Static feature - load from geff
+    name_map_with_features = {
+        **name_map,
+        "area": "area",
+        "random_feature": "random_feature",
     }
 
     tracks = import_from_geff(
         store,
-        name_map,
+        name_map_with_features,
         segmentation_path=path,
         scale=scale,
-        node_features=node_features,
     )
 
     assert hasattr(tracks, "segmentation")
     assert np.array(tracks.segmentation).shape == seg.shape
 
 
-def test_node_features_compute_vs_load(valid_geff, valid_segmentation, tmp_path):
-    """Test that node_features controls whether features are computed or loaded.
-
-    Features marked True in node_features are computed using annotators.
-    Features marked False are loaded directly from the geff file.
-    Features not in the geff can still be computed if marked True.
-    """
+def test_features_loaded_from_name_map(valid_geff, valid_segmentation, tmp_path):
+    """Test that features included in node_name_map are loaded and registered."""
     store, _ = valid_geff
     node_name_map = {
         "time": "t",
-        "pos": ["y", "x"],  # Composite position mapping
+        "pos": ["y", "x"],
         "seg_id": "seg_id",
         "circularity": "circ",  # Map standard key to GEFF property name
+        "area": "area",  # Load area from geff
+        "random_feature": "random_feature",  # Static feature - load from geff
     }
     scale = [1, 1, 1 / 100]
     valid_segmentation_path = tmp_path / "segmentation.tif"
     tifffile.imwrite(valid_segmentation_path, valid_segmentation)
-
-    # Test 1: Mix of computed (True) and loaded (False) features
-    node_features = {
-        "area": True,  # In geff, but should be recomputed
-        "random_feature": False,  # Static feature - load from geff
-        "circularity": False,  # In geff, load without recomputing
-        "ellipse_axis_radii": True,  # Not in geff, should be computed
-    }
 
     tracks = import_from_geff(
         store,
         node_name_map,
         segmentation_path=valid_segmentation_path,
         scale=scale,
-        node_features=node_features,
     )
 
-    feature_keys = ["area", "random_feature", "ellipse_axis_radii", "circularity"]
+    feature_keys = ["area", "random_feature", "circularity"]
     for key in feature_keys:
         assert key in tracks.features
 
@@ -453,68 +420,26 @@ def test_node_features_compute_vs_load(valid_geff, valid_segmentation, tmp_path)
     max_node_id = max(tracks.graph.node_ids())
     data = tracks.graph.nodes[max_node_id]
 
-    # All requested features should be present
+    # All requested features should be present and loaded from geff
     for key in feature_keys:
         assert data[key] is not None
 
-    # Verify computed values (1 pixel = 0.01 after scaling)
-    # Original geff had area=21 for last node
-    assert data["area"] == 0.01
-    assert data["ellipse_axis_radii"] is not None
-    assert data["circularity"] == 0.45  # the value should not be recomputed
-
-    # Verify loaded value from geff
-    assert data["random_feature"] == "e"
+    assert data["area"] == 21  # loaded from geff
+    assert data["circularity"] == 0.45  # loaded from geff (renamed from "circ")
+    assert data["random_feature"] == "e"  # static feature loaded from geff
 
 
-def test_node_features_unknown(valid_geff, valid_segmentation, tmp_path):
-    """Test that providing an unknown feature raises a KeyError."""
+def test_nonexistent_property_in_name_map(valid_geff):
+    """Test that mapping to a non-existent GEFF property raises an error."""
     store, _ = valid_geff
-    name_map = {"time": "t", "pos": ["y", "x"], "seg_id": "seg_id"}
-    scale = [1, 1, 1 / 100]
-    valid_segmentation_path = tmp_path / "segmentation.tif"
-    tifffile.imwrite(valid_segmentation_path, valid_segmentation)
-
-    # Test unknown feature that doesn't exist in annotators or GEFF
-    node_features = {
-        "unknown_computed_feature": True,  # Unknown feature, request computation
+    node_name_map = {
+        "time": "t",
+        "pos": ["y", "x"],
+        "area": "nonexistent_column",  # This property doesn't exist in the GEFF
     }
 
-    with pytest.raises(
-        KeyError,
-        match="Node features not available",
-    ):
-        import_from_geff(
-            store,
-            name_map,
-            segmentation_path=valid_segmentation_path,
-            scale=scale,
-            node_features=node_features,
-        )
-
-
-def test_compute_features_without_segmentation(valid_geff):
-    """Test that computing regionprops features without segmentation raises an error."""
-    store, _ = valid_geff
-    name_map = {"time": "t", "pos": ["y", "x"]}
-    scale = [1, 1, 1 / 100]
-
-    # Try to compute area feature without providing segmentation
-    node_features = {
-        "area": True,  # Request computation without segmentation
-    }
-
-    with pytest.raises(
-        KeyError,
-        match="Node features not available",
-    ):
-        import_from_geff(
-            store,
-            name_map,
-            segmentation_path=None,  # No segmentation
-            scale=scale,
-            node_features=node_features,
-        )
+    with pytest.raises(ValueError):
+        import_from_geff(store, node_name_map)
 
 
 def _make_mask(bbox):
