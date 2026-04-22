@@ -491,6 +491,46 @@ def test_node_features_unknown(valid_geff, valid_segmentation, tmp_path):
         )
 
 
+def test_features_loaded_via_name_map_only(valid_geff, valid_segmentation, tmp_path):
+    """Test that features in node_name_map are registered without node_features.
+
+    When node_name_map includes feature keys (e.g., area, circularity) and no
+    node_features dict is provided, the features should still be loaded from
+    the GEFF and registered in tracks.features.
+    """
+    store, _ = valid_geff
+    node_name_map = {
+        "time": "t",
+        "pos": ["y", "x"],
+        "seg_id": "seg_id",
+        "circularity": "circ",
+        "area": "area",
+        "random_feature": "random_feature",
+    }
+    scale = [1, 1, 1 / 100]
+    valid_segmentation_path = tmp_path / "segmentation.tif"
+    tifffile.imwrite(valid_segmentation_path, valid_segmentation)
+
+    # Import with node_name_map only — no node_features dict
+    tracks = import_from_geff(
+        store,
+        node_name_map,
+        segmentation_path=valid_segmentation_path,
+        scale=scale,
+    )
+
+    # All features from name_map should be registered
+    for key in ["area", "circularity", "random_feature"]:
+        assert key in tracks.features, f"{key} not in tracks.features"
+
+    # Values should be loaded from geff (not recomputed)
+    max_node_id = max(tracks.graph.nodes())
+    data = tracks.graph.nodes[max_node_id]
+    assert data["area"] == 21  # loaded from geff
+    assert data["circularity"] == 0.45  # loaded from geff (renamed from "circ")
+    assert data["random_feature"] == "e"
+
+
 def test_compute_features_without_segmentation(valid_geff):
     """Test that computing regionprops features without segmentation raises an error."""
     store, _ = valid_geff

@@ -487,6 +487,66 @@ class TracksBuilder(ABC):
 
         return new_segmentation, scale
 
+    # Structural keys that are handled by graph construction / SolutionTracks.__init__
+    # and should not be registered as features by _enable_features_from_name_map().
+    STRUCTURAL_KEYS = frozenset({"time", "id", "parent_id", "seg_id"})
+
+    def _enable_features_from_name_map(
+        self,
+        tracks: SolutionTracks,
+        name_map: dict[str, str | list[str]] | None,
+        feature_type: Literal["node", "edge"] = "node",
+    ) -> None:
+        """Enable and register features from a name map.
+
+        For each key in name_map that is not structural (time, id, parent_id,
+        seg_id) and not already registered in tracks.features:
+        - If the key matches an annotator-managed feature and data was loaded
+          for it, enable it via the annotator (recompute=False).
+        - Otherwise, if data was loaded for it, register it as a static feature.
+
+        Args:
+            tracks: SolutionTracks object to add features to
+            name_map: Mapping from standard funtracks keys to source property
+                names (same format as node_name_map / edge_name_map).
+            feature_type: Type of features ("node" or "edge")
+        """
+        if name_map is None:
+            return
+
+        if self.in_memory_geff is None:
+            raise ValueError("No data loaded. Call load_source() first.")
+
+        props = (
+            self.in_memory_geff["node_props"]
+            if feature_type == "node"
+            else self.in_memory_geff["edge_props"]
+        )
+
+        static_features: dict[str, Feature] = {}
+        for key in name_map:
+            if key in self.STRUCTURAL_KEYS:
+                continue
+            if key in tracks.features:
+                continue
+            if key not in props:
+                continue
+
+            if key in tracks.annotators.all_features:
+                tracks.enable_features([key], recompute=False)
+            else:
+                static_features[key] = Feature(
+                    display_name=key,
+                    feature_type=feature_type,
+                    value_type=infer_dtype_from_array(props[key]["values"]),
+                    num_values=1,
+                    required=False,
+                    default_value=None,
+                )
+
+        if static_features:
+            tracks.features.update(static_features)
+
     def enable_features(
         self,
         tracks: SolutionTracks,
@@ -656,7 +716,18 @@ class TracksBuilder(ABC):
             scale=scale,
         )
 
-        # 7. Enable and register features
+        # 7. Enable and register features from name maps (auto-register all
+        #    features that were loaded via node_name_map / edge_name_map)
+        self._enable_features_from_name_map(
+            tracks, self.node_name_map, feature_type="node"
+        )
+        if self.edge_name_map is not None:
+            self._enable_features_from_name_map(
+                tracks, self.edge_name_map, feature_type="edge"
+            )
+
+        # 8. Enable/recompute features from explicit node_features/edge_features
+        #    (backward compatibility: these dicts control recompute behavior)
         if node_features is not None:
             self.enable_features(tracks, node_features, feature_type="node")
         if edge_features is not None:

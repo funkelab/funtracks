@@ -305,6 +305,33 @@ class TestFeatureHandling:
         assert tracks.get_node_attr(1, "area") == 25
         assert tracks.get_node_attr(2, "area") == 25
 
+    def test_load_area_via_node_name_map(self):
+        """Test loading pre-computed area via node_name_map (without features dict)."""
+        df = pd.DataFrame(
+            {
+                "time": [0, 1],
+                "y": [10.0, 20.0],
+                "x": [15.0, 25.0],
+                "id": [1, 2],
+                "parent_id": [-1, 1],
+                "area": [100.0, 200.0],
+            }
+        )
+
+        node_name_map = {
+            "id": "id",
+            "parent_id": "parent_id",
+            "time": "time",
+            "pos": ["y", "x"],
+            "area": "area",
+        }
+        tracks = tracks_from_df(df, node_name_map=node_name_map)
+
+        # Area should be loaded from DataFrame and registered in features
+        assert "area" in tracks.features
+        assert tracks.get_node_attr(1, "area") == 100.0
+        assert tracks.get_node_attr(2, "area") == 200.0
+
     def test_load_multi_value_feature_from_columns(self):
         """Test loading a multi-value feature from separate columns."""
         df = pd.DataFrame(
