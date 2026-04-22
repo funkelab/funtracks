@@ -37,5 +37,6 @@ jobs:
           name: Python Benchmark with pytest-benchmark
           tool: 'pytest'
           output-file-path: output.json
+          benchmark-data-dir-path: benchmarks
           github-token: ${{ secrets.GITHUB_TOKEN }}
           auto-push: true
