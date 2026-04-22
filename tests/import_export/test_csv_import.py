@@ -275,11 +275,21 @@ class TestFeatureHandling:
             }
         )
 
-        tracks = tracks_from_df(df, features={"Area": "area"})
+        tracks = tracks_from_df(
+            df,
+            features=[
+                {
+                    "standard_name": None,
+                    "display_name": "_Area",
+                    "import_name": "area",
+                    "recompute": False,
+                }
+            ],
+        )
 
         # Area should be loaded from DataFrame
-        assert tracks.get_node_attr(1, "area") == 100.0
-        assert tracks.get_node_attr(2, "area") == 200.0
+        assert tracks.get_node_attr(1, "_Area") == 100.0
+        assert tracks.get_node_attr(2, "_Area") == 200.0
 
     def test_recompute_area_from_seg(self):
         """Test recomputing area from segmentation."""
@@ -299,7 +309,18 @@ class TestFeatureHandling:
         seg[0, 8:13, 13:18] = 1  # 5x5 = 25 pixels
         seg[1, 18:23, 23:28] = 2  # 5x5 = 25 pixels
 
-        tracks = tracks_from_df(df, seg, features={"Area": "Recompute"})
+        tracks = tracks_from_df(
+            df,
+            seg,
+            features=[
+                {
+                    "standard_name": "area",
+                    "display_name": "Area",
+                    "import_name": "",
+                    "recompute": True,
+                }
+            ],
+        )
 
         # Area should be computed from segmentation
         assert tracks.get_node_attr(1, "area") == 25

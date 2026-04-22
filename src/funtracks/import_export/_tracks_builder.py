@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any
 
 import geff
 import networkx as nx
@@ -319,7 +319,7 @@ class TracksBuilder(ABC):
         self,
         source: Path | pd.DataFrame,
         node_name_map: dict[str, str | list[str]],
-        node_features: dict[str, bool] | None = None,
+        node_features: list[dict[str, Any]] | None = None,
     ) -> None:
         """Load data from source file and convert to InMemoryGeff format.
 
@@ -328,7 +328,7 @@ class TracksBuilder(ABC):
         Args:
             source: Path to data source (zarr store, CSV file, etc.) or DataFrame
             node_name_map: Maps standard keys to source property names
-            node_features: Optional features dict for backward compatibility
+            node_features: Optional list of features to import
         """
 
     def _combine_multi_value_props(
@@ -487,11 +487,128 @@ class TracksBuilder(ABC):
 
         return new_segmentation, scale
 
-    def enable_features(
+    def enable_node_features(
+        self,
+        tracks: SolutionTracks,
+        features: list[dict[str, Any]] | None,
+    ) -> None:
+        """Enable and register features on tracks object.
+
+        Handles two types of features:
+        1. Annotator features: Computed from segmentation or loaded from props via
+            annotators
+        2. Static features: Custom data columns registered directly as features
+
+        Features with standard_name not in annotators are treated as static features
+        and registered directly with their data from node/edge properties.
+
+        Args:
+            tracks: SolutionTracks object to add features to
+            features (list[dict[str, Any]] | None): List of feature dictionaries,
+                each containing standard_name (str or None), display_name (str),
+                import_name (str), and optional recompute (bool)
+
+        Raises:
+            ValueError: If no data loaded (must call load_source() first)
+            KeyError: If requested features not available in annotators or props
+
+        Notes:
+            - features is a list of dictionaries, where each dictionary specifies a
+            feature to enable/load with the following keys:
+                - standard_name (str | None): Standard name of regionprops feature
+                  (e.g., "area", "circularity"), or None for static features.
+                - import_name (str): Source column name in props.
+                - display_name (str): Display name for the feature.
+                - recompute (bool): Whether to recompute from segmentation.
+
+                Example:
+                    [{
+                        "standard_name": "area",
+                        "import_name": "area_column_in_csv",
+                        "display_name": "Area",
+                        "recompute": False
+                    },
+                    {
+                        "standard_name": None,
+                        "import_name": "_my_metric",
+                        "display_name": "_my_metric",
+                        "recompute": False
+                    }]
+            - Regionprops features require standard_name to exist in tracks.annotators
+            - Static features are registered directly with inferred value_type
+            - Recompute=True only valid for annotator features with segmentation
+        """
+        if features is None:
+            return
+
+        if self.in_memory_geff is None:
+            raise ValueError("No data loaded. Call load_source() first.")
+
+        # Get the appropriate props dict for nodes
+        props = self.in_memory_geff["node_props"]
+
+        # Validate requested features before enabling
+        invalid_features = []
+        for feature in features:
+            key = feature.get("standard_name")
+            recompute = feature.get("recompute", False)
+
+            if key is not None:
+                if recompute:
+                    # Features to compute must exist in annotators
+                    if key not in tracks.annotators.all_features:
+                        invalid_features.append(key)
+                else:
+                    # Features to load must exist in props
+                    if key not in props:
+                        invalid_features.append(key)
+
+        if invalid_features:
+            available_computed = list(tracks.annotators.all_features.keys())
+            available_geff = list(props.keys())
+            raise KeyError(
+                f"Node features not available: "
+                f"{invalid_features}. "
+                f"Available computed features: {available_computed}. "
+                f"Available node properties: {available_geff}"
+            )
+
+        # Separate into features that exist in annotators vs static features
+        annotator_features = {
+            key: recompute
+            for feature in features
+            for key, recompute in [
+                (feature.get("standard_name"), feature.get("recompute", False))
+            ]
+            if key in tracks.annotators.all_features
+        }
+
+        # Enable annotator features with appropriate recompute flag
+        for key, recompute in annotator_features.items():
+            tracks.enable_features([key], recompute=recompute)
+
+        # Register static features (features not in annotator registry)
+        static_keys = [
+            feature["display_name"]
+            for feature in features
+            if feature["standard_name"] is None
+        ]
+        static_features: dict[str, Feature] = {}
+        for key in static_keys:
+            static_features[key] = Feature(
+                display_name=key,
+                feature_type="node",
+                value_type=infer_dtype_from_array(props[key]["values"]),
+                num_values=1,
+                required=False,
+                default_value=None,
+            )
+        tracks.features.update(static_features)
+
+    def enable_edge_features(
         self,
         tracks: SolutionTracks,
         features: dict[str, bool] | None,
-        feature_type: Literal["node", "edge"] = "node",
     ) -> None:
         """Enable and register features on tracks object.
 
@@ -500,7 +617,6 @@ class TracksBuilder(ABC):
         Args:
             tracks: SolutionTracks object to add features to
             features: Dict mapping feature names to recompute flags
-            feature_type: Type of features ("node" or "edge")
         """
         if features is None:
             return
@@ -509,11 +625,7 @@ class TracksBuilder(ABC):
             raise ValueError("No data loaded. Call load_source() first.")
 
         # Get the appropriate props dict based on feature_type
-        props = (
-            self.in_memory_geff["node_props"]
-            if feature_type == "node"
-            else self.in_memory_geff["edge_props"]
-        )
+        props = self.in_memory_geff["edge_props"]
 
         # Validate requested features before enabling
         invalid_features = []
@@ -531,10 +643,10 @@ class TracksBuilder(ABC):
             available_computed = list(tracks.annotators.all_features.keys())
             available_geff = list(props.keys())
             raise KeyError(
-                f"{feature_type.capitalize()} features not available: "
+                f"Edge features not available: "
                 f"{invalid_features}. "
                 f"Available computed features: {available_computed}. "
-                f"Available {feature_type} properties: {available_geff}"
+                f"Available edge properties: {available_geff}"
             )
 
         # Separate into features that exist in annotators vs static features
@@ -554,7 +666,7 @@ class TracksBuilder(ABC):
         for key in static_keys:
             static_features[key] = Feature(
                 display_name=key,
-                feature_type=feature_type,
+                feature_type="edge",
                 value_type=infer_dtype_from_array(props[key]["values"]),
                 num_values=1,
                 required=False,
@@ -567,7 +679,7 @@ class TracksBuilder(ABC):
         source: Path | pd.DataFrame,
         segmentation: Path | np.ndarray | None = None,
         scale: list[float] | None = None,
-        node_features: dict[str, bool] | None = None,
+        node_features: list[dict[str, Any]] | None = None,
         edge_features: dict[str, bool] | None = None,
     ) -> SolutionTracks:
         """Orchestrate the full construction process.
@@ -576,7 +688,9 @@ class TracksBuilder(ABC):
             source: Path to data source or DataFrame
             segmentation: Optional path to segmentation or pre-loaded segmentation array
             scale: Optional spatial scale
-            node_features: Optional node features to enable/load
+            node_features: Optional node features to enable/load, mapping measurement
+            attributes (area, volume) to import_name, display_name, and recompute flag
+
             edge_features: Optional edge features to enable/load
 
         Returns:
@@ -658,8 +772,8 @@ class TracksBuilder(ABC):
 
         # 7. Enable and register features
         if node_features is not None:
-            self.enable_features(tracks, node_features, feature_type="node")
+            self.enable_node_features(tracks, node_features)
         if edge_features is not None:
-            self.enable_features(tracks, edge_features, feature_type="edge")
+            self.enable_edge_features(tracks, edge_features)
 
         return tracks

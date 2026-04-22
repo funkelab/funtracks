@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from geff._typing import InMemoryGeff
 from geff.core_io._base_read import read_to_memory
@@ -165,23 +165,47 @@ class GeffTracksBuilder(TracksBuilder):
         self,
         source_path: Path,
         node_name_map: dict[str, str | list[str]],
-        node_features: dict[str, bool] | None = None,
+        node_features: list[dict[str, Any]] | None = None,
     ) -> None:
         """Load GEFF data and convert to InMemoryGeff format.
 
         Args:
             source_path: Path to GEFF zarr store
             node_name_map: Maps standard keys to GEFF property names
-            node_features: Optional features dict (handled by import_graph_from_geff)
+            node_features (list[dict[str, Any]]): Optional list of features to
+            import, with dicts containing:
+            - standard_name (str | None): lower case name of the regionprops feature, or
+                None if not a regionprops feature.
+            - import_name (str): the name of the csv column to import this feature from.
+            - display_name (str): the name that this feature will be displayed as. This is
+              either the display_name of the feature's annotator, or the name of the
+              column with an underscore prefix if imported as a static feature.
+            - recompute (bool): whether to recompute this feature from the segmentation.
+                This can only be True if the selected feature corresponds to a
+                regionprops feature.
+            Example:
+                [{
+                    "standard_name": "area",
+                    "import_name": "area_column_name_in_csv",
+                    "display_name": "Area",
+                    "recompute": False}]
+            Defaults to None.
         """
         # For backward compatibility, extend node_name_map with node_features
         # Only add features that should be loaded (recompute=False)
         extended_name_map = dict(node_name_map)
         if node_features is not None:
-            for feature_key, recompute in node_features.items():
-                if feature_key not in extended_name_map and not recompute:
-                    # Assume feature name in GEFF matches standard key
-                    extended_name_map[feature_key] = feature_key
+            for feature in node_features:
+                standard_name = feature.get("standard_name")
+                import_name = feature.get("import_name")
+                display_name = feature.get("display_name", import_name)
+                recompute = feature.get("recompute", False)
+                if standard_name is None:
+                    extended_name_map[str(display_name)] = str(
+                        import_name
+                    )  # static feature with display name as key
+                elif standard_name not in extended_name_map and not recompute:
+                    extended_name_map[standard_name] = str(import_name)
 
         # Load GEFF data with renamed properties (returns InMemoryGeff with standard keys)
         self.in_memory_geff, self.position_attr, ndim = import_graph_from_geff(
@@ -197,7 +221,7 @@ def import_from_geff(
     node_name_map: dict[str, str | list[str]] | None = None,
     segmentation_path: Path | None = None,
     scale: list[float] | None = None,
-    node_features: dict[str, bool] | None = None,
+    node_features: list[dict[str, Any]] | None = None,
     edge_features: dict[str, bool] | None = None,
     extra_features: dict[str, bool] | None = None,
     edge_name_map: dict[str, str | list[str]] | None = None,
@@ -217,7 +241,17 @@ def import_from_geff(
             If None, property names are auto-inferred using fuzzy matching.
         segmentation_path: Optional path to segmentation data
         scale: Optional spatial scale
-        node_features: Optional node features to enable/load
+        node_features (list[dict[str, Any]]): Optional list of features to import,
+          with dicts containing:
+            - standard_name (str | None): lower case name of the regionprops feature, or
+              None if not a regionprops feature.
+            - import_name (str): the name of the csv column to import this feature from.
+            - display_name (str): the name that this feature will be displayed as. This
+                is either the display_name of the feature's annotator, or the name of the
+                column with an underscore prefix if imported as a static feature.
+            - recompute (bool): whether to recompute this feature from the segmentation.
+                This can only be True if the selected feature corresponds to a regionprops
+                feature. Defaults to None.
         edge_features: Optional edge features to enable/load
         extra_features: (Deprecated) Use node_features instead. Kept for
             backward compatibility.
@@ -252,7 +286,16 @@ def import_from_geff(
             "Please use 'node_features' (extra_features is deprecated)."
         )
     if extra_features is not None:
-        node_features = extra_features
+        node_features = []
+        for key, value in extra_features.items():
+            node_features.append(
+                {
+                    "standard_name": key,
+                    "import_name": key,
+                    "display_name": key,
+                    "recompute": value == "Recompute",
+                }
+            )
 
     # Handle backward compatibility: edge_prop_filter -> edge_name_map
     # edge_prop_filter was a list of property names to load

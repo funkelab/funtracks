@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import ast
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 import pandas as pd
@@ -62,14 +62,26 @@ class CSVTracksBuilder(TracksBuilder):
         self,
         source: Path | pd.DataFrame,
         node_name_map: dict[str, str | list[str]],
-        node_features: dict[str, bool] | None = None,
+        node_features: list[dict[str, Any]] | None = None,
     ) -> None:
         """Load CSV and convert to InMemoryGeff format.
 
         Args:
             source: Path to CSV file or DataFrame
             node_name_map: Maps standard keys to CSV column names
-            node_features: Optional features dict for backward compatibility
+            node_features (list[dict[str, Any]]): Optional list of features to
+                import, with dicts containing:
+                - standard_name (str | None): lower case name of the regionprops feature,
+                    or None if not a regionprops feature.
+                - import_name (str): the name of the csv column to import this feature
+                    from.
+                - display_name (str): the name that this feature will be displayed as.
+                    This is either the display_name of the feature's annotator, or the
+                    name of the column with an underscore prefix if imported as a static
+                    feature.
+                - recompute (bool): whether to recompute this feature from the
+                    segmentation. This can only be True if the selected feature
+                    corresponds to a regionprops feature.
         """
         # Read CSV or use provided DataFrame
         df = (
@@ -90,10 +102,19 @@ class CSVTracksBuilder(TracksBuilder):
         # Only add features that should be loaded (recompute=False)
         extended_name_map = dict(node_name_map)
         if node_features is not None:
-            for feature_key, recompute in node_features.items():
-                if feature_key not in extended_name_map and not recompute:
-                    # Assume feature name in CSV matches standard key
-                    extended_name_map[feature_key] = feature_key
+            for feature in node_features:
+                standard_name = feature["standard_name"]
+                import_name = feature["import_name"]
+                display_name = feature["display_name"]
+                recompute = feature["recompute"]
+                if standard_name is None:
+                    extended_name_map[display_name] = (
+                        import_name  # static feature with display name as key
+                    )
+                elif standard_name not in extended_name_map and not recompute:
+                    extended_name_map[standard_name] = (
+                        import_name  # assign to regionprops feature
+                    )
 
         # Build a new DataFrame with standard key names, copying data for each mapping.
         # Multi-value features keep original names (combining happens in TracksBuilder)
@@ -199,7 +220,7 @@ def tracks_from_df(
     df: pd.DataFrame,
     segmentation: np.ndarray | None = None,
     scale: list[float] | None = None,
-    features: dict[str, str] | None = None,
+    features: list[dict[str, Any]] | None = None,
     node_name_map: dict[str, str | list[str]] | None = None,
     name_map: dict[str, str | list[str]] | None = None,  # deprecated
 ) -> SolutionTracks:
@@ -219,11 +240,19 @@ def tracks_from_df(
             corresponds to the label ids in the segmentation array. Defaults to None.
         scale: The scale of the segmentation (including the time dimension).
             Defaults to None.
-        features: Dict mapping measurement attributes (area, volume) to value that
-            specifies a column from which to import. If value equals "Recompute",
-            recompute these values instead of importing them from a column.
-            Example: {"Area": "area"} loads from column "area"
-                     {"Area": "Recompute"} recomputes from segmentation
+        features: Optional list of features to import, with each dict containing:
+            - standard_name (str | None): Lower case name of regionprops feature
+              (e.g., "area", "circularity"), or None for static features.
+            - import_name (str): CSV column name to import data from.
+            - display_name (str): Display name for the feature after import.
+            - recompute (bool): Whether to recompute from segmentation.
+
+            Example (new format):
+                [{
+                    "standard_name": "area",
+                    "import_name": "area_column_name_in_csv",
+                    "display_name": "Area",
+                    "recompute": False}]
             Defaults to None.
         node_name_map: Optional mapping from standard funtracks keys to DataFrame
             column names: {standard_key: column_name}.
@@ -256,20 +285,6 @@ def tracks_from_df(
         if node_name_map is None:
             node_name_map = name_map
 
-    # Convert features dict from motile_tracker format to funtracks format
-    node_features = None
-    if features is not None:
-        node_features = {}
-        # Convert feature keys to lowercase for consistency
-        features = {key.lower(): val for key, val in features.items()}
-        for feature_key, feature_value in features.items():
-            if feature_value == "Recompute":
-                # Recompute from segmentation
-                node_features[feature_key] = True
-            else:
-                # Load from column specified by feature_value
-                node_features[feature_value] = False
-
     builder = CSVTracksBuilder()
 
     if node_name_map is not None:
@@ -283,5 +298,5 @@ def tracks_from_df(
         df,
         segmentation,
         scale=scale,
-        node_features=node_features,
+        node_features=features,
     )

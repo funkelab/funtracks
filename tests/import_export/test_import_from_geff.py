@@ -298,10 +298,20 @@ def test_tracks_with_segmentation(valid_geff, invalid_geff, valid_segmentation, 
 
     # Test that a tracks object is produced and that the seg_id has been relabeled.
     scale = [1, 1, (1 / 100)]
-    node_features = {
-        "area": True,  # In geff, but should be recomputed
-        "random_feature": False,  # Static feature - load from geff
-    }
+    node_features = [
+        {
+            "standard_name": "area",
+            "display_name": "Area",
+            "import_name": "",
+            "recompute": True,
+        },  # In geff, but should be recomputed
+        {
+            "standard_name": None,
+            "display_name": "_Random Feature",
+            "import_name": "random_feature",
+            "recompute": False,
+        },  # Static feature - load from geff
+    ]
 
     tracks = import_from_geff(
         store,
@@ -331,7 +341,7 @@ def test_tracks_with_segmentation(valid_geff, invalid_geff, valid_segmentation, 
 
     # Check that only required/requested features are present, and that area is recomputed
     data = tracks.graph.nodes[last_node]
-    assert "random_feature" in data
+    assert "_Random Feature" in data
     assert "random_feature2" not in data
     assert "area" in data
     assert (
@@ -339,10 +349,20 @@ def test_tracks_with_segmentation(valid_geff, invalid_geff, valid_segmentation, 
     )  # recomputed area values should be 1 pixel, so 0.01 after applying the scaling.
 
     # Check that area is not recomputed but taken directly from the graph
-    node_features = {
-        "area": False,  # Load from geff, don't recompute
-        "random_feature": False,  # Static feature - load from geff
-    }
+    node_features = [
+        {
+            "standard_name": "area",
+            "display_name": "Area",
+            "import_name": "area",
+            "recompute": False,
+        },  # Load from geff, don't recompute
+        {
+            "standard_name": None,
+            "display_name": "_Random Feature",
+            "import_name": "random_feature",
+            "recompute": False,
+        },  # Static feature - load from geff
+    ]
 
     tracks = import_from_geff(
         store,
@@ -392,10 +412,20 @@ def test_segmentation_loading_formats(
     else:
         raise ValueError(f"Unknown format: {segmentation_format}")
 
-    node_features = {
-        "area": False,  # Load from geff, don't recompute
-        "random_feature": False,  # Static feature - load from geff
-    }
+    node_features = [
+        {
+            "standard_name": "area",
+            "display_name": "Area",
+            "import_name": "area",
+            "recompute": False,  # Load from geff, don't recompute
+        },
+        {
+            "standard_name": None,
+            "display_name": "_Random Feature",
+            "import_name": "random_feature",
+            "recompute": False,
+        },  # Static feature - load from geff
+    ]
 
     tracks = import_from_geff(
         store,
@@ -428,12 +458,32 @@ def test_node_features_compute_vs_load(valid_geff, valid_segmentation, tmp_path)
     tifffile.imwrite(valid_segmentation_path, valid_segmentation)
 
     # Test 1: Mix of computed (True) and loaded (False) features
-    node_features = {
-        "area": True,  # In geff, but should be recomputed
-        "random_feature": False,  # Static feature - load from geff
-        "circularity": False,  # In geff, load without recomputing
-        "ellipse_axis_radii": True,  # Not in geff, should be computed
-    }
+    node_features = [
+        {
+            "standard_name": "area",
+            "display_name": "Area",
+            "import_name": "area",
+            "recompute": True,
+        },  # In geff, but should be recomputed
+        {
+            "standard_name": None,
+            "display_name": "_Random Feature",
+            "import_name": "random_feature",
+            "recompute": False,
+        },  # Static feature - load from geff
+        {
+            "standard_name": "circularity",
+            "display_name": "Circularity",
+            "import_name": "circularity",
+            "recompute": False,
+        },  # In geff, load without recomputing
+        {
+            "standard_name": "ellipse_axis_radii",
+            "display_name": "Ellipse Axis Radii",
+            "import_name": "",
+            "recompute": True,
+        },  # Not in geff, should be computed
+    ]
 
     tracks = import_from_geff(
         store,
@@ -443,7 +493,7 @@ def test_node_features_compute_vs_load(valid_geff, valid_segmentation, tmp_path)
         node_features=node_features,
     )
 
-    feature_keys = ["area", "random_feature", "ellipse_axis_radii", "circularity"]
+    feature_keys = ["area", "_Random Feature", "ellipse_axis_radii", "circularity"]
     for key in feature_keys:
         assert key in tracks.features
 
@@ -462,7 +512,7 @@ def test_node_features_compute_vs_load(valid_geff, valid_segmentation, tmp_path)
     assert data["circularity"] == 0.45  # the value should not be recomputed
 
     # Verify loaded value from geff
-    assert data["random_feature"] == "e"
+    assert data["_Random Feature"] == "e"
 
 
 def test_node_features_unknown(valid_geff, valid_segmentation, tmp_path):
@@ -474,9 +524,14 @@ def test_node_features_unknown(valid_geff, valid_segmentation, tmp_path):
     tifffile.imwrite(valid_segmentation_path, valid_segmentation)
 
     # Test unknown feature that doesn't exist in annotators or GEFF
-    node_features = {
-        "unknown_computed_feature": True,  # Unknown feature, request computation
-    }
+    node_features = [
+        {
+            "standard_name": "unknown_computed_feature",
+            "display_name": "",
+            "import_name": "",
+            "recompute": True,
+        }
+    ]  # Unknown feature, request computation
 
     with pytest.raises(
         KeyError,
@@ -498,9 +553,14 @@ def test_compute_features_without_segmentation(valid_geff):
     scale = [1, 1, 1 / 100]
 
     # Try to compute area feature without providing segmentation
-    node_features = {
-        "area": True,  # Request computation without segmentation
-    }
+    node_features = [
+        {
+            "standard_name": "area",
+            "display_name": "Area",
+            "import_name": "",
+            "recompute": True,
+        }
+    ]  # Request computation without segmentation
 
     with pytest.raises(
         KeyError,
