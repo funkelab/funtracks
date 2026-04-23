@@ -186,6 +186,33 @@ class TestEdgeCases:
         roots = [n for n in tracks.graph.node_ids() if tracks.graph.in_degree(n) == 0]
         assert len(roots) == 2
 
+    def test_division_nan_parent(self):
+        """Test division where root parent_id is NaN (not -1).
+
+        Regression test: boolean column detection must not convert parent_id
+        to bool when all non-null values are 1 (since 1 == True in Python).
+        With NaN root, parent_id=[NaN, 1, 1] would be cast to
+        [False, True, True], making the root's False pass the edge filter
+        as int(False)=0 and create a spurious edge (0, node_id).
+        """
+        df = pd.DataFrame(
+            {
+                "time": [0, 1, 1],
+                "y": [10.0, 20.0, 30.0],
+                "x": [15.0, 25.0, 35.0],
+                "id": [1, 2, 3],
+                "parent_id": [np.nan, 1, 1],
+            }
+        )
+
+        tracks = tracks_from_df(df)
+
+        assert tracks.graph.num_nodes() == 3
+        assert tracks.graph.num_edges() == 2
+
+        children = list(tracks.graph.successors(1))
+        assert set(children) == {2, 3}
+
     def test_division_event(self):
         """Test cell division (one parent, two children)."""
         df = pd.DataFrame(

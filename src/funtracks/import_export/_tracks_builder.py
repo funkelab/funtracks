@@ -47,6 +47,21 @@ if TYPE_CHECKING:
     from numpy.typing import ArrayLike
 
 
+def _key_to_display_name(key: str) -> str:
+    """Convert a feature key to a human-readable display name.
+
+    Replaces underscores and hyphens with spaces, then title-cases each word.
+
+    Examples:
+        "custom_area" -> "Custom Area"
+        "ellipse_axis_radii" -> "Ellipse Axis Radii"
+        "my-feature" -> "My Feature"
+    """
+    import re
+
+    return re.sub(r"[_\-]+", " ", key).title()
+
+
 def flatten_name_map(
     name_map: dict[str, str | list[str]],
 ) -> list[tuple[str, str]]:
@@ -624,7 +639,7 @@ class TracksBuilder(ABC):
                 tracks.enable_features([key], recompute=False)
             else:
                 static_features[key] = Feature(
-                    display_name=key,
+                    display_name=_key_to_display_name(key),
                     feature_type=feature_type,
                     value_type=infer_dtype_from_array(props[key]["values"]),
                     num_values=1,
