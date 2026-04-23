@@ -3110,22 +3110,6 @@ and is not required in name_map</p>
                 <em>required</em>
             </td>
           </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>node_features</code>
-            </td>
-            <td>
-                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="bool">bool</span>] | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Optional features dict for backward compatibility</p>
-              </div>
-            </td>
-            <td>
-                  <code>None</code>
-            </td>
-          </tr>
       </tbody>
     </table>
 
@@ -3443,8 +3427,12 @@ If None (default), an in-memory/temp graph is used.</p>
 <a id="funtracks.import_export._tracks_builder.TracksBuilder.enable_features"></a>
     <div class="doc doc-contents first">
 
-        <p>Enable and register features on tracks object.</p>
-<p>Common logic shared across all formats for both node and edge features.</p>
+        <p>Enable and register features on tracks object from a name map.</p>
+<p>For each key in name_map that is not structural (time, id, parent_id,
+seg_id) and not already registered in tracks.features:
+- If the key matches an annotator-managed feature and data was loaded
+  for it, enable it via the annotator (recompute=False).
+- Otherwise, if data was loaded for it, register it as a static feature.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -3476,14 +3464,15 @@ If None (default), an in-memory/temp graph is used.</p>
           </tr>
           <tr class="doc-section-item">
             <td>
-                <code>features</code>
+                <code>name_map</code>
             </td>
             <td>
-                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="bool">bool</span>] | None</code>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="str">str</span> | <span title="list">list</span>[<span title="str">str</span>]]</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Dict mapping feature names to recompute flags</p>
+                <p>Mapping from standard funtracks keys to source property
+names (same format as node_name_map / edge_name_map).</p>
               </div>
             </td>
             <td>
@@ -3581,38 +3570,6 @@ If None (default), an in-memory/temp graph is used.</p>
             <td>
               <div class="doc-md-description">
                 <p>Optional spatial scale</p>
-              </div>
-            </td>
-            <td>
-                  <code>None</code>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>node_features</code>
-            </td>
-            <td>
-                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="bool">bool</span>] | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Optional node features to enable/load</p>
-              </div>
-            </td>
-            <td>
-                  <code>None</code>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>edge_features</code>
-            </td>
-            <td>
-                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="bool">bool</span>] | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Optional edge features to enable/load</p>
               </div>
             </td>
             <td>

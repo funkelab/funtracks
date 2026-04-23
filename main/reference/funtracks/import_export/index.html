@@ -2259,7 +2259,6 @@
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">load_source</span><span class="p">(</span>
     <span class="n">source</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">DataFrame</span><span class="p">,</span>
     <span class="n">node_name_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
-    <span class="n">node_features</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre></div>
 
@@ -2309,22 +2308,6 @@
             </td>
             <td>
                 <em>required</em>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>node_features</code>
-            </td>
-            <td>
-                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="bool">bool</span>] | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Optional features dict for backward compatibility</p>
-              </div>
-            </td>
-            <td>
-                  <code>None</code>
             </td>
           </tr>
       </tbody>
@@ -2521,7 +2504,6 @@ can misassign properties when many non-spatiotemporal properties are present.</p
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">load_source</span><span class="p">(</span>
     <span class="n">source_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
     <span class="n">node_name_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
-    <span class="n">node_features</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre></div>
 
@@ -2571,22 +2553,6 @@ can misassign properties when many non-spatiotemporal properties are present.</p
             </td>
             <td>
                 <em>required</em>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>node_features</code>
-            </td>
-            <td>
-                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="bool">bool</span>] | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Optional features dict (handled by import_graph_from_geff)</p>
-              </div>
-            </td>
-            <td>
-                  <code>None</code>
             </td>
           </tr>
       </tbody>
@@ -2735,8 +2701,6 @@ If ndim is None, returns ["z", "y", "x"] as default.</p>
     <span class="n">source</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">DataFrame</span><span class="p">,</span>
     <span class="n">segmentation</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">scale</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">node_features</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">edge_features</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">node_name_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SolutionTracks</span>
@@ -2800,38 +2764,6 @@ If ndim is None, returns ["z", "y", "x"] as default.</p>
             <td>
               <div class="doc-md-description">
                 <p>Optional spatial scale</p>
-              </div>
-            </td>
-            <td>
-                  <code>None</code>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>node_features</code>
-            </td>
-            <td>
-                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="bool">bool</span>] | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Optional node features to enable/load</p>
-              </div>
-            </td>
-            <td>
-                  <code>None</code>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>edge_features</code>
-            </td>
-            <td>
-                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="bool">bool</span>] | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Optional edge features to enable/load</p>
               </div>
             </td>
             <td>
@@ -3073,15 +3005,19 @@ If None (default), an in-memory/temp graph is used.</p>
 </h3>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">enable_features</span><span class="p">(</span>
     <span class="n">tracks</span><span class="p">:</span> <span class="n">SolutionTracks</span><span class="p">,</span>
-    <span class="n">features</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">name_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
     <span class="n">feature_type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;node&quot;</span><span class="p">,</span> <span class="s2">&quot;edge&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;node&quot;</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Enable and register features on tracks object.</p>
-<p>Common logic shared across all formats for both node and edge features.</p>
+        <p>Enable and register features on tracks object from a name map.</p>
+<p>For each key in name_map that is not structural (time, id, parent_id,
+seg_id) and not already registered in tracks.features:
+- If the key matches an annotator-managed feature and data was loaded
+  for it, enable it via the annotator (recompute=False).
+- Otherwise, if data was loaded for it, register it as a static feature.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -3113,14 +3049,15 @@ If None (default), an in-memory/temp graph is used.</p>
           </tr>
           <tr class="doc-section-item">
             <td>
-                <code>features</code>
+                <code>name_map</code>
             </td>
             <td>
-                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="bool">bool</span>] | None</code>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="str">str</span> | <span title="list">list</span>[<span title="str">str</span>]]</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Dict mapping feature names to recompute flags</p>
+                <p>Mapping from standard funtracks keys to source property
+names (same format as node_name_map / edge_name_map).</p>
               </div>
             </td>
             <td>
@@ -3451,7 +3388,6 @@ resulting in a composite mapping like {"pos": ["z", "y", "x"]}.</p>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">load_source</span><span class="p">(</span>
     <span class="n">source</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">DataFrame</span><span class="p">,</span>
     <span class="n">node_name_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
-    <span class="n">node_features</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
 </code></pre></div>
 
@@ -3502,22 +3438,6 @@ resulting in a composite mapping like {"pos": ["z", "y", "x"]}.</p>
             </td>
             <td>
                 <em>required</em>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>node_features</code>
-            </td>
-            <td>
-                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="bool">bool</span>] | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Optional features dict for backward compatibility</p>
-              </div>
-            </td>
-            <td>
-                  <code>None</code>
             </td>
           </tr>
       </tbody>
@@ -4180,15 +4100,13 @@ returns a normal Tracks object. Defaults to False.</p>
     <span class="n">df</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span>
     <span class="n">segmentation</span><span class="p">:</span> <span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">scale</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">features</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">node_name_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">name_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SolutionTracks</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Import tracks from pandas DataFrame (motile_tracker-compatible API).</p>
+        <p>Import tracks from pandas DataFrame.</p>
 
 
 <details class="turns-a-pandas-dataframe-with-columns" open>
@@ -4263,27 +4181,6 @@ Defaults to None.</p>
           </tr>
           <tr class="doc-section-item">
             <td>
-                <code>features</code>
-            </td>
-            <td>
-                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="str">str</span>] | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Dict mapping measurement attributes (area, volume) to value that
-specifies a column from which to import. If value equals "Recompute",
-recompute these values instead of importing them from a column.
-Example: {"Area": "area"} loads from column "area"
-         {"Area": "Recompute"} recomputes from segmentation
-Defaults to None.</p>
-              </div>
-            </td>
-            <td>
-                  <code>None</code>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
                 <code>node_name_map</code>
             </td>
             <td>
@@ -4293,27 +4190,11 @@ Defaults to None.</p>
               <div class="doc-md-description">
                 <p>Optional mapping from standard funtracks keys to DataFrame
 column names: {standard_key: column_name}.
-For example: {"time": "t", "pos": ["y", "x"], "seg_id": "label"}
+For example: {"time": "t", "pos": ["y", "x"], "area": "Area"}
 - Keys are standard funtracks attribute names (e.g., "time", "pos", "seg_id")
-- Values are column names from the DataFrame (e.g., "t", "label")
+- Values are column names from the DataFrame (e.g., "t", "Area")
 - For multi-value features like position, use a list: {"pos": ["y", "x"]}
 If None, column names are auto-inferred using fuzzy matching.</p>
-              </div>
-            </td>
-            <td>
-                  <code>None</code>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>name_map</code>
-            </td>
-            <td>
-                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="str">str</span> | <span title="list">list</span>[<span title="str">str</span>]] | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Deprecated. Use node_name_map instead.</p>
               </div>
             </td>
             <td>
