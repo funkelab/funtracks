@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1776949325166,
+  "lastUpdate": 1776949349940,
   "repoUrl": "https://github.com/funkelab/funtracks",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -62,6 +62,37 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 2.848759254000015 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "malinmayorc@janelia.hhmi.org",
+            "name": "Caroline Malin-Mayor",
+            "username": "cmalinmayor"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "dd5bb45586362b8126c0ccfcac1c2fc402462fd2",
+          "message": "Merge pull request #202 from funkelab/improve-default-display-names\n\nImprove default display name for custom features",
+          "timestamp": "2026-04-23T09:01:56-04:00",
+          "tree_id": "9eddbb1e2fd1dbfaaca4a51e03e0757100aa22de",
+          "url": "https://github.com/funkelab/funtracks/commit/dd5bb45586362b8126c0ccfcac1c2fc402462fd2"
+        },
+        "date": 1776949347799,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_compute_graph_from_seg",
+            "value": 0.49693738310737723,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 2.0123259669999953 sec\nrounds: 1"
           }
         ]
       }
