@@ -62,14 +62,12 @@ class CSVTracksBuilder(TracksBuilder):
         self,
         source: Path | pd.DataFrame,
         node_name_map: dict[str, str | list[str]],
-        node_features: dict[str, bool] | None = None,
     ) -> None:
         """Load CSV and convert to InMemoryGeff format.
 
         Args:
             source: Path to CSV file or DataFrame
             node_name_map: Maps standard keys to CSV column names
-            node_features: Optional features dict for backward compatibility
         """
         # Read CSV or use provided DataFrame
         df = (
@@ -86,19 +84,10 @@ class CSVTracksBuilder(TracksBuilder):
         if "id" in df.columns and "parent_id" in df.columns:
             df = _ensure_integer_ids(df)
 
-        # For backward compatibility, extend node_name_map with node_features
-        # Only add features that should be loaded (recompute=False)
-        extended_name_map = dict(node_name_map)
-        if node_features is not None:
-            for feature_key, recompute in node_features.items():
-                if feature_key not in extended_name_map and not recompute:
-                    # Assume feature name in CSV matches standard key
-                    extended_name_map[feature_key] = feature_key
-
         # Build a new DataFrame with standard key names, copying data for each mapping.
         # Multi-value features keep original names (combining happens in TracksBuilder)
         new_df_data = {}
-        for target_key, source_col in flatten_name_map(extended_name_map):
+        for target_key, source_col in flatten_name_map(node_name_map):
             if source_col in df.columns and target_key not in new_df_data:
                 new_df_data[target_key] = df[source_col].copy()
         df = pd.DataFrame(new_df_data)
@@ -199,11 +188,9 @@ def tracks_from_df(
     df: pd.DataFrame,
     segmentation: np.ndarray | None = None,
     scale: list[float] | None = None,
-    features: dict[str, str] | None = None,
     node_name_map: dict[str, str | list[str]] | None = None,
-    name_map: dict[str, str | list[str]] | None = None,  # deprecated
 ) -> SolutionTracks:
-    """Import tracks from pandas DataFrame (motile_tracker-compatible API).
+    """Import tracks from pandas DataFrame.
 
     Turns a pandas DataFrame with columns:
         time, [z], y, x, id, parent_id, [seg_id], [optional custom attr 1], ...
@@ -219,20 +206,13 @@ def tracks_from_df(
             corresponds to the label ids in the segmentation array. Defaults to None.
         scale: The scale of the segmentation (including the time dimension).
             Defaults to None.
-        features: Dict mapping measurement attributes (area, volume) to value that
-            specifies a column from which to import. If value equals "Recompute",
-            recompute these values instead of importing them from a column.
-            Example: {"Area": "area"} loads from column "area"
-                     {"Area": "Recompute"} recomputes from segmentation
-            Defaults to None.
         node_name_map: Optional mapping from standard funtracks keys to DataFrame
             column names: {standard_key: column_name}.
-            For example: {"time": "t", "pos": ["y", "x"], "seg_id": "label"}
+            For example: {"time": "t", "pos": ["y", "x"], "area": "Area"}
             - Keys are standard funtracks attribute names (e.g., "time", "pos", "seg_id")
-            - Values are column names from the DataFrame (e.g., "t", "label")
+            - Values are column names from the DataFrame (e.g., "t", "Area")
             - For multi-value features like position, use a list: {"pos": ["y", "x"]}
             If None, column names are auto-inferred using fuzzy matching.
-        name_map: Deprecated. Use node_name_map instead.
 
     Returns:
         SolutionTracks: a solution tracks object
@@ -244,41 +224,6 @@ def tracks_from_df(
     Example:
         >>> tracks = tracks_from_df(df, segmentation=seg, scale=[1.0, 1.0, 0.5, 0.5])
     """
-    from warnings import warn
-
-    # Handle deprecated name_map parameter
-    if name_map is not None:
-        warn(
-            "name_map is deprecated, use node_name_map instead",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        if node_name_map is None:
-            node_name_map = name_map
-
-    # Convert features dict from motile_tracker format to funtracks format
-    node_features = None
-    if features is not None:
-        node_features = {}
-        # Convert feature keys to lowercase for consistency
-        features = {key.lower(): val for key, val in features.items()}
-        for feature_key, feature_value in features.items():
-            if feature_value == "Recompute":
-                # Recompute from segmentation
-                node_features[feature_key] = True
-            else:
-                # Use the lowercase standard key (feature_key) so that core features
-                # like "area" are stored with a consistent lowercase key in the graph,
-                # avoiding SQLite duplicate-column errors when SolutionTracks later tries
-                # to register the same feature under its canonical lowercase name.
-                node_features[feature_key] = False
-                # Ensure node_name_map maps the standard key to the actual column name.
-                # Without this, load_source would look for a column named "area" when
-                # the CSV actually has "Area".
-                if node_name_map is not None and feature_key not in node_name_map:
-                    node_name_map = dict(node_name_map)  # copy to avoid mutating caller
-                    node_name_map[feature_key] = feature_value
-
     builder = CSVTracksBuilder()
 
     if node_name_map is not None:
@@ -288,12 +233,9 @@ def tracks_from_df(
         # Auto-infer name mapping from DataFrame columns
         builder.prepare(df)
 
-    # instead of a separate segmentation array
-
     return builder.build(
         df,
         segmentation,
         scale=scale,
-        node_features=node_features,
         node_name_map=builder.node_name_map,
     )
