@@ -1,9 +1,10 @@
+import numpy as np
 import pytest
+from tracksdata.nodes import Mask
 
 from funtracks.actions import UpdateNodeSeg, UpdateTrackIDs
 from funtracks.annotators import EdgeAnnotator
 from funtracks.data_model import SolutionTracks, Tracks
-from funtracks.utils.tracksdata_utils import pixels_to_td_mask
 
 track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
 
@@ -58,15 +59,16 @@ class TestEdgeAnnotator:
         node_id = 3
         edge_id = (1, 3)
 
-        orig_pixels = tracks.get_pixels(node_id)
-        assert orig_pixels is not None
-        # remove all but one pixel
-        pixels_to_remove = tuple(orig_pixels[d][1:] for d in range(len(orig_pixels)))
+        node_mask = tracks.get_mask(node_id)
+        assert node_mask is not None
+        # remove all but one pixel: copy the mask, set first True to False (keep it),
+        # remove the rest
+        new_mask = Mask(node_mask.mask.copy(), node_mask.bbox)
+        new_mask.mask.flat[np.argmax(new_mask.mask.flat)] = False
         expected_iou = pytest.approx(0.0, abs=0.001)
 
         # Use UpdateNodeSeg action to modify segmentation and update edge
-        mask_to_remove = pixels_to_td_mask(pixels_to_remove, ndim=ndim)
-        UpdateNodeSeg(tracks, node_id, mask_to_remove, added=False)
+        UpdateNodeSeg(tracks, node_id, new_mask, added=False)
         assert tracks.get_edge_attr(edge_id, "iou") == expected_iou
 
         # segmentation is fully erased and you try to update
@@ -96,10 +98,8 @@ class TestEdgeAnnotator:
 
         # remove the IOU from computation (tracks level)
         tracks.disable_features([to_remove_key])
-        # remove all but one pixel
-        orig_pixels = tracks.get_pixels(node_id)
-        assert orig_pixels is not None
-        pixels_to_remove = tuple(orig_pixels[d][1:] for d in range(len(orig_pixels)))
+        node_mask = tracks.get_mask(node_id)
+        assert node_mask is not None
 
         # Compute at tracks level - this should not update the removed feature
         for a in tracks.annotators:
@@ -110,9 +110,10 @@ class TestEdgeAnnotator:
 
         # add it back in
         tracks.enable_features([to_remove_key])
-        # Use UpdateNodeSeg action to modify segmentation and update edge
-        mask_to_remove = pixels_to_td_mask(pixels_to_remove, ndim=ndim)
-        UpdateNodeSeg(tracks, node_id, mask_to_remove, added=False)
+        # remove all but one pixel
+        removal = Mask(node_mask.mask.copy(), node_mask.bbox)
+        removal.mask.flat[np.argmax(removal.mask.flat)] = False
+        UpdateNodeSeg(tracks, node_id, removal, added=False)
         new_iou = pytest.approx(0.0, abs=0.001)
         # the feature is now updated
         assert tracks.get_edge_attr(edge_id, to_remove_key) == new_iou

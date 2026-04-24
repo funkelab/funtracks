@@ -20,7 +20,6 @@ from tracksdata.nodes import Mask
 from funtracks.actions.action_history import ActionHistory
 from funtracks.features import Feature, FeatureDict, Position, Time
 from funtracks.utils.tracksdata_utils import (
-    td_mask_to_pixels,
     to_polars_dtype,
 )
 
@@ -536,30 +535,6 @@ class Tracks:
 
         mask = self.graph.nodes[node][td.DEFAULT_ATTR_KEYS.MASK]
         return mask
-
-    def get_pixels(self, node: Node) -> tuple[np.ndarray, ...] | None:
-        """Get the pixels corresponding to each node in the nodes list.
-
-        Args:
-            node (Node): A  node to get the pixels for.
-
-        Returns:
-            tuple[np.ndarray, ...] | None: A tuple representing the pixels for the input
-            node, or None if the segmentation is None. The tuple will have length equal
-            to the number of segmentation dimensions, and can be used to index the
-            segmentation.
-        """
-        if self.segmentation is None:
-            return None
-
-        # Get time and mask for the node
-        mask = self.graph.nodes[node][td.DEFAULT_ATTR_KEYS.MASK]
-        time = self.get_time(node)
-
-        # Convert to pixels
-        pixels = td_mask_to_pixels(mask, time, ndim=self.ndim)
-
-        return pixels
 
     def _update_segmentation_cache(self, mask: td.Mask, time: int) -> None:
         """Invalidate cached chunks that overlap with the given mask.

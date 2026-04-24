@@ -1,4 +1,6 @@
+import numpy as np
 import pytest
+from tracksdata.nodes import Mask
 
 from funtracks.actions import UpdateNodeSeg
 from funtracks.annotators import TrackAnnotator
@@ -8,7 +10,6 @@ from funtracks.user_actions import (
     UserDeleteEdge,
     UserDeleteNode,
 )
-from funtracks.utils.tracksdata_utils import pixels_to_td_mask
 
 
 @pytest.mark.parametrize("ndim", [3, 4])
@@ -117,13 +118,12 @@ class TestTrackAnnotator:
         initial_track_id = tracks.get_track_id(node_id)
 
         # UpdateNodeSeg should not trigger track ID update
-        orig_pixels = tracks.get_pixels(node_id)
-        assert orig_pixels is not None
-        pixels_to_remove = tuple(orig_pixels[d][1:] for d in range(len(orig_pixels)))
-        mask_to_remove = pixels_to_td_mask(pixels_to_remove, ndim=ndim)
+        node_mask = tracks.get_mask(node_id)
+        removal = Mask(node_mask.mask.copy(), node_mask.bbox)
+        removal.mask.flat[np.argmax(removal.mask.flat)] = False
 
         # Perform UpdateNodeSeg action
-        UpdateNodeSeg(tracks, node_id, mask_to_remove, added=False)
+        UpdateNodeSeg(tracks, node_id, removal, added=False)
 
         # Track ID should remain unchanged (no track update happened)
         assert tracks.get_track_id(node_id) == initial_track_id

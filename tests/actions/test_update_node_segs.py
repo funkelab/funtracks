@@ -2,9 +2,9 @@ import numpy as np
 import pytest
 from numpy.testing import assert_array_almost_equal
 from polars.testing import assert_series_equal
+from tracksdata.nodes import Mask
 
 from funtracks.actions import UpdateNodeSeg
-from funtracks.utils.tracksdata_utils import pixels_to_td_mask
 
 
 @pytest.mark.parametrize("ndim", [3, 4])
@@ -30,12 +30,11 @@ def test_update_node_segs(get_tracks, ndim):
     # Add a couple pixels to the first node
     new_seg = np.asarray(tracks.segmentation).copy()
     if ndim == 3:
-        new_seg[time][0][0] = node  # Use node time and node ID
+        new_seg[time][0][0] = node
+        mask = Mask(np.ones((1, 1), dtype=bool), np.array([0, 0, 1, 1]))
     else:
-        new_seg[time][0][0][0] = node  # Use node time and node ID
-
-    pixels = np.nonzero(original_seg != new_seg)
-    mask = pixels_to_td_mask(pixels, ndim=ndim)
+        new_seg[time][0][0][0] = node
+        mask = Mask(np.ones((1, 1, 1), dtype=bool), np.array([0, 0, 0, 1, 1, 1]))
 
     action = UpdateNodeSeg(tracks, node, mask=mask, added=True)
 

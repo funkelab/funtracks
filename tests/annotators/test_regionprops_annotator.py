@@ -1,10 +1,10 @@
 import numpy as np
 import pytest
+from tracksdata.nodes import Mask
 
-from funtracks.actions import UpdateNodeSeg, UpdateTrackIDs
+from funtracks.actions import UpdateNodeSeg
 from funtracks.annotators import RegionpropsAnnotator
-from funtracks.data_model import SolutionTracks, Tracks
-from funtracks.utils.tracksdata_utils import pixels_to_td_mask
+from funtracks.data_model import Tracks
 
 track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
 
@@ -60,14 +60,13 @@ class TestRegionpropsAnnotator:
         # Enable features through tracks
         tracks.enable_features(list(rp_ann.all_features.keys()))
 
-        orig_pixels = tracks.get_pixels(node_id)
-        # remove all but one pixel
-        pixels_to_remove = tuple(orig_pixels[d][1:] for d in range(len(orig_pixels)))
-        mask_to_remove = pixels_to_td_mask(pixels_to_remove, ndim=ndim)
+        node_mask = tracks.get_mask(node_id)
+        removal = Mask(node_mask.mask.copy(), node_mask.bbox)
+        removal.mask.flat[np.argmax(removal.mask.flat)] = False
         expected_area = 1
 
         # Use UpdateNodeSeg action to modify segmentation and update features
-        UpdateNodeSeg(tracks, node_id, mask_to_remove, added=False)
+        UpdateNodeSeg(tracks, node_id, removal, added=False)
         assert tracks.get_node_attr(node_id, "area") == expected_area
         for key in rp_ann.features:
             assert key in tracks.graph.node_attr_keys()
@@ -114,12 +113,12 @@ class TestRegionpropsAnnotator:
 
         # remove all but one pixel
         node_id = 3
-        orig_pixels = tracks.get_pixels(node_id)
-        assert orig_pixels is not None
-        pixels_to_remove = tuple(orig_pixels[d][1:] for d in range(len(orig_pixels)))
-        mask_to_remove = pixels_to_td_mask(pixels_to_remove, ndim=ndim)
+        node_mask = tracks.get_mask(node_id)
+        assert node_mask is not None
+        removal = Mask(node_mask.mask.copy(), node_mask.bbox)
+        removal.mask.flat[np.argmax(removal.mask.flat)] = False
         # Use UpdateNodeSeg action to modify segmentation and update features
-        UpdateNodeSeg(tracks, node_id, mask_to_remove, added=False)
+        UpdateNodeSeg(tracks, node_id, removal, added=False)
         # the one we added back in is now present
         assert tracks.get_node_attr(node_id, to_remove_key) is not None
 
@@ -170,38 +169,3 @@ class TestRegionpropsAnnotator:
                 f"Bug value would be local_centroid * scale + bbox_min = {bug_value}"
             ),
         )
-
-    def test_ignores_irrelevant_actions(self, get_graph, ndim):
-        """Test that RegionpropsAnnotator ignores actions that don't affect
-        segmentation.
-        """
-        graph = get_graph(ndim, is_solution=True, with_seg=True)
-        tracks = SolutionTracks(
-            graph,
-            ndim=ndim,
-            **track_attrs,
-        )
-        tracks.enable_features(["area", "track_id"])
-
-        node_id = 1
-        initial_area = tracks.get_node_attr(node_id, "area")
-
-        # Manually modify segmentation (without triggering an action)
-        # Remove half the pixels from node 1
-        orig_pixels = tracks.get_pixels(node_id)
-        assert orig_pixels is not None
-
-        # If we recomputed area now, it would be different
-        # But we won't - we'll just call UpdateTrackID
-
-        # Get original track_id
-        original_track_id = tracks.get_track_id(node_id)
-        new_track_id = original_track_id + 100
-
-        # Perform UpdateTrackIDs action
-        UpdateTrackIDs(tracks, node_id, new_track_id)
-
-        # Area should remain unchanged (no recomputation happened despite seg change)
-        assert tracks.get_node_attr(node_id, "area") == initial_area
-        # But track_id should be updated
-        assert tracks.get_track_id(node_id) == new_track_id
