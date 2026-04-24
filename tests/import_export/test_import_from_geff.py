@@ -783,3 +783,89 @@ def test_3d_pos_survives_sql_roundtrip(tmp_path):
         "This likely means construct_graph() used the wrong ndim when registering "
         "the pos schema, causing a mismatch with the actual 3-element data."
     )
+
+
+def test_embedded_seg_ellipse_axis_radii_feature_metadata(tmp_path):
+    """Regression: ellipse_axis_radii must have correct Feature metadata after
+    round-tripping through a GEFF with embedded segmentation.
+
+    TracksBuilder.enable_features() hardcodes num_values=1 for static features.
+    When the RegionpropsAnnotator is absent at build step 8 (embedded-seg case),
+    ellipse_axis_radii is registered as a static feature instead of an
+    annotator-managed one, producing wrong metadata: num_values=1 instead of 2,
+    no spatial_dims flag, and no value_names.
+    """
+    import tracksdata as td
+
+    node_attributes = [
+        "pos",
+        "area",
+        "ellipse_axis_radii",
+        "track_id",
+        "lineage_id",
+        td.DEFAULT_ATTR_KEYS.MASK,
+        td.DEFAULT_ATTR_KEYS.BBOX,
+    ]
+    # node_default_values must align with node_attributes by index.
+    # pos/track_id/mask/bbox are handled by special cases in create_empty_graphview_graph
+    # and their slot values here are never accessed; only area, ellipse_axis_radii,
+    # and lineage_id go through the general loop.
+    node_default_values = [
+        None,  # pos — special-cased, slot unused
+        0.0,  # area
+        np.array([0.0, 0.0]),  # ellipse_axis_radii — must be Array(Float64, 2)
+        None,  # track_id — special-cased, slot unused
+        -1,  # lineage_id
+        None,  # mask — special-cased, slot unused
+        None,  # bbox — special-cased, slot unused
+    ]
+    graph = create_empty_graphview_graph(
+        node_attributes=node_attributes,
+        node_default_values=node_default_values,
+        edge_attributes=[],
+        ndim=3,
+    )
+    bbox = [20, 20, 50, 60]
+    graph.bulk_add_nodes(
+        nodes=[
+            {
+                "t": 0,
+                "pos": np.array([35.0, 40.0]),
+                "area": 900.0,
+                "ellipse_axis_radii": np.array([20.0, 15.0]),
+                "track_id": 1,
+                "lineage_id": 1,
+                "solution": 1,
+                td.DEFAULT_ATTR_KEYS.MASK: _make_mask(bbox),
+                td.DEFAULT_ATTR_KEYS.BBOX: np.array(bbox, dtype=np.int64),
+            }
+        ],
+        indices=[1],
+    )
+    graph._update_metadata(segmentation_shape=(3, 100, 100))
+
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+
+    st = SolutionTracks(graph, ndim=3, time_attr="t")
+    export_to_geff(st, run_dir)
+
+    imported = import_from_geff(run_dir / "tracks.geff")
+
+    assert "ellipse_axis_radii" in imported.features, (
+        "ellipse_axis_radii should be registered as a feature after import"
+    )
+    feat = imported.features["ellipse_axis_radii"]
+    assert feat["num_values"] == 2, (
+        f"ellipse_axis_radii num_values should be 2, got {feat['num_values']}. "
+        "Likely cause: registered as a static feature (hardcoded num_values=1) "
+        "because RegionpropsAnnotator was absent when enable_features() ran at "
+        "build step 8 of GeffTracksBuilder.build()."
+    )
+    assert feat.get("spatial_dims") is True, (
+        f"ellipse_axis_radii spatial_dims should be True, got {feat.get('spatial_dims')}"
+    )
+    assert feat.get("value_names") == ["major_axis", "minor_axis"], (
+        f"ellipse_axis_radii value_names should be ['major_axis', 'minor_axis'], "
+        f"got {feat.get('value_names')}"
+    )
