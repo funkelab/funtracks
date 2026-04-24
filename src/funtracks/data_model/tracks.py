@@ -323,36 +323,40 @@ class Tracks:
         For each core feature:
         - Activates any features listed that are detected to exist (without computing)
         - Enables any features that don't exist (compute fresh)
+
+        Area is treated differently: it is activated if already present on the graph
+        but is NOT computed from scratch. Users must call enable_features(["area"])
+        explicitly to compute area for a graph that does not already have it.
         """
         # Import here to avoid circular dependency
         from funtracks.annotators import RegionpropsAnnotator, TrackAnnotator
 
-        # Register core features from annotators in the features dict
-        core_computed_features: list[str] = []
+        # (key, compute_if_missing) pairs: True = compute if not on graph,
+        # False = activate only if already on graph
+        core_features: list[tuple[str, bool]] = []
         for annotator in self.annotators:
             if isinstance(annotator, RegionpropsAnnotator):
                 pos_key = annotator.pos_key
                 if self.features.position_key is None:
                     self.features.position_key = pos_key
-                core_computed_features.append(pos_key)
-                # special case for backward compatibility
-                core_computed_features.append("area")
+                core_features.append((pos_key, True))
+                # area: activate if present but don't compute from scratch
+                core_features.append(("area", False))
             elif isinstance(annotator, TrackAnnotator):
                 tracklet_key = annotator.tracklet_key
                 self.features.tracklet_key = tracklet_key
-                core_computed_features.append(tracklet_key)
+                core_features.append((tracklet_key, True))
                 lineage_key = annotator.lineage_key
                 self.features.lineage_key = lineage_key
-                core_computed_features.append(lineage_key)
-        for key in core_computed_features:
+                core_features.append((lineage_key, True))
+        for key, compute_if_missing in core_features:
             if self._check_existing_feature(key):
                 # Add to FeatureDict if not already there
                 if key not in self.features:
                     feature, _ = self.annotators.all_features[key]
                     self.add_feature(key, feature)
                 self.annotators.activate_features([key])
-            else:
-                # enable it (compute it)
+            elif compute_if_missing:
                 self.enable_features([key])
 
     def nodes(self):
