@@ -12,7 +12,6 @@ from funtracks.actions import (
 from funtracks.utils.tracksdata_utils import (
     assert_node_attrs_equal_with_masks,
     create_empty_graphview_graph,
-    pixels_to_td_mask,
 )
 
 from ..conftest import make_2d_disk_mask, make_3d_sphere_mask
@@ -55,11 +54,7 @@ def test_add_delete_nodes(get_tracks, ndim, with_seg):
 
     actions = []
     for node in nodes:
-        if with_seg:
-            pixels = np.nonzero(reference_seg == node)
-            mask = pixels_to_td_mask(pixels, ndim=ndim)
-        else:
-            mask = None
+        mask = reference_graph.nodes[node]["mask"] if with_seg else None
 
         attrs = {}
         attrs[tracks.features.time_key] = reference_graph.nodes[node][
