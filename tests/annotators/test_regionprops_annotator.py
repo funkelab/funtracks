@@ -2,9 +2,9 @@ import numpy as np
 import pytest
 from tracksdata.nodes import Mask
 
-from funtracks.actions import UpdateNodeSeg
+from funtracks.actions import UpdateNodeSeg, UpdateTrackIDs
 from funtracks.annotators import RegionpropsAnnotator
-from funtracks.data_model import Tracks
+from funtracks.data_model import SolutionTracks, Tracks
 
 track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
 
@@ -169,3 +169,33 @@ class TestRegionpropsAnnotator:
                 f"Bug value would be local_centroid * scale + bbox_min = {bug_value}"
             ),
         )
+
+    def test_ignores_irrelevant_actions(self, get_graph, ndim):
+        """Test that RegionpropsAnnotator ignores actions that don't affect
+        segmentation.
+        """
+        graph = get_graph(ndim, is_solution=True, with_seg=True)
+        tracks = SolutionTracks(
+            graph,
+            ndim=ndim,
+            **track_attrs,
+        )
+        tracks.enable_features(["area", "track_id"])
+
+        node_id = 1
+        initial_area = tracks.get_node_attr(node_id, "area")
+
+        # Make the stored area stale by writing a fake value directly to the graph,
+        # bypassing the action system. If UpdateTrackIDs incorrectly triggers
+        # RegionpropsAnnotator, it would recompute area back to initial_area and
+        # the assertion below would fail.
+        fake_area = initial_area + 999
+        tracks.graph.update_node_attrs(attrs={"area": [fake_area]}, node_ids=[node_id])
+
+        original_track_id = tracks.get_track_id(node_id)
+        new_track_id = original_track_id + 100
+
+        UpdateTrackIDs(tracks, node_id, new_track_id)
+
+        assert tracks.get_node_attr(node_id, "area") == fake_area
+        assert tracks.get_track_id(node_id) == new_track_id
