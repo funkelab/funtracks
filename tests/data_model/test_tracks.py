@@ -181,6 +181,11 @@ def test_set_positions_list(graph_2d_list):
     )
 
 
+def test_get_mask_none(graph_2d_with_track_id):
+    tracks = Tracks(graph_2d_with_track_id, ndim=3, **track_attrs)
+    assert tracks.get_mask(1) is None
+
+
 def test_set_pixels_no_segmentation(graph_2d_with_track_id):
     tracks = Tracks(graph_2d_with_track_id, ndim=3, **track_attrs)
     pix = [(np.array([0]), np.array([10]), np.array([20]))]
