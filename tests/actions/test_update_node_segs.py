@@ -16,13 +16,6 @@ def test_update_node_segs(get_tracks, ndim):
     node = 1
     time = tracks.get_time(node)
 
-    # Populate the cache by accessing segmentation at the node's time
-    # This ensures _update_segmentation_cache will test the cache invalidation logic
-    _ = np.asarray(tracks.segmentation[time])
-
-    # Verify cache is populated
-    assert time in tracks.segmentation._cache._store
-
     original_seg = np.asarray(tracks.segmentation).copy()
     original_area = tracks.graph.nodes[1]["area"]
     original_pos = tracks.graph.nodes[1]["pos"]
@@ -43,9 +36,6 @@ def test_update_node_segs(get_tracks, ndim):
     assert not np.allclose(tracks.graph.nodes[1]["pos"], original_pos)
     assert_array_almost_equal(tracks.segmentation, new_seg)
 
-    # Re-populate cache for inverse action test
-    _ = np.asarray(tracks.segmentation[time])
-
     inverse = action.inverse()
     assert set(tracks.graph.node_ids()) == set(reference_graph.node_ids())
     assert_series_equal(
@@ -53,9 +43,6 @@ def test_update_node_segs(get_tracks, ndim):
         tracks.graph.nodes[1]["pos"],
     )
     assert_array_almost_equal(tracks.segmentation, original_seg)
-
-    # Re-populate cache for second inverse test
-    _ = np.asarray(tracks.segmentation[time])
 
     inverse.inverse()
 

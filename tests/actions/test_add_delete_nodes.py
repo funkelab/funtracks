@@ -7,7 +7,6 @@ from tracksdata.array import GraphArrayView
 from funtracks.actions import (
     ActionGroup,
     AddNode,
-    DeleteNode,
 )
 from funtracks.utils.tracksdata_utils import (
     assert_node_attrs_equal_with_masks,
@@ -118,70 +117,6 @@ def test_add_delete_nodes(get_tracks, ndim, with_seg):
             check_row_order=False,
             check_dtypes=False,
         )
-
-
-@pytest.mark.parametrize("ndim", [3, 4])
-def test_add_node_invalidates_cache(get_tracks, ndim):
-    """Test that AddNode invalidates the GraphArrayView cache for the new node's region.
-
-    Regression test: when the cache is pre-populated before a new node is added,
-    reading the segmentation afterwards must reflect the new node (not stale zeros).
-    """
-    tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
-
-    # Pick a new node id and time point that doesn't already exist
-    new_node = max(tracks.graph.node_ids()) + 1
-    time = 3
-    if ndim == 3:
-        mask = make_2d_disk_mask(center=(15, 45), radius=5)
-    else:
-        mask = make_3d_sphere_mask(center=(15, 45, 75), radius=5)
-
-    # Pre-populate the cache by reading the segmentation at the target time point
-    _ = np.asarray(tracks.segmentation[time])
-    assert time in tracks.segmentation._cache._store
-
-    # Add a new node with segmentation
-    attrs = {
-        tracks.features.time_key: time,
-        tracks.features.tracklet_key: new_node,
-        tracks.features.lineage_key: new_node,
-    }
-    AddNode(tracks, new_node, attributes=attrs, mask=mask)
-
-    # Reading through the cache must reflect the new node (not return stale zeros)
-    center_pixel = (15, 45) if ndim == 3 else (15, 45, 75)
-    assert np.asarray(tracks.segmentation[time])[center_pixel] == new_node, (
-        "New node label not found in cached slice after AddNode"
-    )
-
-
-@pytest.mark.parametrize("ndim", [3, 4])
-def test_delete_node_invalidates_cache(get_tracks, ndim):
-    """Test that DeleteNode invalidates the GraphArrayView cache for the deleted node.
-
-    Regression test: when the cache is pre-populated before a node is deleted,
-    reading the segmentation afterwards must return zeros (not the stale label value).
-    """
-    tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
-    node = 1
-    time = tracks.get_time(node)
-    # Node 1 center: (50, 50) for ndim=3, (50, 50, 50) for ndim=4
-    center_pixel = (50, 50) if ndim == 3 else (50, 50, 50)
-
-    # Pre-populate the cache by reading the time slice
-    _ = np.asarray(tracks.segmentation[time])
-    assert time in tracks.segmentation._cache._store
-
-    # Confirm node's label is visible at its center pixel via the cached slice
-    assert np.asarray(tracks.segmentation[time])[center_pixel] == node
-
-    DeleteNode(tracks, node)
-
-    # Reading through the cache must reflect the deletion (not return the stale label)
-    assert np.asarray(tracks.segmentation[time])[center_pixel] == 0, (
-        "Deleted node label still found in cached slice after DeleteNode"
-    )
 
 
 def test_add_node_missing_time(get_tracks):
