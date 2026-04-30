@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1777320505085,
+  "lastUpdate": 1777545203670,
   "repoUrl": "https://github.com/funkelab/funtracks",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -155,6 +155,37 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 2.8091186989999954 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "malinmayorc@janelia.hhmi.org",
+            "name": "Caroline Malin-Mayor",
+            "username": "cmalinmayor"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4aa2b5fa4278fb4601ec06eb10089be12230e1fa",
+          "message": "Merge pull request #205 from funkelab/remove-invalidate-segmentation-cache\n\nupdate_segmentation_cache no longer necessary, done in tracksdata",
+          "timestamp": "2026-04-30T06:32:51-04:00",
+          "tree_id": "aab2a840ef435d3379bc41abecfd9eeaf7106763",
+          "url": "https://github.com/funkelab/funtracks/commit/4aa2b5fa4278fb4601ec06eb10089be12230e1fa"
+        },
+        "date": 1777545202701,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_compute_graph_from_seg",
+            "value": 0.3886278067851522,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 2.573156069999996 sec\nrounds: 1"
           }
         ]
       }
