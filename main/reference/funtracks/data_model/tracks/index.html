@@ -1162,17 +1162,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#funtracks.data_model.tracks.Tracks.get_pixels" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;get_pixels
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#funtracks.data_model.tracks.Tracks.get_position" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2099,17 +2088,6 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#funtracks.data_model.tracks.Tracks.get_pixels" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;get_pixels
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#funtracks.data_model.tracks.Tracks.get_position" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2971,110 +2949,6 @@ already exist in graph and just register the feature.</p>
             <td>
               <div class="doc-md-description">
                 <p>segmentation is available.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h3 id="funtracks.data_model.tracks.Tracks.get_pixels" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">get_pixels</span>
-
-
-</h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">get_pixels</span><span class="p">(</span><span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span>
-</code></pre></div>
-
-    <div class="doc doc-contents ">
-
-        <p>Get the pixels corresponding to each node in the nodes list.</p>
-
-
-<p><span class="doc-section-title">Parameters:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-          <th>Default</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                <code>node</code>
-            </td>
-            <td>
-                  <code><span title="funtracks.data_model.tracks.Node">Node</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>A  node to get the pixels for.</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-    <p><span class="doc-section-title">Returns:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                  <code><span title="tuple">tuple</span>[<span title="numpy.ndarray">ndarray</span>, ...] | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>tuple[np.ndarray, ...] | None: A tuple representing the pixels for the input</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                  <code><span title="tuple">tuple</span>[<span title="numpy.ndarray">ndarray</span>, ...] | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>node, or None if the segmentation is None. The tuple will have length equal</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                  <code><span title="tuple">tuple</span>[<span title="numpy.ndarray">ndarray</span>, ...] | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>to the number of segmentation dimensions, and can be used to index the</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                  <code><span title="tuple">tuple</span>[<span title="numpy.ndarray">ndarray</span>, ...] | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>segmentation.</p>
               </div>
             </td>
           </tr>
