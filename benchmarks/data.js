@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1777545203670,
+  "lastUpdate": 1777545631907,
   "repoUrl": "https://github.com/funkelab/funtracks",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -186,6 +186,37 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 2.573156069999996 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "malinmayorc@janelia.hhmi.org",
+            "name": "Caroline Malin-Mayor",
+            "username": "cmalinmayor"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e7a7f133b32e77da684345decc8155461df952b3",
+          "message": "Merge pull request #206 from funkelab/remove-get-pixels\n\nremove tracks.get_pixels, all masks now",
+          "timestamp": "2026-04-30T06:39:57-04:00",
+          "tree_id": "037dbb705600b212bd70e6c070d2093050ca0288",
+          "url": "https://github.com/funkelab/funtracks/commit/e7a7f133b32e77da684345decc8155461df952b3"
+        },
+        "date": 1777545630064,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_compute_graph_from_seg",
+            "value": 0.35578101306641047,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 2.810717726000007 sec\nrounds: 1"
           }
         ]
       }
