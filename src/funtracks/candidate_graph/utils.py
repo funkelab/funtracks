@@ -18,6 +18,7 @@ def nodes_from_segmentation(
     segmentation: np.ndarray,
     scale: list[float] | None = None,
     mask: bool = True,
+    t_start: int = 0,
 ) -> tuple[td.graph.GraphView, dict[int, list[Any]]]:
     """Extract candidate nodes from a segmentation. Returns a tracksdata graph
     with only nodes, and also a dictionary from frames to node_ids for
@@ -43,6 +44,10 @@ def nodes_from_segmentation(
             node. Uses regionprop.image (already computed by regionprops at no extra
             cost) and regionprop.bbox. Including them here avoids a separate write
             pass over all nodes later. Defaults to True.
+        t_start (int, optional): The time value to assign to the first frame of the
+            segmentation. Frame i will get t = t_start + i. Useful when the
+            segmentation is a slice of a larger array and nodes need absolute
+            time values. Defaults to 0.
 
     Returns:
         tuple[td.graph.GraphView, dict[int, list[Any]]]: A candidate graph with only
@@ -79,7 +84,7 @@ def nodes_from_segmentation(
                 raise ValueError("Duplicate values found among nodes")
             seen_ids.add(node_id)
             attrs: dict[str, Any] = {
-                "t": t,
+                "t": t + t_start,
                 "pos": list(regionprop.centroid),
                 "area": float(regionprop.area),
             }
@@ -96,7 +101,7 @@ def nodes_from_segmentation(
             nodes_in_frame.append(node_id)
 
         if nodes_in_frame:
-            node_frame_dict[t] = nodes_in_frame
+            node_frame_dict[t + t_start] = nodes_in_frame
 
     if nodes_id_list:
         cand_graph.bulk_add_nodes(nodes=nodes_attrs_list, indices=nodes_id_list)

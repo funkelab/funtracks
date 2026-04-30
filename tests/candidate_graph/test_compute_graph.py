@@ -96,6 +96,32 @@ def test_graph_from_segmentation_with_duplicate_nodes(get_tracks):
         )
 
 
+def test_graph_from_segmentation_t_start(get_tracks):
+    """t_start shifts all node time values so sliced segmentations get absolute times."""
+    tracks = get_tracks(ndim=3, with_seg=True)
+    segmentation_2d = np.asarray(tracks.segmentation)
+
+    # Slice frames 1 onward and use t_start=1 to restore absolute times
+    sliced = segmentation_2d[1:]
+    cand_graph = compute_graph_from_seg(
+        segmentation=sliced,
+        max_edge_distance=100,
+        t_start=1,
+    )
+
+    # All nodes should have t >= 1
+    for node in cand_graph.node_ids():
+        assert cand_graph.nodes[node]["t"] >= 1
+
+    # t values should match the original tracks graph for shared nodes
+    for node in cand_graph.node_ids():
+        if node in set(tracks.graph.node_ids()):
+            assert cand_graph.nodes[node]["t"] == tracks.graph.nodes[node]["t"]
+
+    # Edges should still be formed between adjacent (shifted) frames
+    assert cand_graph.num_edges() > 0
+
+
 def test_graph_from_points_list():
     points_list = np.array(
         [
