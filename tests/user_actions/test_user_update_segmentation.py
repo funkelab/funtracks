@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 from funtracks.user_actions import UserUpdateSegmentation
+from funtracks.utils.tracksdata_utils import td_mask_to_pixels
 
 iou_key = "iou"
 area_key = "area"
@@ -15,12 +16,22 @@ area_key = "area"
     [3],
 )
 class TestUpdateNodeSeg:
+    def pixels_equal_mask(self, pixels, tracks, node_id):
+        mask_pixels = td_mask_to_pixels(
+            tracks.get_mask(node_id), tracks.get_time(node_id), ndim=tracks.ndim
+        )
+        return Counter(zip(*pixels, strict=True)) == Counter(
+            zip(*mask_pixels, strict=True)
+        )
+
     def test_user_update_seg_smaller(self, get_tracks, ndim):
         tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
         node_id = 3
         edge = (1, 3)
 
-        orig_pixels = tracks.get_pixels(node_id)
+        orig_pixels = td_mask_to_pixels(
+            tracks.get_mask(node_id), tracks.get_time(node_id), ndim=tracks.ndim
+        )
         orig_position = tracks.get_position(node_id)
         orig_area = tracks.get_node_attr(node_id, area_key)
         orig_iou = tracks.get_edge_attr(edge, iou_key)
@@ -40,33 +51,32 @@ class TestUpdateNodeSeg:
             current_track_id=1,
         )
         assert tracks.graph.has_node(node_id)
-        assert self.pixel_equals(tracks.get_pixels(node_id), remaining_pixels)
+        assert self.pixels_equal_mask(remaining_pixels, tracks, node_id)
         assert tracks.get_position(node_id) == new_position
         assert tracks.get_node_attr(node_id, "area") == 1
         assert tracks.get_edge_attr(edge, iou_key) == pytest.approx(0.0, abs=0.01)
 
         inverse = action.inverse()
         assert tracks.graph.has_node(node_id)
-        assert self.pixel_equals(tracks.get_pixels(node_id), orig_pixels)
+        assert self.pixels_equal_mask(orig_pixels, tracks, node_id)
         assert tracks.get_position(node_id) == orig_position
         assert tracks.get_node_attr(node_id, "area") == orig_area
         assert tracks.get_edge_attr(edge, iou_key) == pytest.approx(orig_iou, abs=0.01)
 
         inverse.inverse()
-        assert self.pixel_equals(tracks.get_pixels(node_id), remaining_pixels)
+        assert self.pixels_equal_mask(remaining_pixels, tracks, node_id)
         assert tracks.get_position(node_id) == new_position
         assert tracks.get_node_attr(node_id, "area") == 1
         assert tracks.get_edge_attr(edge, iou_key) == pytest.approx(0.0, abs=0.01)
-
-    def pixel_equals(self, pixels1, pixels2):
-        return Counter(zip(*pixels1, strict=True)) == Counter(zip(*pixels2, strict=True))
 
     def test_user_update_seg_bigger(self, get_tracks, ndim):
         tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
         node_id = 3
         edge = (1, 3)
 
-        orig_pixels = tracks.get_pixels(node_id)
+        orig_pixels = td_mask_to_pixels(
+            tracks.get_mask(node_id), tracks.get_time(node_id), ndim=tracks.ndim
+        )
         orig_position = tracks.get_position(node_id)
         orig_area = tracks.get_node_attr(node_id, "area")
         orig_iou = tracks.get_edge_attr(edge, iou_key)
@@ -85,20 +95,20 @@ class TestUpdateNodeSeg:
             tracks, new_value=3, updated_pixels=[(pixels_to_add, 0)], current_track_id=1
         )
         assert tracks.graph.has_node(node_id)
-        assert self.pixel_equals(all_pixels, tracks.get_pixels(node_id))
+        assert self.pixels_equal_mask(all_pixels, tracks, node_id)
         assert tracks.get_node_attr(node_id, "area") == orig_area + 1
         assert tracks.get_edge_attr(edge, iou_key) != orig_iou
 
         inverse = action.inverse()
         assert tracks.graph.has_node(node_id)
-        assert self.pixel_equals(orig_pixels, tracks.get_pixels(node_id))
+        assert self.pixels_equal_mask(orig_pixels, tracks, node_id)
         assert tracks.get_position(node_id) == orig_position
         assert tracks.get_node_attr(node_id, "area") == orig_area
         assert tracks.get_edge_attr(edge, iou_key) == pytest.approx(orig_iou, abs=0.01)
 
         inverse.inverse()
         assert tracks.graph.has_node(node_id)
-        assert self.pixel_equals(all_pixels, tracks.get_pixels(node_id))
+        assert self.pixels_equal_mask(all_pixels, tracks, node_id)
         assert tracks.get_node_attr(node_id, "area") == orig_area + 1
         assert tracks.get_edge_attr(edge, iou_key) != orig_iou
 
@@ -107,7 +117,9 @@ class TestUpdateNodeSeg:
         node_id = 3
         edge = (1, 3)
 
-        orig_pixels = tracks.get_pixels(node_id)
+        orig_pixels = td_mask_to_pixels(
+            tracks.get_mask(node_id), tracks.get_time(node_id), ndim=tracks.ndim
+        )
         orig_position = tracks.get_position(node_id)
         orig_area = tracks.get_node_attr(node_id, "area")
         orig_iou = tracks.get_edge_attr(edge, iou_key)
@@ -125,7 +137,7 @@ class TestUpdateNodeSeg:
 
         inverse = action.inverse()
         assert tracks.graph.has_node(node_id)
-        self.pixel_equals(tracks.get_pixels(node_id), orig_pixels)
+        self.pixels_equal_mask(orig_pixels, tracks, node_id)
         assert tracks.get_position(node_id) == orig_position
         assert tracks.get_node_attr(node_id, "area") == orig_area
         assert tracks.get_edge_attr(edge, iou_key) == pytest.approx(orig_iou, abs=0.01)
@@ -140,7 +152,9 @@ class TestUpdateNodeSeg:
         node_id = 7
         time = 3
 
-        pixels_to_add = tracks.get_pixels(old_node_id)
+        pixels_to_add = td_mask_to_pixels(
+            tracks.get_mask(old_node_id), tracks.get_time(old_node_id), ndim=tracks.ndim
+        )
         pixels_to_add = (
             np.ones(shape=(pixels_to_add[0].shape), dtype=np.uint32) * time,
             *pixels_to_add[1:],
