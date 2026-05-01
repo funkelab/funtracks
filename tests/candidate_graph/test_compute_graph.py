@@ -122,6 +122,55 @@ def test_graph_from_segmentation_t_start(get_tracks):
     assert cand_graph.num_edges() > 0
 
 
+def test_graph_from_segmentation_negative_t_start(get_tracks):
+    """t_start < 0 must raise."""
+    tracks = get_tracks(ndim=3, with_seg=True)
+    segmentation_2d = np.asarray(tracks.segmentation)
+    with pytest.raises(ValueError, match="t_start must be >= 0"):
+        compute_graph_from_seg(
+            segmentation=segmentation_2d,
+            max_edge_distance=100,
+            t_start=-1,
+        )
+
+
+def test_graph_from_segmentation_t_start_zero_matches_default(get_tracks):
+    """t_start=0 must produce identical output to omitting t_start."""
+    tracks = get_tracks(ndim=3, with_seg=True)
+    segmentation_2d = np.asarray(tracks.segmentation)
+
+    default_graph = compute_graph_from_seg(
+        segmentation=segmentation_2d,
+        max_edge_distance=100,
+        iou=True,
+    )
+    explicit_graph = compute_graph_from_seg(
+        segmentation=segmentation_2d,
+        max_edge_distance=100,
+        iou=True,
+        t_start=0,
+    )
+
+    assert set(explicit_graph.node_ids()) == set(default_graph.node_ids())
+
+    for node in default_graph.node_ids():
+        for key in ["t", "pos", "area"]:
+            assert np.array(explicit_graph.nodes[node][key]) == pytest.approx(
+                np.array(default_graph.nodes[node][key]), abs=0.01
+            )
+
+    assert sorted(explicit_graph.edge_list()) == sorted(default_graph.edge_list())
+
+    for src, tgt in default_graph.edge_list():
+        default_iou = default_graph.edges[default_graph.edge_id(src, tgt)]["iou"]
+        explicit_iou = explicit_graph.edges[explicit_graph.edge_id(src, tgt)]["iou"]
+        assert explicit_iou == pytest.approx(default_iou, abs=0.01)
+
+    assert tuple(explicit_graph.metadata["segmentation_shape"]) == tuple(
+        default_graph.metadata["segmentation_shape"]
+    )
+
+
 def test_graph_from_points_list():
     points_list = np.array(
         [

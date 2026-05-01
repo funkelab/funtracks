@@ -55,6 +55,9 @@ def nodes_from_segmentation(
     """
     logger.debug("Extracting nodes from segmentation")
 
+    if t_start < 0:
+        raise ValueError(f"t_start must be >= 0, got {t_start}")
+
     if scale is None:
         scale = [1] * segmentation.ndim
     else:
