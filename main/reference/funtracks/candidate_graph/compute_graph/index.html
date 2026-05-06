@@ -2049,6 +2049,7 @@ isotropic.</p>
     <span class="n">max_edge_distance</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">iou</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">scale</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">t_start</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">td</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">GraphView</span>
 </code></pre></div>
 
@@ -2138,6 +2139,25 @@ Defaults to None, which implies the data is isotropic.</p>
             </td>
             <td>
                   <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>t_start</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The time value to assign to the first frame of the
+segmentation. Frame i will get t = t_start + i. Useful when the
+segmentation is a slice of a larger array and nodes need absolute
+time values. Defaults to 0.</p>
+              </div>
+            </td>
+            <td>
+                  <code>0</code>
             </td>
           </tr>
       </tbody>
