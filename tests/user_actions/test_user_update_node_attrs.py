@@ -78,7 +78,7 @@ class TestUserUpdateNodeAttrs:
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
 
         with pytest.raises(ValueError, match="Cannot update attribute"):
-            UserUpdateNodeAttrs(tracks, node=1, attrs={"track_id": 999})
+            UserUpdateNodeAttrs(tracks, node=1, attrs={"tracklet_id": 999})
 
     def test_protected_area_attr(self, get_tracks, ndim, with_seg):
         """Test that area attribute (managed by annotator) cannot be updated."""

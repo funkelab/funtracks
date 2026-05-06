@@ -10,7 +10,7 @@ from funtracks.utils.tracksdata_utils import (
     td_mask_to_pixels,
 )
 
-track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
+track_attrs = {"time_attr": "t", "tracklet_attr": "tracklet_id"}
 
 
 def test_recompute_track_ids(graph_2d_with_track_id):
@@ -28,7 +28,7 @@ def test_next_track_id(graph_2d_with_track_id):
     AddNode(
         tracks,
         node=10,
-        attributes={"t": 3, "pos": [0, 0], "track_id": 10},
+        attributes={"t": 3, "pos": [0, 0], "tracklet_id": 10},
     )
     assert tracks.get_next_track_id() == 11
 
@@ -91,7 +91,7 @@ def test_update_segmentation(graph_2d_with_segmentation):
 
 def test_next_track_id_empty():
     graph = create_empty_graphview_graph(
-        node_attributes=["pos", "track_id"],
+        node_attributes=["pos", "tracklet_id"],
         edge_attributes=[],
     )
     tracks = SolutionTracks(graph, ndim=4, **track_attrs)
@@ -102,7 +102,7 @@ def test_get_lineage_id_without_lineage_key(graph_2d_with_track_id):
     """Test that get_lineage_id returns None when lineage_key is not set."""
     graph = graph_2d_with_track_id
     graph.add_node(
-        attrs={"t": 1, "pos": [0, 0], "track_id": 1}, index=7, validate_keys=False
+        attrs={"t": 1, "pos": [0, 0], "tracklet_id": 1}, index=7, validate_keys=False
     )
     tracks = SolutionTracks(graph, ndim=3, **track_attrs)
 

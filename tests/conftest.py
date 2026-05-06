@@ -21,8 +21,8 @@ if TYPE_CHECKING:
 # WITH_SEG means segmentation stored as mask/bbox node attributes
 FEATURES_WITH_SEG = ["pos", "area", "iou", "mask", "bbox"]
 FEATURES_NO_SEG = ["pos"]
-SOLUTION_FEATURES_WITH_SEG = ["pos", "area", "iou", "track_id", "mask", "bbox"]
-SOLUTION_FEATURES_NO_SEG = ["pos", "track_id"]
+SOLUTION_FEATURES_WITH_SEG = ["pos", "area", "iou", "tracklet_id", "mask", "bbox"]
+SOLUTION_FEATURES_NO_SEG = ["pos", "tracklet_id"]
 
 
 def make_2d_disk_mask(center=(50, 50), radius=20) -> Mask:
@@ -162,7 +162,7 @@ def _make_graph(
     if with_pos:
         node_attributes.append("pos")
     if with_track_id:
-        node_attributes.append("track_id")
+        node_attributes.append("tracklet_id")
         node_attributes.append("lineage_id")
     if with_area:
         node_attributes.append("area")
@@ -251,7 +251,7 @@ def _make_graph(
             # TODO: don't hardcode "pos" and other column names
             node_attrs["pos"] = positions[node_id]
         if with_track_id:
-            node_attrs["track_id"] = track_ids[node_id]
+            node_attrs["tracklet_id"] = track_ids[node_id]
             node_attrs["lineage_id"] = lineage_ids[node_id]
         if with_area:
             node_attrs["area"] = float(areas[node_id])
@@ -398,14 +398,14 @@ def get_tracks(get_graph) -> Callable[..., "Tracks | SolutionTracks"]:
             features_dict["area"] = Area(ndim=ndim)
             features_dict["iou"] = IoU()
         if is_solution:
-            features_dict["track_id"] = TrackletID()
+            features_dict["tracklet_id"] = TrackletID()
             features_dict["lineage_id"] = LineageID()
 
         feature_dict = FeatureDict(
             features=features_dict,
             time_key="t",
             position_key="pos",
-            tracklet_key="track_id" if is_solution else None,
+            tracklet_key="tracklet_id" if is_solution else None,
             lineage_key="lineage_id" if is_solution else None,
         )
 
@@ -437,7 +437,7 @@ def graph_2d_list(tmp_path) -> td.graph.GraphView:
             "x": 50,
             "t": 0,
             "area": 1245,
-            "track_id": 1,
+            "tracklet_id": 1,
             "lineage_id": 1,
         },
         {
@@ -445,14 +445,14 @@ def graph_2d_list(tmp_path) -> td.graph.GraphView:
             "x": 100,
             "t": 1,
             "area": 500,
-            "track_id": 2,
+            "tracklet_id": 2,
             "lineage_id": 2,
         },
     ]
     graph.add_node_attr_key("y", default_value=0.0, dtype=pl.Float64)
     graph.add_node_attr_key("x", default_value=0.0, dtype=pl.Float64)
     graph.add_node_attr_key("area", default_value=0.0, dtype=pl.Float64)
-    graph.add_node_attr_key("track_id", default_value=0.0, dtype=pl.Float64)
+    graph.add_node_attr_key("tracklet_id", default_value=0.0, dtype=pl.Float64)
     graph.add_node_attr_key("lineage_id", default_value=0.0, dtype=pl.Float64)
 
     graph.bulk_add_nodes(nodes=nodes, indices=[1, 2])

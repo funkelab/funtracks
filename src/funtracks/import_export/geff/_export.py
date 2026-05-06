@@ -10,6 +10,7 @@ import polars as pl
 import tracksdata as td
 from geff_spec import GeffMetadata
 
+from funtracks.annotators._track_annotator import DEFAULT_TRACKLET_KEY
 from funtracks.utils import remove_tilde, setup_zarr_group
 
 from .._export_segmentation import export_segmentation
@@ -28,7 +29,7 @@ def export_to_geff(
     node_ids: set[int] | None = None,
     zarr_format: Literal[2, 3] = 2,
     save_segmentation: bool = True,
-    seg_label_attr: str | None = "track_id",
+    seg_label_attr: str | None = DEFAULT_TRACKLET_KEY,
     seg_file_format: Literal["zarr", "tiff"] = "zarr",
 ):
     """Export the Tracks graph to geff.
@@ -45,8 +46,8 @@ def export_to_geff(
         save_segmentation (bool): If True, saves the segmentation array alongside
             the graph when segmentation is present. Defaults to True.
         seg_label_attr (str | None): Node attribute used to paint cell labels in the
-            exported segmentation. Defaults to "track_id". When None, original
-            segmentation labels (node IDs) are preserved.
+            exported segmentation. Defaults to DEFAULT_TRACKLET_KEY. When None,
+            original segmentation labels (node IDs) are preserved.
         seg_file_format: Output format for the segmentation, either "zarr" or "tiff".
             Defaults to "zarr".
     """

@@ -13,6 +13,11 @@ from geff_spec.utils import (
     create_props_metadata,
 )
 
+from funtracks.annotators._track_annotator import (
+    DEFAULT_LINEAGE_KEY,
+    DEFAULT_TRACKLET_KEY,
+)
+
 from .._tracks_builder import TracksBuilder, flatten_name_map
 
 if TYPE_CHECKING:
@@ -162,12 +167,15 @@ class CSVTracksBuilder(TracksBuilder):
             metadata, node_props_metadata, c_type="node"
         )
 
-        # Set track_node_props if we have track_id or lineage_id
+        # Set track_node_props if we have a tracklet/lineage column.
+        # Accept the legacy "track_id" spelling for backward compatibility.
         track_node_props = {}
-        if "track_id" in node_props:
-            track_node_props["tracklet"] = "track_id"
-        if "lineage_id" in node_props:
-            track_node_props["lineage"] = "lineage_id"
+        for tracklet_key in (DEFAULT_TRACKLET_KEY, "track_id"):
+            if tracklet_key in node_props:
+                track_node_props["tracklet"] = tracklet_key
+                break
+        if DEFAULT_LINEAGE_KEY in node_props:
+            track_node_props["lineage"] = DEFAULT_LINEAGE_KEY
         if track_node_props:
             metadata.track_node_props = track_node_props
 

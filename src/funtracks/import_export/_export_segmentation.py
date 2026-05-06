@@ -8,6 +8,7 @@ import numpy as np
 import tifffile
 from tracksdata.array import GraphArrayView
 
+from funtracks.annotators._track_annotator import DEFAULT_TRACKLET_KEY
 from funtracks.utils import setup_zarr_array
 
 if TYPE_CHECKING:
@@ -20,7 +21,7 @@ def export_segmentation(
     tracks: Tracks,
     output_path: Path,
     file_format: Literal["zarr", "tiff"] = "zarr",
-    label_attr: str | None = "track_id",
+    label_attr: str | None = DEFAULT_TRACKLET_KEY,
     zarr_format: Literal[2, 3] = 2,
     node_ids: set[int] | None = None,
 ) -> None:
@@ -35,9 +36,9 @@ def export_segmentation(
             For tiff, a .tif file will be written.
         file_format: Output format, either "zarr" or "tiff". Defaults to "zarr".
         label_attr: Node attribute used to paint cell labels. When set, each cell is
-            painted with the value of this attribute (e.g. "track_id"). When None,
-            the original segmentation labels (node IDs) are preserved as-is.
-            Defaults to "track_id".
+            painted with the value of this attribute (e.g. DEFAULT_TRACKLET_KEY).
+            When None, the original segmentation labels (node IDs) are preserved
+            as-is. Defaults to DEFAULT_TRACKLET_KEY.
         zarr_format: Zarr format version. Only used when file_format="zarr".
             Defaults to 2.
         node_ids: Optional subset of node IDs to include. Cells not in this set

@@ -23,7 +23,7 @@ class TestTrackAnnotator:
         assert len(ann.features) == 0
         assert len(ann.lineage_id_to_nodes) == 2
 
-        ann = TrackAnnotator(tracks, tracklet_key="track_id")
+        ann = TrackAnnotator(tracks, tracklet_key="tracklet_id")
         assert len(ann.all_features) == 2
         assert len(ann.features) == 0
         assert len(ann.lineage_id_to_nodes) == 2
@@ -178,7 +178,7 @@ class TestTrackAnnotator:
         # ---- Add a node with existing track id ----
         # After the split, only node 3 has track_id=3, and it has lineage_id=1
         # (nodes 4,5 got new track_id=6 and lineage_id=3)
-        attrs = {"pos": ([5, 8]), tracks.features.time_key: (5), "track_id": (3)}
+        attrs = {"pos": ([5, 8]), tracks.features.time_key: (5), "tracklet_id": (3)}
         UserAddNode(tracks, node=7, attributes=attrs)
 
         # Assert new node adopts lineage of existing track (track_id=3 -> lineage_id=1)
@@ -186,7 +186,7 @@ class TestTrackAnnotator:
         assert 7 in ann.lineage_id_to_nodes[1]
 
         # ---- Add a node with a new track id ----
-        attrs = {"pos": ([5, 8]), tracks.features.time_key: (5), "track_id": (4)}
+        attrs = {"pos": ([5, 8]), tracks.features.time_key: (5), "tracklet_id": (4)}
         expected_lineage_id = ann.max_lineage_id + 1
         UserAddNode(tracks, node=8, attributes=attrs)
 

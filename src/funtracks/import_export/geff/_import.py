@@ -16,7 +16,6 @@ if TYPE_CHECKING:
 
 
 # defining constants here because they are only used in the context of import
-TRACK_KEY = "track_id"
 SEG_KEY = "seg_id"
 
 

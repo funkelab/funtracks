@@ -14,6 +14,11 @@ from geff.validate.graph import (
 from geff.validate.segmentation import has_seg_ids_at_coords
 from geff.validate.tracks import validate_lineages, validate_tracklets
 
+from funtracks.annotators._track_annotator import (
+    DEFAULT_LINEAGE_KEY,
+    DEFAULT_TRACKLET_KEY,
+)
+
 if TYPE_CHECKING:
     import dask.array as da
 
@@ -410,26 +415,30 @@ def validate_in_memory_geff(in_memory_geff: InMemoryGeff) -> None:
     if not valid:
         raise ValueError(f"Repeated edges found in data:\n{invalid_edges}")
 
-    # Validate tracklet_id if present (optional - remove if invalid)
-    if "track_id" in node_props:
-        tracklet_ids = node_props["track_id"]["values"]
-        valid, errors = validate_tracklets(node_ids, edge_ids, tracklet_ids)
-        if not valid:
-            warn(
-                f"track_id validation failed:\n{chr(10).join(errors)}\n"
-                "Removing track_id from data.",
-                stacklevel=2,
-            )
-            del node_props["track_id"]
+    # Validate tracklet_id if present (optional - remove if invalid).
+    # Accept the legacy "track_id" spelling as well, so files persisted under
+    # the pre-2.0 default key continue to validate.
+    for tracklet_key in (DEFAULT_TRACKLET_KEY, "track_id"):
+        if tracklet_key in node_props:
+            tracklet_ids = node_props[tracklet_key]["values"]
+            valid, errors = validate_tracklets(node_ids, edge_ids, tracklet_ids)
+            if not valid:
+                warn(
+                    f"{tracklet_key} validation failed:\n{chr(10).join(errors)}\n"
+                    f"Removing {tracklet_key} from data.",
+                    stacklevel=2,
+                )
+                del node_props[tracklet_key]
+            break
 
     # Validate lineage_id if present (optional - remove if invalid)
-    if "lineage_id" in node_props:
-        lineage_ids = node_props["lineage_id"]["values"]
+    if DEFAULT_LINEAGE_KEY in node_props:
+        lineage_ids = node_props[DEFAULT_LINEAGE_KEY]["values"]
         valid, errors = validate_lineages(node_ids, edge_ids, lineage_ids)
         if not valid:
             warn(
-                f"lineage_id validation failed:\n{chr(10).join(errors)}\n"
-                "Removing lineage_id from data.",
+                f"{DEFAULT_LINEAGE_KEY} validation failed:\n{chr(10).join(errors)}\n"
+                f"Removing {DEFAULT_LINEAGE_KEY} from data.",
                 stacklevel=2,
             )
-            del node_props["lineage_id"]
+            del node_props[DEFAULT_LINEAGE_KEY]
