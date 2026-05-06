@@ -14,6 +14,7 @@ def compute_graph_from_seg(
     max_edge_distance: float,
     iou: bool = False,
     scale: list[float] | None = None,
+    t_start: int = 0,
 ) -> td.graph.GraphView:
     """Construct a candidate graph from a segmentation array. Nodes are placed at the
     centroid of each segmentation and edges are added for all nodes in adjacent frames
@@ -30,12 +31,18 @@ def compute_graph_from_seg(
         scale (list[float] | None, optional): The scale of the segmentation data.
             Will be used to rescale the point locations and attribute computations.
             Defaults to None, which implies the data is isotropic.
+        t_start (int, optional): The time value to assign to the first frame of the
+            segmentation. Frame i will get t = t_start + i. Useful when the
+            segmentation is a slice of a larger array and nodes need absolute
+            time values. Defaults to 0.
 
     Returns:
         td.graph.GraphView: A candidate graph that can be passed to the motile solver
     """
     # add nodes (including mask and bbox in the same bulk_add_nodes call)
-    cand_graph, node_frame_dict = nodes_from_segmentation(segmentation, scale=scale)
+    cand_graph, node_frame_dict = nodes_from_segmentation(
+        segmentation, scale=scale, t_start=t_start
+    )
     logger.info("Candidate nodes: %d", cand_graph.num_nodes())
 
     # pre-compute IOU dict before edge insertion so values can be included
