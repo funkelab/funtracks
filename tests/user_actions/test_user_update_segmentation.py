@@ -145,6 +145,55 @@ class TestUpdateNodeSeg:
         inverse.inverse()
         assert not tracks.graph.has_node(node_id)
 
+    def test_user_erase_seg_history_size(self, get_tracks, ndim):
+        """An erase via UserUpdateSegmentation must add exactly one history
+        entry. Regression test for a bug where the nested UserDeleteNode
+        also registered itself, leaving two entries per fill and corrupting
+        undo behavior."""
+        tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
+        node_id = 6
+        pixels = td_mask_to_pixels(
+            tracks.get_mask(node_id), tracks.get_time(node_id), ndim=tracks.ndim
+        )
+        UserUpdateSegmentation(
+            tracks,
+            new_value=0,
+            updated_pixels=[(pixels, node_id)],
+            current_track_id=1,
+        )
+        assert len(tracks.action_history.undo_stack) == 1
+
+    def test_user_two_erases_then_two_undos(self, get_tracks, ndim):
+        """Two consecutive erases must both be reversible via
+        tracks.action_history.undo(). Reproduces bug_paint_undo: the second
+        undo crashed because the buggy history had a duplicate UserDeleteNode
+        entry that tried to re-add an already-restored node."""
+        tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
+        pixels_5 = td_mask_to_pixels(
+            tracks.get_mask(5), tracks.get_time(5), ndim=tracks.ndim
+        )
+        pixels_6 = td_mask_to_pixels(
+            tracks.get_mask(6), tracks.get_time(6), ndim=tracks.ndim
+        )
+
+        UserUpdateSegmentation(
+            tracks, new_value=0, updated_pixels=[(pixels_5, 5)], current_track_id=1
+        )
+        assert not tracks.graph.has_node(5)
+
+        UserUpdateSegmentation(
+            tracks, new_value=0, updated_pixels=[(pixels_6, 6)], current_track_id=1
+        )
+        assert not tracks.graph.has_node(6)
+
+        assert tracks.action_history.undo() is True
+        assert tracks.graph.has_node(6)
+        assert not tracks.graph.has_node(5)
+
+        assert tracks.action_history.undo() is True
+        assert tracks.graph.has_node(5)
+        assert tracks.graph.has_node(6)
+
     def test_user_add_seg(self, get_tracks, ndim):
         tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
         # draw a new node just like node 6 but in time 3 (instead of 4)
