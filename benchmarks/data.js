@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1778091579399,
+  "lastUpdate": 1778205803843,
   "repoUrl": "https://github.com/funkelab/funtracks",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -279,6 +279,37 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 2.8281346129999747 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "45037215+TeunHuijben@users.noreply.github.com",
+            "name": "Teun Huijben",
+            "username": "TeunHuijben"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2b15b1aa61f3b64d5107ab632f5f6aa9a6fa8dc8",
+          "message": "UserUpdateSegmentation didn't give top_level=False to UserDeleteNode when segmentation was erased (#214)",
+          "timestamp": "2026-05-07T19:02:54-07:00",
+          "tree_id": "f70b8911c39f03d8158290a667e493a9548c892a",
+          "url": "https://github.com/funkelab/funtracks/commit/2b15b1aa61f3b64d5107ab632f5f6aa9a6fa8dc8"
+        },
+        "date": 1778205802432,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_compute_graph_from_seg",
+            "value": 0.350649120582542,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 2.851853723000005 sec\nrounds: 1"
           }
         ]
       }
