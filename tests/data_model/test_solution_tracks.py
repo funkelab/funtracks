@@ -5,7 +5,10 @@ from funtracks.actions import AddNode
 from funtracks.data_model import SolutionTracks, Tracks
 from funtracks.import_export import export_to_csv
 from funtracks.user_actions import UserUpdateSegmentation
-from funtracks.utils.tracksdata_utils import create_empty_graphview_graph
+from funtracks.utils.tracksdata_utils import (
+    create_empty_graphview_graph,
+    td_mask_to_pixels,
+)
 
 track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
 
@@ -75,7 +78,7 @@ def test_update_segmentation(graph_2d_with_segmentation):
         ndim=3,
         **track_attrs,
     )
-    pix = tracks.get_pixels(1)
+    pix = td_mask_to_pixels(tracks.get_mask(1), tracks.get_time(1), ndim=tracks.ndim)
     assert isinstance(pix, tuple)
     UserUpdateSegmentation(
         tracks,
