@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
+import tracksdata as td
 from geff._typing import InMemoryGeff
 from geff.core_io._base_read import read_to_memory
-
-from funtracks.annotators import RegionpropsAnnotator
+from tracksdata.nodes import Mask
 
 from .._tracks_builder import TracksBuilder, flatten_name_map
 
@@ -233,88 +233,54 @@ class GeffTracksBuilder(TracksBuilder):
         # Fall back to fuzzy matching when axes metadata is absent or incomplete
         return super().infer_node_name_map()
 
-    def enable_features(
+    def construct_graph(
         self,
-        tracks: SolutionTracks,
-        name_map: dict[str, str | list[str]],
-        feature_type: Literal["node", "edge"] = "node",
-    ) -> None:
-        """Reconstruct embedded segmentation, then delegate to the parent.
+        node_name_map: dict[str, str | list[str]] | None = None,
+        database: str | None = None,
+    ) -> td.graph.GraphView:
+        """Construct graph and prepare embedded segmentation data.
 
-        The GEFF format serialises mask data as plain numeric arrays (zarr cannot
-        store arbitrary Python objects).  Before enabling node features, this
-        override wraps each raw array back into a
-        :class:`tracksdata.nodes.Mask` instance and, when a
-        ``segmentation_shape`` was written to the zarr attrs during export,
-        reconstructs the dense segmentation as a
-        :class:`tracksdata.array.GraphArrayView` and registers a
-        :class:`~funtracks.annotators.RegionpropsAnnotator`.
-
-        Doing this inside ``enable_features()`` — rather than after
-        ``super().build()`` returns — means the annotator is present when the
-        parent processes the name map, so multi-value features such as
-        ``ellipse_axis_radii`` are registered with their correct metadata
-        (``num_values=2``, ``spatial_dims=True``, ``value_names``) rather than
-        being silently downgraded to a static scalar feature.
+        The GEFF format serialises mask data as plain numeric arrays (zarr
+        cannot store arbitrary Python objects).  After the base graph is built,
+        this override wraps each raw array back into a
+        :class:`tracksdata.nodes.Mask` instance and writes
+        ``segmentation_shape`` into the graph metadata so that
+        :class:`~funtracks.data_model.tracks.Tracks.__init__` can reconstruct
+        the segmentation and create the
+        :class:`~funtracks.annotators.RegionpropsAnnotator` naturally.
         """
-        if feature_type == "node":
-            self._setup_embedded_segmentation(tracks)
-        super().enable_features(tracks, name_map, feature_type=feature_type)
-
-    def _setup_embedded_segmentation(self, tracks: SolutionTracks) -> None:
-        """Reconstruct Mask objects and segmentation from embedded GEFF data.
-
-        Idempotent: guards on ``tracks.segmentation is None`` and the absence of
-        an existing :class:`~funtracks.annotators.RegionpropsAnnotator`.
-        """
-        import tracksdata as td
-        from tracksdata.array import GraphArrayView
-        from tracksdata.nodes import Mask
+        graph = super().construct_graph(node_name_map, database=database)
 
         mask_key = td.DEFAULT_ATTR_KEYS.MASK
         bbox_key = td.DEFAULT_ATTR_KEYS.BBOX
-        graph = tracks.graph
 
-        if (
-            mask_key not in graph.node_attr_keys()
-            or bbox_key not in graph.node_attr_keys()
-        ):
-            return
+        if mask_key in graph.node_attr_keys() and bbox_key in graph.node_attr_keys():
+            # Reconstruct Mask objects from raw numeric arrays
+            df = graph.node_attrs(attr_keys=[mask_key, bbox_key])
+            node_ids = list(graph.node_ids())
+            nodes_to_update = []
+            new_masks = []
+            for node_id, mask_val, bbox_val in zip(
+                node_ids, df[mask_key], df[bbox_key], strict=True
+            ):
+                if not isinstance(mask_val, Mask):
+                    nodes_to_update.append(node_id)
+                    new_masks.append(Mask(mask_val.astype(bool), bbox=bbox_val))
 
-        df = graph.node_attrs(attr_keys=[mask_key, bbox_key])
-        node_ids = list(graph.node_ids())
-        nodes_to_update = []
-        new_masks = []
-        for node_id, mask_val, bbox_val in zip(
-            node_ids, df[mask_key], df[bbox_key], strict=True
-        ):
-            if not isinstance(mask_val, Mask):
-                nodes_to_update.append(node_id)
-                new_masks.append(Mask(mask_val.astype(bool), bbox=bbox_val))
-
-        if nodes_to_update:
-            graph.update_node_attrs(
-                attrs={mask_key: new_masks},
-                node_ids=nodes_to_update,
-            )
-
-        seg_shape = getattr(self, "_segmentation_shape", None)
-        if seg_shape is not None and tracks.segmentation is None:
-            graph._update_metadata(segmentation_shape=seg_shape)
-            tracks.segmentation = GraphArrayView(
-                graph=graph,
-                shape=seg_shape,
-                attr_key="node_id",
-                offset=0,
-            )
-            if not any(isinstance(a, RegionpropsAnnotator) for a in tracks.annotators):
-                pos_key = (
-                    tracks.features.position_key
-                    if isinstance(tracks.features.position_key, str)
-                    else None
+            if nodes_to_update:
+                graph.update_node_attrs(
+                    attrs={mask_key: new_masks},
+                    node_ids=nodes_to_update,
                 )
-                tracks.annotators.append(RegionpropsAnnotator(tracks, pos_key=pos_key))
-                tracks._setup_core_computed_features()
+
+        # Write segmentation_shape into graph metadata so that
+        # Tracks.__init__ can reconstruct the segmentation and the
+        # RegionpropsAnnotator is created during _get_annotators().
+        seg_shape = getattr(self, "_segmentation_shape", None)
+        if seg_shape is not None:
+            graph._update_metadata(segmentation_shape=seg_shape)
+
+        return graph
 
     def load_source(
         self,
