@@ -440,6 +440,8 @@ class TracksBuilder(ABC):
             raise ValueError("No data loaded. Call load_source() first.")
 
         node_default_values: list[Any] | None = None
+        node_attr_dtypes: dict[str, type] = {}
+
         if node_name_map is not None:
             node_attributes = list(self.in_memory_geff["node_props"].keys())
             node_first_values = [
@@ -447,20 +449,47 @@ class TracksBuilder(ABC):
                 for key in node_attributes
             ]
 
-            node_default_dtypes = [type(value) for value in node_first_values]
+            type_map = {
+                "int": int,
+                "float": float,
+                "bool": bool,
+                "str": str,
+            }
+
+            # Resolve dtype per feature, either derive from Features, or from the first
+            # value if this attribute is not in self.available_computed_features
+            for attr, value in zip(node_attributes, node_first_values, strict=True):
+                dtype = self.available_computed_features.get(attr, {}).get(
+                    "value_type",
+                    type(value),
+                )
+
+                # keep array types
+                if isinstance(value, np.ndarray):
+                    dtype = np.ndarray
+
+                # convert type names to type
+                elif isinstance(dtype, str):
+                    dtype = type_map[dtype]
+
+                node_attr_dtypes[attr] = dtype
+
             node_default_values = []
-            for i, dtype in enumerate(node_default_dtypes):
+
+            for attr, value in zip(node_attributes, node_first_values, strict=True):
                 default_value: Any
+                dtype = node_attr_dtypes[attr]
+
                 if issubclass(dtype, (bool, np.bool_)):
                     default_value = False
-                elif issubclass(dtype, np.integer):
+                elif issubclass(dtype, (int, np.integer)):
                     default_value = -1
-                elif issubclass(dtype, np.floating):
+                elif issubclass(dtype, (float, np.floating)):
                     default_value = 0.0
-                elif issubclass(dtype, np.str_):
+                elif issubclass(dtype, (str, np.str_)):
                     default_value = ""
                 elif issubclass(dtype, np.ndarray):
-                    default_value = np.array([0.0 for _ in node_first_values[i]])
+                    default_value = np.zeros_like(value, dtype=float)
                 else:
                     default_value = 0
                 node_default_values.append(default_value)
@@ -475,6 +504,8 @@ class TracksBuilder(ABC):
 
         node_ids = [int(i) for i in self.in_memory_geff["node_ids"]]
         node_attrs = []
+
+        # Enforce dtype before inserting into graph
         for idx in range(len(self.in_memory_geff["node_ids"])):
             node_attr = {}
             node_attr[td.DEFAULT_ATTR_KEYS.SOLUTION] = 1  # Add default solution value
@@ -486,6 +517,13 @@ class TracksBuilder(ABC):
                 # set missing attribute to None
                 if prop.get("missing") is not None and prop["missing"][idx]:
                     value = None
+                elif value is not None and node_name_map is not None:
+                    dtype = node_attr_dtypes.get(key)
+                    if dtype is not None and not isinstance(
+                        value, np.ndarray
+                    ):  # arrays should stay arrays
+                        value = dtype(value)
+
                 node_attr[key] = value
             for key in graph.node_attr_keys():
                 if key not in node_attr:
