@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1778599293383,
+  "lastUpdate": 1778694292166,
   "repoUrl": "https://github.com/funkelab/funtracks",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -341,6 +341,37 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 1.946358998000001 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "45037215+TeunHuijben@users.noreply.github.com",
+            "name": "Teun Huijben",
+            "username": "TeunHuijben"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "67c8b62c841a48c98d1e8f916a403d8ccf75e219",
+          "message": "fix: register RegionpropsAnnotator before enable_features (#204)\n\n* fix: register RegionpropsAnnotator before enable_features for embedded-seg GEFF import\n\n* Override construct_graph instead of enable_features\n\nPer Claude:  Instead of overriding enable_features() to retroactively set up the segmentation and manually create the RegionpropsAnnotator after SolutionTracks is already constructed, we now override construct_graph() to:\n  1. Convert raw numpy mask arrays back to Mask objects on the graph\n  2. Write segmentation_shape into the graph metadata\n\nThis means when Tracks.__init__() runs (inside SolutionTracks()), it finds segmentation_shape in the graph metadata, reconstructs the GraphArrayView segmentation naturally, and _get_annotators() creates the RegionpropsAnnotator through the normal path — no special-casing needed.\n\n* minor Claude suggestions\n\n---------\n\nCo-authored-by: Caroline Malin-Mayor <malinmayorc@janelia.hhmi.org>",
+          "timestamp": "2026-05-13T10:44:14-07:00",
+          "tree_id": "6b56f71ed8490f85f227d85b14345bd1a09c2190",
+          "url": "https://github.com/funkelab/funtracks/commit/67c8b62c841a48c98d1e8f916a403d8ccf75e219"
+        },
+        "date": 1778694290102,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_compute_graph_from_seg",
+            "value": 0.35148206846356617,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 2.8450953539999944 sec\nrounds: 1"
           }
         ]
       }
