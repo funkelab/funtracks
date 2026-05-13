@@ -797,6 +797,8 @@ def test_embedded_seg_ellipse_axis_radii_feature_metadata(tmp_path):
     """
     import tracksdata as td
 
+    from funtracks.annotators import RegionpropsAnnotator
+
     node_attributes = [
         "pos",
         "area",
@@ -851,6 +853,12 @@ def test_embedded_seg_ellipse_axis_radii_feature_metadata(tmp_path):
     export_to_geff(st, run_dir)
 
     imported = import_from_geff(run_dir / "tracks.geff")
+
+    assert any(isinstance(a, RegionpropsAnnotator) for a in imported.annotators), (
+        "RegionpropsAnnotator should be present after import of an embedded-seg "
+        "GEFF. Without it, regionprops features get wrong metadata via the "
+        "static-feature fallback in TracksBuilder.enable_features()."
+    )
 
     assert "ellipse_axis_radii" in imported.features, (
         "ellipse_axis_radii should be registered as a feature after import"

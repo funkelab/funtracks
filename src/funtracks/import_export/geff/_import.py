@@ -253,8 +253,15 @@ class GeffTracksBuilder(TracksBuilder):
 
         mask_key = td.DEFAULT_ATTR_KEYS.MASK
         bbox_key = td.DEFAULT_ATTR_KEYS.BBOX
+        has_mask = mask_key in graph.node_attr_keys()
+        has_bbox = bbox_key in graph.node_attr_keys()
+        if has_mask != has_bbox:
+            raise ValueError(
+                f"GEFF graph has only one of '{mask_key}'/'{bbox_key}'; "
+                "both are required for mask reconstruction."
+            )
 
-        if mask_key in graph.node_attr_keys() and bbox_key in graph.node_attr_keys():
+        if has_mask:
             # Reconstruct Mask objects from raw numeric arrays
             df = graph.node_attrs(attr_keys=[mask_key, bbox_key])
             node_ids = list(graph.node_ids())
@@ -276,9 +283,8 @@ class GeffTracksBuilder(TracksBuilder):
         # Write segmentation_shape into graph metadata so that
         # Tracks.__init__ can reconstruct the segmentation and the
         # RegionpropsAnnotator is created during _get_annotators().
-        seg_shape = getattr(self, "_segmentation_shape", None)
-        if seg_shape is not None:
-            graph._update_metadata(segmentation_shape=seg_shape)
+        if self._segmentation_shape is not None:
+            graph._update_metadata(segmentation_shape=self._segmentation_shape)
 
         return graph
 
