@@ -60,19 +60,18 @@ def test_enable_disable_features(graph_2d_with_segmentation):
     nodes = list(tracks.graph.node_ids())
     edges = list(tracks.graph.edge_ids())
 
-    # Core features (time, pos, area) should be in tracks.features and computed
+    # Core features (time, pos) should be in tracks.features and computed
     assert "pos" in tracks.features
     assert "t" in tracks.features
-    assert "area" in tracks.features  # Core feature for backward compatibility
     assert tracks.graph.nodes[nodes[0]]["pos"] is not None
-    assert tracks.graph.nodes[nodes[0]]["area"] is not None
 
-    # Other features should NOT be in tracks.features initially
+    # area and other features should NOT be in tracks.features initially
+    assert "area" not in tracks.features
     assert "iou" not in tracks.features
     assert "circularity" not in tracks.features
 
     # Enable multiple features at once
-    tracks.enable_features(["iou", "circularity"])
+    tracks.enable_features(["area", "iou", "circularity"])
 
     # Features should now be in FeatureDict
     assert "iou" in tracks.features
