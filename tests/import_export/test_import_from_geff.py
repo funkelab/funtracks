@@ -918,20 +918,20 @@ def test_embedded_seg_ellipse_axis_radii_feature_metadata(tmp_path):
         "pos",
         "area",
         "ellipse_axis_radii",
-        "track_id",
+        "tracklet_id",
         "lineage_id",
         td.DEFAULT_ATTR_KEYS.MASK,
         td.DEFAULT_ATTR_KEYS.BBOX,
     ]
     # node_default_values must align with node_attributes by index.
-    # pos/track_id/mask/bbox are handled by special cases in create_empty_graphview_graph
-    # and their slot values here are never accessed; only area, ellipse_axis_radii,
-    # and lineage_id go through the general loop.
+    # pos/tracklet_id/mask/bbox are handled by special cases in
+    # create_empty_graphview_graph and their slot values here are never accessed;
+    # only area, ellipse_axis_radii, and lineage_id go through the general loop.
     node_default_values = [
         None,  # pos — special-cased, slot unused
         0.0,  # area
         np.array([0.0, 0.0]),  # ellipse_axis_radii — must be Array(Float64, 2)
-        None,  # track_id — special-cased, slot unused
+        None,  # tracklet_id — special-cased, slot unused
         -1,  # lineage_id
         None,  # mask — special-cased, slot unused
         None,  # bbox — special-cased, slot unused
@@ -950,7 +950,7 @@ def test_embedded_seg_ellipse_axis_radii_feature_metadata(tmp_path):
                 "pos": np.array([35.0, 40.0]),
                 "area": 900.0,
                 "ellipse_axis_radii": np.array([20.0, 15.0]),
-                "track_id": 1,
+                "tracklet_id": 1,
                 "lineage_id": 1,
                 "solution": 1,
                 td.DEFAULT_ATTR_KEYS.MASK: _make_mask(bbox),
