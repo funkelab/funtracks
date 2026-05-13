@@ -1832,10 +1832,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#funtracks.import_export.GeffTracksBuilder.build" class="md-nav__link">
+  <a href="#funtracks.import_export.GeffTracksBuilder.construct_graph" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;build
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;construct_graph
       
     </span>
   </a>
@@ -2421,25 +2421,28 @@
 <div class="doc doc-object doc-function">
 
 
-<h3 id="funtracks.import_export.GeffTracksBuilder.build" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">build</span>
+<h3 id="funtracks.import_export.GeffTracksBuilder.construct_graph" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">construct_graph</span>
 
 
 </h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">build</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">construct_graph</span><span class="p">(</span>
+    <span class="n">node_name_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">td</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">GraphView</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Build SolutionTracks and reconstruct Mask objects and segmentation.</p>
-<p>The geff format serialises mask data as plain numeric arrays (zarr cannot
-store arbitrary Python objects). After loading we post-process every node
-that carries both a <code>mask</code> and a <code>bbox</code> attribute and wrap the raw array
-back into a :class:<code>tracksdata.nodes.Mask</code> instance, exactly as
-tracksdata's own <code>from_geff</code> does.</p>
-<p>Additionally, if <code>segmentation_shape</code> was written to the zarr attrs during
-export, restore it in the graph metadata and reconstruct the segmentation
-as a :class:<code>tracksdata.array.GraphArrayView</code>.</p>
+        <p>Construct graph and prepare embedded segmentation data.</p>
+<p>The GEFF format serialises mask data as plain numeric arrays (zarr
+cannot store arbitrary Python objects).  After the base graph is built,
+this override wraps each raw array back into a
+:class:<code>tracksdata.nodes.Mask</code> instance and writes
+<code>segmentation_shape</code> into the graph metadata so that
+:class:<code>~funtracks.data_model.tracks.Tracks.__init__</code> can reconstruct
+the segmentation and create the
+:class:<code>~funtracks.annotators.RegionpropsAnnotator</code> naturally.</p>
 
 
     </div>
