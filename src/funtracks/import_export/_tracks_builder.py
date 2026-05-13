@@ -15,6 +15,10 @@ import numpy as np
 import tracksdata as td
 from geff._typing import InMemoryGeff
 
+from funtracks.annotators._track_annotator import (
+    DEFAULT_LINEAGE_KEY,
+    DEFAULT_TRACKLET_KEY,
+)
 from funtracks.data_model.solution_tracks import SolutionTracks
 from funtracks.features import Feature
 from funtracks.import_export._import_segmentation import (
@@ -92,7 +96,6 @@ def flatten_name_map(
 
 
 # defining constants here because they are only used in the context of import
-TRACK_KEY = "track_id"
 SEG_KEY = "seg_id"
 
 
@@ -743,10 +746,23 @@ class TracksBuilder(ABC):
         # 7. Create SolutionTracks
         # construct_graph() always stores time as "t" (tracksdata convention),
         # regardless of TIME_ATTR, so we pass "t" here explicitly.
+        # Propagate the tracklet/lineage key actually present in the source data,
+        # so that auto-detection in _setup_core_computed_features finds the
+        # existing column instead of silently recomputing under the default key.
+        # Accepts both the canonical DEFAULT_TRACKLET_KEY and the legacy "track_id".
+        node_props = self.in_memory_geff["node_props"]
+        tracklet_attr: str | None = None
+        for candidate in (DEFAULT_TRACKLET_KEY, "track_id"):
+            if candidate in node_props:
+                tracklet_attr = candidate
+                break
+        lineage_attr = DEFAULT_LINEAGE_KEY if DEFAULT_LINEAGE_KEY in node_props else None
         tracks = SolutionTracks(
             graph=graph,
             pos_attr="pos",
             time_attr="t",
+            tracklet_attr=tracklet_attr,
+            lineage_attr=lineage_attr,
             ndim=self.ndim,
             scale=scale,
         )

@@ -475,7 +475,7 @@ def test_import_from_geff_roundtrip_auto_axes(tmp_path):
         node_attributes=[
             "pos",
             "area",
-            "track_id",
+            "tracklet_id",
             "lineage_id",
             td.DEFAULT_ATTR_KEYS.MASK,
             td.DEFAULT_ATTR_KEYS.BBOX,
@@ -490,7 +490,7 @@ def test_import_from_geff_roundtrip_auto_axes(tmp_path):
                 "t": 0,
                 "pos": np.array([50.0, 50.0]),
                 "area": 1681.0,
-                "track_id": 1,
+                "tracklet_id": 1,
                 "lineage_id": 1,
                 "solution": 1,
                 td.DEFAULT_ATTR_KEYS.MASK: _make_mask(bbox),
@@ -785,6 +785,121 @@ def test_3d_pos_survives_sql_roundtrip(tmp_path):
     )
 
 
+class TestGeffTrackletIdImport:
+    """Regression tests on the GEFF import path: a user's tracklet IDs must
+    survive import unchanged regardless of which spelling — the public
+    DEFAULT_TRACKLET_KEY or the legacy "track_id" — is used in node_name_map.
+    """
+
+    @staticmethod
+    def _legacy_geff_store():
+        """Build a GEFF store with the tracklet column under the pre-2.0
+        'track_id' property name and deliberately non-sequential tracklet IDs
+        so any recompute over weakly-connected components yields different
+        values and the assertion catches the silent overwrite.
+
+        The first two edges from create_mock_geff connect nodes {0,1,2} into
+        a chain (so they form a valid connected tracklet); the remaining nodes
+        are isolated singletons each with their own tracklet ID.
+
+        Returns (store, expected_id_map).
+        """
+        track_id_values = np.array([42, 42, 42, 99, 100, 101])
+        store, memory_geff = create_mock_geff(
+            node_id_dtype="uint",
+            node_axis_dtypes={"position": "float64", "time": "int64"},
+            directed=True,
+            num_nodes=6,
+            num_edges=2,
+            include_t=True,
+            include_z=False,
+            include_y=True,
+            include_x=True,
+            extra_node_props={"track_id": track_id_values},
+        )
+        node_ids = memory_geff["node_ids"]
+        expected = {
+            int(nid): int(t) for nid, t in zip(node_ids, track_id_values, strict=True)
+        }
+        return store, expected
+
+    def test_geff_legacy_property_renamed_to_default_key(self):
+        """A GEFF with the legacy 'track_id' property loaded under the public
+        DEFAULT_TRACKLET_KEY (renaming via name_map) must preserve tracklet IDs.
+        """
+        from funtracks.annotators._track_annotator import DEFAULT_TRACKLET_KEY
+
+        store, expected = self._legacy_geff_store()
+
+        name_map = {
+            "time": "t",
+            "pos": ["y", "x"],
+            # Rename: load source property "track_id" under standard key "tracklet_id"
+            DEFAULT_TRACKLET_KEY: "track_id",
+        }
+        tracks_out = import_from_geff(store, name_map)
+
+        for nid, exp_id in expected.items():
+            assert tracks_out.get_track_id(nid) == exp_id, (
+                f"node {nid}: expected tracklet {exp_id}, "
+                f"got {tracks_out.get_track_id(nid)} (silent recompute?)"
+            )
+
+    def test_geff_legacy_property_with_legacy_key(self):
+        """A GEFF with the legacy 'track_id' property loaded under the legacy
+        spelling in name_map must also preserve tracklet IDs (covers the
+        legacy-fallback path in _setup_core_computed_features).
+        """
+        store, expected = self._legacy_geff_store()
+
+        name_map = {
+            "time": "t",
+            "pos": ["y", "x"],
+            "track_id": "track_id",  # legacy spelling on both sides
+        }
+        tracks_out = import_from_geff(store, name_map)
+
+        for nid, exp_id in expected.items():
+            assert tracks_out.get_track_id(nid) == exp_id, (
+                f"node {nid}: expected tracklet {exp_id}, "
+                f"got {tracks_out.get_track_id(nid)}"
+            )
+
+    def test_geff_canonical_property_preserves_tracklet_ids(self, get_tracks, tmp_path):
+        """End-to-end round-trip via export_to_geff (canonical property name).
+
+        Conftest's get_tracks builds a SolutionTracks with non-sequential
+        tracklet IDs ({1:1, 2:2, 3:3, 4:3, 5:3, 6:5} — note 5 skips 4), so a
+        fresh recompute over weakly-connected components would yield different
+        IDs and the assertion catches the regression.
+        """
+        from funtracks.annotators._track_annotator import DEFAULT_TRACKLET_KEY
+
+        tracks_in = get_tracks(ndim=3, with_seg=False, is_solution=True)
+        expected = {
+            int(nid): tracks_in.get_track_id(int(nid))
+            for nid in tracks_in.graph.node_ids()
+        }
+
+        export_dir = tmp_path / "export"
+        export_dir.mkdir()
+        export_to_geff(tracks_in, export_dir, save_segmentation=False)
+
+        name_map = {
+            "time": "t",
+            "pos": ["y", "x"],
+            DEFAULT_TRACKLET_KEY: DEFAULT_TRACKLET_KEY,
+            "lineage_id": "lineage_id",
+        }
+        tracks_out = import_from_geff(export_dir / "tracks.geff", name_map)
+
+        for nid, exp_id in expected.items():
+            assert tracks_out.get_track_id(nid) == exp_id, (
+                f"node {nid}: expected tracklet {exp_id}, "
+                f"got {tracks_out.get_track_id(nid)}"
+            )
+
+
 def test_embedded_seg_ellipse_axis_radii_feature_metadata(tmp_path):
     """Regression: ellipse_axis_radii must have correct Feature metadata after
     round-tripping through a GEFF with embedded segmentation.
@@ -803,20 +918,20 @@ def test_embedded_seg_ellipse_axis_radii_feature_metadata(tmp_path):
         "pos",
         "area",
         "ellipse_axis_radii",
-        "track_id",
+        "tracklet_id",
         "lineage_id",
         td.DEFAULT_ATTR_KEYS.MASK,
         td.DEFAULT_ATTR_KEYS.BBOX,
     ]
     # node_default_values must align with node_attributes by index.
-    # pos/track_id/mask/bbox are handled by special cases in create_empty_graphview_graph
-    # and their slot values here are never accessed; only area, ellipse_axis_radii,
-    # and lineage_id go through the general loop.
+    # pos/tracklet_id/mask/bbox are handled by special cases in
+    # create_empty_graphview_graph and their slot values here are never accessed;
+    # only area, ellipse_axis_radii, and lineage_id go through the general loop.
     node_default_values = [
         None,  # pos — special-cased, slot unused
         0.0,  # area
         np.array([0.0, 0.0]),  # ellipse_axis_radii — must be Array(Float64, 2)
-        None,  # track_id — special-cased, slot unused
+        None,  # tracklet_id — special-cased, slot unused
         -1,  # lineage_id
         None,  # mask — special-cased, slot unused
         None,  # bbox — special-cased, slot unused
@@ -835,7 +950,7 @@ def test_embedded_seg_ellipse_axis_radii_feature_metadata(tmp_path):
                 "pos": np.array([35.0, 40.0]),
                 "area": 900.0,
                 "ellipse_axis_radii": np.array([20.0, 15.0]),
-                "track_id": 1,
+                "tracklet_id": 1,
                 "lineage_id": 1,
                 "solution": 1,
                 td.DEFAULT_ATTR_KEYS.MASK: _make_mask(bbox),

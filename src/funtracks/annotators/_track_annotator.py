@@ -8,7 +8,6 @@ import rustworkx as rx
 import tracksdata as td
 
 from funtracks.actions import AddNode, DeleteNode, UpdateTrackIDs
-from funtracks.data_model import SolutionTracks
 from funtracks.features import LineageID, TrackletID
 
 from ._graph_annotator import GraphAnnotator
@@ -17,6 +16,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
     from funtracks.actions import BasicAction
+    from funtracks.data_model import SolutionTracks
     from funtracks.features import Feature
 
 
@@ -64,6 +64,8 @@ class TrackAnnotator(GraphAnnotator):
         Returns:
             True if tracks is a SolutionTracks instance, False otherwise
         """
+        from funtracks.data_model import SolutionTracks
+
         return isinstance(tracks, SolutionTracks)
 
     @classmethod
@@ -91,6 +93,8 @@ class TrackAnnotator(GraphAnnotator):
         tracklet_key: str | None = DEFAULT_TRACKLET_KEY,
         lineage_key: str | None = DEFAULT_LINEAGE_KEY,
     ):
+        from funtracks.data_model import SolutionTracks
+
         if not isinstance(tracks, SolutionTracks):
             raise ValueError("Currently the TrackAnnotator only works on SolutionTracks")
 
@@ -198,15 +202,15 @@ class TrackAnnotator(GraphAnnotator):
         Each connected component will get a unique id, and the relevant class
         attributes will be updated.
         """
+        # Materialise the internal -> external node-id mapping once. On
+        # tracksdata-backed graphs every call to graph.node_ids() walks the
+        # bidict, so calling it inside the per-component loop is O(n) per node.
+        node_id_map = self.tracks.graph.node_ids()
 
         lineages_internal = rx.weakly_connected_components(self.tracks.graph.rx_graph)
-        lineages_external = []
-        for lin in lineages_internal:
-            node_ids_internal = list(lin)
-            node_ids_external = [
-                self.tracks.graph.node_ids()[nid] for nid in node_ids_internal
-            ]
-            lineages_external.append(node_ids_external)
+        lineages_external = [
+            [node_id_map[nid] for nid in lin] for lin in lineages_internal
+        ]
 
         max_id, ids_to_nodes = self._assign_ids(lineages_external, self.lineage_key)
         self.max_lineage_id = max_id
@@ -220,28 +224,30 @@ class TrackAnnotator(GraphAnnotator):
         """
         graph_copy = self.tracks.graph.detach().filter().subgraph()
 
-        parents = [
-            node
-            for node, degree in zip(
-                self.tracks.graph.node_ids(), self.tracks.graph.out_degree(), strict=True
-            )
-            if degree >= 2
-        ]
+        # Hoist O(n) graph queries out of the per-parent / per-tracklet loops.
+        # On tracksdata-backed graphs each node_ids() / edge_list() call walks
+        # the bidict, so doing this inside the inner loops is O(n^2) overall.
+        src_node_ids = self.tracks.graph.node_ids()
+        out_degrees = self.tracks.graph.out_degree()
+        parents = [n for n, d in zip(src_node_ids, out_degrees, strict=True) if d >= 2]
+
+        # Build parent -> daughters once instead of scanning edge_list per parent.
+        children: dict[int, list[int]] = {}
+        for src, tgt in self.tracks.graph.edge_list():
+            children.setdefault(src, []).append(tgt)
 
         # Remove all intertrack edges from a copy of the original graph
         for parent in parents:
-            all_edges = self.tracks.graph.edge_list()
-            daughters = [edge[1] for edge in all_edges if edge[0] == parent]
-
-            for daughter in daughters:
+            for daughter in children.get(parent, ()):
                 graph_copy.remove_edge(parent, daughter)
+
+        copy_node_id_map = graph_copy.node_ids()
 
         track_id = 1
         all_node_ids = []
         all_track_ids = []
         for tracklet in rx.weakly_connected_components(graph_copy.rx_graph):
-            node_ids_internal = list(tracklet)
-            node_ids_external = [graph_copy.node_ids()[nid] for nid in node_ids_internal]
+            node_ids_external = [copy_node_id_map[nid] for nid in tracklet]
             all_node_ids.extend(node_ids_external)
             all_track_ids.extend([track_id] * len(node_ids_external))
             self.tracklet_id_to_nodes[track_id] = node_ids_external

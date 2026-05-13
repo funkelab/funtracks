@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 import numpy as np
 import pandas as pd
 
+from funtracks.annotators._track_annotator import DEFAULT_TRACKLET_KEY
+
 from .._export_segmentation import export_segmentation
 from .._utils import filter_graph_with_ancestors
 
@@ -23,7 +25,7 @@ def export_to_csv(
     use_display_names: bool = False,
     export_seg: bool = False,
     seg_path: Path | str | None = None,
-    seg_label_attr: str | None = "track_id",
+    seg_label_attr: str | None = DEFAULT_TRACKLET_KEY,
     seg_file_format: Literal["zarr", "tiff"] = "zarr",
     zarr_format: Literal[2, 3] = 2,
 ) -> None:
@@ -47,8 +49,8 @@ def export_to_csv(
         export_seg: Whether to export the segmentation alongside the CSV.
         seg_path: Path to save the segmentation to. Required when export_seg=True.
         seg_label_attr: Node attribute used to paint cell labels in the exported
-            segmentation. Defaults to "track_id". When None, original segmentation
-            labels (node IDs) are preserved.
+            segmentation. Defaults to DEFAULT_TRACKLET_KEY. When None, original
+            segmentation labels (node IDs) are preserved.
         seg_file_format: Output format for the segmentation, either "zarr" or "tiff".
             Defaults to "zarr".
         zarr_format: Zarr format version. Only used when seg_file_format="zarr".
@@ -61,7 +63,7 @@ def export_to_csv(
         >>> export_to_csv(tracks, "output.csv", use_display_names=True)
         >>> # Export only specific nodes
         >>> export_to_csv(tracks, "filtered.csv", node_ids={1, 2, 3})
-        >>> # Export with segmentation as zarr painted by track_id
+        >>> # Export with segmentation as zarr painted by tracklet_id
         >>> export_to_csv(tracks, "out.csv", export_seg=True, seg_path="seg_zarr")
         >>> # Export with segmentation as tiff, original labels
         >>> export_to_csv(tracks, "out.csv", export_seg=True, seg_path="seg.tif",
@@ -98,10 +100,10 @@ def export_to_csv(
         column_map["coords"] = coords
 
         # identifiers
-        header.extend(["id", "parent_id", "track_id"])
+        header.extend(["id", "parent_id", DEFAULT_TRACKLET_KEY])
         column_map["id"] = "id"
         column_map["parent_id"] = "parent_id"
-        column_map["track_id"] = "track_id"
+        column_map[DEFAULT_TRACKLET_KEY] = DEFAULT_TRACKLET_KEY
 
     # For display names mode, build dynamic header from features
     feature_names = []
@@ -175,7 +177,9 @@ def export_to_csv(
             for name, value in zip(column_map["coords"], pos, strict=True):
                 row[name] = convert_numpy_to_python(value)
 
-            row[cast(str, column_map["track_id"])] = tracks.get_track_id(node_id)
+            row[cast(str, column_map[DEFAULT_TRACKLET_KEY])] = tracks.get_track_id(
+                node_id
+            )
 
         rows.append(row)
 
@@ -201,10 +205,10 @@ def export_to_csv(
 
         df_colors = pd.DataFrame(
             list(track_id_to_hex.items()),  # convert dict to list of (track_id, hex)
-            columns=[column_map["track_id"], "Tracklet ID Color"],
+            columns=[column_map[DEFAULT_TRACKLET_KEY], "Tracklet ID Color"],
         )
 
-        df = pd.merge(df, df_colors, how="left", on=[column_map["track_id"]])
+        df = pd.merge(df, df_colors, how="left", on=[column_map[DEFAULT_TRACKLET_KEY]])
 
     df.to_csv(outfile, index=False)
 

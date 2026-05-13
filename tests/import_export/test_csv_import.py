@@ -711,3 +711,66 @@ class TestSpatialDimsValidation:
 
         with pytest.raises(ValueError, match="pos.*mapping.*segmentation"):
             tracks_from_df(df, node_name_map=name_map)
+
+
+class TestTrackletIdImport:
+    """Regression tests for user-provided tracklet IDs must
+    survive import unchanged regardless of which spelling (the public
+    DEFAULT_TRACKLET_KEY or the legacy "track_id") is used in name_map.
+    """
+
+    @staticmethod
+    def _df_with_two_tracks() -> pd.DataFrame:
+        # Two disjoint linear tracks with deliberately non-sequential tracklet
+        # IDs (42, 99) so that a fresh recompute via weakly_connected_components
+        # would yield (1, 2) and the assertion catches the silent overwrite.
+        return pd.DataFrame(
+            {
+                "ID": [1, 2, 3, 10, 11, 12],
+                "Time": [0, 1, 2, 0, 1, 2],
+                "y": [10.0, 11.0, 12.0, 50.0, 51.0, 52.0],
+                "x": [10.0, 11.0, 12.0, 50.0, 51.0, 52.0],
+                "Parent ID": [-1, 1, 2, -1, 10, 11],
+                "Tracklet ID": [42, 42, 42, 99, 99, 99],
+            }
+        )
+
+    def test_preserves_tracklet_ids_with_default_key(self):
+        """name_map using DEFAULT_TRACKLET_KEY ('tracklet_id') must preserve IDs."""
+        from funtracks.annotators._track_annotator import DEFAULT_TRACKLET_KEY
+
+        df = self._df_with_two_tracks()
+        name_map = {
+            "id": "ID",
+            "time": "Time",
+            "pos": ["y", "x"],
+            "parent_id": "Parent ID",
+            DEFAULT_TRACKLET_KEY: "Tracklet ID",
+        }
+        tracks = tracks_from_df(df, node_name_map=name_map)
+
+        expected = dict(zip(df["ID"], df["Tracklet ID"], strict=True))
+        for nid in df["ID"]:
+            assert tracks.get_track_id(nid) == expected[nid], (
+                f"node {nid}: expected tracklet {expected[nid]}, "
+                f"got {tracks.get_track_id(nid)} (silent recompute?)"
+            )
+
+    def test_preserves_tracklet_ids_with_legacy_key(self):
+        """name_map using legacy 'track_id' must continue to preserve IDs."""
+        df = self._df_with_two_tracks()
+        name_map = {
+            "id": "ID",
+            "time": "Time",
+            "pos": ["y", "x"],
+            "parent_id": "Parent ID",
+            "track_id": "Tracklet ID",
+        }
+        tracks = tracks_from_df(df, node_name_map=name_map)
+
+        expected = dict(zip(df["ID"], df["Tracklet ID"], strict=True))
+        for nid in df["ID"]:
+            assert tracks.get_track_id(nid) == expected[nid], (
+                f"node {nid}: expected tracklet {expected[nid]}, "
+                f"got {tracks.get_track_id(nid)}"
+            )

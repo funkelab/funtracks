@@ -17,10 +17,19 @@ from tracksdata.array import GraphArrayView
 from tracksdata.nodes import Mask
 
 from funtracks.actions.action_history import ActionHistory
+from funtracks.annotators._track_annotator import (
+    DEFAULT_LINEAGE_KEY,
+    DEFAULT_TRACKLET_KEY,
+)
 from funtracks.features import Feature, FeatureDict, Position, Time
 from funtracks.utils.tracksdata_utils import (
     to_polars_dtype,
 )
+
+# Pre-2.0 default attribute name for tracklet IDs. Retained as a fallback so
+# data persisted under the old key (CSV/GEFF/Zarr) continues to load without
+# triggering a silent recompute.
+LEGACY_TRACKLET_KEY = "track_id"
 
 if TYPE_CHECKING:
     import tracksdata as td
@@ -81,7 +90,7 @@ class Tracks:
                 - List/tuple of strings for multi-axis (one attribute per axis)
                 Defaults to "pos" if None.
             tracklet_attr (str | None): Graph attribute name for tracklet/track IDs.
-                Defaults to "track_id" if None.
+                Defaults to DEFAULT_TRACKLET_KEY if None.
             lineage_attr (str | None): Graph attribute name for lineage IDs.
                 Defaults to "lineage_id" if None.
             scale (list[float] | None): Scaling factors for each dimension (including
@@ -186,10 +195,10 @@ class Tracks:
                 - Single string: one attribute containing position array (e.g., "pos")
                 - List/tuple: multiple attributes, one per axis (e.g., ["y", "x"])
                 - None: defaults to "pos"
-            tracklet_key: Graph attribute name for tracklet/track IDs (e.g., "track_id").
-                If None, defaults to "track_id"
-            lineage_key: Graph attribute name for lineage IDs (e.g., "lineage_id").
-                if None, defaults to "lineage_id"
+            tracklet_key: Graph attribute name for tracklet/track IDs.
+                If None, defaults to DEFAULT_TRACKLET_KEY.
+            lineage_key: Graph attribute name for lineage IDs.
+                If None, defaults to DEFAULT_LINEAGE_KEY.
 
         Returns:
             FeatureDict initialized with time feature and position if no segmentation
@@ -199,9 +208,9 @@ class Tracks:
         if pos_attr is None:
             pos_attr = "pos"
         if tracklet_key is None:
-            tracklet_key = "track_id"
+            tracklet_key = DEFAULT_TRACKLET_KEY
         if lineage_key is None:
-            lineage_key = "lineage_id"
+            lineage_key = DEFAULT_LINEAGE_KEY
 
         # Build static features dict - always include time
         features: dict[str, Feature] = {time_key: Time()}
@@ -324,6 +333,19 @@ class Tracks:
         """
         # Import here to avoid circular dependency
         from funtracks.annotators import RegionpropsAnnotator, TrackAnnotator
+
+        # Backward compatibility: if the TrackAnnotator was configured with the
+        # canonical key but the graph still holds tracklets under the pre-2.0
+        # legacy key ("track_id"), swap the annotator over to the legacy key so
+        # the existing data is auto-detected instead of silently recomputed.
+        graph_attrs = set(self.graph.node_attr_keys())
+        for annotator in self.annotators:
+            if (
+                isinstance(annotator, TrackAnnotator)
+                and annotator.tracklet_key not in graph_attrs
+                and LEGACY_TRACKLET_KEY in graph_attrs
+            ):
+                annotator.change_key(annotator.tracklet_key, LEGACY_TRACKLET_KEY)
 
         # Register core features from annotators in the features dict
         core_computed_features: list[str] = []

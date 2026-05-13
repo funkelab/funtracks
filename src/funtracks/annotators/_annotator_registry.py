@@ -19,7 +19,7 @@ class AnnotatorRegistry(list[GraphAnnotator]):
         annotators = AnnotatorRegistry([
             RegionpropsAnnotator(tracks, pos_key="centroid"),
             EdgeAnnotator(tracks),
-            TrackAnnotator(tracks, tracklet_key="track_id"),
+            TrackAnnotator(tracks, tracklet_key=DEFAULT_TRACKLET_KEY),
         ])
 
         # Can use as a list

@@ -8,8 +8,8 @@ from funtracks.import_export import export_to_csv
 @pytest.mark.parametrize(
     ("ndim", "expected_header"),
     [
-        (3, ["t", "y", "x", "id", "parent_id", "track_id"]),
-        (4, ["t", "z", "y", "x", "id", "parent_id", "track_id"]),
+        (3, ["t", "y", "x", "id", "parent_id", "tracklet_id"]),
+        (4, ["t", "z", "y", "x", "id", "parent_id", "tracklet_id"]),
     ],
     ids=["2d", "3d"],
 )
@@ -36,8 +36,8 @@ def test_export_solution_to_csv(get_tracks, tmp_path, ndim, expected_header):
 @pytest.mark.parametrize(
     ("ndim", "expected_header"),
     [
-        (3, ["t", "y", "x", "id", "parent_id", "track_id"]),
-        (4, ["t", "z", "y", "x", "id", "parent_id", "track_id"]),
+        (3, ["t", "y", "x", "id", "parent_id", "tracklet_id"]),
+        (4, ["t", "z", "y", "x", "id", "parent_id", "tracklet_id"]),
     ],
     ids=["2d", "3d"],
 )
@@ -61,10 +61,12 @@ def test_export_solution_to_csv_with_seg_zarr(
     assert isinstance(seg_zarr, zarr.Array)
     assert seg_zarr.shape == tracks.segmentation.shape
 
-    # values should be track_ids (not node_ids) — default seg_label_attr="track_id"
+    # values should be track_ids (not node_ids) — default seg_label_attr="tracklet_id"
     seg_arr = seg_zarr[:]
     unique_vals = set(seg_arr.flatten()) - {0}
-    track_ids = set(tracks.graph.node_attrs(attr_keys=["track_id"])["track_id"].to_list())
+    track_ids = set(
+        tracks.graph.node_attrs(attr_keys=["tracklet_id"])["tracklet_id"].to_list()
+    )
     assert unique_vals == track_ids
 
 
@@ -86,9 +88,11 @@ def test_export_solution_to_csv_with_seg_tiff(get_tracks, tmp_path, ndim):
     seg_arr = tifffile.imread(str(seg_file))
     assert seg_arr.shape == tracks.segmentation.shape
 
-    # values should be track_ids (not node_ids) — default seg_label_attr="track_id"
+    # values should be track_ids (not node_ids) — default seg_label_attr="tracklet_id"
     unique_vals = set(seg_arr.flatten()) - {0}
-    track_ids = set(tracks.graph.node_attrs(attr_keys=["track_id"])["track_id"].to_list())
+    track_ids = set(
+        tracks.graph.node_attrs(attr_keys=["tracklet_id"])["tracklet_id"].to_list()
+    )
     assert unique_vals == track_ids
 
 

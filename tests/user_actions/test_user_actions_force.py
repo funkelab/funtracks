@@ -10,7 +10,7 @@ def test_user_force_add_downstream(get_tracks):
     tracks = get_tracks(ndim=3, with_seg=False, is_solution=True)
 
     # upstream division, with force
-    attrs = {"t": 2, "track_id": 1, "pos": [3, 4]}
+    attrs = {"t": 2, "tracklet_id": 1, "pos": [3, 4]}
     UserAddNode(tracks, node=7, attributes=attrs, force=True)
     assert tracks.get_track_id(7) == 1
     assert [1, 2] not in tracks.graph.edge_list()
@@ -25,7 +25,7 @@ def test_user_force_add_upstream(get_tracks):
     tracks = get_tracks(ndim=3, with_seg=False, is_solution=True)
 
     # downstream parent division, with force
-    attrs = {"t": 0, "track_id": 3, "pos": [3, 4]}
+    attrs = {"t": 0, "tracklet_id": 3, "pos": [3, 4]}
     UserAddNode(tracks, node=7, attributes=attrs, force=True)
     assert tracks.get_track_id(7) == 3
     assert [1, 2] in tracks.graph.edge_list()  # still there
@@ -41,7 +41,7 @@ def test_auto_assign_new_track_id(get_tracks):
 
     # existing track id at current time --> allowed, with warning
     with pytest.warns(UserWarning, match="Starting a new track, because track id"):
-        attrs = {"t": 1, "track_id": 2, "pos": [3, 4]}  # combination exists already
+        attrs = {"t": 1, "tracklet_id": 2, "pos": [3, 4]}  # combination exists already
         UserAddNode(tracks, node=7, attributes=attrs)
 
         assert tracks.graph.has_node(7)

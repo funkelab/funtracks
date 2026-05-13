@@ -11,7 +11,7 @@ from funtracks.import_export import export_to_geff
 @pytest.mark.parametrize("ndim", [3, 4])
 @pytest.mark.parametrize("with_seg", [True, False])
 @pytest.mark.parametrize("save_segmentation", [True, False])
-@pytest.mark.parametrize("seg_label_attr", ["track_id", None])
+@pytest.mark.parametrize("seg_label_attr", ["tracklet_id", None])
 @pytest.mark.parametrize("is_solution", [True, False])
 @pytest.mark.parametrize("pos_attr_type", (str, list))
 def test_export_to_geff(
@@ -56,7 +56,7 @@ def test_export_to_geff(
             graph,
             time_attr="t",
             pos_attr=pos_keys,
-            tracklet_attr="track_id" if is_solution else None,
+            tracklet_attr="tracklet_id" if is_solution else None,
             ndim=ndim,
         )
     else:
@@ -68,7 +68,7 @@ def test_export_to_geff(
     if (
         with_seg
         and save_segmentation
-        and seg_label_attr == "track_id"
+        and seg_label_attr == "tracklet_id"
         and not is_solution
     ):
         export_dir = tmp_path / "export"
@@ -219,9 +219,11 @@ def test_export_to_geff_seg_tiff(get_tracks, ndim, tmp_path):
     seg_arr = tifffile.imread(str(tmp_path / "segmentation.tif"))
     assert seg_arr.shape == tracks.segmentation.shape
 
-    # values should be track_ids (default seg_label_attr="track_id")
+    # values should be track_ids (default seg_label_attr="tracklet_id")
     unique_vals = set(seg_arr.flatten()) - {0}
-    track_ids = set(tracks.graph.node_attrs(attr_keys=["track_id"])["track_id"].to_list())
+    track_ids = set(
+        tracks.graph.node_attrs(attr_keys=["tracklet_id"])["tracklet_id"].to_list()
+    )
     assert unique_vals == track_ids
 
     # Check metadata references the tiff path with ../../ prefix (sibling of geff dir)

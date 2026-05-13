@@ -127,10 +127,10 @@ def test_get_set_node_attr(graph_2d_with_segmentation):
 
     tracks._set_node_attr(1, "area", 42)
 
-    tracks._set_nodes_attr([1, 2], "track_id", [7, 8])
+    tracks._set_nodes_attr([1, 2], "tracklet_id", [7, 8])
     assert tracks.get_node_attr(1, "area") == 42
-    assert tracks.get_nodes_attr([1, 2], "track_id") == [7, 8]
-    assert tracks.get_nodes_attr([1, 2], "track_id") == [7, 8]
+    assert tracks.get_nodes_attr([1, 2], "tracklet_id") == [7, 8]
+    assert tracks.get_nodes_attr([1, 2], "tracklet_id") == [7, 8]
     with pytest.raises(KeyError):
         tracks.get_node_attr(1, "not_present")
     with pytest.raises(KeyError):

@@ -176,7 +176,7 @@ def test_add_edge_with_unregistered_edge_attr(tmp_path):
     # This mirrors what the motile solver does: it writes edge attributes directly
     # to the graph without going through tracks.add_feature().
     graph = create_empty_graphview_graph(
-        node_attributes=["pos", "track_id", "lineage_id"],
+        node_attributes=["pos", "tracklet_id", "lineage_id"],
         edge_attributes=["custom_score"],
         database=db_path,
         position_attrs=["pos"],
@@ -185,8 +185,20 @@ def test_add_edge_with_unregistered_edge_attr(tmp_path):
 
     graph.bulk_add_nodes(
         nodes=[
-            {"t": 0, "pos": [10.0, 10.0], "track_id": 1, "lineage_id": 1, "solution": 1},
-            {"t": 1, "pos": [11.0, 11.0], "track_id": 2, "lineage_id": 1, "solution": 1},
+            {
+                "t": 0,
+                "pos": [10.0, 10.0],
+                "tracklet_id": 1,
+                "lineage_id": 1,
+                "solution": 1,
+            },
+            {
+                "t": 1,
+                "pos": [11.0, 11.0],
+                "tracklet_id": 2,
+                "lineage_id": 1,
+                "solution": 1,
+            },
         ],
         indices=[1, 2],
     )
@@ -197,12 +209,12 @@ def test_add_edge_with_unregistered_edge_attr(tmp_path):
         features={
             "t": Time(),
             "pos": Position(axes=["y", "x"]),
-            "track_id": TrackletID(),
+            "tracklet_id": TrackletID(),
             "lineage_id": LineageID(),
         },
         time_key="t",
         position_key="pos",
-        tracklet_key="track_id",
+        tracklet_key="tracklet_id",
         lineage_key="lineage_id",
     )
     tracks = SolutionTracks(graph, ndim=3, features=features)
