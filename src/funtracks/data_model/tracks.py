@@ -92,7 +92,7 @@ class Tracks:
                 definitions. If provided, time_attr/pos_attr/tracklet_attr are ignored.
                 Assumes that all features in the dict already exist on the graph (will
                 be activated but not recomputed). If None, core computed features (pos,
-                area, track_id) are auto-detected by checking if they exist on the graph.
+                track_id) are auto-detected by checking if they exist on the graph.
             _segmentation (GraphArrayView | None): Internal parameter for reusing an
                 existing GraphArrayView instance. Not intended for public use.
         """
@@ -341,7 +341,6 @@ class Tracks:
                 core_features.append(lineage_key)
         for key in core_features:
             if self._check_existing_feature(key):
-                # Add to FeatureDict if not already there
                 if key not in self.features:
                     feature, _ = self.annotators.all_features[key]
                     self.add_feature(key, feature)

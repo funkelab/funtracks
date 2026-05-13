@@ -101,6 +101,25 @@ def test_enable_disable_features(graph_2d_with_segmentation):
     assert "circularity" not in tracks.features
 
 
+def test_area_on_graph_not_auto_activated(graph_2d_with_segmentation):
+    """Area pre-populated on a raw graph must not be auto-activated.
+
+    Lock in the behavior introduced when area was removed from the core
+    auto-detected features: even though the graph already carries area values,
+    Tracks(graph) without an explicit FeatureDict must leave area out of
+    tracks.features. Callers opt in via enable_features(["area"]).
+    """
+    assert "area" in graph_2d_with_segmentation.node_attr_keys()
+
+    tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
+
+    assert "area" not in tracks.features
+    assert "area" in tracks.annotators.all_features
+
+    tracks.enable_features(["area"])
+    assert "area" in tracks.features
+
+
 def test_get_available_features(graph_2d_with_segmentation):
     """Test get_available_features returns all features from all annotators."""
     tracks = SolutionTracks(
