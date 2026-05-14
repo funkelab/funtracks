@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1778694292166,
+  "lastUpdate": 1778763547898,
   "repoUrl": "https://github.com/funkelab/funtracks",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -372,6 +372,37 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 2.8450953539999944 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "malinmayorc@janelia.hhmi.org",
+            "name": "Caroline Malin-Mayor",
+            "username": "cmalinmayor"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6f5c19f9c1d60d888a9ac75b9e41c6200033de91",
+          "message": "Merge pull request #208 from funkelab/stop-autocompute-area\n\nstop auto-computing area",
+          "timestamp": "2026-05-14T08:58:31-04:00",
+          "tree_id": "57ff882d2621eef2dea8a50622ed12b21b57e0d2",
+          "url": "https://github.com/funkelab/funtracks/commit/6f5c19f9c1d60d888a9ac75b9e41c6200033de91"
+        },
+        "date": 1778763546163,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_compute_graph_from_seg",
+            "value": 0.3577731554384486,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 2.7950671670000133 sec\nrounds: 1"
           }
         ]
       }
