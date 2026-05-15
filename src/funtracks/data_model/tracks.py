@@ -199,7 +199,7 @@ class Tracks:
         if pos_attr is None:
             pos_attr = "pos"
         if tracklet_key is None:
-            tracklet_key = "track_id"
+            tracklet_key = "tracklet_id"
         if lineage_key is None:
             lineage_key = "lineage_id"
 

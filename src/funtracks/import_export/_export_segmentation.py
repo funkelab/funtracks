@@ -20,12 +20,12 @@ def export_segmentation(
     tracks: Tracks,
     output_path: Path,
     file_format: Literal["zarr", "tiff"] = "zarr",
-    label_attr: str | None = "track_id",
+    relabel: Literal["tracklet", "lineage", None] = "tracklet",
     zarr_format: Literal[2, 3] = 2,
     node_ids: set[int] | None = None,
 ) -> None:
-    """Export the segmentation to zarr or tiff, optionally painting cells by a
-    node attribute.
+    """Export the segmentation to zarr or tiff, optionally painting cells by
+    tracklet or lineage ID.
 
     Writes frame-by-frame so large datasets are never fully materialized in memory.
 
@@ -34,27 +34,43 @@ def export_segmentation(
         output_path: Destination path. For zarr, a directory will be created.
             For tiff, a .tif file will be written.
         file_format: Output format, either "zarr" or "tiff". Defaults to "zarr".
-        label_attr: Node attribute used to paint cell labels. When set, each cell is
-            painted with the value of this attribute (e.g. "track_id"). When None,
-            the original segmentation labels (node IDs) are preserved as-is.
-            Defaults to "track_id".
+        relabel: How to relabel the segmentation cells.
+            "tracklet" (default): paint each cell with its tracklet ID.
+            "lineage": paint each cell with its lineage ID.
+            None: preserve original segmentation labels (node IDs) as-is.
         zarr_format: Zarr format version. Only used when file_format="zarr".
             Defaults to 2.
         node_ids: Optional subset of node IDs to include. Cells not in this set
-            are painted as 0 (background). Has no effect when label_attr is None.
+            are painted as 0 (background). Has no effect when relabel is None.
 
     Raises:
         ValueError: If tracks.segmentation is None.
-        ValueError: If label_attr is specified but not present as a node attribute.
+        ValueError: If relabel is requested but the corresponding key is not set
+            or not present as a node attribute.
     """
     if tracks.segmentation is None:
         raise ValueError("tracks.segmentation is None — cannot export segmentation.")
 
+    # Resolve the graph attribute key from the relabel option
+    if relabel == "tracklet":
+        label_attr = tracks.features.tracklet_key
+        if label_attr is None:
+            raise ValueError(
+                "relabel='tracklet' requested but tracks has no tracklet key."
+            )
+    elif relabel == "lineage":
+        label_attr = tracks.features.lineage_key
+        if label_attr is None:
+            raise ValueError("relabel='lineage' requested but tracks has no lineage key.")
+    else:
+        label_attr = None
+
     if label_attr is not None:
-        existing_attrs = tracks.graph.node_attrs().columns
+        existing_attrs = tracks.graph.node_attr_keys()
         if label_attr not in existing_attrs:
             raise ValueError(
-                f"label_attr '{label_attr}' is not a node attribute. "
+                f"relabel='{relabel}' resolved to attribute '{label_attr}', "
+                f"which is not a node attribute. "
                 f"Available attributes: {existing_attrs}"
             )
 

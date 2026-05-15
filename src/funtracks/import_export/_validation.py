@@ -411,16 +411,16 @@ def validate_in_memory_geff(in_memory_geff: InMemoryGeff) -> None:
         raise ValueError(f"Repeated edges found in data:\n{invalid_edges}")
 
     # Validate tracklet_id if present (optional - remove if invalid)
-    if "track_id" in node_props:
-        tracklet_ids = node_props["track_id"]["values"]
+    if "tracklet_id" in node_props:
+        tracklet_ids = node_props["tracklet_id"]["values"]
         valid, errors = validate_tracklets(node_ids, edge_ids, tracklet_ids)
         if not valid:
             warn(
-                f"track_id validation failed:\n{chr(10).join(errors)}\n"
-                "Removing track_id from data.",
+                f"tracklet_id validation failed:\n{chr(10).join(errors)}\n"
+                "Removing tracklet_id from data.",
                 stacklevel=2,
             )
-            del node_props["track_id"]
+            del node_props["tracklet_id"]
 
     # Validate lineage_id if present (optional - remove if invalid)
     if "lineage_id" in node_props:
