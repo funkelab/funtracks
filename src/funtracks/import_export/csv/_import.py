@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, cast
 import numpy as np
 import pandas as pd
 from geff._typing import InMemoryGeff
+from geff.convert._dataframe import _df_columns_to_props
 from geff_spec.utils import (
     add_or_update_props_metadata,
     create_or_update_metadata,
@@ -106,15 +107,6 @@ class CSVTracksBuilder(TracksBuilder):
                     )
                 )
 
-        # Fill None values with False for boolean columns.
-        # Only apply to object/bool dtype columns to avoid converting integer columns
-        # like time=[0, 1, 1] to bool (since 0==False and 1==True in Python).
-        for col in df.columns:
-            if (
-                df[col].dtype == object or pd.api.types.is_bool_dtype(df[col].dtype)
-            ) and df[col].dropna().isin([True, False]).all():
-                df[col] = df[col].fillna(False).astype(bool)
-
         # Determine dimensionality from position mapping (if not already set)
         if self.ndim is None:
             pos_mapping = node_name_map.get("pos", [])
@@ -124,16 +116,13 @@ class CSVTracksBuilder(TracksBuilder):
                 # Fallback for legacy separate position keys
                 self.ndim = 4 if "z" in df.columns else 3
 
-        # Convert DataFrame to InMemoryGeff format
-        df_dict = df.to_dict(orient="list")
-        node_ids = np.array(df_dict.pop("id"))
-        parent_ids = df_dict.pop("parent_id")
+        # Convert DataFrame columns to GEFF-compatible PropDictNpArray format.
+        # Uses geff's construct_props for proper dtype inference and missing masks.
+        node_ids = np.array(df["id"])
+        parent_ids = df["parent_id"].tolist()
 
-        # Build node_props with GEFF-compatible structure
-        # Store position coordinates as individual attributes (z, y, x)
-        node_props: dict[str, dict[str, np.ndarray | None]] = {}
-        for prop_name, values in df_dict.items():
-            node_props[prop_name] = {"values": np.array(values), "missing": None}
+        prop_columns = [c for c in df.columns if c not in ("id", "parent_id")]
+        node_props = _df_columns_to_props(df, prop_columns)
 
         # Extract edge IDs from parent_id column
         edge_tuples = [
