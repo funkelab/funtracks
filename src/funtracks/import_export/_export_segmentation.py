@@ -98,5 +98,5 @@ def export_segmentation(
         with tifffile.TiffWriter(output_path, bigtiff=True) as tif:
             for t in range(shape[0]):
                 tif.write(
-                    get_frame(t).astype(tiff_dtype), compression="deflate"
+                    get_frame(t).astype(tiff_dtype), contiguous=True
                 )  # compression may prevent contiguous writing
