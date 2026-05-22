@@ -442,25 +442,45 @@ class TracksBuilder(ABC):
         node_default_values: list[Any] | None = None
         if node_name_map is not None:
             node_attributes = list(self.in_memory_geff["node_props"].keys())
-            node_first_values = [
-                self.in_memory_geff["node_props"][key]["values"][0]
-                for key in node_attributes
-            ]
+            # Cast arrays to match Feature definitions when the dtype kind is wrong
+            # (e.g., area imported as int but Feature defines value_type="float").
+            # Only cast when there's an actual mismatch to avoid unnecessary copies.
+            kind_map = {"float": "f", "int": "iu", "bool": "b"}
+            for key in node_attributes:
+                feature_def = self.available_computed_features.get(key, {})
+                value_type = feature_def.get("value_type")
+                expected_kinds = kind_map.get(value_type)
+                if expected_kinds is None:
+                    continue
+                prop = self.in_memory_geff["node_props"][key]
+                if prop["values"].dtype.kind not in expected_kinds:
+                    prop["values"] = prop["values"].astype(
+                        float
+                        if value_type == "float"
+                        else int
+                        if value_type == "int"
+                        else bool
+                    )
 
-            node_default_dtypes = [type(value) for value in node_first_values]
             node_default_values = []
-            for i, dtype in enumerate(node_default_dtypes):
+            for key in node_attributes:
+                values_arr = self.in_memory_geff["node_props"][key]["values"]
+
                 default_value: Any
-                if issubclass(dtype, (bool, np.bool_)):
+                if values_arr.ndim > 1:
+                    # Multi-value feature (e.g., position, ellipsoid_axes)
+                    default_value = np.zeros(values_arr.shape[1], dtype=values_arr.dtype)
+                elif values_arr.dtype == np.object_:
+                    # Variable-length arrays stored as object arrays
+                    default_value = np.zeros_like(values_arr[0])
+                elif np.issubdtype(values_arr.dtype, np.bool_):
                     default_value = False
-                elif issubclass(dtype, np.integer):
+                elif np.issubdtype(values_arr.dtype, np.integer):
                     default_value = -1
-                elif issubclass(dtype, np.floating):
+                elif np.issubdtype(values_arr.dtype, np.floating):
                     default_value = 0.0
-                elif issubclass(dtype, np.str_):
+                elif np.issubdtype(values_arr.dtype, np.str_):
                     default_value = ""
-                elif issubclass(dtype, np.ndarray):
-                    default_value = np.array([0.0 for _ in node_first_values[i]])
                 else:
                     default_value = 0
                 node_default_values.append(default_value)
