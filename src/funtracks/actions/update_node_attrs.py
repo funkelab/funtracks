@@ -40,7 +40,7 @@ class UpdateNodeAttrs(BasicAction):
         for attr in attrs:
             if attr in protected_attrs:
                 raise ValueError(f"Cannot update attribute {attr} manually")
-        self.node = node
+        self.node = int(node)
         self.prev_attrs = {attr: self.tracks.get_node_attr(node, attr) for attr in attrs}
         self.new_attrs = attrs
         self._apply()
