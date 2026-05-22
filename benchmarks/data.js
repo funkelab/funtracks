@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1779473317678,
+  "lastUpdate": 1779473676558,
   "repoUrl": "https://github.com/funkelab/funtracks",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -434,6 +434,37 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 2.5631550410000017 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "malinmayorc@janelia.hhmi.org",
+            "name": "Caroline Malin-Mayor",
+            "username": "cmalinmayor"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8b201acb209df366c985aea589ccfa51ae384acb",
+          "message": "Merge pull request #219 from funkelab/enforce_python_integers_in_actions\n\nenforce python integers when setting self.node in actions",
+          "timestamp": "2026-05-22T14:14:01-04:00",
+          "tree_id": "37becd424fdd1933dd3749220df389a2217738fd",
+          "url": "https://github.com/funkelab/funtracks/commit/8b201acb209df366c985aea589ccfa51ae384acb"
+        },
+        "date": 1779473674758,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_compute_graph_from_seg",
+            "value": 0.3484136808729147,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 2.870151359999994 sec\nrounds: 1"
           }
         ]
       }
