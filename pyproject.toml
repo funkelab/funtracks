@@ -43,6 +43,9 @@ dependencies =[
     "tqdm>=4.66.1",
 ]
 
+[tool.uv.sources]
+tracksdata = { git = "https://github.com/cmalinmayor/tracksdata.git", branch = "multiple-masks-per-node" }
+
 [project.urls]
 "Bug Tracker" = "https://github.com/funkelab/funtracks/issues"
 "Documentation" = "https://funkelab.github.io/funtracks/"
