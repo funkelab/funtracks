@@ -57,10 +57,16 @@ class EdgeAnnotator(GraphAnnotator):
         """
         return {DEFAULT_IOU_KEY: IoU()}
 
-    def __init__(self, tracks: Tracks) -> None:
-        self.iou_key = DEFAULT_IOU_KEY
+    def __init__(
+        self,
+        tracks: Tracks,
+        mask_attr: str = "mask",
+        iou_key: str = DEFAULT_IOU_KEY,
+    ) -> None:
+        self.mask_attr = mask_attr
+        self.iou_key = iou_key
         # Build features dict with custom key
-        feats = {} if tracks.segmentation is None else {DEFAULT_IOU_KEY: IoU()}
+        feats = {} if tracks.segmentation is None else {self.iou_key: IoU()}
         super().__init__(tracks, feats)
 
     def compute(self, feature_keys: list[str] | None = None) -> None:
@@ -105,8 +111,8 @@ class EdgeAnnotator(GraphAnnotator):
         """
         for edge in edges:
             source, target = edge
-            mask1 = self.tracks.graph.nodes[source]["mask"]
-            mask2 = self.tracks.graph.nodes[target]["mask"]
+            mask1 = self.tracks.graph.nodes[source][self.mask_attr]
+            mask2 = self.tracks.graph.nodes[target][self.mask_attr]
             iou = mask1.iou(mask2)
             self.tracks._set_edge_attr(edge, self.iou_key, iou)
 
@@ -144,8 +150,8 @@ class EdgeAnnotator(GraphAnnotator):
         # Update IoU for each edge
         for edge in edges_to_update:
             source, target = edge
-            mask1 = self.tracks.graph.nodes[source]["mask"]
-            mask2 = self.tracks.graph.nodes[target]["mask"]
+            mask1 = self.tracks.graph.nodes[source][self.mask_attr]
+            mask2 = self.tracks.graph.nodes[target][self.mask_attr]
             if mask1.mask.sum() == 0 or mask2.mask.sum() == 0:
                 empty_node = source if mask1.mask.sum() == 0 else target
                 frame = self.tracks.get_time(empty_node)

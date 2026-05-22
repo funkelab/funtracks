@@ -201,3 +201,71 @@ class TestRegionpropsAnnotator:
 
         assert tracks.get_node_attr(node_id, "area") == fake_area
         assert tracks.get_track_id(node_id) == new_track_id
+
+
+@pytest.mark.parametrize("ndim", [3, 4])
+class TestRegionpropsAnnotatorCustomMask:
+    def test_key_prefix(self, get_graph, ndim):
+        """key_prefix prepends to all feature keys."""
+        graph = get_graph(ndim, with_seg=True)
+        tracks = Tracks(graph, ndim=ndim, **track_attrs)
+        rp_ann = RegionpropsAnnotator(tracks, key_prefix="nuc_")
+        expected_keys = {
+            "nuc_pos",
+            "nuc_area",
+            "nuc_ellipse_axis_radii",
+            "nuc_circularity",
+            "nuc_perimeter",
+        }
+        assert set(rp_ann.all_features.keys()) == expected_keys
+
+    def test_key_prefix_with_pos_key(self, get_graph, ndim):
+        """key_prefix combined with custom pos_key."""
+        graph = get_graph(ndim, with_seg=True)
+        tracks = Tracks(graph, ndim=ndim, **track_attrs)
+        rp_ann = RegionpropsAnnotator(
+            tracks,
+            pos_key="nuc_pos",
+            key_prefix="nuc_",
+        )
+        assert "nuc_pos" in rp_ann.all_features
+        assert "nuc_area" in rp_ann.all_features
+
+    def test_custom_mask_attr_compute(self, get_graph, ndim):
+        """mask_attr controls which node attribute masks are read from."""
+        graph = get_graph(ndim, with_seg=True)
+
+        # Add a second mask attribute under a different key
+        import polars as pl
+
+        graph.add_node_attr_key("nuc_mask", pl.Object)
+        spatial_ndim = ndim - 1
+        graph.add_node_attr_key(
+            "nuc_bbox",
+            pl.Array(pl.Int64, 2 * spatial_ndim),
+        )
+
+        # Copy existing masks to the new attribute
+        for node_id in graph.node_ids():
+            mask = graph.nodes[node_id]["mask"]
+            graph.update_node_attrs(
+                attrs={"nuc_mask": [mask], "nuc_bbox": [mask.bbox]},
+                node_ids=[node_id],
+            )
+
+        tracks = Tracks(graph, ndim=ndim, **track_attrs)
+        rp_ann = RegionpropsAnnotator(
+            tracks,
+            mask_attr="nuc_mask",
+            key_prefix="nuc_",
+        )
+        rp_ann.activate_features(list(rp_ann.all_features.keys()))
+        # Add feature keys to graph schema so compute can write
+        for key, (feat, _) in rp_ann.all_features.items():
+            tracks.add_feature(key, feat)
+        rp_ann.compute()
+
+        # Verify that features were computed under prefixed keys
+        for node_id in tracks.graph.node_ids():
+            assert tracks.graph.nodes[node_id]["nuc_area"] is not None
+            assert tracks.graph.nodes[node_id]["nuc_area"] > 0

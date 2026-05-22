@@ -158,3 +158,48 @@ class TestEdgeAnnotator:
         assert tracks.graph.edges[edge_id]["iou"] == initial_iou
         # But track_id should be updated
         assert tracks.get_track_id(node_id) == new_track_id
+
+
+@pytest.mark.parametrize("ndim", [3, 4])
+class TestEdgeAnnotatorCustomMask:
+    def test_custom_iou_key(self, get_graph, ndim):
+        """iou_key controls the feature key used for IoU."""
+        graph = get_graph(ndim, with_seg=True)
+        tracks = Tracks(graph, ndim=ndim, **track_attrs)
+        ann = EdgeAnnotator(tracks, iou_key="nuc_iou")
+        assert "nuc_iou" in ann.all_features
+        assert "iou" not in ann.all_features
+
+    def test_custom_mask_attr_compute(self, get_graph, ndim):
+        """mask_attr controls which node attribute masks are read from."""
+        import polars as pl
+
+        graph = get_graph(ndim, with_seg=True)
+
+        # Add a second mask attribute under a different key
+        graph.add_node_attr_key("nuc_mask", pl.Object)
+        spatial_ndim = ndim - 1
+        graph.add_node_attr_key(
+            "nuc_bbox",
+            pl.Array(pl.Int64, 2 * spatial_ndim),
+        )
+
+        # Copy existing masks to the new attribute
+        for node_id in graph.node_ids():
+            mask = graph.nodes[node_id]["mask"]
+            graph.update_node_attrs(
+                attrs={"nuc_mask": [mask], "nuc_bbox": [mask.bbox]},
+                node_ids=[node_id],
+            )
+
+        tracks = Tracks(graph, ndim=ndim, **track_attrs)
+        ann = EdgeAnnotator(tracks, mask_attr="nuc_mask", iou_key="nuc_iou")
+        ann.activate_features(["nuc_iou"])
+        tracks.add_feature("nuc_iou", ann.all_features["nuc_iou"][0])
+        ann.compute()
+
+        # Verify that nuc_iou was computed on edges
+        for edge in [(1, 2), (1, 3), (3, 4), (4, 5)]:
+            src, tgt = edge
+            edge_id = tracks.graph.edge_id(src, tgt)
+            assert tracks.graph.edges[edge_id]["nuc_iou"] is not None
