@@ -510,6 +510,17 @@ class Tracks:
         """
         return int(self.get_node_attr(node, self.features.time_key))
 
+    @property
+    def segmentations(self) -> dict[str, GraphArrayView]:
+        """All segmentation views as a dict mapping name to GraphArrayView.
+
+        Base implementation returns the single membrane segmentation (if present).
+        Subclasses can override to expose additional segmentations.
+        """
+        if self.segmentation is not None:
+            return {"segmentation": self.segmentation}
+        return {}
+
     def get_mask(self, node: Node) -> Mask | None:
         """Get the segmentation mask associated with a given node.
 
