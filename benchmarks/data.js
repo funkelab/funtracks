@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1779473714131,
+  "lastUpdate": 1779752550770,
   "repoUrl": "https://github.com/funkelab/funtracks",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -496,6 +496,37 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 2.841603766999995 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "malinmayorc@janelia.hhmi.org",
+            "name": "Caroline Malin-Mayor",
+            "username": "cmalinmayor"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3ae556a7111c221b6c305d1783c8aa664c467236",
+          "message": "Merge pull request #221 from funkelab/pre-commit-ci-update-config\n\n[pre-commit.ci] pre-commit autoupdate",
+          "timestamp": "2026-05-25T19:41:58-04:00",
+          "tree_id": "5d9e6cdeb078468799bcae5afc48e48f00faa18b",
+          "url": "https://github.com/funkelab/funtracks/commit/3ae556a7111c221b6c305d1783c8aa664c467236"
+        },
+        "date": 1779752548105,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_compute_graph_from_seg",
+            "value": 0.5039516946295317,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 1.9843171689999508 sec\nrounds: 1"
           }
         ]
       }
