@@ -110,22 +110,17 @@ class DeleteNode(BasicAction):
         self.node = int(node)
 
         # Save all node feature values from the features dict
+        # (mask and solution are now registered as Features, so they're
+        # captured here automatically)
         self.attributes = {}
-        for key in self.tracks.features.node_features:
+        for key, feature in self.tracks.features.node_features.items():
             val = self.tracks.get_node_attr(node, key)
             if val is not None:
                 self.attributes[key] = val
-
-        if td.DEFAULT_ATTR_KEYS.MASK in self.tracks.graph.node_attr_keys():
-            self.attributes[td.DEFAULT_ATTR_KEYS.MASK] = self.tracks.get_nodes_attr(
-                [self.node], td.DEFAULT_ATTR_KEYS.MASK
-            )[0]
-            self.attributes[td.DEFAULT_ATTR_KEYS.BBOX] = self.tracks.get_nodes_attr(
-                [self.node], td.DEFAULT_ATTR_KEYS.BBOX
-            )[0]
-        self.attributes[td.DEFAULT_ATTR_KEYS.SOLUTION] = self.tracks.get_nodes_attr(
-            [self.node], td.DEFAULT_ATTR_KEYS.SOLUTION
-        )[0]
+            # For mask features, also save the paired bbox
+            if feature.get("value_type") == "mask":
+                bbox_key = feature["bbox_key"]
+                self.attributes[bbox_key] = self.tracks.get_node_attr(node, bbox_key)
 
         mask = self.tracks.get_mask(node) if mask is None else mask
 

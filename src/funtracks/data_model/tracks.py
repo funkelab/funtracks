@@ -17,7 +17,7 @@ from tracksdata.array import GraphArrayView
 from tracksdata.nodes import Mask
 
 from funtracks.actions.action_history import ActionHistory
-from funtracks.features import Feature, FeatureDict, Position, Time
+from funtracks.features import Feature, FeatureDict, Position, SegMask, Solution, Time
 from funtracks.utils.tracksdata_utils import (
     to_polars_dtype,
 )
@@ -33,7 +33,6 @@ Node: TypeAlias = int
 Edge: TypeAlias = tuple[Node, Node]
 AttrValues: TypeAlias = list[AttrValue]
 Attrs: TypeAlias = dict[str, AttrValues]
-SegMask: TypeAlias = tuple[np.ndarray, ...]
 
 logger = logging.getLogger(__name__)
 
@@ -237,6 +236,16 @@ class Tracks:
             pos_feature = Position(axes=self.axis_names)
             feature_dict.register_position_feature(single_position_key, pos_feature)
         # else: single pos_attr with segmentation - RegionpropsAnnotator will handle it
+
+        # Register mask feature if segmentation exists
+        if self.segmentation is not None:
+            feature_dict[td.DEFAULT_ATTR_KEYS.MASK] = SegMask(
+                bbox_key=td.DEFAULT_ATTR_KEYS.BBOX
+            )
+
+        # Register solution if it's on the graph
+        if td.DEFAULT_ATTR_KEYS.SOLUTION in self.graph.node_attr_keys():
+            feature_dict[td.DEFAULT_ATTR_KEYS.SOLUTION] = Solution()
 
         return feature_dict
 
@@ -711,15 +720,26 @@ class Tracks:
 
         # Perform custom graph operations when a feature is added
         if feature["feature_type"] == "node" and key not in self.graph.node_attr_keys():
-            dtype = to_polars_dtype(feature["value_type"])
-            num_values = feature.get("num_values")
-            if num_values is not None and num_values > 1:
-                dtype = pl.Array(pl.Float64, num_values)
-            self.graph.add_node_attr_key(
-                key,
-                default_value=feature["default_value"],
-                dtype=dtype,
-            )
+            if feature["value_type"] == "mask":
+                # Mask features use pl.Object; also register the paired bbox column
+                self.graph.add_node_attr_key(key, default_value=None, dtype=pl.Object)
+                bbox_key = feature["bbox_key"]
+                if bbox_key not in self.graph.node_attr_keys():
+                    spatial_ndim = self.ndim - 1
+                    self.graph.add_node_attr_key(
+                        bbox_key,
+                        dtype=pl.Array(pl.Int64, 2 * spatial_ndim),
+                    )
+            else:
+                dtype = to_polars_dtype(feature["value_type"])
+                num_values = feature.get("num_values")
+                if num_values is not None and num_values > 1:
+                    dtype = pl.Array(pl.Float64, num_values)
+                self.graph.add_node_attr_key(
+                    key,
+                    default_value=feature["default_value"],
+                    dtype=dtype,
+                )
         elif feature["feature_type"] == "edge" and key not in self.graph.edge_attr_keys():
             self.graph.add_edge_attr_key(
                 key,
@@ -736,13 +756,27 @@ class Tracks:
         Args:
             key: The key for the feature to delete
         """
+        # Get feature metadata before removing from dict
+        feature = self.features.get(key)
+
         # Remove from the features dictionary
         del self.features[key]
 
+        # Determine feature_type from FeatureDict entry or annotators
+        if feature is not None:
+            feature_type = feature["feature_type"]
+        elif ann_entry := self.annotators.all_features.get(key):
+            feature_type = ann_entry[0]["feature_type"]
+        else:
+            return
+
         # Perform custom graph operations when a feature is deleted
-        if feature := self.annotators.all_features.get(key):
-            feature_type = feature[0]["feature_type"]
-            if feature_type == "node" and key in self.graph.node_attr_keys():
-                self.graph.remove_node_attr_key(key)
-            elif feature_type == "edge" and key in self.graph.edge_attr_keys():
-                self.graph.remove_edge_attr_key(key)
+        if feature_type == "node" and key in self.graph.node_attr_keys():
+            self.graph.remove_node_attr_key(key)
+            # For mask features, also remove the paired bbox column
+            if feature is not None and feature.get("value_type") == "mask":
+                bbox_key = feature.get("bbox_key")
+                if bbox_key and bbox_key in self.graph.node_attr_keys():
+                    self.graph.remove_node_attr_key(bbox_key)
+        elif feature_type == "edge" and key in self.graph.edge_attr_keys():
+            self.graph.remove_edge_attr_key(key)

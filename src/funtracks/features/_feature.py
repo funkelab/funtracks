@@ -6,7 +6,7 @@ from typing import Any, Literal, TypedDict
 from typing_extensions import NotRequired
 
 # Type alias for feature value types
-ValueType = Literal["int", "float", "str", "bool"]
+ValueType = Literal["int", "float", "str", "bool", "mask"]
 
 
 class Feature(TypedDict):
@@ -40,3 +40,4 @@ class Feature(TypedDict):
     value_names: NotRequired[Sequence[str]]
     default_value: Any
     spatial_dims: NotRequired[bool]
+    bbox_key: NotRequired[str]

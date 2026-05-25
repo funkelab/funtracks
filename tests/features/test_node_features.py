@@ -4,6 +4,8 @@ from funtracks.features import (
     EllipsoidAxes,
     Perimeter,
     Position,
+    SegMask,
+    Solution,
     Time,
 )
 
@@ -81,6 +83,31 @@ def test_perimeter_feature():
 
     feat = Perimeter(ndim=4)
     assert feat["display_name"] == "Surface Area"
+
+
+def test_seg_mask_feature():
+    """Test that SegMask() returns a valid Feature TypedDict"""
+    feat = SegMask()
+    assert feat["feature_type"] == "node"
+    assert feat["value_type"] == "mask"
+    assert feat["num_values"] == 1
+    assert feat["display_name"] == "Segmentation mask"
+    assert feat["default_value"] is None
+    assert feat["bbox_key"] == "bbox"
+
+    # Custom bbox_key
+    feat = SegMask(bbox_key="nuc_bbox")
+    assert feat["bbox_key"] == "nuc_bbox"
+
+
+def test_solution_feature():
+    """Test that Solution() returns a valid Feature TypedDict"""
+    feat = Solution()
+    assert feat["feature_type"] == "node"
+    assert feat["value_type"] == "int"
+    assert feat["num_values"] == 1
+    assert feat["display_name"] == "Solution"
+    assert feat["default_value"] == 1
 
 
 def test_feature_as_dict():

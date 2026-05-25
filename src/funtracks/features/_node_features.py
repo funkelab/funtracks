@@ -23,6 +23,46 @@ def Time() -> Feature:
     }
 
 
+def SegMask(bbox_key: str = "bbox") -> Feature:
+    """A feature to hold a segmentation mask for a node.
+
+    The mask is stored as a pl.Object column. The paired bounding box
+    column (``bbox_key``) is implied — it is NOT a separate Feature in
+    the FeatureDict, but is automatically created/deleted alongside the
+    mask column.
+
+    Args:
+        bbox_key: The node attribute key for the paired bounding box
+            column. Defaults to ``"bbox"``.
+
+    Returns:
+        Feature: A feature dict representing a segmentation mask.
+    """
+    return {
+        "feature_type": "node",
+        "value_type": "mask",
+        "num_values": 1,
+        "display_name": "Segmentation mask",
+        "default_value": None,
+        "bbox_key": bbox_key,
+    }
+
+
+def Solution() -> Feature:
+    """A feature to hold the integer solution value for a node.
+
+    Returns:
+        Feature: A feature dict representing solution status.
+    """
+    return {
+        "feature_type": "node",
+        "value_type": "int",
+        "num_values": 1,
+        "display_name": "Solution",
+        "default_value": 1,
+    }
+
+
 def Position(axes: Sequence[str]) -> Feature:
     """A feature to hold the position of a node (time not included).
 
