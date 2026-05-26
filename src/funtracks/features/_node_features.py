@@ -48,21 +48,6 @@ def SegMask(bbox_key: str = "bbox") -> Feature:
     }
 
 
-def Solution() -> Feature:
-    """A feature to hold the integer solution value for a node.
-
-    Returns:
-        Feature: A feature dict representing solution status.
-    """
-    return {
-        "feature_type": "node",
-        "value_type": "int",
-        "num_values": 1,
-        "display_name": "Solution",
-        "default_value": 1,
-    }
-
-
 def Position(axes: Sequence[str]) -> Feature:
     """A feature to hold the position of a node (time not included).
 

@@ -5,7 +5,6 @@ from funtracks.features import (
     Perimeter,
     Position,
     SegMask,
-    Solution,
     Time,
 )
 
@@ -98,16 +97,6 @@ def test_seg_mask_feature():
     # Custom bbox_key
     feat = SegMask(bbox_key="nuc_bbox")
     assert feat["bbox_key"] == "nuc_bbox"
-
-
-def test_solution_feature():
-    """Test that Solution() returns a valid Feature TypedDict"""
-    feat = Solution()
-    assert feat["feature_type"] == "node"
-    assert feat["value_type"] == "int"
-    assert feat["num_values"] == 1
-    assert feat["display_name"] == "Solution"
-    assert feat["default_value"] == 1
 
 
 def test_feature_as_dict():

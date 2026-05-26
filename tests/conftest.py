@@ -368,7 +368,6 @@ def get_tracks(get_graph) -> Callable[..., "Tracks | SolutionTracks"]:
         LineageID,
         Position,
         SegMask,
-        Solution,
         Time,
         TrackletID,
     )
@@ -393,8 +392,6 @@ def get_tracks(get_graph) -> Callable[..., "Tracks | SolutionTracks"]:
             features_dict["mask"] = SegMask()
             features_dict["area"] = Area(ndim=ndim)
             features_dict["iou"] = IoU()
-        # Solution is always on the test graph (set by _make_graph)
-        features_dict["solution"] = Solution()
         if is_solution:
             features_dict["track_id"] = TrackletID()
             features_dict["lineage_id"] = LineageID()

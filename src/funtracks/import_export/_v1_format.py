@@ -9,7 +9,7 @@ import networkx as nx
 import numpy as np
 import tracksdata as td
 
-from funtracks.features import FeatureDict, SegMask, Solution
+from funtracks.features import FeatureDict, SegMask
 from funtracks.utils.tracksdata_utils import (
     add_masks_and_bboxes_to_graph,
     convert_graph_nx_to_td,
@@ -88,19 +88,15 @@ def load_v1_tracks(
     if seg is not None:
         graph_td = add_masks_and_bboxes_to_graph(graph_td, seg)
 
-    # Ensure mask and solution Features are in the FeatureDict (older saves
-    # predate their registration as Features).
+    # Ensure mask Feature is in the FeatureDict (older saves predate
+    # its registration as a Feature).
     features = attrs.get("features")
-    if isinstance(features, FeatureDict):
-        if seg is not None and td.DEFAULT_ATTR_KEYS.MASK not in features:
-            features[td.DEFAULT_ATTR_KEYS.MASK] = SegMask(
-                bbox_key=td.DEFAULT_ATTR_KEYS.BBOX
-            )
-        if (
-            td.DEFAULT_ATTR_KEYS.SOLUTION not in features
-            and td.DEFAULT_ATTR_KEYS.SOLUTION in graph_td.node_attr_keys()
-        ):
-            features[td.DEFAULT_ATTR_KEYS.SOLUTION] = Solution()
+    if (
+        isinstance(features, FeatureDict)
+        and seg is not None
+        and td.DEFAULT_ATTR_KEYS.MASK not in features
+    ):
+        features[td.DEFAULT_ATTR_KEYS.MASK] = SegMask(bbox_key=td.DEFAULT_ATTR_KEYS.BBOX)
 
     # filtering the warnings because the default values of time_attr and pos_attr are
     # not None. Therefore, new style Tracks attrs that have features instead of

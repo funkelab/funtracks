@@ -17,7 +17,7 @@ from tracksdata.array import GraphArrayView
 from tracksdata.nodes import Mask
 
 from funtracks.actions.action_history import ActionHistory
-from funtracks.features import Feature, FeatureDict, Position, SegMask, Solution, Time
+from funtracks.features import Feature, FeatureDict, Position, SegMask, Time
 from funtracks.utils.tracksdata_utils import (
     to_polars_dtype,
 )
@@ -242,10 +242,6 @@ class Tracks:
             feature_dict[td.DEFAULT_ATTR_KEYS.MASK] = SegMask(
                 bbox_key=td.DEFAULT_ATTR_KEYS.BBOX
             )
-
-        # Register solution if it's on the graph
-        if td.DEFAULT_ATTR_KEYS.SOLUTION in self.graph.node_attr_keys():
-            feature_dict[td.DEFAULT_ATTR_KEYS.SOLUTION] = Solution()
 
         return feature_dict
 

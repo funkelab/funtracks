@@ -282,19 +282,15 @@ def test_undo_redo(graph_2d_with_segmentation):
     assert tracks.get_node_attr(2, "another_label") == "second_value"
 
 
-def test_get_feature_set_registers_mask_and_solution(
+def test_get_feature_set_registers_mask(
     graph_2d_with_segmentation,
 ):
-    """_get_feature_set registers mask and solution as Features when present."""
+    """_get_feature_set registers mask as a Feature when segmentation exists."""
     tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
 
     assert "mask" in tracks.features
     assert tracks.features["mask"]["value_type"] == "mask"
     assert tracks.features["mask"]["bbox_key"] == "bbox"
-
-    assert "solution" in tracks.features
-    assert tracks.features["solution"]["value_type"] == "int"
-    assert tracks.features["solution"]["default_value"] == 1
 
 
 def test_get_feature_set_no_mask_without_segmentation(
