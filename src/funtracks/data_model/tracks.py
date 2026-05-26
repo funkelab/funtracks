@@ -17,7 +17,7 @@ from tracksdata.array import GraphArrayView
 from tracksdata.nodes import Mask
 
 from funtracks.actions.action_history import ActionHistory
-from funtracks.features import Feature, FeatureDict, Position, Time
+from funtracks.features import Feature, FeatureDict, Position, Solution, Time
 from funtracks.utils.tracksdata_utils import (
     to_polars_dtype,
 )
@@ -237,6 +237,12 @@ class Tracks:
             pos_feature = Position(axes=self.axis_names)
             feature_dict.register_position_feature(single_position_key, pos_feature)
         # else: single pos_attr with segmentation - RegionpropsAnnotator will handle it
+
+        # Register solution features when present on the graph
+        if "node_solution" in self.graph.node_attr_keys():
+            feature_dict["node_solution"] = Solution("node")
+        if "edge_solution" in self.graph.edge_attr_keys():
+            feature_dict["edge_solution"] = Solution("edge")
 
         return feature_dict
 

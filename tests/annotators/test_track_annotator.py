@@ -78,7 +78,7 @@ class TestTrackAnnotator:
         # add an edge
         node_id = 6
         edge_id = (4, 6)
-        attrs = {"iou": 0, "solution": 1} if with_seg else {"solution": 1}
+        attrs = {"iou": 0, "edge_solution": True} if with_seg else {"edge_solution": True}
         tracks.graph.add_edge(source_id=edge_id[0], target_id=edge_id[1], attrs=attrs)
         to_remove_key = ann.lineage_key
         orig_lin = tracks.get_node_attr(node_id, ann.lineage_key)

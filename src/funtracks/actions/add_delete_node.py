@@ -123,9 +123,6 @@ class DeleteNode(BasicAction):
             self.attributes[td.DEFAULT_ATTR_KEYS.BBOX] = self.tracks.get_nodes_attr(
                 [self.node], td.DEFAULT_ATTR_KEYS.BBOX
             )[0]
-        self.attributes[td.DEFAULT_ATTR_KEYS.SOLUTION] = self.tracks.get_nodes_attr(
-            [self.node], td.DEFAULT_ATTR_KEYS.SOLUTION
-        )[0]
 
         mask = self.tracks.get_mask(node) if mask is None else mask
 

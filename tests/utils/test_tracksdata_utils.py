@@ -4,7 +4,6 @@ import threading
 
 import numpy as np
 import pytest
-import tracksdata as td
 
 from funtracks.utils.tracksdata_utils import (
     create_empty_graphview_graph,
@@ -157,7 +156,9 @@ def test_memory_graph_survives_thread_boundary():
             node_attributes=["pos"],
             ndim=3,
         )
-        graph.bulk_add_nodes([{"t": 0, "pos": [1.0, 2.0], "solution": 1}], indices=[1])
+        graph.bulk_add_nodes(
+            [{"t": 0, "pos": [1.0, 2.0], "node_solution": True}], indices=[1]
+        )
         result["graph"] = graph
 
     t = threading.Thread(target=worker)
@@ -174,20 +175,18 @@ def test_memory_graph_survives_thread_boundary():
 
 
 def test_create_empty_graphview_graph_with_solution_attr():
-    """Test that passing 'solution' as a node/edge attribute does not raise.
+    """Test that passing solution as a node/edge attribute does not raise.
 
     Regression test: create_empty_graphview_graph unconditionally added the
     solution attribute at the end, even when it was already added via the
     node_attributes / edge_attributes loop, causing a ValueError.
     """
-    solution_key = td.DEFAULT_ATTR_KEYS.SOLUTION
-
     # Should not raise ValueError even though solution is listed explicitly
     graph = create_empty_graphview_graph(
-        node_attributes=[solution_key],
-        edge_attributes=[solution_key],
-        node_default_values=[1],
-        edge_default_values=[1],
+        node_attributes=["node_solution"],
+        edge_attributes=["edge_solution"],
+        node_default_values=[True],
+        edge_default_values=[True],
     )
 
     assert graph is not None

@@ -106,7 +106,7 @@ def export_to_csv(
     # For display names mode, build dynamic header from features
     feature_names = []
     if use_display_names:
-        for feature_name, feature_dict in tracks.features.items():
+        for feature_name, feature_dict in tracks.features.node_features.items():
             feature_names.append(feature_name)
             num_values = feature_dict.get("num_values", 1)
 

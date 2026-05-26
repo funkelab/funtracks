@@ -185,8 +185,20 @@ def test_add_edge_with_unregistered_edge_attr(tmp_path):
 
     graph.bulk_add_nodes(
         nodes=[
-            {"t": 0, "pos": [10.0, 10.0], "track_id": 1, "lineage_id": 1, "solution": 1},
-            {"t": 1, "pos": [11.0, 11.0], "track_id": 2, "lineage_id": 1, "solution": 1},
+            {
+                "t": 0,
+                "pos": [10.0, 10.0],
+                "track_id": 1,
+                "lineage_id": 1,
+                "node_solution": True,
+            },
+            {
+                "t": 1,
+                "pos": [11.0, 11.0],
+                "track_id": 2,
+                "lineage_id": 1,
+                "node_solution": True,
+            },
         ],
         indices=[1, 2],
     )

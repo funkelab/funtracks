@@ -239,7 +239,7 @@ def _make_graph(
     nodes_attrs_list = []
     for node_id, attrs in base_nodes:
         node_attrs: dict[str, Any] = dict(attrs)  # Start with time
-        node_attrs["solution"] = 1
+        node_attrs["node_solution"] = True
         if with_pos:
             # TODO: don't hardcode "pos" and other column names
             node_attrs["pos"] = positions[node_id]
@@ -258,10 +258,10 @@ def _make_graph(
         nodes_attrs_list.append(node_attrs)
 
     edges = [
-        {"source_id": 1, "target_id": 2, "solution": 1},
-        {"source_id": 1, "target_id": 3, "solution": 1},
-        {"source_id": 3, "target_id": 4, "solution": 1},
-        {"source_id": 4, "target_id": 5, "solution": 1},
+        {"source_id": 1, "target_id": 2, "edge_solution": True},
+        {"source_id": 1, "target_id": 3, "edge_solution": True},
+        {"source_id": 3, "target_id": 4, "edge_solution": True},
+        {"source_id": 4, "target_id": 5, "edge_solution": True},
     ]
 
     graph.bulk_add_nodes(nodes=nodes_attrs_list, indices=nodes_id_list)
@@ -367,6 +367,7 @@ def get_tracks(get_graph) -> Callable[..., "Tracks | SolutionTracks"]:
         IoU,
         LineageID,
         Position,
+        Solution,
         Time,
         TrackletID,
     )
@@ -385,6 +386,8 @@ def get_tracks(get_graph) -> Callable[..., "Tracks | SolutionTracks"]:
         features_dict = {
             "t": Time(),
             "pos": Position(axes=axis_names),
+            "node_solution": Solution("node"),
+            "edge_solution": Solution("edge"),
         }
 
         if with_seg:

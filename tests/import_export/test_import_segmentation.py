@@ -47,8 +47,8 @@ class TestRelabelSegmentation:
 
         # Create graph with node_ids 1, 2
         graph = create_empty_graphview_graph()
-        graph.add_node(index=1, attrs={"t": 0, "solution": 1})
-        graph.add_node(index=2, attrs={"t": 1, "solution": 1})
+        graph.add_node(index=1, attrs={"t": 0, "node_solution": True})
+        graph.add_node(index=2, attrs={"t": 1, "node_solution": True})
 
         node_ids = np.array([1, 2])
         seg_ids = np.array([10, 20])
@@ -71,8 +71,8 @@ class TestRelabelSegmentation:
 
         # Create graph with node_ids 0, 1 (includes 0!)
         graph = create_empty_graphview_graph()
-        graph.add_node(index=0, attrs={"t": 0, "solution": 1})
-        graph.add_node(index=1, attrs={"t": 1, "solution": 1})
+        graph.add_node(index=0, attrs={"t": 0, "node_solution": True})
+        graph.add_node(index=1, attrs={"t": 1, "node_solution": True})
 
         node_ids = np.array([0, 1])
         seg_ids = np.array([10, 20])
@@ -98,8 +98,8 @@ class TestRelabelSegmentation:
         seg[1, 2, 2] = 2
 
         graph = create_empty_graphview_graph()
-        graph.add_node(index=1, attrs={"t": 0, "solution": 1})
-        graph.add_node(index=2, attrs={"t": 1, "solution": 1})
+        graph.add_node(index=1, attrs={"t": 0, "node_solution": True})
+        graph.add_node(index=2, attrs={"t": 1, "node_solution": True})
 
         node_ids = np.array([1, 2])
         seg_ids = np.array([1, 2])  # Same as node_ids
@@ -120,9 +120,9 @@ class TestRelabelSegmentation:
         seg[0, 3, 3] = 30
 
         graph = create_empty_graphview_graph()
-        graph.add_node(index=1, attrs={"t": 0, "solution": 1})
-        graph.add_node(index=2, attrs={"t": 0, "solution": 1})
-        graph.add_node(index=3, attrs={"t": 0, "solution": 1})
+        graph.add_node(index=1, attrs={"t": 0, "node_solution": True})
+        graph.add_node(index=2, attrs={"t": 0, "node_solution": True})
+        graph.add_node(index=3, attrs={"t": 0, "node_solution": True})
 
         node_ids = np.array([1, 2, 3])
         seg_ids = np.array([10, 20, 30])
