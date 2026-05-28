@@ -34,7 +34,7 @@ class UpdateNodeSeg(BasicAction):
                 (False) from this node. Defaults to True
         """
         super().__init__(tracks)
-        self.node = node
+        self.node = int(node)
         self.mask = mask
         self.added = added
         self._apply()

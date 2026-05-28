@@ -44,7 +44,7 @@ class AddNode(BasicAction):
         """
         super().__init__(tracks)
         self.tracks: SolutionTracks  # Narrow type from base class
-        self.node = node
+        self.node = int(node)
 
         # Get keys from tracks features
         time_key = tracks.features.time_key
@@ -107,7 +107,7 @@ class DeleteNode(BasicAction):
     ):
         super().__init__(tracks)
         self.tracks: SolutionTracks  # Narrow type from base class
-        self.node = node
+        self.node = int(node)
 
         # Save all node feature values from the features dict
         self.attributes = {}

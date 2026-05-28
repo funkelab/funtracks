@@ -110,6 +110,8 @@ def export_to_csv(
     feature_names = []
     if use_display_names:
         for feature_name, feature_dict in tracks.features.items():
+            if feature_dict["feature_type"] != "node":
+                continue
             feature_names.append(feature_name)
             num_values = feature_dict.get("num_values", 1)
 

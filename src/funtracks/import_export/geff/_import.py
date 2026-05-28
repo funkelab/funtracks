@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import tracksdata as td
 from geff._typing import InMemoryGeff
 from geff.core_io._base_read import read_to_memory
-
-from funtracks.annotators import RegionpropsAnnotator
+from tracksdata.nodes import Mask
 
 from .._tracks_builder import TracksBuilder, flatten_name_map
 
@@ -233,30 +233,36 @@ class GeffTracksBuilder(TracksBuilder):
         # Fall back to fuzzy matching when axes metadata is absent or incomplete
         return super().infer_node_name_map()
 
-    def build(self, *args, **kwargs):
-        """Build SolutionTracks and reconstruct Mask objects and segmentation.
+    def construct_graph(
+        self,
+        node_name_map: dict[str, str | list[str]] | None = None,
+        database: str | None = None,
+    ) -> td.graph.GraphView:
+        """Construct graph and prepare embedded segmentation data.
 
-        The geff format serialises mask data as plain numeric arrays (zarr cannot
-        store arbitrary Python objects). After loading we post-process every node
-        that carries both a ``mask`` and a ``bbox`` attribute and wrap the raw array
-        back into a :class:`tracksdata.nodes.Mask` instance, exactly as
-        tracksdata's own ``from_geff`` does.
-
-        Additionally, if ``segmentation_shape`` was written to the zarr attrs during
-        export, restore it in the graph metadata and reconstruct the segmentation
-        as a :class:`tracksdata.array.GraphArrayView`.
+        The GEFF format serialises mask data as plain numeric arrays (zarr
+        cannot store arbitrary Python objects).  After the base graph is built,
+        this override wraps each raw array back into a
+        :class:`tracksdata.nodes.Mask` instance and writes
+        ``segmentation_shape`` into the graph metadata so that
+        :class:`~funtracks.data_model.tracks.Tracks.__init__` can reconstruct
+        the segmentation and create the
+        :class:`~funtracks.annotators.RegionpropsAnnotator` naturally.
         """
-        import tracksdata as td
-        from tracksdata.array import GraphArrayView
-        from tracksdata.nodes import Mask
-
-        tracks = super().build(*args, **kwargs)
+        graph = super().construct_graph(node_name_map, database=database)
 
         mask_key = td.DEFAULT_ATTR_KEYS.MASK
         bbox_key = td.DEFAULT_ATTR_KEYS.BBOX
-        graph = tracks.graph
+        has_mask = mask_key in graph.node_attr_keys()
+        has_bbox = bbox_key in graph.node_attr_keys()
+        if has_mask != has_bbox:
+            raise ValueError(
+                f"GEFF graph has only one of '{mask_key}'/'{bbox_key}'; "
+                "both are required for mask reconstruction."
+            )
 
-        if mask_key in graph.node_attr_keys() and bbox_key in graph.node_attr_keys():
+        if has_mask:
+            # Reconstruct Mask objects from raw numeric arrays
             df = graph.node_attrs(attr_keys=[mask_key, bbox_key])
             node_ids = list(graph.node_ids())
             nodes_to_update = []
@@ -274,36 +280,13 @@ class GeffTracksBuilder(TracksBuilder):
                     node_ids=nodes_to_update,
                 )
 
-            # Reconstruct segmentation from segmentation_shape written by export_to_geff.
-            # Tracks.__init__ already ran (segmentation=None because graph metadata
-            # was not yet populated), so we create the GraphArrayView directly.
-            seg_shape = getattr(self, "_segmentation_shape", None)
-            if seg_shape is not None and tracks.segmentation is None:
-                graph._update_metadata(segmentation_shape=seg_shape)
-                tracks.segmentation = GraphArrayView(
-                    graph=graph,
-                    shape=seg_shape,
-                    attr_key="node_id",
-                    offset=0,
-                )
-                # RegionpropsAnnotator was not created during __init__ because
-                # segmentation was None at that point. Now that segmentation is
-                # available, add it so that newly painted cells get their position
-                # and area computed correctly.
-                if not any(
-                    isinstance(a, RegionpropsAnnotator) for a in tracks.annotators
-                ):
-                    pos_key = (
-                        tracks.features.position_key
-                        if isinstance(tracks.features.position_key, str)
-                        else None
-                    )
-                    tracks.annotators.append(
-                        RegionpropsAnnotator(tracks, pos_key=pos_key)
-                    )
-                    tracks._setup_core_computed_features()
+        # Write segmentation_shape into graph metadata so that
+        # Tracks.__init__ can reconstruct the segmentation and the
+        # RegionpropsAnnotator is created during _get_annotators().
+        if self._segmentation_shape is not None:
+            graph._update_metadata(segmentation_shape=self._segmentation_shape)
 
-        return tracks
+        return graph
 
     def load_source(
         self,

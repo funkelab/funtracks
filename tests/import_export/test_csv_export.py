@@ -171,3 +171,23 @@ def test_export_filtered_nodes(get_tracks, tmp_path):
 
     # Should have header + node 2 + node 1 (ancestor)
     assert len(lines) == 3  # header + 2 nodes
+
+
+def test_ignore_edge_features_at_export(get_tracks, tmp_path):
+    """Test that edge features are ignored when exporting to csv"""
+
+    tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
+    temp_file = tmp_path / "test_export_node_features_only.csv"
+
+    # enable node and edge features
+    tracks.enable_features(["iou", "area"])
+
+    # export should not fail
+    export_to_csv(tracks, temp_file, use_display_names=True)
+
+    # Ensure that node feature 'Area' is present but edge feature 'IoU' is not
+    with open(temp_file) as f:
+        lines = f.readlines()
+
+    assert "Area" in lines[0]
+    assert "IoU" not in lines[0]

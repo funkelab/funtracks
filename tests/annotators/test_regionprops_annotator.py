@@ -100,6 +100,8 @@ class TestRegionpropsAnnotator:
         )
         all_feature_keys = list(rp_ann.all_features.keys())
         to_remove_key = all_feature_keys[1]  # area
+        # area is not auto-enabled, so enable it first before testing disable
+        tracks.enable_features([to_remove_key])
         tracks.disable_features([to_remove_key])
 
         rp_ann.compute()

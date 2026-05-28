@@ -92,7 +92,7 @@ class Tracks:
                 definitions. If provided, time_attr/pos_attr/tracklet_attr are ignored.
                 Assumes that all features in the dict already exist on the graph (will
                 be activated but not recomputed). If None, core computed features (pos,
-                area, track_id) are auto-detected by checking if they exist on the graph.
+                track_id) are auto-detected by checking if they exist on the graph.
             _segmentation (GraphArrayView | None): Internal parameter for reusing an
                 existing GraphArrayView instance. Not intended for public use.
         """
@@ -315,42 +315,37 @@ class Tracks:
         return key in node_attrs
 
     def _setup_core_computed_features(self) -> None:
-        """Sets up the core computed features (area, position, tracklet if applicable)
+        """Sets up core computed features (position, tracklet, lineage).
 
-        Registers position/tracklet features from annotators into FeatureDict
-        For each core feature:
-        - Activates any features listed that are detected to exist (without computing)
-        - Enables any features that don't exist (compute fresh)
+        Registers position/tracklet/lineage features from annotators into
+        FeatureDict.  For each core feature:
+        - Activates any features that are detected to already exist on the graph
+        - Enables (computes) any features that don't exist yet
         """
         # Import here to avoid circular dependency
         from funtracks.annotators import RegionpropsAnnotator, TrackAnnotator
 
-        # Register core features from annotators in the features dict
-        core_computed_features: list[str] = []
+        core_features: list[str] = []
         for annotator in self.annotators:
             if isinstance(annotator, RegionpropsAnnotator):
                 pos_key = annotator.pos_key
                 if self.features.position_key is None:
                     self.features.position_key = pos_key
-                core_computed_features.append(pos_key)
-                # special case for backward compatibility
-                core_computed_features.append("area")
+                core_features.append(pos_key)
             elif isinstance(annotator, TrackAnnotator):
                 tracklet_key = annotator.tracklet_key
                 self.features.tracklet_key = tracklet_key
-                core_computed_features.append(tracklet_key)
+                core_features.append(tracklet_key)
                 lineage_key = annotator.lineage_key
                 self.features.lineage_key = lineage_key
-                core_computed_features.append(lineage_key)
-        for key in core_computed_features:
+                core_features.append(lineage_key)
+        for key in core_features:
             if self._check_existing_feature(key):
-                # Add to FeatureDict if not already there
                 if key not in self.features:
                     feature, _ = self.annotators.all_features[key]
                     self.add_feature(key, feature)
                 self.annotators.activate_features([key])
             else:
-                # enable it (compute it)
                 self.enable_features([key])
 
     def nodes(self):

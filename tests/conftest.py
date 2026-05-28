@@ -17,13 +17,6 @@ if TYPE_CHECKING:
 
     from funtracks.data_model import SolutionTracks, Tracks
 
-# Feature list constants for consistent test usage
-# WITH_SEG means segmentation stored as mask/bbox node attributes
-FEATURES_WITH_SEG = ["pos", "area", "iou", "mask", "bbox"]
-FEATURES_NO_SEG = ["pos"]
-SOLUTION_FEATURES_WITH_SEG = ["pos", "area", "iou", "track_id", "mask", "bbox"]
-SOLUTION_FEATURES_NO_SEG = ["pos", "track_id"]
-
 
 def make_2d_disk_mask(center=(50, 50), radius=20) -> Mask:
     """Create a 2D disk mask with bounding box.
