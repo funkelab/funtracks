@@ -95,6 +95,8 @@ def export_segmentation(
     else:  # tiff
         # Cast to int32 for broad compatibility (e.g. Fiji does not display int64)
         tiff_dtype = np.int32
-        with tifffile.TiffWriter(output_path, bigtiff=False) as tif:
+        with tifffile.TiffWriter(output_path, bigtiff=True) as tif:
             for t in range(shape[0]):
-                tif.write(get_frame(t).astype(tiff_dtype), contiguous=True)
+                tif.write(
+                    get_frame(t).astype(tiff_dtype), contiguous=True
+                )  # compression may prevent contiguous writing
