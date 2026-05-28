@@ -81,38 +81,21 @@ def load_v1_tracks(
         for k, default in all_edge_keys.items():
             edata.setdefault(k, default)
 
-    # Rename old "solution" attribute to "node_solution" / "edge_solution"
-    # and convert int values to bool.
-    first_node_data: dict = next(iter(graph_nx.nodes(data=True)), (None, {}))[1]
-    if "solution" in first_node_data:
-        for _nid in graph_nx.nodes():
-            data = graph_nx.nodes[_nid]
-            data["node_solution"] = bool(data.pop("solution"))
-    first_edge_data: dict = next(iter(graph_nx.edges(data=True)), (None, None, {}))[2]
-    if "solution" in first_edge_data:
-        for _src, _dst, edata in graph_nx.edges(data=True):
-            edata["edge_solution"] = bool(edata.pop("solution"))
-
     graph_td = convert_graph_nx_to_td(graph_nx)
+
+    # Ensure solution Features are registered in the FeatureDict when loading
+    # as a solution. Old saves predate solution being a registered Feature.
+    if solution:
+        features = attrs.get("features")
+        if isinstance(features, FeatureDict):
+            if "node_solution" not in features:
+                features["node_solution"] = Solution("node")
+            if "edge_solution" not in features:
+                features["edge_solution"] = Solution("edge")
 
     # Add mask and bbox attributes to graph if segmentation is available
     if seg is not None:
         graph_td = add_masks_and_bboxes_to_graph(graph_td, seg)
-
-    # Ensure solution Features are in the FeatureDict (older saves predate
-    # their registration as Features).
-    features = attrs.get("features")
-    if isinstance(features, FeatureDict):
-        if (
-            "node_solution" in graph_td.node_attr_keys()
-            and "node_solution" not in features
-        ):
-            features["node_solution"] = Solution("node")
-        if (
-            "edge_solution" in graph_td.edge_attr_keys()
-            and "edge_solution" not in features
-        ):
-            features["edge_solution"] = Solution("edge")
 
     # filtering the warnings because the default values of time_attr and pos_attr are
     # not None. Therefore, new style Tracks attrs that have features instead of
