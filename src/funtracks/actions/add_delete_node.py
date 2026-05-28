@@ -34,12 +34,12 @@ class AddNode(BasicAction):
         Args:
             tracks (Tracks): The Tracks to add the node to
             node (Node): A node id
-            attributes (Attrs): Includes times, track_ids, and optionally positions
+            attributes (Attrs): Includes times, tracklet_ids, and optionally positions
             mask (Mask | None, optional): The segmentation mask associated with
                 the node. Defaults to None.
         Raises:
             ValueError: If time attribute is not in attributes.
-            ValueError: If track_id is not in attributes.
+            ValueError: If tracklet_id is not in attributes.
             ValueError: If mask is None and position is not in attributes.
         """
         super().__init__(tracks)

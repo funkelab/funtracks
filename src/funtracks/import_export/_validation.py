@@ -380,7 +380,7 @@ def validate_in_memory_geff(in_memory_geff: InMemoryGeff) -> None:
     - validate_no_repeated_edges: No duplicate edges
 
     Validates optional properties (warns and removes if invalid):
-    - validate_tracklets: track_id must form valid tracklets
+    - validate_tracklets: tracklet_id must form valid tracklets
     - validate_lineages: lineage_id must form valid lineages
 
     Args:

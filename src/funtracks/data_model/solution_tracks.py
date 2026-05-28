@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 
 class SolutionTracks(Tracks):
-    """Difference from Tracks: every node must have a track_id"""
+    """Difference from Tracks: every node must have a tracklet_id"""
 
     def __init__(
         self,
@@ -31,7 +31,7 @@ class SolutionTracks(Tracks):
     ):
         """Initialize a SolutionTracks object.
 
-        SolutionTracks extends Tracks to ensure every node has a track_id. A
+        SolutionTracks extends Tracks to ensure every node has a tracklet_id. A
         TrackAnnotator is automatically added to manage track IDs.
 
         Args:
@@ -45,7 +45,7 @@ class SolutionTracks(Tracks):
                 - List/tuple of strings for multi-axis (one attribute per axis)
                 Defaults to "pos" if None.
             tracklet_attr (str | None): Graph attribute name for tracklet/track IDs.
-                Defaults to "track_id" if None.
+                Defaults to "tracklet_id" if None.
             lineage_attr (str | None): Graph attribute name for lineage IDs.
                 Defaults to "lineage_id" if None.
             scale (list[float] | None): Scaling factors for each dimension (including
@@ -56,7 +56,8 @@ class SolutionTracks(Tracks):
                 definitions. If provided, time_attr/pos_attr/tracklet_attr are ignored.
                 Assumes that all features in the dict already exist on the graph (will
                 be activated but not recomputed). If None, core computed features (pos,
-                area, track_id) are auto-detected by checking if they exist on the graph.
+                area, tracklet_id) are auto-detected by checking if they exist on the
+                graph.
             _segmentation (GraphArrayView | None): Internal parameter for reusing an
                 existing GraphArrayView instance. Not intended for public use.
         """
@@ -95,7 +96,7 @@ class SolutionTracks(Tracks):
     @classmethod
     def from_tracks(cls, tracks: Tracks):
         force_recompute = False
-        # Check if all nodes have track_id before trusting existing track IDs
+        # Check if all nodes have tracklet_id before trusting existing track IDs
         if (
             tracks.features.tracklet_key is not None
             and (
