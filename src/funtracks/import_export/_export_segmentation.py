@@ -22,11 +22,15 @@ def resolve_relabel_attr(
 ) -> str | None:
     """Resolve a ``relabel`` option to the corresponding graph attribute key.
 
+    Validates that the resolved key is both configured on the ``Tracks``
+    features and present as a node attribute in the graph.
+
     Returns:
         The attribute key string, or ``None`` when *relabel* is ``None``.
 
     Raises:
-        ValueError: If the requested key is not configured on *tracks*.
+        ValueError: If the requested key is not configured on *tracks* or is
+            not present as a node attribute.
     """
     if relabel == "tracklet":
         label_attr = tracks.features.tracklet_key
@@ -34,13 +38,21 @@ def resolve_relabel_attr(
             raise ValueError(
                 "relabel='tracklet' requested but tracks has no tracklet key."
             )
-        return label_attr
-    if relabel == "lineage":
+    elif relabel == "lineage":
         label_attr = tracks.features.lineage_key
         if label_attr is None:
             raise ValueError("relabel='lineage' requested but tracks has no lineage key.")
-        return label_attr
-    return None
+    else:
+        return None
+
+    existing_attrs = tracks.graph.node_attr_keys()
+    if label_attr not in existing_attrs:
+        raise ValueError(
+            f"relabel='{relabel}' resolved to attribute '{label_attr}', "
+            f"which is not a node attribute. "
+            f"Available attributes: {existing_attrs}"
+        )
+    return label_attr
 
 
 def export_segmentation(
@@ -80,15 +92,6 @@ def export_segmentation(
 
     # Resolve the graph attribute key from the relabel option
     label_attr = resolve_relabel_attr(tracks, relabel)
-
-    if label_attr is not None:
-        existing_attrs = tracks.graph.node_attr_keys()
-        if label_attr not in existing_attrs:
-            raise ValueError(
-                f"relabel='{relabel}' resolved to attribute '{label_attr}', "
-                f"which is not a node attribute. "
-                f"Available attributes: {existing_attrs}"
-            )
 
     shape = tracks.segmentation.shape
 

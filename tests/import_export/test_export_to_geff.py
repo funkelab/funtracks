@@ -11,7 +11,7 @@ from funtracks.import_export import export_to_geff
 @pytest.mark.parametrize("ndim", [3, 4])
 @pytest.mark.parametrize("with_seg", [True, False])
 @pytest.mark.parametrize("save_segmentation", [True, False])
-@pytest.mark.parametrize("seg_relabel", ["tracklet", None])
+@pytest.mark.parametrize("seg_relabel", ["tracklet", "lineage", None])
 @pytest.mark.parametrize("is_solution", [True, False])
 @pytest.mark.parametrize("pos_attr_type", (str, list))
 def test_export_to_geff(
@@ -64,8 +64,13 @@ def test_export_to_geff(
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=is_solution)
 
     # Exporting segmentation with a label_attr not present in the graph raises ValueError.
-    # Non-solution tracks don't have track_id as a node attribute.
-    if with_seg and save_segmentation and seg_relabel == "tracklet" and not is_solution:
+    # Non-solution tracks don't have tracklet_id or lineage_id as node attributes.
+    if (
+        with_seg
+        and save_segmentation
+        and seg_relabel in ("tracklet", "lineage")
+        and not is_solution
+    ):
         export_dir = tmp_path / "export"
         export_dir.mkdir()
         with pytest.raises(ValueError):
@@ -97,8 +102,11 @@ def test_export_to_geff(
         assert seg_zarr.shape == tracks.segmentation.shape
         unique_vals = set(seg_zarr[:].flatten()) - {0}
         if seg_relabel is not None:
-            # values should be the relabel attr values (e.g. tracklet_ids)
-            label_key = tracks.features.tracklet_key
+            # values should be the relabel attr values (e.g. tracklet_ids or lineage_ids)
+            if seg_relabel == "lineage":
+                label_key = tracks.features.lineage_key
+            else:
+                label_key = tracks.features.tracklet_key
             label_vals = set(
                 tracks.graph.node_attrs(attr_keys=[label_key])[label_key].to_list()
             )
@@ -185,7 +193,10 @@ def test_export_to_geff(
         assert isinstance(seg_zarr, zarr.Array)
         assert seg_zarr.shape == tracks.segmentation.shape
         if seg_relabel is not None:
-            label_key = tracks.features.tracklet_key
+            if seg_relabel == "lineage":
+                label_key = tracks.features.lineage_key
+            else:
+                label_key = tracks.features.tracklet_key
             kept_vals = set(
                 tracks.graph.filter(node_ids=[1, 3, 4, 6])
                 .node_attrs(attr_keys=[label_key])[label_key]
