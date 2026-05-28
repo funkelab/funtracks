@@ -4,6 +4,9 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
+from funtracks.exceptions import InvalidActionError
+from funtracks.utils.tracksdata_utils import pixels_to_td_mask
+
 from ..actions._base import ActionGroup
 from ..actions.update_segmentation import UpdateNodeSeg
 from .user_add_node import UserAddNode
@@ -11,8 +14,6 @@ from .user_delete_node import UserDeleteNode
 
 if TYPE_CHECKING:
     from funtracks.data_model import SolutionTracks
-
-from funtracks.utils.tracksdata_utils import pixels_to_td_mask
 
 
 class UserUpdateSegmentation(ActionGroup):
@@ -86,16 +87,23 @@ class UserUpdateSegmentation(ActionGroup):
                     time_key: time,
                     tracklet_key: current_track_id,
                 }
-                self.actions.append(
-                    UserAddNode(
-                        tracks,
-                        new_value,
-                        attributes=attrs,
-                        pixels=all_pixels,
-                        force=force,
-                        _top_level=False,
+                try:
+                    self.actions.append(
+                        UserAddNode(
+                            tracks,
+                            new_value,
+                            attributes=attrs,
+                            pixels=all_pixels,
+                            force=force,
+                            _top_level=False,
+                        )
                     )
-                )
+                except InvalidActionError:
+                    if len(self.actions) > 0:
+                        for action in self.actions:
+                            action.inverse()
+                    return
+
                 node_to_select = new_value
 
         self.tracks.action_history.add_new_action(self)
