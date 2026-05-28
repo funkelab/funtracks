@@ -16,6 +16,33 @@ if TYPE_CHECKING:
     from funtracks.data_model.tracks import Tracks
 
 
+def resolve_relabel_attr(
+    tracks: Tracks,
+    relabel: Literal["tracklet", "lineage", None],
+) -> str | None:
+    """Resolve a ``relabel`` option to the corresponding graph attribute key.
+
+    Returns:
+        The attribute key string, or ``None`` when *relabel* is ``None``.
+
+    Raises:
+        ValueError: If the requested key is not configured on *tracks*.
+    """
+    if relabel == "tracklet":
+        label_attr = tracks.features.tracklet_key
+        if label_attr is None:
+            raise ValueError(
+                "relabel='tracklet' requested but tracks has no tracklet key."
+            )
+        return label_attr
+    if relabel == "lineage":
+        label_attr = tracks.features.lineage_key
+        if label_attr is None:
+            raise ValueError("relabel='lineage' requested but tracks has no lineage key.")
+        return label_attr
+    return None
+
+
 def export_segmentation(
     tracks: Tracks,
     output_path: Path,
@@ -52,18 +79,7 @@ def export_segmentation(
         raise ValueError("tracks.segmentation is None — cannot export segmentation.")
 
     # Resolve the graph attribute key from the relabel option
-    if relabel == "tracklet":
-        label_attr = tracks.features.tracklet_key
-        if label_attr is None:
-            raise ValueError(
-                "relabel='tracklet' requested but tracks has no tracklet key."
-            )
-    elif relabel == "lineage":
-        label_attr = tracks.features.lineage_key
-        if label_attr is None:
-            raise ValueError("relabel='lineage' requested but tracks has no lineage key.")
-    else:
-        label_attr = None
+    label_attr = resolve_relabel_attr(tracks, relabel)
 
     if label_attr is not None:
         existing_attrs = tracks.graph.node_attr_keys()

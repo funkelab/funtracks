@@ -12,7 +12,7 @@ from geff_spec import GeffMetadata
 
 from funtracks.utils import remove_tilde, setup_zarr_group
 
-from .._export_segmentation import export_segmentation
+from .._export_segmentation import export_segmentation, resolve_relabel_attr
 from .._utils import filter_graph_with_ancestors
 
 if TYPE_CHECKING:
@@ -113,12 +113,7 @@ def export_to_geff(
             zarr_format=zarr_format,
             node_ids=set(nodes_to_keep) if node_ids is not None else None,
         )
-        if seg_relabel == "tracklet":
-            label_prop = tracks.features.tracklet_key
-        elif seg_relabel == "lineage":
-            label_prop = tracks.features.lineage_key
-        else:
-            label_prop = "node_id"
+        label_prop = resolve_relabel_attr(tracks, seg_relabel) or "node_id"
         metadata.related_objects = [
             {
                 "path": f"{rel_prefix}/{seg_name}",
