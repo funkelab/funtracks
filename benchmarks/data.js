@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1779752550770,
+  "lastUpdate": 1779975534492,
   "repoUrl": "https://github.com/funkelab/funtracks",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -527,6 +527,37 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 1.9843171689999508 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "malinmayorc@janelia.hhmi.org",
+            "name": "Caroline Malin-Mayor",
+            "username": "cmalinmayor"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fc0bef40b97f7cb40e81755d4b0a7928765db462",
+          "message": "Merge pull request #220 from funkelab/allow_big_tiff\n\nallow big tiff and compression when exporting seg to tiff",
+          "timestamp": "2026-05-28T09:38:18-04:00",
+          "tree_id": "2017c30954794612f2b9867d5e0714ce3b22c37f",
+          "url": "https://github.com/funkelab/funtracks/commit/fc0bef40b97f7cb40e81755d4b0a7928765db462"
+        },
+        "date": 1779975533064,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_compute_graph_from_seg",
+            "value": 0.3453859552451328,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 2.8953117080000084 sec\nrounds: 1"
           }
         ]
       }
