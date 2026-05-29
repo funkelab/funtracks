@@ -5,7 +5,10 @@ from funtracks.actions import AddNode
 from funtracks.data_model import SolutionTracks, Tracks
 from funtracks.import_export import export_to_csv
 from funtracks.user_actions import UserUpdateSegmentation
-from funtracks.utils.tracksdata_utils import create_empty_graphview_graph
+from funtracks.utils.tracksdata_utils import (
+    create_empty_graphview_graph,
+    td_mask_to_pixels,
+)
 
 track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
 
@@ -75,7 +78,7 @@ def test_update_segmentation(graph_2d_with_segmentation):
         ndim=3,
         **track_attrs,
     )
-    pix = tracks.get_pixels(1)
+    pix = td_mask_to_pixels(tracks.get_mask(1), tracks.get_time(1), ndim=tracks.ndim)
     assert isinstance(pix, tuple)
     UserUpdateSegmentation(
         tracks,
@@ -116,6 +119,7 @@ def test_export_to_csv_with_display_names(
     """Test CSV export with use_display_names=True option."""
     # Test 2D with display names
     tracks = SolutionTracks(graph_2d_with_segmentation, **track_attrs, ndim=3)
+    tracks.enable_features(["area"])
     temp_file = tmp_path / "test_export_2d_display.csv"
     export_to_csv(tracks, temp_file, use_display_names=True)
     with open(temp_file) as f:
@@ -123,12 +127,13 @@ def test_export_to_csv_with_display_names(
 
     assert len(lines) == tracks.graph.num_nodes() + 1  # add header
 
-    # With display names: ID, Parent ID, Time, y, x, Tracklet ID, Lineage ID
-    header = ["ID", "Parent ID", "Time", "y", "x", "Area", "Tracklet ID", "Lineage ID"]
+    # With display names: ID, Parent ID, Time, y, x, Tracklet ID, Lineage ID, Area
+    header = ["ID", "Parent ID", "Time", "y", "x", "Tracklet ID", "Lineage ID", "Area"]
     assert lines[0].strip().split(",") == header
 
-    # Test 3D with display names
+    # Test 3D with display names (area display name is "Volume" in 3D)
     tracks = SolutionTracks(graph_3d_with_segmentation, **track_attrs, ndim=4)
+    tracks.enable_features(["area"])
     temp_file = tmp_path / "test_export_3d_display.csv"
     export_to_csv(tracks, temp_file, use_display_names=True)
     with open(temp_file) as f:
@@ -136,7 +141,7 @@ def test_export_to_csv_with_display_names(
 
     assert len(lines) == tracks.graph.num_nodes() + 1  # add header
 
-    # With display names: ID, Parent ID, Time, z, y, x, Tracklet ID, Lineage ID
+    # With display names: ID, Parent ID, Time, z, y, x, Tracklet ID, Lineage ID, Volume
     header = [
         "ID",
         "Parent ID",
@@ -144,9 +149,9 @@ def test_export_to_csv_with_display_names(
         "z",
         "y",
         "x",
-        "Volume",
         "Tracklet ID",
         "Lineage ID",
+        "Volume",
     ]
     assert lines[0].strip().split(",") == header
 

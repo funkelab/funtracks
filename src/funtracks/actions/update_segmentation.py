@@ -34,7 +34,7 @@ class UpdateNodeSeg(BasicAction):
                 (False) from this node. Defaults to True
         """
         super().__init__(tracks)
-        self.node = node
+        self.node = int(node)
         self.mask = mask
         self.added = added
         self._apply()
@@ -77,9 +77,5 @@ class UpdateNodeSeg(BasicAction):
                 },
                 node_ids=[value],
             )
-
-        # Invalidate cache for affected chunks
-        time = self.tracks.get_time(self.node)
-        self.tracks._update_segmentation_cache(mask=mask_new, time=time)
 
         self.tracks.notify_annotators(self)

@@ -1,10 +1,10 @@
 import numpy as np
 import pytest
+from tracksdata.nodes import Mask
 
 from funtracks.actions import UpdateNodeSeg, UpdateTrackIDs
 from funtracks.annotators import RegionpropsAnnotator
 from funtracks.data_model import SolutionTracks, Tracks
-from funtracks.utils.tracksdata_utils import pixels_to_td_mask
 
 track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
 
@@ -60,14 +60,13 @@ class TestRegionpropsAnnotator:
         # Enable features through tracks
         tracks.enable_features(list(rp_ann.all_features.keys()))
 
-        orig_pixels = tracks.get_pixels(node_id)
-        # remove all but one pixel
-        pixels_to_remove = tuple(orig_pixels[d][1:] for d in range(len(orig_pixels)))
-        mask_to_remove = pixels_to_td_mask(pixels_to_remove, ndim=ndim)
+        node_mask = tracks.get_mask(node_id)
+        removal = Mask(node_mask.mask.copy(), node_mask.bbox)
+        removal.mask.flat[np.argmax(removal.mask.flat)] = False
         expected_area = 1
 
         # Use UpdateNodeSeg action to modify segmentation and update features
-        UpdateNodeSeg(tracks, node_id, mask_to_remove, added=False)
+        UpdateNodeSeg(tracks, node_id, removal, added=False)
         assert tracks.get_node_attr(node_id, "area") == expected_area
         for key in rp_ann.features:
             assert key in tracks.graph.node_attr_keys()
@@ -101,6 +100,8 @@ class TestRegionpropsAnnotator:
         )
         all_feature_keys = list(rp_ann.all_features.keys())
         to_remove_key = all_feature_keys[1]  # area
+        # area is not auto-enabled, so enable it first before testing disable
+        tracks.enable_features([to_remove_key])
         tracks.disable_features([to_remove_key])
 
         rp_ann.compute()
@@ -114,12 +115,12 @@ class TestRegionpropsAnnotator:
 
         # remove all but one pixel
         node_id = 3
-        orig_pixels = tracks.get_pixels(node_id)
-        assert orig_pixels is not None
-        pixels_to_remove = tuple(orig_pixels[d][1:] for d in range(len(orig_pixels)))
-        mask_to_remove = pixels_to_td_mask(pixels_to_remove, ndim=ndim)
+        node_mask = tracks.get_mask(node_id)
+        assert node_mask is not None
+        removal = Mask(node_mask.mask.copy(), node_mask.bbox)
+        removal.mask.flat[np.argmax(removal.mask.flat)] = False
         # Use UpdateNodeSeg action to modify segmentation and update features
-        UpdateNodeSeg(tracks, node_id, mask_to_remove, added=False)
+        UpdateNodeSeg(tracks, node_id, removal, added=False)
         # the one we added back in is now present
         assert tracks.get_node_attr(node_id, to_remove_key) is not None
 
@@ -186,22 +187,17 @@ class TestRegionpropsAnnotator:
         node_id = 1
         initial_area = tracks.get_node_attr(node_id, "area")
 
-        # Manually modify segmentation (without triggering an action)
-        # Remove half the pixels from node 1
-        orig_pixels = tracks.get_pixels(node_id)
-        assert orig_pixels is not None
+        # Make the stored area stale by writing a fake value directly to the graph,
+        # bypassing the action system. If UpdateTrackIDs incorrectly triggers
+        # RegionpropsAnnotator, it would recompute area back to initial_area and
+        # the assertion below would fail.
+        fake_area = initial_area + 999
+        tracks.graph.update_node_attrs(attrs={"area": [fake_area]}, node_ids=[node_id])
 
-        # If we recomputed area now, it would be different
-        # But we won't - we'll just call UpdateTrackID
-
-        # Get original track_id
         original_track_id = tracks.get_track_id(node_id)
         new_track_id = original_track_id + 100
 
-        # Perform UpdateTrackIDs action
         UpdateTrackIDs(tracks, node_id, new_track_id)
 
-        # Area should remain unchanged (no recomputation happened despite seg change)
-        assert tracks.get_node_attr(node_id, "area") == initial_area
-        # But track_id should be updated
+        assert tracks.get_node_attr(node_id, "area") == fake_area
         assert tracks.get_track_id(node_id) == new_track_id

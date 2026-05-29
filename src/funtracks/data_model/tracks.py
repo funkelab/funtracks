@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import itertools
 import logging
 from collections.abc import Iterable, Sequence
 from typing import (
@@ -20,7 +19,6 @@ from tracksdata.nodes import Mask
 from funtracks.actions.action_history import ActionHistory
 from funtracks.features import Feature, FeatureDict, Position, Time
 from funtracks.utils.tracksdata_utils import (
-    td_mask_to_pixels,
     to_polars_dtype,
 )
 
@@ -94,7 +92,7 @@ class Tracks:
                 definitions. If provided, time_attr/pos_attr/tracklet_attr are ignored.
                 Assumes that all features in the dict already exist on the graph (will
                 be activated but not recomputed). If None, core computed features (pos,
-                area, track_id) are auto-detected by checking if they exist on the graph.
+                track_id) are auto-detected by checking if they exist on the graph.
             _segmentation (GraphArrayView | None): Internal parameter for reusing an
                 existing GraphArrayView instance. Not intended for public use.
         """
@@ -317,42 +315,37 @@ class Tracks:
         return key in node_attrs
 
     def _setup_core_computed_features(self) -> None:
-        """Sets up the core computed features (area, position, tracklet if applicable)
+        """Sets up core computed features (position, tracklet, lineage).
 
-        Registers position/tracklet features from annotators into FeatureDict
-        For each core feature:
-        - Activates any features listed that are detected to exist (without computing)
-        - Enables any features that don't exist (compute fresh)
+        Registers position/tracklet/lineage features from annotators into
+        FeatureDict.  For each core feature:
+        - Activates any features that are detected to already exist on the graph
+        - Enables (computes) any features that don't exist yet
         """
         # Import here to avoid circular dependency
         from funtracks.annotators import RegionpropsAnnotator, TrackAnnotator
 
-        # Register core features from annotators in the features dict
-        core_computed_features: list[str] = []
+        core_features: list[str] = []
         for annotator in self.annotators:
             if isinstance(annotator, RegionpropsAnnotator):
                 pos_key = annotator.pos_key
                 if self.features.position_key is None:
                     self.features.position_key = pos_key
-                core_computed_features.append(pos_key)
-                # special case for backward compatibility
-                core_computed_features.append("area")
+                core_features.append(pos_key)
             elif isinstance(annotator, TrackAnnotator):
                 tracklet_key = annotator.tracklet_key
                 self.features.tracklet_key = tracklet_key
-                core_computed_features.append(tracklet_key)
+                core_features.append(tracklet_key)
                 lineage_key = annotator.lineage_key
                 self.features.lineage_key = lineage_key
-                core_computed_features.append(lineage_key)
-        for key in core_computed_features:
+                core_features.append(lineage_key)
+        for key in core_features:
             if self._check_existing_feature(key):
-                # Add to FeatureDict if not already there
                 if key not in self.features:
                     feature, _ = self.annotators.all_features[key]
                     self.add_feature(key, feature)
                 self.annotators.activate_features([key])
             else:
-                # enable it (compute it)
                 self.enable_features([key])
 
     def nodes(self):
@@ -536,76 +529,6 @@ class Tracks:
 
         mask = self.graph.nodes[node][td.DEFAULT_ATTR_KEYS.MASK]
         return mask
-
-    def get_pixels(self, node: Node) -> tuple[np.ndarray, ...] | None:
-        """Get the pixels corresponding to each node in the nodes list.
-
-        Args:
-            node (Node): A  node to get the pixels for.
-
-        Returns:
-            tuple[np.ndarray, ...] | None: A tuple representing the pixels for the input
-            node, or None if the segmentation is None. The tuple will have length equal
-            to the number of segmentation dimensions, and can be used to index the
-            segmentation.
-        """
-        if self.segmentation is None:
-            return None
-
-        # Get time and mask for the node
-        mask = self.graph.nodes[node][td.DEFAULT_ATTR_KEYS.MASK]
-        time = self.get_time(node)
-
-        # Convert to pixels
-        pixels = td_mask_to_pixels(mask, time, ndim=self.ndim)
-
-        return pixels
-
-    def _update_segmentation_cache(self, mask: td.Mask, time: int) -> None:
-        """Invalidate cached chunks that overlap with the given mask.
-
-        Args:
-            mask: Mask object with .bbox attribute defining the affected region
-            time: Time point of the mask
-        """
-        if self.segmentation is None:
-            return
-
-        cache = self.segmentation._cache
-
-        # Only invalidate if this time point is in the cache
-        if time not in cache._store:
-            return
-
-        # Convert bbox to slices directly
-        # bbox format: [z_min, y_min, x_min, z_max, y_max, x_max] (3D)
-        # or [y_min, x_min, y_max, x_max] (2D)
-        ndim = len(mask.bbox) // 2
-        volume_slicing = tuple(
-            slice(mask.bbox[i], mask.bbox[i + ndim] + 1) for i in range(ndim)
-        )
-
-        # Use cache's method to get chunk bounds (same logic as cache.get())
-        bounds = cache._chunk_bounds(volume_slicing)
-        chunk_ranges = [range(lo, hi + 1) for lo, hi in bounds]
-
-        # Invalidate all affected chunks
-        cache_entry = cache._store[time]
-        for chunk_idx in itertools.product(*chunk_ranges):
-            if all(
-                0 <= idx < grid_size
-                for idx, grid_size in zip(chunk_idx, cache.grid_shape, strict=True)
-            ):
-                cache_entry.ready[chunk_idx] = False
-                # Clear the buffer to ensure stale data isn't used
-                # when the chunk is recomputed
-                chunk_slc = tuple(
-                    slice(ci * cs, min((ci + 1) * cs, fs))
-                    for ci, cs, fs in zip(
-                        chunk_idx, cache.chunk_shape, cache.shape, strict=True
-                    )
-                )
-                cache_entry.buffer[chunk_slc] = 0
 
     def undo(self) -> bool:
         """Undo the last performed action from the action history.
