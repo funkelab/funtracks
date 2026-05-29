@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1779995072456,
+  "lastUpdate": 1780017193420,
   "repoUrl": "https://github.com/funkelab/funtracks",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -589,6 +589,37 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 2.5565230649999933 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "45037215+TeunHuijben@users.noreply.github.com",
+            "name": "Teun Huijben",
+            "username": "TeunHuijben"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c2b542a1f1d60520dbd59e2714bc2dc5f16a8ea0",
+          "message": "graph.nodes|edges setter doesn't need list (#207)\n\n* graph.nodes|edges setter doesnt need list\n\n* newest td release, including single node api change",
+          "timestamp": "2026-05-28T18:12:37-07:00",
+          "tree_id": "2264f027b8a359a37bd1c3981fa91900c885cb73",
+          "url": "https://github.com/funkelab/funtracks/commit/c2b542a1f1d60520dbd59e2714bc2dc5f16a8ea0"
+        },
+        "date": 1780017191233,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_compute_graph_from_seg",
+            "value": 0.386028971932945,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 2.5904791420000066 sec\nrounds: 1"
           }
         ]
       }
