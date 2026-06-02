@@ -83,12 +83,11 @@ def load_v1_tracks(
 
     graph_td = convert_graph_nx_to_td(graph_nx)
 
-    # Ensure solution Feature is registered in the FeatureDict when loading
-    # as a solution. Old saves predate solution being a registered Feature.
-    if solution:
-        features = attrs.get("features")
-        if isinstance(features, FeatureDict) and "solution" not in features:
-            features["solution"] = Solution()
+    # Ensure solution Feature is registered in the FeatureDict.
+    # Old saves predate solution being a registered Feature.
+    features = attrs.get("features")
+    if isinstance(features, FeatureDict) and "solution" not in features:
+        features["solution"] = Solution()
 
     # Add mask and bbox attributes to graph if segmentation is available
     if seg is not None:

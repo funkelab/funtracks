@@ -383,16 +383,16 @@ def get_tracks(get_graph) -> Callable[..., "Tracks | SolutionTracks"]:
         graph = get_graph(ndim=ndim, is_solution=is_solution, with_seg=with_seg)
 
         # Build FeatureDict based on what exists in the graph
-        features_dict = {
+        features_dict: dict[str, Any] = {
             "t": Time(),
             "pos": Position(axes=axis_names),
+            "solution": Solution(),
         }
 
         if with_seg:
             features_dict["area"] = Area(ndim=ndim)
             features_dict["iou"] = IoU()
         if is_solution:
-            features_dict["solution"] = Solution()
             features_dict["track_id"] = TrackletID()
             features_dict["lineage_id"] = LineageID()
 
