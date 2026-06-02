@@ -156,9 +156,7 @@ def test_memory_graph_survives_thread_boundary():
             node_attributes=["pos"],
             ndim=3,
         )
-        graph.bulk_add_nodes(
-            [{"t": 0, "pos": [1.0, 2.0], "node_solution": True}], indices=[1]
-        )
+        graph.bulk_add_nodes([{"t": 0, "pos": [1.0, 2.0], "solution": True}], indices=[1])
         result["graph"] = graph
 
     t = threading.Thread(target=worker)
@@ -183,8 +181,8 @@ def test_create_empty_graphview_graph_with_solution_attr():
     """
     # Should not raise ValueError even though solution is listed explicitly
     graph = create_empty_graphview_graph(
-        node_attributes=["node_solution"],
-        edge_attributes=["edge_solution"],
+        node_attributes=["solution"],
+        edge_attributes=["solution"],
         node_default_values=[True],
         edge_default_values=[True],
     )

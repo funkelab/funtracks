@@ -124,7 +124,7 @@ def test_delete_missing_edge(get_tracks):
 def test_delete_edge_triple_div(get_tracks):
     tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
     attrs = {}
-    attrs["edge_solution"] = True
+    attrs["solution"] = True
     attrs["iou"] = 0.9
 
     tracks.graph.add_edge(

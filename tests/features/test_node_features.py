@@ -85,22 +85,13 @@ def test_perimeter_feature():
 
 
 def test_solution_feature():
-    """Test that Solution() returns valid Feature TypedDicts for both node and edge."""
-    node_feat = Solution("node")
-    assert node_feat["feature_type"] == "node"
-    assert node_feat["value_type"] == "bool"
-    assert node_feat["num_values"] == 1
-    assert node_feat["display_name"] == "Solution"
-    assert node_feat["default_value"] is True
-
-    edge_feat = Solution("edge")
-    assert edge_feat["feature_type"] == "edge"
-    assert edge_feat["value_type"] == "bool"
-    assert edge_feat["default_value"] is True
-
-    # Default is "node"
-    default_feat = Solution()
-    assert default_feat["feature_type"] == "node"
+    """Test that Solution() returns a valid Feature TypedDict for node and edge."""
+    feat = Solution()
+    assert feat["feature_type"] == ["node", "edge"]
+    assert feat["value_type"] == "bool"
+    assert feat["num_values"] == 1
+    assert feat["display_name"] == "Solution"
+    assert feat["default_value"] is True
 
 
 def test_feature_as_dict():

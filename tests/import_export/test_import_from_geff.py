@@ -492,7 +492,7 @@ def test_import_from_geff_roundtrip_auto_axes(tmp_path):
                 "area": 1681.0,
                 "track_id": 1,
                 "lineage_id": 1,
-                "node_solution": True,
+                "solution": True,
                 td.DEFAULT_ATTR_KEYS.MASK: _make_mask(bbox),
                 td.DEFAULT_ATTR_KEYS.BBOX: np.array(bbox, dtype=np.int64),
             }
@@ -613,7 +613,7 @@ def test_import_from_geff_warns_missing_segmentation_shape(tmp_path):
             {
                 "t": 0,
                 "pos": np.array([50.0, 50.0]),
-                "node_solution": True,
+                "solution": True,
                 td.DEFAULT_ATTR_KEYS.MASK: _make_mask(bbox),
                 td.DEFAULT_ATTR_KEYS.BBOX: np.array(bbox, dtype=np.int64),
             }
@@ -837,7 +837,7 @@ def test_embedded_seg_ellipse_axis_radii_feature_metadata(tmp_path):
                 "ellipse_axis_radii": np.array([20.0, 15.0]),
                 "track_id": 1,
                 "lineage_id": 1,
-                "node_solution": True,
+                "solution": True,
                 td.DEFAULT_ATTR_KEYS.MASK: _make_mask(bbox),
                 td.DEFAULT_ATTR_KEYS.BBOX: np.array(bbox, dtype=np.int64),
             }

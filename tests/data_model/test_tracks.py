@@ -202,7 +202,7 @@ def test_set_pixels_no_segmentation(graph_2d_with_track_id):
 def test_compute_ndim_errors():
     g = create_empty_graphview_graph()
     g.add_node_attr_key("pos", default_value=[0, 0], dtype=pl.List(pl.Int64))
-    g.add_node(index=1, attrs={"t": 0, "pos": [0, 0, 0], "node_solution": True})
+    g.add_node(index=1, attrs={"t": 0, "pos": [0, 0, 0], "solution": True})
 
     with pytest.raises(
         ValueError, match="Cannot compute dimensions from segmentation or scale"

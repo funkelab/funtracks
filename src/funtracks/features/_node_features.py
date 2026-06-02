@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 from ._feature import Feature
 
@@ -23,17 +23,14 @@ def Time() -> Feature:
     }
 
 
-def Solution(feature_type: Literal["node", "edge"] = "node") -> Feature:
-    """A feature to hold the boolean solution status of a node or edge.
-
-    Args:
-        feature_type: Whether this solution applies to nodes or edges.
+def Solution() -> Feature:
+    """A feature to hold the boolean solution status of nodes and edges.
 
     Returns:
         Feature: A feature dict representing solution status.
     """
     return {
-        "feature_type": feature_type,
+        "feature_type": ["node", "edge"],
         "value_type": "bool",
         "num_values": 1,
         "display_name": "Solution",

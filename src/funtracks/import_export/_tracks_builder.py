@@ -497,7 +497,7 @@ class TracksBuilder(ABC):
         node_attrs = []
         for idx in range(len(self.in_memory_geff["node_ids"])):
             node_attr = {}
-            node_attr["node_solution"] = True  # Add default solution value
+            node_attr["solution"] = True  # Add default solution value
             for key, prop in self.in_memory_geff["node_props"].items():
                 # force time key to be "t" in graph
                 if key == self.TIME_ATTR:
@@ -517,7 +517,7 @@ class TracksBuilder(ABC):
             edge_attr = {}
             edge_attr["source_id"] = int(self.in_memory_geff["edge_ids"][idx][0])
             edge_attr["target_id"] = int(self.in_memory_geff["edge_ids"][idx][1])
-            edge_attr["edge_solution"] = True  # Default solution value
+            edge_attr["solution"] = True  # Default solution value
             for key, prop in self.in_memory_geff["edge_props"].items():
                 value = prop["values"][idx]
                 if prop.get("missing") is not None and prop["missing"][idx]:

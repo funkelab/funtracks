@@ -238,11 +238,9 @@ class Tracks:
             feature_dict.register_position_feature(single_position_key, pos_feature)
         # else: single pos_attr with segmentation - RegionpropsAnnotator will handle it
 
-        # Register solution features when present on the graph
-        if "node_solution" in self.graph.node_attr_keys():
-            feature_dict["node_solution"] = Solution("node")
-        if "edge_solution" in self.graph.edge_attr_keys():
-            feature_dict["edge_solution"] = Solution("edge")
+        # Register solution feature when present on the graph
+        if "solution" in self.graph.node_attr_keys():
+            feature_dict["solution"] = Solution()
 
         return feature_dict
 
@@ -716,7 +714,8 @@ class Tracks:
         self.features[key] = feature
 
         # Perform custom graph operations when a feature is added
-        if feature["feature_type"] == "node" and key not in self.graph.node_attr_keys():
+        ft = feature["feature_type"]
+        if "node" in ft and key not in self.graph.node_attr_keys():
             dtype = to_polars_dtype(feature["value_type"])
             num_values = feature.get("num_values")
             if num_values is not None and num_values > 1:
@@ -726,7 +725,7 @@ class Tracks:
                 default_value=feature["default_value"],
                 dtype=dtype,
             )
-        elif feature["feature_type"] == "edge" and key not in self.graph.edge_attr_keys():
+        if "edge" in ft and key not in self.graph.edge_attr_keys():
             self.graph.add_edge_attr_key(
                 key,
                 default_value=feature["default_value"],
@@ -748,7 +747,7 @@ class Tracks:
         # Perform custom graph operations when a feature is deleted
         if feature := self.annotators.all_features.get(key):
             feature_type = feature[0]["feature_type"]
-            if feature_type == "node" and key in self.graph.node_attr_keys():
+            if "node" in feature_type and key in self.graph.node_attr_keys():
                 self.graph.remove_node_attr_key(key)
-            elif feature_type == "edge" and key in self.graph.edge_attr_keys():
+            if "edge" in feature_type and key in self.graph.edge_attr_keys():
                 self.graph.remove_edge_attr_key(key)
