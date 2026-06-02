@@ -171,6 +171,81 @@ classDiagram
     GraphAnnotator --> Tracks : references
 ```
 
+## Feature Keys and Graph Attributes
+
+### Two Layers: Metadata vs. Semantics
+
+The `Feature` TypedDict is pure **metadata** — it describes *how* to handle a feature's
+data (value type, number of values, display name, spatial dimensions). It does not
+describe *what* the feature means.
+
+The **semantic meaning** of a feature — "this attribute stores tracklet IDs" or "this
+attribute stores positions" — is tracked by special key pointers on `FeatureDict`:
+
+- `FeatureDict.time_key` — which graph attribute stores time
+- `FeatureDict.position_key` — which graph attribute stores position
+- `FeatureDict.tracklet_key` — which graph attribute stores tracklet IDs
+- `FeatureDict.lineage_key` — which graph attribute stores lineage IDs
+
+These pointers are the **source of truth** for where core semantic concepts live on
+the graph. The rest of funtracks (export, validation, annotators) reads these pointers
+rather than assuming hardcoded attribute names.
+
+### Default vs. Custom Attribute Names
+
+Each core semantic feature has a default attribute name (e.g., `"tracklet_id"` for
+tracklet IDs, `"pos"` for position). These defaults are used when no explicit name is
+provided:
+
+```python
+# Uses default: tracklet_key="tracklet_id"
+tracks = SolutionTracks(graph=graph)
+
+# Uses custom attribute name
+tracks = SolutionTracks(graph=graph, tracklet_attr="my_track_col")
+```
+
+Custom attribute names are also supported through `FeatureDict`:
+
+```python
+fd = FeatureDict(
+    features={"my_track_col": TrackletID(), "my_lineage": LineageID()},
+    tracklet_key="my_track_col",
+    lineage_key="my_lineage",
+)
+tracks = SolutionTracks(graph=graph, features=fd)
+```
+
+When a `FeatureDict` is provided, the `tracklet_attr`/`pos_attr`/`time_attr` arguments
+are ignored — the `FeatureDict` is the sole authority.
+
+### Computed Features and Key Names
+
+Annotators (e.g., `TrackAnnotator`, `RegionpropsAnnotator`) accept custom key names
+in their constructors:
+
+```python
+TrackAnnotator(tracks, tracklet_key="my_track", lineage_key="my_lineage")
+RegionpropsAnnotator(tracks, pos_key="coordinates", area_key="size")
+```
+
+When constructing `Tracks` or `SolutionTracks` directly, you have full control over
+which attribute names are used.
+
+**Through the import path** (`tracks_from_df`, `import_from_geff`), computed features
+always use their default key names. The `node_name_map` controls what the *source*
+column is called, but the builder always renames it to the standard key before adding
+it to the graph. For example, `{"tracklet_id": "Track ID"}` loads the `"Track ID"`
+column and stores it as `"tracklet_id"` on the graph.
+
+### Why Custom Keys Are Useful
+
+Renaming attributes on a graph is O(n) — it requires iterating all nodes. If an
+external data source uses `"track"` as the tracklet column name, a user can construct
+a `Tracks` object that uses `"track"` directly, avoiding the cost of a rename. The
+`FeatureDict` key pointer tells funtracks where to find the data regardless of the
+attribute name.
+
 ## Initialization Lifecycle
 
 Here's what happens when you create a `Tracks` instance.
@@ -196,7 +271,7 @@ These features are **automatically checked** during initialization:
 
 1. **`pos` (position)**: Always auto-detected for RegionpropsAnnotator
 2. **`area`**: Always auto-detected (for backward compatibility)
-3. **`track_id` (tracklet_id)**: Always auto-detected for TrackAnnotator
+3. **`tracklet_id`**: Always auto-detected for TrackAnnotator
 
 ### Example Scenarios
 
