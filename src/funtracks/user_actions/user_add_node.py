@@ -41,7 +41,7 @@ class UserAddNode(ActionGroup):
             tracks (SolutionTracks): the tracks to add the node to
             node (int): The node id of the new node to add
             attributes (dict[str, Any]): A dictionary from attribute strings to values.
-                Must contain "time" and "tracklet_id".
+                Must contain "time" and tracks.features.tracklet_key.
             pixels (tuple[np.ndarray, ...] | None, optional): The pixels of the associated
                 segmentation to add to the tracks. Defaults to None.
             force (bool, optional): Whether to force the action by removing any
