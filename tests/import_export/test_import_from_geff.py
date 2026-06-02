@@ -870,14 +870,14 @@ def test_embedded_seg_ellipse_axis_radii_feature_metadata(tmp_path):
         td.DEFAULT_ATTR_KEYS.BBOX,
     ]
     # node_default_values must align with node_attributes by index.
-    # pos/track_id/mask/bbox are handled by special cases in create_empty_graphview_graph
+    # pos/mask/bbox are handled by special cases in create_empty_graphview_graph
     # and their slot values here are never accessed; only area, ellipse_axis_radii,
-    # and lineage_id go through the general loop.
+    # track_id, and lineage_id go through the general loop.
     node_default_values = [
         None,  # pos — special-cased, slot unused
         0.0,  # area
         np.array([0.0, 0.0]),  # ellipse_axis_radii — must be Array(Float64, 2)
-        None,  # track_id — special-cased, slot unused
+        -1,  # track_id
         -1,  # lineage_id
         None,  # mask — special-cased, slot unused
         None,  # bbox — special-cased, slot unused
