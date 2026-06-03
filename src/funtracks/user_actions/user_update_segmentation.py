@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from funtracks.exceptions import InvalidActionError
 from funtracks.utils.tracksdata_utils import pixels_to_td_mask
 
 from ..actions._base import ActionGroup
@@ -47,27 +46,11 @@ class UserUpdateSegmentation(ActionGroup):
         node_to_select = None
         if self.tracks.segmentation is None:
             raise ValueError("Cannot update non-existing segmentation.")
-        for pixels, old_value in updated_pixels:
-            ndim = len(pixels)
-            if old_value == 0:
-                continue
-            time = pixels[0][0]
-            # check if all pixels of old_value are removed
-            mask_pixels = pixels_to_td_mask(pixels, self.tracks.ndim)
-            mask_old_value = self.tracks.graph.nodes[old_value]["mask"]
-            # If pixels fully overlaps with old_value mask, delete node
-            if mask_pixels.intersection(mask_old_value) == mask_old_value.mask.sum():
-                self.actions.append(
-                    UserDeleteNode(tracks, old_value, pixels=pixels, _top_level=False)
-                )
-            else:
-                self.actions.append(
-                    UpdateNodeSeg(tracks, old_value, mask_pixels, added=False)
-                )
+
         if new_value != 0 and updated_pixels:
             all_pixels = tuple(
                 np.concatenate([pixels[dim] for pixels, _ in updated_pixels])
-                for dim in range(ndim)
+                for dim in range(self.tracks.ndim)
             )
             assert len(np.unique(all_pixels[0])) == 1, (
                 "Can only update one time point at a time"
@@ -87,24 +70,35 @@ class UserUpdateSegmentation(ActionGroup):
                     time_key: time,
                     tracklet_key: current_track_id,
                 }
-                try:
-                    self.actions.append(
-                        UserAddNode(
-                            tracks,
-                            new_value,
-                            attributes=attrs,
-                            pixels=all_pixels,
-                            force=force,
-                            _top_level=False,
-                        )
+                self.actions.append(
+                    UserAddNode(
+                        tracks,
+                        new_value,
+                        attributes=attrs,
+                        pixels=all_pixels,
+                        force=force,
+                        _top_level=False,
                     )
-                except InvalidActionError:
-                    if len(self.actions) > 0:
-                        for action in self.actions:
-                            action.inverse()
-                    return
-
+                )
                 node_to_select = new_value
 
+        # Now that the InvalidAction check for adding a new node has passed, we can add
+        # actions for updating/deleting existing nodes
+        for pixels, old_value in updated_pixels:
+            if old_value == 0:
+                continue
+            time = pixels[0][0]
+            # check if all pixels of old_value are removed
+            mask_pixels = pixels_to_td_mask(pixels, self.tracks.ndim)
+            mask_old_value = self.tracks.graph.nodes[old_value]["mask"]
+            # If pixels fully overlaps with old_value mask, delete node
+            if mask_pixels.intersection(mask_old_value) == mask_old_value.mask.sum():
+                self.actions.append(
+                    UserDeleteNode(tracks, old_value, pixels=pixels, _top_level=False)
+                )
+            else:
+                self.actions.append(
+                    UpdateNodeSeg(tracks, old_value, mask_pixels, added=False)
+                )
         self.tracks.action_history.add_new_action(self)
         self.tracks.refresh.emit(node_to_select)
