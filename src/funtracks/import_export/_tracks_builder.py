@@ -33,6 +33,7 @@ from funtracks.import_export._utils import (
 from funtracks.import_export._validation import (
     validate_edge_name_map,
     validate_feature_key_collisions,
+    validate_graph_seg_match,
     validate_in_memory_geff,
     validate_node_name_map,
     validate_spatial_dims,
@@ -584,8 +585,6 @@ class TracksBuilder(ABC):
         # sample_node = next(iter(graph.node_ids()))
         has_position = "pos" in graph.node_attr_keys()
         if has_position:
-            from funtracks.import_export._validation import validate_graph_seg_match
-
             validate_graph_seg_match(graph, seg_array, scale, self.axis_names)
 
         # Check if relabeling is needed (seg_id != node_id)

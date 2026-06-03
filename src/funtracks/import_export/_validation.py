@@ -26,12 +26,11 @@ def validate_graph_seg_match(
     segmentation: da.Array,
     scale: list[float],
     position_attr: list[str],
-) -> bool:
+) -> None:
     """Validate if the graph matches the provided segmentation data.
 
     Checks if the seg_id value of the last node matches the pixel value at the
-    (scaled) node coordinates. Returns a boolean indicating whether relabeling
-    of the segmentation to match node id values is required.
+    (scaled) node coordinates.
 
     Args:
         graph: tracksdata graph with standard keys
@@ -42,14 +41,6 @@ def validate_graph_seg_match(
     Returns:
         bool: True if relabeling from seg_id to node_id is required.
     """
-    # Check segmentation dimensions match graph dimensionality
-    ndim = len(position_attr) + 1  # +1 for time
-    if len(segmentation.shape) != ndim:
-        raise ValueError(
-            f"Segmentation has {len(segmentation.shape)} dimensions but graph has "
-            f"{ndim} dimensions (time + {len(position_attr)} spatial dims)"
-        )
-
     # Get the last node for validation
     node_ids = list(graph.node_ids())
     if not node_ids:
@@ -94,13 +85,6 @@ def validate_graph_seg_match(
     if not seg_id_at_coord:
         error_msg = "Error testing seg id:\n" + "\n".join(f"- {e}" for e in errors)
         raise ValueError(error_msg)
-
-    # TODO: The relabeling check (seg_id != node_id) is duplicated in
-    # TracksBuilder.handle_segmentation. Consider deduplicating by either:
-    # 1. Using this return value in the caller, or
-    # 2. Removing the return value and making this purely a validation function
-    # Return True if relabeling is needed (seg_id != node_id)
-    return last_node_id != seg_id
 
 
 def validate_node_name_map(
