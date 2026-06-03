@@ -85,7 +85,10 @@ class UserUpdateSegmentation(ActionGroup):
         # Now that the InvalidAction check for adding a new node has passed, we can add
         # actions for updating/deleting existing nodes
         for pixels, old_value in updated_pixels:
-            if old_value == 0:
+            if (
+                old_value == 0 or old_value == new_value
+            ):  # skip painting over the same label or over background, since this does
+                # not require updating any existing nodes
                 continue
             time = pixels[0][0]
             # check if all pixels of old_value are removed
