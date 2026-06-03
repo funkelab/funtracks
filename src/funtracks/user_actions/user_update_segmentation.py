@@ -47,9 +47,15 @@ class UserUpdateSegmentation(ActionGroup):
         if self.tracks.segmentation is None:
             raise ValueError("Cannot update non-existing segmentation.")
 
-        if new_value != 0 and updated_pixels:
+        # Discard the entries where pixels get overwritten with the same value
+        valid_updates = [
+            (pixels, old_value)
+            for pixels, old_value in updated_pixels
+            if old_value != new_value
+        ]
+        if new_value != 0 and valid_updates:
             all_pixels = tuple(
-                np.concatenate([pixels[dim] for pixels, _ in updated_pixels])
+                np.concatenate([pixels[dim] for pixels, _ in valid_updates])
                 for dim in range(self.tracks.ndim)
             )
             assert len(np.unique(all_pixels[0])) == 1, (
