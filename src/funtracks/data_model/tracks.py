@@ -516,15 +516,15 @@ class Tracks:
         """
         return int(self.get_node_attr(node, self.features.time_key))
 
-    def get_mask(self, node: Node) -> Mask | None:
+    def get_mask(
+        self, node: Node, mask_key: str = td.DEFAULT_ATTR_KEYS.MASK
+    ) -> Mask | None:
         """Get the segmentation mask associated with a given node.
 
-        .. deprecated:: 1.0
-            `set_time` will be removed in funtracks v2.0.
-            Use `update_node_attrs([node], {tracks.features.time_key: [time]})` instead.
-
         Args:
-            node (Node): The node to get the mask for.
+            node: The node to get the mask for.
+            mask_key: The feature key for the mask column.
+                Defaults to the standard mask key.
 
         Returns:
             Mask | None: The segmentation mask for the node, or None if no
@@ -533,8 +533,28 @@ class Tracks:
         if self.segmentation is None:
             return None
 
-        mask = self.graph.nodes[node][td.DEFAULT_ATTR_KEYS.MASK]
+        mask = self.graph.nodes[node][mask_key]
         return mask
+
+    def update_mask(
+        self, node: Node, mask: Mask, mask_key: str = td.DEFAULT_ATTR_KEYS.MASK
+    ) -> None:
+        """Update the segmentation mask for an existing node, auto-syncing the bbox.
+
+        Writes both the mask and its bbox to the graph. The bbox key is
+        looked up from the mask Feature's derived_features list.
+
+        Args:
+            node: The node to update the mask for.
+            mask: The Mask object (carries .bbox).
+            mask_key: The feature key for the mask column.
+                Defaults to the standard mask key.
+        """
+        self.graph.nodes[node][mask_key] = mask
+        mask_feature = self.features.get(mask_key)
+        if mask_feature is not None:
+            for derived_key in mask_feature.get("derived_features", []):
+                self.graph.nodes[node][derived_key] = mask.bbox
 
     def undo(self) -> bool:
         """Undo the last performed action from the action history.

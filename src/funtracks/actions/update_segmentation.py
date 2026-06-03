@@ -24,6 +24,7 @@ class UpdateNodeSeg(BasicAction):
         node: Node,
         mask: Mask,
         added: bool = True,
+        mask_key: str = td.DEFAULT_ATTR_KEYS.MASK,
     ):
         """
         Args:
@@ -32,11 +33,14 @@ class UpdateNodeSeg(BasicAction):
             mask (Mask): The mask that was updated for the node
             added (bool, optional): If the provided mask were added (True) or deleted
                 (False) from this node. Defaults to True
+            mask_key: The feature key for the mask column.
+                Defaults to the standard mask key.
         """
         super().__init__(tracks)
         self.node = int(node)
         self.mask = mask
         self.added = added
+        self.mask_key = mask_key
         self._apply()
 
     def inverse(self) -> BasicAction:
@@ -46,6 +50,7 @@ class UpdateNodeSeg(BasicAction):
             self.node,
             mask=self.mask,
             added=not self.added,
+            mask_key=self.mask_key,
         )
 
     def _apply(self) -> None:
@@ -56,26 +61,14 @@ class UpdateNodeSeg(BasicAction):
 
         if value == 0:
             # val=0 means deleting (part of) the mask
-            mask_old = self.tracks.graph.nodes[self.node][td.DEFAULT_ATTR_KEYS.MASK]
+            mask_old = self.tracks.graph.nodes[self.node][self.mask_key]
             mask_subtracted = mask_old.__isub__(mask_new)
-            self.tracks.graph.update_node_attrs(
-                attrs={
-                    td.DEFAULT_ATTR_KEYS.MASK: [mask_subtracted],
-                    td.DEFAULT_ATTR_KEYS.BBOX: [mask_subtracted.bbox],
-                },
-                node_ids=[self.node],
-            )
+            self.tracks.update_mask(self.node, mask_subtracted, mask_key=self.mask_key)
 
         elif self.tracks.graph.has_node(value):
             # if node already exists:
-            mask_old = self.tracks.graph.nodes[value][td.DEFAULT_ATTR_KEYS.MASK]
+            mask_old = self.tracks.graph.nodes[value][self.mask_key]
             mask_combined = mask_old.__or__(mask_new)
-            self.tracks.graph.update_node_attrs(
-                attrs={
-                    td.DEFAULT_ATTR_KEYS.MASK: [mask_combined],
-                    td.DEFAULT_ATTR_KEYS.BBOX: [mask_combined.bbox],
-                },
-                node_ids=[value],
-            )
+            self.tracks.update_mask(value, mask_combined, mask_key=self.mask_key)
 
         self.tracks.notify_annotators(self)

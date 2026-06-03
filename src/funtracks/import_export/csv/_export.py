@@ -109,8 +109,8 @@ def export_to_csv(
         # Collect derived feature keys to skip
         derived_keys: set[str] = set()
         for fd in tracks.features.values():
-            for dk in fd.get("derived_features", []):
-                derived_keys.add(dk)
+            for derived_key in fd.get("derived_features", []):
+                derived_keys.add(derived_key)
 
         for feature_name, feature_dict in tracks.features.items():
             if feature_dict["feature_type"] != "node":

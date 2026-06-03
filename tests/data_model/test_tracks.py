@@ -342,3 +342,19 @@ def test_delete_feature_mask_removes_both_columns(
     assert "bbox" not in tracks.features
     assert "mask" not in tracks.graph.node_attr_keys()
     assert "bbox" not in tracks.graph.node_attr_keys()
+
+
+def test_update_mask_syncs_bbox(graph_2d_with_segmentation):
+    """update_mask writes both the mask and bbox to the graph node."""
+    from tests.conftest import make_2d_disk_mask
+
+    tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
+
+    new_mask = make_2d_disk_mask(center=(30, 30), radius=10)
+    tracks.update_mask(1, new_mask)
+
+    stored_mask = tracks.graph.nodes[1][td.DEFAULT_ATTR_KEYS.MASK]
+    stored_bbox = tracks.graph.nodes[1][td.DEFAULT_ATTR_KEYS.BBOX]
+
+    assert stored_mask is new_mask
+    assert np.array_equal(stored_bbox, new_mask.bbox)
