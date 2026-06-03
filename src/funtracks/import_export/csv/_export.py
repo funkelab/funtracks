@@ -107,6 +107,8 @@ def export_to_csv(
     feature_names = []
     if use_display_names:
         for feature_name, feature_dict in tracks.features.items():
+            if feature_dict["feature_type"] != "node":
+                continue
             # Skip mask features — they contain binary objects, not scalar values
             if feature_dict.get("value_type") == "mask":
                 continue
