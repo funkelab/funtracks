@@ -17,7 +17,7 @@ from tracksdata.array import GraphArrayView
 from tracksdata.nodes import Mask
 
 from funtracks.actions.action_history import ActionHistory
-from funtracks.features import Feature, FeatureDict, Position, SegMask, Time
+from funtracks.features import Feature, FeatureDict, Position, SegBbox, SegMask, Time
 from funtracks.utils.tracksdata_utils import (
     to_polars_dtype,
 )
@@ -237,11 +237,12 @@ class Tracks:
             feature_dict.register_position_feature(single_position_key, pos_feature)
         # else: single pos_attr with segmentation - RegionpropsAnnotator will handle it
 
-        # Register mask feature if segmentation exists
+        # Register mask and bbox features if segmentation exists
         if self.segmentation is not None:
             feature_dict[td.DEFAULT_ATTR_KEYS.MASK] = SegMask(
-                bbox_key=td.DEFAULT_ATTR_KEYS.BBOX
+                self.ndim, bbox_key=td.DEFAULT_ATTR_KEYS.BBOX
             )
+            feature_dict[td.DEFAULT_ATTR_KEYS.BBOX] = SegBbox(self.ndim)
 
         return feature_dict
 
@@ -717,20 +718,13 @@ class Tracks:
         # Perform custom graph operations when a feature is added
         if feature["feature_type"] == "node" and key not in self.graph.node_attr_keys():
             if feature["value_type"] == "mask":
-                # Mask features use pl.Object; also register the paired bbox column
+                # Mask features use pl.Object
                 self.graph.add_node_attr_key(key, default_value=None, dtype=pl.Object)
-                bbox_key = feature["bbox_key"]
-                if bbox_key not in self.graph.node_attr_keys():
-                    spatial_ndim = self.ndim - 1
-                    self.graph.add_node_attr_key(
-                        bbox_key,
-                        dtype=pl.Array(pl.Int64, 2 * spatial_ndim),
-                    )
             else:
                 dtype = to_polars_dtype(feature["value_type"])
                 num_values = feature.get("num_values")
                 if num_values is not None and num_values > 1:
-                    dtype = pl.Array(pl.Float64, num_values)
+                    dtype = pl.Array(to_polars_dtype(feature["value_type"]), num_values)
                 self.graph.add_node_attr_key(
                     key,
                     default_value=feature["default_value"],
@@ -758,6 +752,12 @@ class Tracks:
         # Remove from the features dictionary
         del self.features[key]
 
+        # Cascade-delete any derived features
+        if feature is not None:
+            for derived_key in feature.get("derived_features", []):
+                if derived_key in self.features:
+                    self.delete_feature(derived_key)
+
         # Determine feature_type from FeatureDict entry or annotators
         if feature is not None:
             feature_type = feature["feature_type"]
@@ -769,10 +769,5 @@ class Tracks:
         # Perform custom graph operations when a feature is deleted
         if feature_type == "node" and key in self.graph.node_attr_keys():
             self.graph.remove_node_attr_key(key)
-            # For mask features, also remove the paired bbox column
-            if feature is not None and feature.get("value_type") == "mask":
-                bbox_key = feature.get("bbox_key")
-                if bbox_key and bbox_key in self.graph.node_attr_keys():
-                    self.graph.remove_node_attr_key(bbox_key)
         elif feature_type == "edge" and key in self.graph.edge_attr_keys():
             self.graph.remove_edge_attr_key(key)

@@ -106,11 +106,20 @@ def export_to_csv(
     # For display names mode, build dynamic header from features
     feature_names = []
     if use_display_names:
+        # Collect derived feature keys to skip
+        derived_keys: set[str] = set()
+        for fd in tracks.features.values():
+            for dk in fd.get("derived_features", []):
+                derived_keys.add(dk)
+
         for feature_name, feature_dict in tracks.features.items():
             if feature_dict["feature_type"] != "node":
                 continue
             # Skip mask features — they contain binary objects, not scalar values
             if feature_dict.get("value_type") == "mask":
+                continue
+            # Skip derived features (e.g. bbox managed by mask)
+            if feature_name in derived_keys:
                 continue
             feature_names.append(feature_name)
             num_values = feature_dict.get("num_values", 1)
