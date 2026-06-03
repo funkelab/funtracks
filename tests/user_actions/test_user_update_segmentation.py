@@ -143,7 +143,7 @@ class TestUpdateNodeSeg:
         # applied (which does not happen if caught by the error), the original
         # segmentation should be unchanged.
         t, y, x = (a.item() for a in pixels_to_add)
-        assert np.asarray(tracks.segmentation[t, y, x]) == 1
+        assert np.asarray(tracks.segmentation[t, y, x]) == node_id
 
         # If the action is forced, the segmentation for node 1 should be updated, and the
         # new node should be added.
