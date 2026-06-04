@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1780415472213,
+  "lastUpdate": 1780600820238,
   "repoUrl": "https://github.com/funkelab/funtracks",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -651,6 +651,37 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 2.5624795829999982 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "malinmayorc@janelia.hhmi.org",
+            "name": "Caroline Malin-Mayor",
+            "username": "cmalinmayor"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cce52e31ca135b418501280e3d204c565fffe347",
+          "message": "Merge pull request #225 from funkelab/423-reject-force-update-seg\n\nEdit action order to fail first and avoid corrupted state",
+          "timestamp": "2026-06-04T15:19:40-04:00",
+          "tree_id": "7cfca15d89503809de3d2d2abe4423ef05399899",
+          "url": "https://github.com/funkelab/funtracks/commit/cce52e31ca135b418501280e3d204c565fffe347"
+        },
+        "date": 1780600818001,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_compute_graph_from_seg",
+            "value": 0.34910125390300706,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 2.8644984479999493 sec\nrounds: 1"
           }
         ]
       }
