@@ -47,15 +47,15 @@ class UserUpdateSegmentation(ActionGroup):
         if self.tracks.segmentation is None:
             raise ValueError("Cannot update non-existing segmentation.")
 
-        # Discard the entries where pixels get overwritten with the same value
-        valid_updates = [
+        # Discard entries where pixels get overwritten with the same value
+        updated_pixels = [
             (pixels, old_value)
             for pixels, old_value in updated_pixels
             if old_value != new_value
         ]
-        if new_value != 0 and valid_updates:
+        if new_value != 0 and updated_pixels:
             all_pixels = tuple(
-                np.concatenate([pixels[dim] for pixels, _ in valid_updates])
+                np.concatenate([pixels[dim] for pixels, _ in updated_pixels])
                 for dim in range(self.tracks.ndim)
             )
             assert len(np.unique(all_pixels[0])) == 1, (
@@ -91,10 +91,7 @@ class UserUpdateSegmentation(ActionGroup):
         # Now that the InvalidAction check for adding a new node has passed, we can add
         # actions for updating/deleting existing nodes
         for pixels, old_value in updated_pixels:
-            if (
-                old_value == 0 or old_value == new_value
-            ):  # skip painting over the same label or over background, since this does
-                # not require updating any existing nodes
+            if old_value == 0:
                 continue
             time = pixels[0][0]
             # check if all pixels of old_value are removed
