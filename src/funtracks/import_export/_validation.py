@@ -38,8 +38,9 @@ def validate_graph_seg_match(
         scale: Scaling information (pixel to world coordinates)
         position_attr: Position keys (e.g., ["y", "x"] or ["z", "y", "x"])
 
-    Returns:
-        bool: True if relabeling from seg_id to node_id is required.
+    Raises:
+        ValueError: If the graph has no nodes, a node coordinate is out of
+            bounds, or the segmentation pixel value does not match the seg id.
     """
     # Get the last node for validation
     node_ids = list(graph.node_ids())
