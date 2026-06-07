@@ -3,6 +3,7 @@ from collections import Counter
 import numpy as np
 import pytest
 
+from funtracks.exceptions import InvalidActionError
 from funtracks.user_actions import UserUpdateSegmentation
 from funtracks.utils.tracksdata_utils import td_mask_to_pixels
 
@@ -111,6 +112,54 @@ class TestUpdateNodeSeg:
         assert self.pixels_equal_mask(all_pixels, tracks, node_id)
         assert tracks.get_node_attr(node_id, "area") == orig_area + 1
         assert tracks.get_edge_attr(edge, iou_key) != orig_iou
+
+    def test_invalid_action_with_segmentation(self, get_tracks, ndim):
+        tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
+        node_id = 1
+
+        # Paint on top of node 1 with track id 3: because of the downstream division, this
+        # should raise an invalid action error.
+        orig_pixels = td_mask_to_pixels(
+            tracks.get_mask(node_id), tracks.get_time(node_id), ndim=tracks.ndim
+        )
+
+        pixels_to_add = tuple(
+            np.array([orig_pixels[d][0]]) for d in range(len(orig_pixels))
+        )
+        new_value = 7
+
+        # assert InvalidActionError is raised
+        with pytest.raises(
+            InvalidActionError,
+            match="Cannot add node here - downstream division of parent detected.",
+        ):
+            UserUpdateSegmentation(
+                tracks,
+                new_value=new_value,
+                updated_pixels=[(pixels_to_add, node_id)],
+                current_track_id=3,
+            )
+        # because the existing nodes are only updated after the UserAddNode action is
+        # applied (which does not happen if caught by the error), the original
+        # segmentation should be unchanged.
+        t, y, x = (a.item() for a in pixels_to_add)
+        assert np.asarray(tracks.segmentation[t, y, x]) == node_id
+
+        # If the action is forced, the segmentation for node 1 should be updated, and the
+        # new node should be added.
+        update_seg_action = UserUpdateSegmentation(
+            tracks,
+            new_value=new_value,
+            updated_pixels=[(pixels_to_add, node_id)],
+            current_track_id=3,
+            force=True,
+        )
+
+        # assert that the segmentation now has the new value
+        assert np.asarray(tracks.segmentation[t, y, x]) == new_value
+        assert tracks.graph.has_node(new_value)
+        assert len(update_seg_action.actions) == 2  # one for adding a node,
+        # and one for updating existing node 1
 
     def test_user_erase_seg(self, get_tracks, ndim):
         tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
