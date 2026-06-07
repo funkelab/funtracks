@@ -169,6 +169,19 @@ class GeffTracksBuilder(TracksBuilder):
         # Store axes metadata for use in infer_node_name_map
         self._geff_axes = metadata.axes or []
 
+        # Read funtracks FeatureDict from GEFF extra metadata if present
+        # This will be passed to SolutionTracks via the base build() method
+        if metadata.extra and "funtracks" in metadata.extra:
+            funtracks_extra = metadata.extra["funtracks"]
+            if "features" in funtracks_extra:
+                try:
+                    from funtracks.features import FeatureDict
+
+                    self.features = FeatureDict.from_json(funtracks_extra["features"])
+                except (KeyError, ValueError, TypeError):
+                    # If FeatureDict loading fails, features will remain None
+                    pass
+
         # Read segmentation_shape written by export_to_geff (stored as an extra
         # zarr attribute alongside the geff metadata).
         # source_path may be a filesystem Path or an in-memory zarr Store,

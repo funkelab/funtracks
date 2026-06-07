@@ -95,6 +95,11 @@ def export_to_geff(
         node_props_metadata={},
         edge_props_metadata={},
         axes=axes,
+        extra={
+            "funtracks": {
+                "features": tracks.features.dump_json(),
+            }
+        },
     )
 
     # Save segmentation if present and requested
