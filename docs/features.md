@@ -226,7 +226,7 @@ in their constructors:
 
 ```python
 TrackAnnotator(tracks, tracklet_key="my_track", lineage_key="my_lineage")
-RegionpropsAnnotator(tracks, pos_key="coordinates", area_key="size")
+RegionpropsAnnotator(tracks, pos_key="coordinates")
 ```
 
 When constructing `Tracks` or `SolutionTracks` directly, you have full control over
