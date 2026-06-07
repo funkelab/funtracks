@@ -553,6 +553,8 @@ class Tracks:
         self.graph.nodes[node][mask_key] = mask
         mask_feature = self.features.get(mask_key)
         if mask_feature is not None:
+            # NOTE: all derived features of a mask are currently assumed to be
+            # its bounding box. Revisit if non-bbox derived features are added.
             for derived_key in mask_feature.get("derived_features", []):
                 self.graph.nodes[node][derived_key] = mask.bbox
 
@@ -737,19 +739,16 @@ class Tracks:
 
         # Perform custom graph operations when a feature is added
         if feature["feature_type"] == "node" and key not in self.graph.node_attr_keys():
-            if feature["value_type"] == "mask":
-                # Mask features use pl.Object
-                self.graph.add_node_attr_key(key, default_value=None, dtype=pl.Object)
-            else:
-                dtype = to_polars_dtype(feature["value_type"])
-                num_values = feature.get("num_values")
-                if num_values is not None and num_values > 1:
-                    dtype = pl.Array(to_polars_dtype(feature["value_type"]), num_values)
-                self.graph.add_node_attr_key(
-                    key,
-                    default_value=feature["default_value"],
-                    dtype=dtype,
-                )
+            # "mask" value_type maps to pl.Object via to_polars_dtype
+            dtype = to_polars_dtype(feature["value_type"])
+            num_values = feature.get("num_values")
+            if num_values is not None and num_values > 1:
+                dtype = pl.Array(dtype, num_values)
+            self.graph.add_node_attr_key(
+                key,
+                default_value=feature["default_value"],
+                dtype=dtype,
+            )
         elif feature["feature_type"] == "edge" and key not in self.graph.edge_attr_keys():
             self.graph.add_edge_attr_key(
                 key,

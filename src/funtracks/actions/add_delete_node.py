@@ -101,7 +101,7 @@ class DeleteNode(BasicAction):
         self.node = int(node)
 
         # Save all node feature values from the features dict
-        # (mask, bbox, and solution are now registered as Features, so they're
+        # (mask and bbox are now registered as Features, so they're
         # captured here automatically)
         self.attributes: dict[str, Any] = {}
         for key in self.tracks.features.node_features:
