@@ -367,6 +367,8 @@ def get_tracks(get_graph) -> Callable[..., "Tracks | SolutionTracks"]:
         IoU,
         LineageID,
         Position,
+        SegBbox,
+        SegMask,
         Time,
         TrackletID,
     )
@@ -388,6 +390,8 @@ def get_tracks(get_graph) -> Callable[..., "Tracks | SolutionTracks"]:
         }
 
         if with_seg:
+            features_dict["mask"] = SegMask(ndim)
+            features_dict["bbox"] = SegBbox(ndim)
             features_dict["area"] = Area(ndim=ndim)
             features_dict["iou"] = IoU()
         if is_solution:

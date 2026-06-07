@@ -7,8 +7,9 @@ from typing import TYPE_CHECKING
 
 import networkx as nx
 import numpy as np
+import tracksdata as td
 
-from funtracks.features import FeatureDict
+from funtracks.features import FeatureDict, SegBbox, SegMask
 from funtracks.utils.tracksdata_utils import (
     add_masks_and_bboxes_to_graph,
     convert_graph_nx_to_td,
@@ -86,6 +87,20 @@ def load_v1_tracks(
     # Add mask and bbox attributes to graph if segmentation is available
     if seg is not None:
         graph_td = add_masks_and_bboxes_to_graph(graph_td, seg)
+
+    # Ensure mask and bbox Features are in the FeatureDict (older saves
+    # predate their registration as Features).
+    features = attrs.get("features")
+    ndim = attrs.get("ndim", len(seg.shape) if seg is not None else 3)
+    if (
+        isinstance(features, FeatureDict)
+        and seg is not None
+        and td.DEFAULT_ATTR_KEYS.MASK not in features
+    ):
+        features[td.DEFAULT_ATTR_KEYS.MASK] = SegMask(
+            ndim, bbox_key=td.DEFAULT_ATTR_KEYS.BBOX
+        )
+        features[td.DEFAULT_ATTR_KEYS.BBOX] = SegBbox(ndim)
 
     # filtering the warnings because the default values of time_attr and pos_attr are
     # not None. Therefore, new style Tracks attrs that have features instead of
