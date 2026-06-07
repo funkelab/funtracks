@@ -852,6 +852,31 @@ def test_embedded_seg_ellipse_axis_radii_feature_metadata(tmp_path):
     st = SolutionTracks(graph, ndim=3, time_attr="t")
     export_to_geff(st, run_dir)
 
+    # Remove FeatureDict from GEFF metadata to simulate old/external GEFF
+    # This tests that enable_features() correctly auto-detects features
+    import zarr
+
+    z = zarr.open(str(run_dir / "tracks.geff"), mode="r+")
+    attrs = dict(z.attrs)
+    if "geff" in attrs and "extra" in attrs["geff"]:
+        geff_attrs = dict(attrs["geff"])
+        if "funtracks" in geff_attrs["extra"]:
+            extra = dict(geff_attrs["extra"])
+            if "features" in extra.get("funtracks", {}):
+                funtracks = dict(extra["funtracks"])
+                del funtracks["features"]
+                if not funtracks:
+                    del extra["funtracks"]
+                else:
+                    extra["funtracks"] = funtracks
+                if not extra:
+                    del geff_attrs["extra"]
+                else:
+                    geff_attrs["extra"] = extra
+                attrs["geff"] = geff_attrs
+                z.attrs.clear()
+                z.attrs.update(attrs)
+
     imported = import_from_geff(run_dir / "tracks.geff")
 
     assert any(isinstance(a, RegionpropsAnnotator) for a in imported.annotators), (
