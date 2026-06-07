@@ -102,6 +102,3 @@ def relabel_segmentation(
             new_segmentation[t][computed_seg[t] == seg_id] = node_id
 
     return new_segmentation, graph
-
-
-# TODO: export segmentation with check to relabel to tracklet_id
