@@ -291,40 +291,6 @@ def validate_edge_name_map(
         validate_spatial_dims_in_name_map(edge_name_map, available_features, ndim)
 
 
-def validate_feature_key_collisions(
-    name_map: dict[str, str | list[str]],
-    edge_name_map: dict[str, str | list[str]] | None,
-) -> None:
-    """Validate that node and edge feature keys don't overlap.
-
-    Feature keys must be unique across both node and edge features because
-    they share the same namespace in FeatureDict.
-
-    Args:
-        name_map: Mapping from standard keys to node property names
-        edge_name_map: Optional mapping from standard keys to edge property names
-
-    Raises:
-        ValueError: If any keys appear in both name_map and edge_name_map
-    """
-    if edge_name_map is None:
-        return
-
-    # Get the standard keys (not the source property names) from both maps
-    node_keys = set(name_map.keys())
-    edge_keys = set(edge_name_map.keys())
-
-    # Find overlapping keys
-    colliding_keys = node_keys & edge_keys
-
-    if colliding_keys:
-        raise ValueError(
-            f"Feature keys cannot be shared between nodes and edges. "
-            f"Colliding keys: {sorted(colliding_keys)}. "
-            f"Please use unique keys for node and edge features."
-        )
-
-
 def validate_spatial_dims(
     in_memory_geff: InMemoryGeff,
     available_features: dict,

@@ -32,7 +32,6 @@ from funtracks.import_export._utils import (
 )
 from funtracks.import_export._validation import (
     validate_edge_name_map,
-    validate_feature_key_collisions,
     validate_in_memory_geff,
     validate_node_name_map,
     validate_spatial_dims,
@@ -263,9 +262,6 @@ class TracksBuilder(ABC):
         Checks for edges:
         - All mapped edge properties exist in importable_edge_props
 
-        Checks for both:
-        - No feature key collisions between node and edge features
-
         Note: Array shapes for spatial_dims features are validated after loading
         via validate_spatial_dims().
 
@@ -297,9 +293,6 @@ class TracksBuilder(ABC):
                 available_features=self.available_computed_features,
                 ndim=self.ndim,
             )
-
-        # Check for feature key collisions between nodes and edges
-        validate_feature_key_collisions(self.node_name_map, self.edge_name_map)
 
     def prepare(
         self,
@@ -533,6 +526,15 @@ class TracksBuilder(ABC):
 
         if self.TIME_ATTR != "t":
             graph.remove_node_attr_key(self.TIME_ATTR)
+
+        # create_empty_graphview_graph returns a filtered view, but that view is
+        # a snapshot at filter time; nodes/edges added afterwards (potentially with
+        # solution=False) bypass the filter. Re-filter the populated root so
+        # solution=False rows are actually excluded.
+        graph = graph._root.filter(
+            td.NodeAttr("solution") == True,  # noqa: E712
+            td.EdgeAttr("solution") == True,  # noqa: E712
+        ).subgraph()
 
         return graph
 

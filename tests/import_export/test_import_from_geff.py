@@ -877,3 +877,44 @@ def test_embedded_seg_ellipse_axis_radii_feature_metadata(tmp_path):
         f"ellipse_axis_radii value_names should be ['major_axis', 'minor_axis'], "
         f"got {feat.get('value_names')}"
     )
+
+
+def test_import_from_geff_respects_external_solution_column(tmp_path):
+    """A geff produced externally (e.g. by a tracksdata solver) may carry a
+    'solution' column with mixed True/False values on nodes. Funtracks must
+    honor those values and filter out nodes with solution=False, not silently
+    default everything to True.
+
+    Reproduces the asymmetric `internal_attrs` filter bug in
+    GeffTracksBuilder.infer_node_name_map: the axes-branch drops 'solution'
+    from the node name map, so the column is never loaded, and every node
+    inherits the default True.
+    """
+    # Separate y/x columns (not a 2-D 'pos' array) so tracksdata's to_geff
+    # registers them as space-typed axes — required to exercise the
+    # axes-branch of GeffTracksBuilder.infer_node_name_map.
+    graph = create_empty_graphview_graph(
+        node_attributes=["y", "x"], position_attrs=["y", "x"], ndim=3
+    )
+    graph.bulk_add_nodes(
+        nodes=[
+            {"t": 0, "y": 10.0, "x": 10.0, "solution": True},
+            {"t": 0, "y": 20.0, "x": 20.0, "solution": False},
+            {"t": 1, "y": 11.0, "x": 11.0, "solution": True},
+        ],
+        indices=[1, 2, 3],
+    )
+
+    # Export the root graph, not the filtered solution-only view, so the
+    # solution=False row survives into the geff (mimicking a solver-produced
+    # geff with rejected nodes).
+    tracks_path = tmp_path / "tracks.geff"
+    graph._root.to_geff(geff_store=tracks_path, zarr_format=2)
+
+    tracks = import_from_geff(tracks_path)
+
+    node_ids = set(tracks.graph.node_ids())
+    assert node_ids == {1, 3}, (
+        "Node 2 has solution=False in the geff file and should be filtered out "
+        f"by import_from_geff. Got node_ids={node_ids}."
+    )
