@@ -71,7 +71,7 @@ class RegionpropsAnnotator(GraphAnnotator):
         Returns:
             True if tracks have segmentation, False otherwise
         """
-        return tracks.segmentation is not None
+        return tracks.segmentation_shape is not None
 
     def __init__(
         self,

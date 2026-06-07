@@ -39,7 +39,7 @@ class EdgeAnnotator(GraphAnnotator):
         Returns:
             True if tracks have segmentation, False otherwise
         """
-        return tracks.segmentation is not None
+        return tracks.segmentation_shape is not None
 
     @classmethod
     def get_available_features(cls, ndim: int = 3) -> dict[str, Feature]:

@@ -65,7 +65,7 @@ class Tracks:
         scale: list[float] | None = None,
         ndim: int | None = None,
         features: FeatureDict | None = None,
-        _segmentation: GraphArrayView | None = None,
+        _segmentations: dict[str, GraphArrayView] | None = None,
     ):
         """Initialize a Tracks object.
 
@@ -92,52 +92,28 @@ class Tracks:
                 Assumes that all features in the dict already exist on the graph (will
                 be activated but not recomputed). If None, core computed features (pos,
                 track_id) are auto-detected by checking if they exist on the graph.
-            _segmentation (GraphArrayView | None): Internal parameter for reusing an
-                existing GraphArrayView instance. Not intended for public use.
+            _segmentations (dict[str, GraphArrayView] | None): Internal parameter
+                for reusing existing GraphArrayView instances. Not intended for
+                public use.
         """
         self.graph = graph
-        if _segmentation is not None:
-            # Reuse provided segmentation instance (internal use only)
-            self.segmentation = _segmentation
-        elif "mask" in graph.node_attr_keys():
-            # Create new GraphArrayView from graph metadata, but only if
-            # segmentation_shape is present. A graph can carry per-node mask
-            # attributes without a full dense segmentation array (e.g. after a
-            # geff round-trip that was saved without segmentation).
-            seg_shape = graph.metadata.get("segmentation_shape")
-            if seg_shape is not None:
-                try:
-                    array_view = GraphArrayView(
-                        graph=graph,
-                        shape=seg_shape,
-                        attr_key="node_id",
-                        offset=0,
-                    )
-                    self.segmentation = array_view
-                except (ValueError, KeyError) as err:
-                    raise ValueError(
-                        "segmentation_shape is incompatible with graph, "
-                        "check if mask and bbox attrs exist on nodes"
-                    ) from err
-            else:
-                self.segmentation = None
-        else:
-            self.segmentation = None
         self.scale = scale
-        self.ndim = self._compute_ndim(
-            self.segmentation.shape if self.segmentation is not None else None,
-            scale,
-            ndim,
-        )
-        self.axis_names = ["z", "y", "x"] if self.ndim == 4 else ["y", "x"]
         self.action_history = ActionHistory()
         self.node_id_counter = 1
+
+        # Store provided segmentations or initialize empty dict
+        self._segmentations: dict[str, GraphArrayView] = _segmentations or {}
+        self.segmentation_shape = graph.metadata.get("segmentation_shape")
+
+        # Compute ndim early since it's needed for feature setup
+        self.ndim = self._compute_ndim(self.segmentation_shape, scale, ndim)
+        self.axis_names = ["z", "y", "x"] if self.ndim == 4 else ["y", "x"]
 
         # initialization steps:
         # 1. set up feature dict (or use provided)
         # 2. set up annotator registry
-        # 3. activate existing features
-        # 4. enable core features (compute them)
+        # 3. activate existing features and enable computed features
+        # 4. initialize segmentations for all mask features
 
         # 1. set up feature dictionary for keeping track of features on graph
         if features is not None and (
@@ -164,6 +140,49 @@ class Tracks:
             self._activate_features_from_dict()
         else:
             self._setup_core_computed_features()
+
+        # 4. Initialize segmentations for all mask features
+        if _segmentations is not None:
+            # Reuse provided segmentation instances (internal use only)
+            self._segmentations = _segmentations
+        else:
+            self._initialize_segmentations()
+
+    def _initialize_segmentations(self) -> None:
+        """Initialize GraphArrayView objects for all mask features in the FeatureDict.
+
+        Scans the features dictionary for all features with value_type="mask" and
+        creates a GraphArrayView for each one. All segmentations share the same shape
+        from self.segmentation_shape. Stores them in self._segmentations.
+        """
+        seg_shape = self.segmentation_shape
+        if seg_shape is None:
+            return
+
+        # Find all mask features and create GraphArrayViews
+        for feature_key, feature in self.features.items():
+            if feature.get("value_type") == "mask":
+                # Get the bbox key from the mask feature's derived_features
+                derived_features = feature.get("derived_features", [])
+                bbox_key = derived_features[0] if derived_features else "bbox"
+
+                # Create GraphArrayView for this mask feature
+                try:
+                    array_view = GraphArrayView(
+                        graph=self.graph,
+                        shape=seg_shape,
+                        attr_key="node_id",
+                        offset=0,
+                        mask_attr_key=feature_key,
+                        bbox_attr_key=bbox_key,
+                    )
+                    self._segmentations[feature_key] = array_view
+                except (ValueError, KeyError) as err:
+                    logger.warning(
+                        "Could not create segmentation for mask feature '%s': %s",
+                        feature_key,
+                        err,
+                    )
 
     def _get_feature_set(
         self,
@@ -230,7 +249,7 @@ class Tracks:
             # For multi-axis, set position_key directly
             # (not a single feature to register)
             feature_dict.position_key = multi_position_key
-        elif self.segmentation is None:
+        elif self.segmentation_shape is None:
             # Single position attribute without segmentation - static, provided by user
             single_position_key = pos_attr
             pos_feature = Position(axes=self.axis_names)
@@ -238,7 +257,7 @@ class Tracks:
         # else: single pos_attr with segmentation - RegionpropsAnnotator will handle it
 
         # Register mask and bbox features if segmentation exists
-        if self.segmentation is not None:
+        if self.segmentation_shape is not None:
             feature_dict[td.DEFAULT_ATTR_KEYS.MASK] = SegMask(
                 self.ndim, bbox_key=td.DEFAULT_ATTR_KEYS.BBOX
             )
@@ -517,15 +536,34 @@ class Tracks:
         return int(self.get_node_attr(node, self.features.time_key))
 
     @property
-    def segmentations(self) -> dict[str, GraphArrayView]:
-        """All segmentation views as a dict mapping name to GraphArrayView.
+    def segmentation(self) -> GraphArrayView | None:
+        """Primary segmentation view for backward compatibility.
 
-        Base implementation returns the single membrane segmentation (if present).
-        Subclasses can override to expose additional segmentations.
+        Returns the first available segmentation from _segmentations, prioritizing
+        the default "mask" key if present, otherwise returns the first available
+        segmentation alphabetically by key name.
+
+        Returns:
+            GraphArrayView | None: The primary segmentation, or None if no
+                segmentations exist.
         """
-        if self.segmentation is not None:
-            return {"segmentation": self.segmentation}
-        return {}
+        if not self._segmentations:
+            return None
+        # Prefer default "mask" key for backward compatibility
+        if "mask" in self._segmentations:
+            return self._segmentations["mask"]
+        # Otherwise return first segmentation alphabetically
+        return self._segmentations[sorted(self._segmentations.keys())[0]]
+
+    @property
+    def segmentations(self) -> dict[str, GraphArrayView]:
+        """All segmentation views as a dict mapping mask feature name to GraphArrayView.
+
+        Returns a dictionary with all mask features from the FeatureDict, where keys
+        are the feature names (e.g., "nuclear_mask", "membrane_mask") and values are
+        the corresponding GraphArrayView objects.
+        """
+        return self._segmentations
 
     def get_mask(
         self, node: Node, mask_key: str = td.DEFAULT_ATTR_KEYS.MASK

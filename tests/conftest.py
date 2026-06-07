@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import polars as pl
@@ -462,6 +462,114 @@ def sphere(center, radius, shape):
     distance = np.linalg.norm(np.subtract(indices, np.asarray(center)), axis=-1)
     mask = distance <= radius
     return mask
+
+
+@pytest.fixture
+def graph_2d_with_nuclear_and_membrane(tmp_path) -> td.graph.GraphView:
+    """2D graph with both nuclear and membrane masks/bboxes on every node.
+
+    Each node has:
+    - nuclear_mask and nuclear_bbox attributes
+    - membrane_mask and membrane_bbox attributes
+
+    The membrane masks are larger than the nuclear masks
+    (membrane radius = nuclear radius + 5).
+    """
+    db_path = str(tmp_path / "graph_2d_nuclear_membrane.db")
+
+    graph = create_empty_graphview_graph(
+        node_attributes=[
+            "pos",
+        ],
+        edge_attributes=[],
+        database=db_path,
+        position_attrs=["pos"],
+        ndim=3,
+    )
+
+    # Add custom mask and bbox attributes manually with correct dtypes
+    graph.add_node_attr_key("nuclear_mask", pl.Object)
+    graph.add_node_attr_key("nuclear_bbox", pl.Array(pl.Int64, 4))  # 2D bbox has 4 values
+    graph.add_node_attr_key("membrane_mask", pl.Object)
+    graph.add_node_attr_key(
+        "membrane_bbox", pl.Array(pl.Int64, 4)
+    )  # 2D bbox has 4 values
+
+    # Node definitions with positions
+    base_nodes = [
+        (1, {"t": 0, "pos": [50, 50]}),
+        (2, {"t": 1, "pos": [20, 80]}),
+        (3, {"t": 1, "pos": [60, 45]}),
+        (4, {"t": 2, "pos": [1.5, 1.5]}),
+        (5, {"t": 4, "pos": [1.5, 1.5]}),
+        (6, {"t": 4, "pos": [97.5, 97.5]}),
+    ]
+
+    # Create masks for each node (nuclear and membrane)
+    nodes_id_list = []
+    nodes_attrs_list = []
+
+    for node_id, attrs in base_nodes:
+        node_attrs = dict(attrs)
+        node_attrs["solution"] = 1
+
+        # Get center position
+        center: tuple[float, float] = tuple(attrs["pos"])  # type: ignore[arg-type,assignment]
+
+        # Create nuclear and membrane masks based on node
+        if node_id in [1, 2, 3]:
+            # Disk-based masks
+            nuclear_radius = {1: 20, 2: 10, 3: 15}[node_id]
+            membrane_radius = nuclear_radius + 5
+
+            nuclear_mask = make_2d_disk_mask(center=center, radius=nuclear_radius)
+            node_attrs["nuclear_mask"] = nuclear_mask
+            node_attrs["nuclear_bbox"] = cast(Mask, nuclear_mask).bbox
+            membrane_mask = make_2d_disk_mask(center=center, radius=membrane_radius)
+            node_attrs["membrane_mask"] = membrane_mask
+            node_attrs["membrane_bbox"] = cast(Mask, membrane_mask).bbox
+        else:
+            # Square-based masks
+            nuclear_width = 4
+            membrane_width = 6
+
+            # Calculate start corners to center the squares
+            nuclear_corner = (
+                int(center[0] - nuclear_width / 2),
+                int(center[1] - nuclear_width / 2),
+            )
+            membrane_corner = (
+                int(center[0] - membrane_width / 2),
+                int(center[1] - membrane_width / 2),
+            )
+
+            nuclear_mask = make_2d_square_mask(
+                start_corner=nuclear_corner, width=nuclear_width
+            )
+            node_attrs["nuclear_mask"] = nuclear_mask
+            node_attrs["nuclear_bbox"] = cast(Mask, nuclear_mask).bbox
+            membrane_mask = make_2d_square_mask(
+                start_corner=membrane_corner, width=membrane_width
+            )
+            node_attrs["membrane_mask"] = membrane_mask
+            node_attrs["membrane_bbox"] = cast(Mask, membrane_mask).bbox
+
+        nodes_id_list.append(node_id)
+        nodes_attrs_list.append(node_attrs)
+
+    # Add edges
+    edges = [
+        {"source_id": 1, "target_id": 2, "solution": 1},
+        {"source_id": 1, "target_id": 3, "solution": 1},
+        {"source_id": 3, "target_id": 4, "solution": 1},
+        {"source_id": 4, "target_id": 5, "solution": 1},
+    ]
+
+    graph.bulk_add_nodes(nodes=nodes_attrs_list, indices=nodes_id_list)
+    graph.bulk_add_edges(edges)
+    graph._update_metadata(segmentation_shape=(5, 100, 100))
+
+    return graph
 
 
 @pytest.fixture

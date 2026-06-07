@@ -27,7 +27,7 @@ class SolutionTracks(Tracks):
         scale: list[float] | None = None,
         ndim: int | None = None,
         features: FeatureDict | None = None,
-        _segmentation: td.array.GraphArrayView | None = None,
+        _segmentations: dict[str, td.array.GraphArrayView] | None = None,
     ):
         """Initialize a SolutionTracks object.
 
@@ -57,8 +57,8 @@ class SolutionTracks(Tracks):
                 Assumes that all features in the dict already exist on the graph (will
                 be activated but not recomputed). If None, core computed features (pos,
                 area, track_id) are auto-detected by checking if they exist on the graph.
-            _segmentation (GraphArrayView | None): Internal parameter for reusing an
-                existing GraphArrayView instance. Not intended for public use.
+            _segmentations (dict[str, GraphArrayView] | None): Internal parameter for
+                reusing existing GraphArrayView instances. Not intended for public use.
         """
         super().__init__(
             graph,
@@ -69,7 +69,7 @@ class SolutionTracks(Tracks):
             scale=scale,
             ndim=ndim,
             features=features,
-            _segmentation=_segmentation,
+            _segmentations=_segmentations,
         )
 
         self.track_annotator = self._get_track_annotator()
@@ -113,7 +113,7 @@ class SolutionTracks(Tracks):
             scale=tracks.scale,
             ndim=tracks.ndim,
             features=tracks.features,
-            _segmentation=tracks.segmentation,
+            _segmentations=tracks._segmentations,
         )
         if force_recompute:
             soln_tracks.enable_features(
