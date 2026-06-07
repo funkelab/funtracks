@@ -39,7 +39,7 @@ class AddNode(BasicAction):
                 the node. Defaults to None.
         Raises:
             ValueError: If time attribute is not in attributes.
-            ValueError: If tracklet_id is not in attributes.
+            ValueError: If tracks.features.tracklet_key is not in attributes.
             ValueError: If mask is None and position is not in attributes.
         """
         super().__init__(tracks)

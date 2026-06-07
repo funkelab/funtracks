@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 
 class SolutionTracks(Tracks):
-    """Difference from Tracks: every node must have a tracklet_id"""
+    """Difference from Tracks: every node must have a tracklet id"""
 
     def __init__(
         self,
@@ -31,7 +31,7 @@ class SolutionTracks(Tracks):
     ):
         """Initialize a SolutionTracks object.
 
-        SolutionTracks extends Tracks to ensure every node has a tracklet_id. A
+        SolutionTracks extends Tracks to ensure every node has a tracklet id. A
         TrackAnnotator is automatically added to manage track IDs.
 
         Args:
@@ -96,7 +96,8 @@ class SolutionTracks(Tracks):
     @classmethod
     def from_tracks(cls, tracks: Tracks):
         force_recompute = False
-        # Check if all nodes have tracklet_id before trusting existing track IDs
+        # Check if all nodes have a value at features.tracklet_key before trusting
+        # existing track IDs
         if (
             tracks.features.tracklet_key is not None
             and (

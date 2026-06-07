@@ -53,7 +53,8 @@ class UserAddNode(ActionGroup):
         Raises:
             InvalidActionError: If the action cannot be completed because of one of
             following reasons:
-                    - attributes dictionary does not contain `time` or `tracklet_id`.
+                    - attributes dictionary does not contain `time` or
+                    tracks.features.tracklet_key.
                     - a node with given ID already exists in the tracks.
                     - a node is trying to be added to a track that divided in a previous
                     time point (forceable).
