@@ -4,6 +4,7 @@ import warnings
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
+import tracksdata as td
 
 from funtracks.exceptions import InvalidActionError
 from funtracks.utils.tracksdata_utils import pixels_to_td_mask
@@ -149,9 +150,17 @@ class UserAddNode(ActionGroup):
         # remove skip edge that will be replaced by new edges after adding nodes
         if pred is not None and succ is not None:
             self.actions.append(DeleteEdge(tracks, (pred, succ)))
+        # put mask+bbox into attributes
+        if pixels is not None:
+            mask = pixels_to_td_mask(pixels, self.tracks.ndim)
+            mask_key = td.DEFAULT_ATTR_KEYS.MASK
+            attributes[mask_key] = mask
+            mask_feature = tracks.features.get(mask_key)
+            if mask_feature is not None:
+                for derived_key in mask_feature.get("derived_features", []):
+                    attributes[derived_key] = mask.bbox
+        self.actions.append(AddNode(tracks, node, attributes))
         # add predecessor and successor edges
-        mask = pixels_to_td_mask(pixels, self.tracks.ndim) if pixels is not None else None
-        self.actions.append(AddNode(tracks, node, attributes, mask))
         if pred is not None:
             self.actions.append(AddEdge(tracks, (pred, node)))
         if succ is not None:

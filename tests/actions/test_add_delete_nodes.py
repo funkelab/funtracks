@@ -53,8 +53,6 @@ def test_add_delete_nodes(get_tracks, ndim, with_seg):
 
     actions = []
     for node in nodes:
-        mask = reference_graph.nodes[node]["mask"] if with_seg else None
-
         attrs = {}
         attrs[tracks.features.time_key] = reference_graph.nodes[node][
             tracks.features.time_key
@@ -77,7 +75,7 @@ def test_add_delete_nodes(get_tracks, ndim, with_seg):
             attrs["bbox"] = reference_graph.nodes[node]["bbox"]
             attrs["mask"] = reference_graph.nodes[node]["mask"]
 
-        actions.append(AddNode(tracks, node, attributes=attrs, mask=mask))
+        actions.append(AddNode(tracks, node, attributes=attrs))
     action = ActionGroup(tracks=tracks, actions=actions)
 
     assert set(tracks.graph.node_ids()) == set(reference_graph.node_ids())
@@ -188,20 +186,16 @@ def test_custom_attributes_preserved(get_tracks, ndim, with_seg):
     # Create segmentation if needed
     if with_seg:
         if ndim == 3:
-            # Create 2D mask centered at (50, 50) with radius 5
-            mask = make_2d_disk_mask(center=(50, 50), radius=5)
+            seg_mask = make_2d_disk_mask(center=(50, 50), radius=5)
         else:
-            # Create proper 4D pixel coordinates (t, z, y, x)
-            mask = make_3d_sphere_mask(center=(50, 50, 50), radius=5)
-        custom_attrs["mask"] = mask
-        custom_attrs["bbox"] = mask.bbox
+            seg_mask = make_3d_sphere_mask(center=(50, 50, 50), radius=5)
+        custom_attrs["mask"] = seg_mask
+        custom_attrs["bbox"] = seg_mask.bbox
         custom_attrs.pop("pos")  # pos will be computed from segmentation
-    else:
-        mask = None
 
     # Add a node with custom attributes
     node_id = 100
-    action = AddNode(tracks, node_id, custom_attrs.copy(), mask=mask)
+    action = AddNode(tracks, node_id, custom_attrs.copy())
     # Verify all attributes are present after adding
     assert tracks.graph.has_node(node_id)
     for key, value in custom_attrs.items():
