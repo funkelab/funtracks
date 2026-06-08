@@ -17,7 +17,7 @@ from tracksdata.array import GraphArrayView
 from tracksdata.nodes import Mask
 
 from funtracks.actions.action_history import ActionHistory
-from funtracks.features import Feature, FeatureDict, Position, Time
+from funtracks.features import Feature, FeatureDict, Position, SegBbox, SegMask, Time
 from funtracks.utils.tracksdata_utils import (
     to_polars_dtype,
 )
@@ -33,7 +33,6 @@ Node: TypeAlias = int
 Edge: TypeAlias = tuple[Node, Node]
 AttrValues: TypeAlias = list[AttrValue]
 Attrs: TypeAlias = dict[str, AttrValues]
-SegMask: TypeAlias = tuple[np.ndarray, ...]
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +80,7 @@ class Tracks:
                 - List/tuple of strings for multi-axis (one attribute per axis)
                 Defaults to "pos" if None.
             tracklet_attr (str | None): Graph attribute name for tracklet/track IDs.
-                Defaults to "track_id" if None.
+                Defaults to "tracklet_id" if None.
             lineage_attr (str | None): Graph attribute name for lineage IDs.
                 Defaults to "lineage_id" if None.
             scale (list[float] | None): Scaling factors for each dimension (including
@@ -92,7 +91,7 @@ class Tracks:
                 definitions. If provided, time_attr/pos_attr/tracklet_attr are ignored.
                 Assumes that all features in the dict already exist on the graph (will
                 be activated but not recomputed). If None, core computed features (pos,
-                track_id) are auto-detected by checking if they exist on the graph.
+                tracklet_id) are auto-detected by checking if they exist on the graph.
             _segmentation (GraphArrayView | None): Internal parameter for reusing an
                 existing GraphArrayView instance. Not intended for public use.
         """
@@ -186,8 +185,9 @@ class Tracks:
                 - Single string: one attribute containing position array (e.g., "pos")
                 - List/tuple: multiple attributes, one per axis (e.g., ["y", "x"])
                 - None: defaults to "pos"
-            tracklet_key: Graph attribute name for tracklet/track IDs (e.g., "track_id").
-                If None, defaults to "track_id"
+            tracklet_key: Graph attribute name for tracklet/track IDs
+                (e.g., "tracklet_id").
+                If None, defaults to "tracklet_id"
             lineage_key: Graph attribute name for lineage IDs (e.g., "lineage_id").
                 if None, defaults to "lineage_id"
 
@@ -199,7 +199,7 @@ class Tracks:
         if pos_attr is None:
             pos_attr = "pos"
         if tracklet_key is None:
-            tracklet_key = "track_id"
+            tracklet_key = "tracklet_id"
         if lineage_key is None:
             lineage_key = "lineage_id"
 
@@ -237,6 +237,13 @@ class Tracks:
             pos_feature = Position(axes=self.axis_names)
             feature_dict.register_position_feature(single_position_key, pos_feature)
         # else: single pos_attr with segmentation - RegionpropsAnnotator will handle it
+
+        # Register mask and bbox features if segmentation exists
+        if self.segmentation is not None:
+            feature_dict[td.DEFAULT_ATTR_KEYS.MASK] = SegMask(
+                self.ndim, bbox_key=td.DEFAULT_ATTR_KEYS.BBOX
+            )
+            feature_dict[td.DEFAULT_ATTR_KEYS.BBOX] = SegBbox(self.ndim)
 
         return feature_dict
 
@@ -510,15 +517,15 @@ class Tracks:
         """
         return int(self.get_node_attr(node, self.features.time_key))
 
-    def get_mask(self, node: Node) -> Mask | None:
+    def get_mask(
+        self, node: Node, mask_key: str = td.DEFAULT_ATTR_KEYS.MASK
+    ) -> Mask | None:
         """Get the segmentation mask associated with a given node.
 
-        .. deprecated:: 1.0
-            `set_time` will be removed in funtracks v2.0.
-            Use `update_node_attrs([node], {tracks.features.time_key: [time]})` instead.
-
         Args:
-            node (Node): The node to get the mask for.
+            node: The node to get the mask for.
+            mask_key: The feature key for the mask column.
+                Defaults to the standard mask key.
 
         Returns:
             Mask | None: The segmentation mask for the node, or None if no
@@ -527,8 +534,30 @@ class Tracks:
         if self.segmentation is None:
             return None
 
-        mask = self.graph.nodes[node][td.DEFAULT_ATTR_KEYS.MASK]
+        mask = self.graph.nodes[node][mask_key]
         return mask
+
+    def update_mask(
+        self, node: Node, mask: Mask, mask_key: str = td.DEFAULT_ATTR_KEYS.MASK
+    ) -> None:
+        """Update the segmentation mask for an existing node, auto-syncing the bbox.
+
+        Writes both the mask and its bbox to the graph. The bbox key is
+        looked up from the mask Feature's derived_features list.
+
+        Args:
+            node: The node to update the mask for.
+            mask: The Mask object (carries .bbox).
+            mask_key: The feature key for the mask column.
+                Defaults to the standard mask key.
+        """
+        self.graph.nodes[node][mask_key] = mask
+        mask_feature = self.features.get(mask_key)
+        if mask_feature is not None:
+            # NOTE: all derived features of a mask are currently assumed to be
+            # its bounding box. Revisit if non-bbox derived features are added.
+            for derived_key in mask_feature.get("derived_features", []):
+                self.graph.nodes[node][derived_key] = mask.bbox
 
     def undo(self) -> bool:
         """Undo the last performed action from the action history.
@@ -711,10 +740,11 @@ class Tracks:
 
         # Perform custom graph operations when a feature is added
         if feature["feature_type"] == "node" and key not in self.graph.node_attr_keys():
+            # "mask" value_type maps to pl.Object via to_polars_dtype
             dtype = to_polars_dtype(feature["value_type"])
             num_values = feature.get("num_values")
             if num_values is not None and num_values > 1:
-                dtype = pl.Array(pl.Float64, num_values)
+                dtype = pl.Array(dtype, num_values)
             self.graph.add_node_attr_key(
                 key,
                 default_value=feature["default_value"],
@@ -736,13 +766,28 @@ class Tracks:
         Args:
             key: The key for the feature to delete
         """
+        # Get feature metadata before removing from dict
+        feature = self.features.get(key)
+
         # Remove from the features dictionary
         del self.features[key]
 
+        # Cascade-delete any derived features
+        if feature is not None:
+            for derived_key in feature.get("derived_features", []):
+                if derived_key in self.features:
+                    self.delete_feature(derived_key)
+
+        # Determine feature_type from FeatureDict entry or annotators
+        if feature is not None:
+            feature_type = feature["feature_type"]
+        elif ann_entry := self.annotators.all_features.get(key):
+            feature_type = ann_entry[0]["feature_type"]
+        else:
+            return
+
         # Perform custom graph operations when a feature is deleted
-        if feature := self.annotators.all_features.get(key):
-            feature_type = feature[0]["feature_type"]
-            if feature_type == "node" and key in self.graph.node_attr_keys():
-                self.graph.remove_node_attr_key(key)
-            elif feature_type == "edge" and key in self.graph.edge_attr_keys():
-                self.graph.remove_edge_attr_key(key)
+        if feature_type == "node" and key in self.graph.node_attr_keys():
+            self.graph.remove_node_attr_key(key)
+        elif feature_type == "edge" and key in self.graph.edge_attr_keys():
+            self.graph.remove_edge_attr_key(key)

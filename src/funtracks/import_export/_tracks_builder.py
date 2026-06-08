@@ -33,6 +33,7 @@ from funtracks.import_export._utils import (
 from funtracks.import_export._validation import (
     validate_edge_name_map,
     validate_feature_key_collisions,
+    validate_graph_seg_match,
     validate_in_memory_geff,
     validate_node_name_map,
     validate_spatial_dims,
@@ -92,7 +93,6 @@ def flatten_name_map(
 
 
 # defining constants here because they are only used in the context of import
-TRACK_KEY = "track_id"
 SEG_KEY = "seg_id"
 
 
@@ -397,7 +397,7 @@ class TracksBuilder(ABC):
         Validates:
         - Graph structure (unique nodes, valid edges, etc.)
         - Spatial_dims features have correct array shapes
-        - Optional properties (lineage_id, track_id) - removed with warning if invalid
+        - Optional properties (lineage_id, tracklet_id) - removed with warning if invalid
 
         Raises:
             ValueError: If required validation fails
@@ -584,8 +584,6 @@ class TracksBuilder(ABC):
         # sample_node = next(iter(graph.node_ids()))
         has_position = "pos" in graph.node_attr_keys()
         if has_position:
-            from funtracks.import_export._validation import validate_graph_seg_match
-
             validate_graph_seg_match(graph, seg_array, scale, self.axis_names)
 
         # Check if relabeling is needed (seg_id != node_id)

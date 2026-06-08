@@ -151,15 +151,6 @@ class CSVTracksBuilder(TracksBuilder):
             metadata, node_props_metadata, c_type="node"
         )
 
-        # Set track_node_props if we have track_id or lineage_id
-        track_node_props = {}
-        if "track_id" in node_props:
-            track_node_props["tracklet"] = "track_id"
-        if "lineage_id" in node_props:
-            track_node_props["lineage"] = "lineage_id"
-        if track_node_props:
-            metadata.track_node_props = track_node_props
-
         # Build InMemoryGeff structure (cast dict to InMemoryGeff type)
         self.in_memory_geff = cast(
             InMemoryGeff,

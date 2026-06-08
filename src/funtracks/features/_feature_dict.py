@@ -108,7 +108,7 @@ class FeatureDict(dict[str, Feature]):
         self[key] = feature
 
     def register_tracklet_feature(self, key: str, feature: Feature) -> None:
-        """Register the tracklet/track_id feature and set the tracklet_key.
+        """Register the tracklet feature and set the tracklet_key.
 
         Args:
             key: The key to use for the tracklet feature

@@ -5,9 +5,11 @@ import tracksdata as td
 
 from funtracks.actions import UpdateNodeAttrs
 from funtracks.data_model import Tracks
+from funtracks.features import SegBbox, SegMask
 from funtracks.user_actions import UserUpdateSegmentation
 from funtracks.utils.tracksdata_utils import (
     create_empty_graphview_graph,
+    to_polars_dtype,
 )
 
 track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
@@ -278,3 +280,81 @@ def test_undo_redo(graph_2d_with_segmentation):
 
     assert tracks.redo() is True  # Redo second action
     assert tracks.get_node_attr(2, "another_label") == "second_value"
+
+
+def test_get_feature_set_registers_mask(
+    graph_2d_with_segmentation,
+):
+    """_get_feature_set registers mask and bbox as Features when segmentation exists."""
+    tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
+
+    assert "mask" in tracks.features
+    assert tracks.features["mask"]["value_type"] == "mask"
+    assert tracks.features["mask"]["derived_features"] == ["bbox"]
+    assert "bbox" in tracks.features
+    assert tracks.features["bbox"]["value_type"] == "int"
+
+
+def test_get_feature_set_no_mask_without_segmentation(
+    graph_2d_with_position,
+):
+    """_get_feature_set does NOT register mask when there is no segmentation."""
+    tracks = Tracks(graph_2d_with_position, ndim=3, **track_attrs)
+    assert "mask" not in tracks.features
+
+
+def test_to_polars_dtype_mask():
+    """to_polars_dtype maps 'mask' to pl.Object."""
+    assert to_polars_dtype("mask") == pl.Object
+
+
+def test_add_feature_mask_creates_both_columns():
+    """add_feature with mask and bbox Features creates both columns."""
+    graph = create_empty_graphview_graph(ndim=3)
+    tracks = Tracks(graph, ndim=3, **track_attrs)
+
+    assert "nuc_mask" not in tracks.graph.node_attr_keys()
+    assert "nuc_bbox" not in tracks.graph.node_attr_keys()
+
+    tracks.add_feature("nuc_mask", SegMask(ndim=3, bbox_key="nuc_bbox"))
+    tracks.add_feature("nuc_bbox", SegBbox(ndim=3))
+
+    assert "nuc_mask" in tracks.graph.node_attr_keys()
+    assert "nuc_bbox" in tracks.graph.node_attr_keys()
+    assert "nuc_mask" in tracks.features
+    assert "nuc_bbox" in tracks.features
+
+
+def test_delete_feature_mask_removes_both_columns(
+    graph_2d_with_segmentation,
+):
+    """delete_feature on a mask Feature removes both mask and bbox columns (cascade)."""
+    tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
+
+    assert "mask" in tracks.features
+    assert "bbox" in tracks.features
+    assert "mask" in tracks.graph.node_attr_keys()
+    assert "bbox" in tracks.graph.node_attr_keys()
+
+    tracks.delete_feature("mask")
+
+    assert "mask" not in tracks.features
+    assert "bbox" not in tracks.features
+    assert "mask" not in tracks.graph.node_attr_keys()
+    assert "bbox" not in tracks.graph.node_attr_keys()
+
+
+def test_update_mask_syncs_bbox(graph_2d_with_segmentation):
+    """update_mask writes both the mask and bbox to the graph node."""
+    from tests.conftest import make_2d_disk_mask
+
+    tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
+
+    new_mask = make_2d_disk_mask(center=(30, 30), radius=10)
+    tracks.update_mask(1, new_mask)
+
+    stored_mask = tracks.graph.nodes[1][td.DEFAULT_ATTR_KEYS.MASK]
+    stored_bbox = tracks.graph.nodes[1][td.DEFAULT_ATTR_KEYS.BBOX]
+
+    assert stored_mask is new_mask
+    assert np.array_equal(stored_bbox, new_mask.bbox)
