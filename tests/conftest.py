@@ -477,7 +477,7 @@ def graph_2d_with_nuclear_and_membrane(tmp_path) -> td.graph.GraphView:
     db_path = str(tmp_path / "graph_2d_nuclear_membrane.db")
 
     graph = create_empty_graphview_graph(
-        node_attributes=["pos"],
+        node_attributes=["pos", "track_id", "lineage_id"],
         edge_attributes=[],
         database=db_path,
         position_attrs=["pos"],
@@ -490,6 +490,10 @@ def graph_2d_with_nuclear_and_membrane(tmp_path) -> td.graph.GraphView:
         graph.add_node_attr_key(f"{prefix}_bbox", pl.Array(pl.Int64, 4))
 
     # Same node layout as _make_graph (ndim=3)
+    # Track and lineage IDs match the standard _make_graph fixture
+    track_ids = {1: 1, 2: 2, 3: 3, 4: 3, 5: 3, 6: 5}
+    lineage_ids = {1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 2}
+
     base_nodes = [
         (1, {"t": 0, "pos": [50, 50]}),
         (2, {"t": 1, "pos": [20, 80]}),
@@ -510,6 +514,8 @@ def graph_2d_with_nuclear_and_membrane(tmp_path) -> td.graph.GraphView:
     for node_id, attrs in base_nodes:
         node_attrs = dict(attrs)
         node_attrs["solution"] = 1
+        node_attrs["track_id"] = track_ids[node_id]
+        node_attrs["lineage_id"] = lineage_ids[node_id]
         center: tuple[float, float] = tuple(attrs["pos"])  # type: ignore[arg-type,assignment]
 
         if node_id in membrane_radii:

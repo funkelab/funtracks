@@ -35,6 +35,7 @@ class UserAddNode(ActionGroup):
         attributes: dict[str, Any],
         pixels: tuple[np.ndarray, ...] | None = None,
         force: bool = False,
+        mask_key: str = td.DEFAULT_ATTR_KEYS.MASK,
         _top_level: bool = True,
     ):
         """
@@ -47,6 +48,8 @@ class UserAddNode(ActionGroup):
                 segmentation to add to the tracks. Defaults to None.
             force (bool, optional): Whether to force the action by removing any
                 conflicting edges. Defaults to False.
+            mask_key: The mask attribute key to use (e.g. "mask",
+                "nuclear_mask"). Defaults to the standard mask key.
             _top_level (bool): If True, add this action to the history and emit
                 refresh. Set to False when used as a sub-action inside a compound
                 action. Defaults to True.
@@ -153,7 +156,6 @@ class UserAddNode(ActionGroup):
         # put mask+bbox into attributes
         if pixels is not None:
             mask = pixels_to_td_mask(pixels, self.tracks.ndim)
-            mask_key = td.DEFAULT_ATTR_KEYS.MASK
             attributes[mask_key] = mask
             mask_feature = tracks.features.get(mask_key)
             if mask_feature is not None:

@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import numpy as np
+import tracksdata as td
 
 from ..actions._base import ActionGroup
 from ..actions.update_segmentation import UpdateNodeSeg
@@ -23,6 +24,7 @@ class UserUpdateSegmentation(ActionGroup):
         updated_pixels: list[tuple[tuple[np.ndarray, ...], int]],
         current_track_id: int,
         force: bool = False,
+        mask_key: str = td.DEFAULT_ATTR_KEYS.MASK,
     ):
         """Assumes that the pixels have already been updated in the project.segmentation
         NOTE: Re discussion with Kasia: we should have a basic action that updates the
@@ -40,11 +42,13 @@ class UserUpdateSegmentation(ActionGroup):
                 the currently selected track id in the viewer.
             force (bool): Whether to force the operation by removing conflicting edges.
                 Defaults to False.
+            mask_key: The mask attribute key to update (e.g. "mask",
+                "nuclear_mask"). Defaults to the standard mask key.
         """
         super().__init__(tracks, actions=[])
         self.tracks: SolutionTracks  # Narrow type from base class
         node_to_select = None
-        if self.tracks.segmentation is None:
+        if self.tracks.segmentation_shape is None:
             raise ValueError("Cannot update non-existing segmentation.")
         for pixels, old_value in updated_pixels:
             ndim = len(pixels)
@@ -53,7 +57,7 @@ class UserUpdateSegmentation(ActionGroup):
             time = pixels[0][0]
             # check if all pixels of old_value are removed
             mask_pixels = pixels_to_td_mask(pixels, self.tracks.ndim)
-            mask_old_value = self.tracks.graph.nodes[old_value]["mask"]
+            mask_old_value = self.tracks.graph.nodes[old_value][mask_key]
             # If pixels fully overlaps with old_value mask, delete node
             if mask_pixels.intersection(mask_old_value) == mask_old_value.mask.sum():
                 self.actions.append(
@@ -61,7 +65,13 @@ class UserUpdateSegmentation(ActionGroup):
                 )
             else:
                 self.actions.append(
-                    UpdateNodeSeg(tracks, old_value, mask_pixels, added=False)
+                    UpdateNodeSeg(
+                        tracks,
+                        old_value,
+                        mask_pixels,
+                        added=False,
+                        mask_key=mask_key,
+                    )
                 )
         if new_value != 0 and updated_pixels:
             all_pixels = tuple(
@@ -75,7 +85,13 @@ class UserUpdateSegmentation(ActionGroup):
             if self.tracks.graph.has_node(new_value):
                 mask_pixels = pixels_to_td_mask(all_pixels, self.tracks.ndim)
                 self.actions.append(
-                    UpdateNodeSeg(tracks, new_value, mask_pixels, added=True)
+                    UpdateNodeSeg(
+                        tracks,
+                        new_value,
+                        mask_pixels,
+                        added=True,
+                        mask_key=mask_key,
+                    )
                 )
             else:
                 time_key = tracks.features.time_key
@@ -93,6 +109,7 @@ class UserUpdateSegmentation(ActionGroup):
                         attributes=attrs,
                         pixels=all_pixels,
                         force=force,
+                        mask_key=mask_key,
                         _top_level=False,
                     )
                 )
