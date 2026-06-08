@@ -468,34 +468,28 @@ def sphere(center, radius, shape):
 def graph_2d_with_nuclear_and_membrane(tmp_path) -> td.graph.GraphView:
     """2D graph with both nuclear and membrane masks/bboxes on every node.
 
-    Each node has:
-    - nuclear_mask and nuclear_bbox attributes
-    - membrane_mask and membrane_bbox attributes
-
-    The membrane masks are larger than the nuclear masks
-    (membrane radius = nuclear radius + 5).
+    Uses the same node positions, edges, and segmentation shape as the
+    standard ``_make_graph`` fixture.  Membrane masks are identical to the
+    standard ``mask`` (same centres and radii), so they have the same
+    known IoU values (e.g. 0.395 for edge 1→3).  Nuclear masks are
+    smaller (half-radius disks / 2-wide squares), giving different IoU.
     """
     db_path = str(tmp_path / "graph_2d_nuclear_membrane.db")
 
     graph = create_empty_graphview_graph(
-        node_attributes=[
-            "pos",
-        ],
+        node_attributes=["pos"],
         edge_attributes=[],
         database=db_path,
         position_attrs=["pos"],
         ndim=3,
     )
 
-    # Add custom mask and bbox attributes manually with correct dtypes
-    graph.add_node_attr_key("nuclear_mask", pl.Object)
-    graph.add_node_attr_key("nuclear_bbox", pl.Array(pl.Int64, 4))  # 2D bbox has 4 values
-    graph.add_node_attr_key("membrane_mask", pl.Object)
-    graph.add_node_attr_key(
-        "membrane_bbox", pl.Array(pl.Int64, 4)
-    )  # 2D bbox has 4 values
+    # Add custom mask and bbox attributes manually
+    for prefix in ("nuclear", "membrane"):
+        graph.add_node_attr_key(f"{prefix}_mask", pl.Object)
+        graph.add_node_attr_key(f"{prefix}_bbox", pl.Array(pl.Int64, 4))
 
-    # Node definitions with positions
+    # Same node layout as _make_graph (ndim=3)
     base_nodes = [
         (1, {"t": 0, "pos": [50, 50]}),
         (2, {"t": 1, "pos": [20, 80]}),
@@ -505,59 +499,47 @@ def graph_2d_with_nuclear_and_membrane(tmp_path) -> td.graph.GraphView:
         (6, {"t": 4, "pos": [97.5, 97.5]}),
     ]
 
-    # Create masks for each node (nuclear and membrane)
+    # Membrane masks = same radii as standard _make_graph masks
+    membrane_radii = {1: 20, 2: 10, 3: 15}
+    # Nuclear masks = smaller (roughly half-radius)
+    nuclear_radii = {1: 10, 2: 5, 3: 8}
+
     nodes_id_list = []
     nodes_attrs_list = []
 
     for node_id, attrs in base_nodes:
         node_attrs = dict(attrs)
         node_attrs["solution"] = 1
-
-        # Get center position
         center: tuple[float, float] = tuple(attrs["pos"])  # type: ignore[arg-type,assignment]
 
-        # Create nuclear and membrane masks based on node
-        if node_id in [1, 2, 3]:
-            # Disk-based masks
-            nuclear_radius = {1: 20, 2: 10, 3: 15}[node_id]
-            membrane_radius = nuclear_radius + 5
-
-            nuclear_mask = make_2d_disk_mask(center=center, radius=nuclear_radius)
-            node_attrs["nuclear_mask"] = nuclear_mask
-            node_attrs["nuclear_bbox"] = cast(Mask, nuclear_mask).bbox
-            membrane_mask = make_2d_disk_mask(center=center, radius=membrane_radius)
-            node_attrs["membrane_mask"] = membrane_mask
-            node_attrs["membrane_bbox"] = cast(Mask, membrane_mask).bbox
+        if node_id in membrane_radii:
+            mem_mask = make_2d_disk_mask(center=center, radius=membrane_radii[node_id])
+            nuc_mask = make_2d_disk_mask(center=center, radius=nuclear_radii[node_id])
         else:
-            # Square-based masks
-            nuclear_width = 4
-            membrane_width = 6
+            # Square-based masks for corner nodes
+            mem_mask = make_2d_square_mask(
+                start_corner=(
+                    int(center[0] - 2),
+                    int(center[1] - 2),
+                ),
+                width=4,
+            )
+            nuc_mask = make_2d_square_mask(
+                start_corner=(
+                    int(center[0] - 1),
+                    int(center[1] - 1),
+                ),
+                width=2,
+            )
 
-            # Calculate start corners to center the squares
-            nuclear_corner = (
-                int(center[0] - nuclear_width / 2),
-                int(center[1] - nuclear_width / 2),
-            )
-            membrane_corner = (
-                int(center[0] - membrane_width / 2),
-                int(center[1] - membrane_width / 2),
-            )
-
-            nuclear_mask = make_2d_square_mask(
-                start_corner=nuclear_corner, width=nuclear_width
-            )
-            node_attrs["nuclear_mask"] = nuclear_mask
-            node_attrs["nuclear_bbox"] = cast(Mask, nuclear_mask).bbox
-            membrane_mask = make_2d_square_mask(
-                start_corner=membrane_corner, width=membrane_width
-            )
-            node_attrs["membrane_mask"] = membrane_mask
-            node_attrs["membrane_bbox"] = cast(Mask, membrane_mask).bbox
+        node_attrs["membrane_mask"] = mem_mask
+        node_attrs["membrane_bbox"] = cast(Mask, mem_mask).bbox
+        node_attrs["nuclear_mask"] = nuc_mask
+        node_attrs["nuclear_bbox"] = cast(Mask, nuc_mask).bbox
 
         nodes_id_list.append(node_id)
         nodes_attrs_list.append(node_attrs)
 
-    # Add edges
     edges = [
         {"source_id": 1, "target_id": 2, "solution": 1},
         {"source_id": 1, "target_id": 3, "solution": 1},

@@ -111,7 +111,7 @@ class EdgeAnnotator(GraphAnnotator):
                 self.features (not enabled) are ignored.
         """
         # Can only compute features if segmentation is present
-        if self.tracks.segmentation is None:
+        if self.tracks.segmentation_shape is None:
             return
 
         keys_to_compute = self._filter_feature_keys(feature_keys)
@@ -124,7 +124,8 @@ class EdgeAnnotator(GraphAnnotator):
             for n in self.tracks.graph.node_ids():
                 nodes_by_frame[self.tracks.get_time(n)].append(n)
 
-            for t in range(self.tracks.segmentation.shape[0] - 1):
+            num_frames = self.tracks.segmentation_shape[0]
+            for t in range(num_frames - 1):
                 nodes_in_t = nodes_by_frame[t]
                 edges = []
                 for node in nodes_in_t:
@@ -166,7 +167,7 @@ class EdgeAnnotator(GraphAnnotator):
             return
 
         # Can only compute features if segmentation is present
-        if self.tracks.segmentation is None:
+        if self.tracks.segmentation_shape is None:
             return
 
         if self.iou_key not in self.features:
