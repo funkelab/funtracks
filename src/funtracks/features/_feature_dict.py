@@ -51,13 +51,13 @@ class FeatureDict(dict[str, Feature]):
 
     @property
     def node_features(self) -> dict[str, Feature]:
-        """A dict of all node features"""
-        return {k: v for k, v in self.items() if v["feature_type"] == "node"}
+        """A dict of all features that apply to nodes"""
+        return {k: v for k, v in self.items() if "node" in v["feature_type"]}
 
     @property
     def edge_features(self) -> dict[str, Feature]:
-        """A dict of all edge features"""
-        return {k: v for k, v in self.items() if v["feature_type"] == "edge"}
+        """A dict of all features that apply to edges"""
+        return {k: v for k, v in self.items() if "edge" in v["feature_type"]}
 
     def dump_json(self) -> dict:
         """Dump this FeatureDict to a json compatible dictionary

@@ -8,6 +8,10 @@ from typing_extensions import NotRequired
 # Type alias for feature value types
 ValueType = Literal["int", "float", "str", "bool", "mask"]
 
+# A feature applies to one or more graph element types
+FeatureScope = Literal["node", "edge"]
+FeatureType = FeatureScope | list[FeatureScope]
+
 
 class Feature(TypedDict):
     """TypedDict for storing metadata associated with a graph feature.
@@ -18,8 +22,9 @@ class Feature(TypedDict):
     The key is stored separately in the FeatureDict mapping (not in the Feature itself).
 
     Attributes:
-        feature_type (Literal["node", "edge"]): Specifies which graph elements
-            the feature applies to.
+        feature_type: Which graph elements the feature applies to.
+            A single string ("node" or "edge") or a list of them
+            (e.g. ["node", "edge"]).
         value_type (ValueType): The data type of the feature values.
         num_values (int): The number of values expected for this feature.
         display_name (str): Optional. A display name for the feature.
@@ -37,7 +42,7 @@ class Feature(TypedDict):
             deleting the mask also deletes the bounding box.
     """
 
-    feature_type: Literal["node", "edge"]
+    feature_type: FeatureType
     value_type: ValueType
     num_values: int
     display_name: NotRequired[str]

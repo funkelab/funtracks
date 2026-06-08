@@ -9,7 +9,7 @@ import networkx as nx
 import numpy as np
 import tracksdata as td
 
-from funtracks.features import FeatureDict, SegBbox, SegMask
+from funtracks.features import FeatureDict, SegBbox, SegMask, Solution
 from funtracks.utils.tracksdata_utils import (
     add_masks_and_bboxes_to_graph,
     convert_graph_nx_to_td,
@@ -83,6 +83,12 @@ def load_v1_tracks(
             edata.setdefault(k, default)
 
     graph_td = convert_graph_nx_to_td(graph_nx)
+
+    # Ensure solution Feature is registered in the FeatureDict.
+    # Old saves predate solution being a registered Feature.
+    features = attrs.get("features")
+    if isinstance(features, FeatureDict) and "solution" not in features:
+        features["solution"] = Solution()
 
     # Add mask and bbox attributes to graph if segmentation is available
     if seg is not None:

@@ -10,8 +10,6 @@ if TYPE_CHECKING:
     from funtracks.data_model import Tracks
     from funtracks.data_model.tracks import Edge
 
-import tracksdata as td
-
 
 class AddEdge(BasicAction):
     """Action for adding a new edge. Endpoints must exist already."""
@@ -57,11 +55,10 @@ class AddEdge(BasicAction):
         if self.tracks.graph.has_edge(*self.edge):
             raise ValueError(f"Edge {self.edge} already exists in the graph")
 
-        # Add required solution attribute (default to 1,
-        # but respect saved value e.g. during undo)
         attrs = dict(self.attributes)
-        attrs.setdefault(td.DEFAULT_ATTR_KEYS.SOLUTION, 1)
 
+        # Fill in missing edge attributes with schema defaults (includes
+        # solution and any other registered edge attrs).
         schemas = self.tracks.graph._edge_attr_schemas()
         for attr in self.tracks.graph.edge_attr_keys():
             if attr not in attrs:
@@ -101,11 +98,6 @@ class DeleteEdge(BasicAction):
             val = tracks.get_edge_attr(edge, key)
             if val is not None:
                 self.attributes[key] = val
-
-        # Also save the solution attribute so undo restores the original value
-        self.attributes[td.DEFAULT_ATTR_KEYS.SOLUTION] = tracks.get_edge_attr(
-            edge, td.DEFAULT_ATTR_KEYS.SOLUTION
-        )
 
         self._apply()
 

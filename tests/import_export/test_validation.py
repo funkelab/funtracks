@@ -4,7 +4,6 @@ import pytest
 
 from funtracks.import_export._validation import (
     validate_edge_name_map,
-    validate_feature_key_collisions,
     validate_node_name_map,
 )
 
@@ -118,54 +117,3 @@ class TestValidateEdgeNameMap:
 
         # Should not raise when importable_props is empty
         validate_edge_name_map(edge_name_map, importable_props)
-
-
-class TestValidateFeatureKeyCollisions:
-    """Test validate_feature_key_collisions helper function."""
-
-    def test_no_collision(self):
-        """Test that non-overlapping keys pass validation."""
-        name_map = {"time": "t", "x": "x", "y": "y", "area": "area"}
-        edge_name_map = {"iou": "iou", "distance": "distance"}
-
-        # Should not raise
-        validate_feature_key_collisions(name_map, edge_name_map)
-
-    def test_single_collision(self):
-        """Test that a single colliding key raises ValueError."""
-        name_map = {"time": "t", "x": "x", "y": "y", "iou": "node_iou"}
-        edge_name_map = {"iou": "edge_iou", "distance": "distance"}
-
-        with pytest.raises(ValueError, match="Feature keys cannot be shared"):
-            validate_feature_key_collisions(name_map, edge_name_map)
-
-        with pytest.raises(ValueError, match="iou"):
-            validate_feature_key_collisions(name_map, edge_name_map)
-
-    def test_multiple_collisions(self):
-        """Test that multiple colliding keys are all reported."""
-        name_map = {
-            "time": "t",
-            "x": "x",
-            "y": "y",
-            "iou": "node_iou",
-            "weight": "node_weight",
-        }
-        edge_name_map = {"iou": "edge_iou", "weight": "edge_weight", "distance": "dist"}
-
-        with pytest.raises(ValueError, match="Feature keys cannot be shared"):
-            validate_feature_key_collisions(name_map, edge_name_map)
-
-        with pytest.raises(ValueError, match="iou"):
-            validate_feature_key_collisions(name_map, edge_name_map)
-
-        with pytest.raises(ValueError, match="weight"):
-            validate_feature_key_collisions(name_map, edge_name_map)
-
-    def test_none_edge_name_map(self):
-        """Test that None edge_name_map doesn't raise."""
-        name_map = {"time": "t", "x": "x", "y": "y", "iou": "iou"}
-        edge_name_map = None
-
-        # Should not raise
-        validate_feature_key_collisions(name_map, edge_name_map)

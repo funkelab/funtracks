@@ -178,18 +178,14 @@ def create_empty_graphview_graph(
                 default_value=default_value,
                 dtype=to_polars_dtype(default_value),
             )
-    if td.DEFAULT_ATTR_KEYS.SOLUTION not in graph_td.node_attr_keys():
-        graph_td.add_node_attr_key(
-            td.DEFAULT_ATTR_KEYS.SOLUTION, default_value=1, dtype=pl.Int64
-        )
-    if td.DEFAULT_ATTR_KEYS.SOLUTION not in graph_td.edge_attr_keys():
-        graph_td.add_edge_attr_key(
-            td.DEFAULT_ATTR_KEYS.SOLUTION, default_value=1, dtype=pl.Int64
-        )
+    if "solution" not in graph_td.node_attr_keys():
+        graph_td.add_node_attr_key("solution", default_value=True, dtype=pl.Boolean)
+    if "solution" not in graph_td.edge_attr_keys():
+        graph_td.add_edge_attr_key("solution", default_value=True, dtype=pl.Boolean)
 
     graph_td_sub = graph_td.filter(
-        td.NodeAttr(td.DEFAULT_ATTR_KEYS.SOLUTION) == 1,
-        td.EdgeAttr(td.DEFAULT_ATTR_KEYS.SOLUTION) == 1,
+        td.NodeAttr("solution") == True,  # noqa: E712
+        td.EdgeAttr("solution") == True,  # noqa: E712
     ).subgraph()
 
     return graph_td_sub
@@ -481,8 +477,8 @@ def td_relabel_nodes(graph, mapping: dict[int, int]) -> td.graph.IndexedRXGraph:
         new_graph.add_edge(source_id, target_id, attrs)
 
     new_graph_sub = new_graph.filter(
-        td.NodeAttr(td.DEFAULT_ATTR_KEYS.SOLUTION) == 1,
-        td.EdgeAttr(td.DEFAULT_ATTR_KEYS.SOLUTION) == 1,
+        td.NodeAttr("solution") == True,  # noqa: E712
+        td.EdgeAttr("solution") == True,  # noqa: E712
     ).subgraph()
     return new_graph_sub
 
@@ -539,9 +535,7 @@ def convert_graph_nx_to_td(graph_nx: nx.DiGraph) -> td.graph.GraphView:
                     f"Node attribute '{attr}' already exists in "
                     f"tracksdata graph. Skipping addition."
                 )
-    graph_td.add_node_attr_key(
-        td.DEFAULT_ATTR_KEYS.SOLUTION, default_value=1, dtype=pl.Int64
-    )
+    graph_td.add_node_attr_key("solution", default_value=True, dtype=pl.Boolean)
 
     # Add edge attribute keys to tracksdata graph
     for attr, value in all_edges[0][2].items():
@@ -564,9 +558,7 @@ def convert_graph_nx_to_td(graph_nx: nx.DiGraph) -> td.graph.GraphView:
                 f"Edge attribute '{attr}' already exists in tracksdata graph. "
                 f"Skipping addition."
             )
-    graph_td.add_edge_attr_key(
-        td.DEFAULT_ATTR_KEYS.SOLUTION, default_value=1, dtype=pl.Int64
-    )
+    graph_td.add_edge_attr_key("solution", default_value=True, dtype=pl.Boolean)
 
     # Add node attributes
     for node_id, attrs in all_nodes:
@@ -575,7 +567,7 @@ def convert_graph_nx_to_td(graph_nx: nx.DiGraph) -> td.graph.GraphView:
         for key, value in attrs_copy.items():
             if isinstance(value, list):
                 attrs_copy[key] = np.array(value, dtype=np.float64)
-        attrs_copy[td.DEFAULT_ATTR_KEYS.SOLUTION] = 1
+        attrs_copy["solution"] = True
         graph_td.add_node(attrs_copy, index=node_id)
 
     # Add edges
@@ -585,13 +577,13 @@ def convert_graph_nx_to_td(graph_nx: nx.DiGraph) -> td.graph.GraphView:
         for key, value in attrs_copy.items():
             if isinstance(value, list):
                 attrs_copy[key] = np.array(value, dtype=np.float64)
-        attrs_copy[td.DEFAULT_ATTR_KEYS.SOLUTION] = 1
+        attrs_copy["solution"] = True
         graph_td.add_edge(source_id, target_id, attrs_copy)
 
     # Create subgraph (GraphView) with only solution nodes and edges
     graph_td_sub = graph_td.filter(
-        td.NodeAttr(td.DEFAULT_ATTR_KEYS.SOLUTION) == 1,
-        td.EdgeAttr(td.DEFAULT_ATTR_KEYS.SOLUTION) == 1,
+        td.NodeAttr("solution") == True,  # noqa: E712
+        td.EdgeAttr("solution") == True,  # noqa: E712
     ).subgraph()
 
     return graph_td_sub
