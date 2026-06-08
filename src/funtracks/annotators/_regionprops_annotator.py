@@ -17,7 +17,7 @@ from funtracks.features import (
     Position,
 )
 
-from ._graph_annotator import GraphAnnotator
+from ._graph_annotator import GraphAnnotator, _derive_mask_prefix
 from ._regionprops_extended import regionprops_extended
 
 if TYPE_CHECKING:
@@ -73,6 +73,59 @@ class RegionpropsAnnotator(GraphAnnotator):
         """
         return tracks.segmentation_shape is not None
 
+    @classmethod
+    def create_annotators(cls, tracks) -> list[GraphAnnotator]:
+        """Create one RegionpropsAnnotator per mask feature in tracks.features.
+
+        For the default "mask" key: no prefix, uses tracks.features.position_key.
+        For other mask keys: derives prefix via _derive_mask_prefix, uses
+        "{prefix}pos" as position key.
+
+        Args:
+            tracks: The tracks to create annotators for
+
+        Returns:
+            List of RegionpropsAnnotator instances (one per mask feature)
+        """
+        if not cls.can_annotate(tracks):
+            return []
+
+        annotators: list[GraphAnnotator] = []
+        mask_features = [
+            (key, feat)
+            for key, feat in tracks.features.items()
+            if feat.get("value_type") == "mask"
+        ]
+
+        if not mask_features:
+            # No mask features in FeatureDict — fall back to single default instance
+            pos_key = (
+                tracks.features.position_key
+                if isinstance(tracks.features.position_key, str)
+                else None
+            )
+            return [cls(tracks, pos_key=pos_key)]
+
+        for mask_key, _feat in mask_features:
+            prefix = _derive_mask_prefix(mask_key)
+            if not prefix:
+                # Default mask — use tracks.features.position_key
+                pos_key = (
+                    tracks.features.position_key
+                    if isinstance(tracks.features.position_key, str)
+                    else None
+                )
+                annotators.append(
+                    cls(tracks, pos_key=pos_key, mask_attr=mask_key, key_prefix=prefix)
+                )
+            else:
+                pos_key = f"{prefix}pos"
+                annotators.append(
+                    cls(tracks, pos_key=pos_key, mask_attr=mask_key, key_prefix=prefix)
+                )
+
+        return annotators
+
     def __init__(
         self,
         tracks: Tracks,
@@ -87,11 +140,21 @@ class RegionpropsAnnotator(GraphAnnotator):
             tracks.ndim,
         )
 
-        # Apply key_prefix to all feature keys
+        # Apply key_prefix to all feature keys and display names
         if key_prefix:
+            # Format the prefix for display (capitalize first letter, add space)
+            display_prefix = key_prefix.replace("_", " ").title().strip()
+            if display_prefix and not display_prefix.endswith(" "):
+                display_prefix += " "
+
             specs = [
                 FeatureSpec(
-                    f"{key_prefix}{spec.key}", spec.feature, spec.regionprops_attr
+                    f"{key_prefix}{spec.key}",
+                    {
+                        **spec.feature,
+                        "display_name": f"{display_prefix}{spec.feature['display_name']}",
+                    },
+                    spec.regionprops_attr,
                 )
                 for spec in specs
             ]
@@ -170,8 +233,8 @@ class RegionpropsAnnotator(GraphAnnotator):
                 If None, computes all currently active features. Keys not in
                 self.features (not enabled) are ignored.
         """
-        # Can only compute features if segmentation is present
-        if self.tracks.segmentation is None:
+        # Can only compute features if this annotator's mask attribute exists in graph
+        if self.mask_attr not in self.tracks.graph.node_attr_keys():
             return
 
         keys_to_compute = self._filter_feature_keys(feature_keys)
@@ -239,8 +302,14 @@ class RegionpropsAnnotator(GraphAnnotator):
         if not isinstance(action, (AddNode, UpdateNodeSeg)):
             return
 
-        # Can only compute features if segmentation is present
-        if self.tracks.segmentation is None:
+        # Check if the action affects this annotator's mask attribute
+        if isinstance(action, UpdateNodeSeg) and action.mask_key != self.mask_attr:
+            return
+        if isinstance(action, AddNode) and self.mask_attr not in action.attributes:
+            return
+
+        # Can only compute features if this annotator's mask attribute exists in graph
+        if self.mask_attr not in self.tracks.graph.node_attr_keys():
             return
 
         # Get the node from the action

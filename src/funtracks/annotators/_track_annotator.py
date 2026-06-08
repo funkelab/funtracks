@@ -67,6 +67,29 @@ class TrackAnnotator(GraphAnnotator):
         return isinstance(tracks, SolutionTracks)
 
     @classmethod
+    def create_annotators(cls, tracks) -> list[GraphAnnotator]:
+        """Create a single TrackAnnotator configured from tracks.features.
+
+        Reads tracklet_key and lineage_key from the FeatureDict so that the
+        wiring logic lives here rather than in _get_annotators().
+
+        Args:
+            tracks: The tracks to create annotators for
+
+        Returns:
+            List containing a single TrackAnnotator, or empty if not applicable
+        """
+        if not cls.can_annotate(tracks):
+            return []
+        return [
+            cls(
+                tracks,
+                tracklet_key=tracks.features.tracklet_key,
+                lineage_key=tracks.features.lineage_key,
+            )
+        ]
+
+    @classmethod
     def get_available_features(cls, ndim: int = 3) -> dict[str, Feature]:
         """Get all features that can be computed by this annotator.
 

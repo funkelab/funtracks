@@ -8,7 +8,7 @@ from funtracks.actions.add_delete_edge import AddEdge
 from funtracks.actions.update_segmentation import UpdateNodeSeg
 from funtracks.features import Feature, IoU
 
-from ._graph_annotator import GraphAnnotator
+from ._graph_annotator import GraphAnnotator, _derive_mask_prefix
 
 if TYPE_CHECKING:
     from funtracks.actions import BasicAction
@@ -42,6 +42,39 @@ class EdgeAnnotator(GraphAnnotator):
         return tracks.segmentation_shape is not None
 
     @classmethod
+    def create_annotators(cls, tracks) -> list[GraphAnnotator]:
+        """Create one EdgeAnnotator per mask feature in tracks.features.
+
+        Each instance gets a mask_attr and iou_key derived from the mask key.
+
+        Args:
+            tracks: The tracks to create annotators for
+
+        Returns:
+            List of EdgeAnnotator instances (one per mask feature)
+        """
+        if not cls.can_annotate(tracks):
+            return []
+
+        mask_features = [
+            key
+            for key, feat in tracks.features.items()
+            if feat.get("value_type") == "mask"
+        ]
+
+        if not mask_features:
+            # No mask features in FeatureDict — fall back to single default instance
+            return [cls(tracks)]
+
+        annotators: list[GraphAnnotator] = []
+        for mask_key in mask_features:
+            prefix = _derive_mask_prefix(mask_key)
+            iou_key = f"{prefix}{DEFAULT_IOU_KEY}"
+            annotators.append(cls(tracks, mask_attr=mask_key, iou_key=iou_key))
+
+        return annotators
+
+    @classmethod
     def get_available_features(cls, ndim: int = 3) -> dict[str, Feature]:
         """Get all features that can be computed by this annotator.
 
@@ -66,7 +99,7 @@ class EdgeAnnotator(GraphAnnotator):
         self.mask_attr = mask_attr
         self.iou_key = iou_key
         # Build features dict with custom key
-        feats = {} if tracks.segmentation is None else {self.iou_key: IoU()}
+        feats = {} if tracks.segmentation_shape is None else {self.iou_key: IoU()}
         super().__init__(tracks, feats)
 
     def compute(self, feature_keys: list[str] | None = None) -> None:
@@ -126,6 +159,10 @@ class EdgeAnnotator(GraphAnnotator):
         """
         # Only update for actions that change edges or segmentation
         if not isinstance(action, (AddEdge, UpdateNodeSeg)):
+            return
+
+        # Check if the action affects this annotator's mask attribute
+        if isinstance(action, UpdateNodeSeg) and action.mask_key != self.mask_attr:
             return
 
         # Can only compute features if segmentation is present

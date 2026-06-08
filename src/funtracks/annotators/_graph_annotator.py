@@ -11,6 +11,25 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _derive_mask_prefix(mask_key: str) -> str:
+    """Derive a feature key prefix from a mask attribute key.
+
+    Args:
+        mask_key: The mask attribute key (e.g., "mask", "nuclear_mask", "foo")
+
+    Returns:
+        A prefix string:
+        - "mask" → "" (no prefix, backward compatible)
+        - "nuclear_mask" → "nuclear_" (strip "_mask" suffix, keep trailing "_")
+        - "foo" → "foo_" (append "_")
+    """
+    if mask_key == "mask":
+        return ""
+    if mask_key.endswith("_mask"):
+        return mask_key[: -len("mask")]  # keeps the trailing "_"
+    return mask_key + "_"
+
+
 class GraphAnnotator:
     """A base class for adding and updating graph features.
 
@@ -29,6 +48,23 @@ class GraphAnnotator:
             (feature, is_included) tuples. Tracks both what can be computed and
             what is currently being computed. Defaults to computing nothing.
     """
+
+    @classmethod
+    def create_annotators(cls, tracks: Tracks) -> list[GraphAnnotator]:
+        """Return a list of annotator instances for these tracks.
+
+        Default implementation creates a single instance if can_annotate() is True.
+        Subclasses can override to create multiple instances (e.g., per mask feature).
+
+        Args:
+            tracks: The tracks to create annotators for
+
+        Returns:
+            List of annotator instances (empty if this annotator cannot annotate)
+        """
+        if cls.can_annotate(tracks):
+            return [cls(tracks)]  # type: ignore[call-arg]
+        return []
 
     @classmethod
     def can_annotate(cls, tracks: Tracks) -> bool:

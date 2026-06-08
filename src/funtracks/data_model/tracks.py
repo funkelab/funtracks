@@ -268,12 +268,8 @@ class Tracks:
     def _get_annotators(self) -> AnnotatorRegistry:
         """Instantiate and return core annotators based on available data.
 
-        Creates annotators conditionally:
-        - RegionpropsAnnotator: Only if segmentation is provided
-        - EdgeAnnotator: Only if segmentation is provided
-        - TrackAnnotator: Only if this is a SolutionTracks instance
-
-        Each annotator is configured with appropriate keys from self.features.
+        Delegates to each annotator class's create_annotators() factory method,
+        which decides how many instances to create and with what parameters.
 
         Returns:
             AnnotatorRegistry containing all applicable annotators
@@ -286,31 +282,10 @@ class Tracks:
             TrackAnnotator,
         )
 
+        annotator_classes = [RegionpropsAnnotator, EdgeAnnotator, TrackAnnotator]
         annotator_list: list[GraphAnnotator] = []
-
-        # RegionpropsAnnotator: requires segmentation
-        if RegionpropsAnnotator.can_annotate(self):
-            # Pass position_key only if it's a single string (not multi-axis list)
-            pos_key = (
-                self.features.position_key
-                if isinstance(self.features.position_key, str)
-                else None
-            )
-            annotator_list.append(RegionpropsAnnotator(self, pos_key=pos_key))
-
-        # EdgeAnnotator: requires segmentation
-        if EdgeAnnotator.can_annotate(self):
-            annotator_list.append(EdgeAnnotator(self))
-
-        # TrackAnnotator: requires SolutionTracks (checked in can_annotate)
-        if TrackAnnotator.can_annotate(self):
-            annotator_list.append(
-                TrackAnnotator(
-                    self,  # type: ignore[arg-type]
-                    tracklet_key=self.features.tracklet_key,
-                    lineage_key=self.features.lineage_key,
-                )
-            )
+        for cls in annotator_classes:
+            annotator_list.extend(cls.create_annotators(self))
         return AnnotatorRegistry(annotator_list)
 
     def _activate_features_from_dict(self) -> None:
@@ -354,7 +329,11 @@ class Tracks:
         for annotator in self.annotators:
             if isinstance(annotator, RegionpropsAnnotator):
                 pos_key = annotator.pos_key
-                if self.features.position_key is None:
+                # Only set position_key from the default-mask annotator
+                if (
+                    self.features.position_key is None
+                    and annotator.mask_attr == td.DEFAULT_ATTR_KEYS.MASK
+                ):
                     self.features.position_key = pos_key
                 core_features.append(pos_key)
             elif isinstance(annotator, TrackAnnotator):
