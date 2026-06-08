@@ -902,3 +902,82 @@ def test_embedded_seg_ellipse_axis_radii_feature_metadata(tmp_path):
         f"ellipse_axis_radii value_names should be ['major_axis', 'minor_axis'], "
         f"got {feat.get('value_names')}"
     )
+
+
+def test_featuredict_survives_geff_roundtrip(tmp_path):
+    """The FeatureDict stored in GEFF extra metadata must be loaded on import,
+    not re-derived by auto-detection.
+
+    Proves the loaded FeatureDict is the source of truth by customizing a
+    feature's display_name before export — auto-detection would reset it to the
+    default, so a surviving custom value can only come from the stored dict.
+    """
+    import tracksdata as td
+
+    node_attributes = [
+        "pos",
+        "area",
+        "ellipse_axis_radii",
+        "track_id",
+        "lineage_id",
+        "solution",
+        td.DEFAULT_ATTR_KEYS.MASK,
+        td.DEFAULT_ATTR_KEYS.BBOX,
+    ]
+    node_default_values = [
+        None,  # pos — special-cased, slot unused
+        0.0,  # area
+        np.array([0.0, 0.0]),  # ellipse_axis_radii — must be Array(Float64, 2)
+        None,  # track_id — special-cased, slot unused
+        -1,  # lineage_id
+        1,  # solution
+        None,  # mask — special-cased, slot unused
+        None,  # bbox — special-cased, slot unused
+    ]
+    graph = create_empty_graphview_graph(
+        node_attributes=node_attributes,
+        node_default_values=node_default_values,
+        edge_attributes=[],
+        ndim=3,
+    )
+    bbox = [20, 20, 50, 60]
+    graph.bulk_add_nodes(
+        nodes=[
+            {
+                "t": 0,
+                "pos": np.array([35.0, 40.0]),
+                "area": 900.0,
+                "ellipse_axis_radii": np.array([20.0, 15.0]),
+                "track_id": 1,
+                "lineage_id": 1,
+                "solution": 1,
+                td.DEFAULT_ATTR_KEYS.MASK: _make_mask(bbox),
+                td.DEFAULT_ATTR_KEYS.BBOX: np.array(bbox, dtype=np.int64),
+            }
+        ],
+        indices=[1],
+    )
+    graph._update_metadata(segmentation_shape=(3, 100, 100))
+
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+
+    st = SolutionTracks(graph, ndim=3, time_attr="t")
+    # Customize metadata that auto-detection cannot reproduce.
+    pos_key = st.features.position_key
+    assert isinstance(pos_key, str)
+    st.features[pos_key]["display_name"] = "Custom Position Name"
+    export_to_geff(st, run_dir)
+
+    # Import WITHOUT stripping the FeatureDict (the positive path).
+    imported = import_from_geff(run_dir / "tracks.geff")
+
+    assert imported.features[pos_key]["display_name"] == "Custom Position Name", (
+        "Custom display_name should survive the GEFF round-trip, proving the "
+        "stored FeatureDict was loaded rather than re-derived by auto-detection."
+    )
+    # Tracked keys must round-trip too.
+    assert imported.features.time_key == st.features.time_key
+    assert imported.features.position_key == st.features.position_key
+    assert imported.features.tracklet_key == st.features.tracklet_key
+    assert imported.features.lineage_key == st.features.lineage_key
