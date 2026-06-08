@@ -40,6 +40,7 @@ def to_polars_dtype(dtype_or_value: str | Any) -> pl.DataType:
         "int": pl.Int64,
         "float": pl.Float64,
         "bool": pl.Boolean,
+        "mask": pl.Object,
         "datetime": pl.Datetime,
         "date": pl.Date,
     }
