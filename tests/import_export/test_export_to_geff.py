@@ -11,7 +11,7 @@ from funtracks.import_export import export_to_geff
 @pytest.mark.parametrize("ndim", [3, 4])
 @pytest.mark.parametrize("with_seg", [True, False])
 @pytest.mark.parametrize("save_segmentation", [True, False])
-@pytest.mark.parametrize("seg_label_attr", ["track_id", None])
+@pytest.mark.parametrize("seg_relabel", ["tracklet", "lineage", None])
 @pytest.mark.parametrize("is_solution", [True, False])
 @pytest.mark.parametrize("pos_attr_type", (str, list))
 def test_export_to_geff(
@@ -20,7 +20,7 @@ def test_export_to_geff(
     ndim,
     with_seg,
     save_segmentation,
-    seg_label_attr,
+    seg_relabel,
     is_solution,
     pos_attr_type,
     tmp_path,
@@ -64,11 +64,11 @@ def test_export_to_geff(
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=is_solution)
 
     # Exporting segmentation with a label_attr not present in the graph raises ValueError.
-    # Non-solution tracks don't have track_id as a node attribute.
+    # Non-solution tracks don't have tracklet_id or lineage_id as node attributes.
     if (
         with_seg
         and save_segmentation
-        and seg_label_attr == "track_id"
+        and seg_relabel in ("tracklet", "lineage")
         and not is_solution
     ):
         export_dir = tmp_path / "export"
@@ -78,7 +78,7 @@ def test_export_to_geff(
                 tracks,
                 export_dir,
                 save_segmentation=save_segmentation,
-                seg_label_attr=seg_label_attr,
+                seg_relabel=seg_relabel,
             )
         return
 
@@ -89,7 +89,7 @@ def test_export_to_geff(
         tracks,
         export_dir,
         save_segmentation=save_segmentation,
-        seg_label_attr=seg_label_attr,
+        seg_relabel=seg_relabel,
     )
     z = zarr.open((export_dir / "tracks.geff").as_posix(), mode="r")
     assert isinstance(z, zarr.Group)
@@ -101,12 +101,14 @@ def test_export_to_geff(
         assert isinstance(seg_zarr, zarr.Array)
         assert seg_zarr.shape == tracks.segmentation.shape
         unique_vals = set(seg_zarr[:].flatten()) - {0}
-        if seg_label_attr is not None:
-            # values should be the label_attr values (e.g. track_ids)
+        if seg_relabel is not None:
+            # values should be the relabel attr values (e.g. tracklet_ids or lineage_ids)
+            if seg_relabel == "lineage":
+                label_key = tracks.features.lineage_key
+            else:
+                label_key = tracks.features.tracklet_key
             label_vals = set(
-                tracks.graph.node_attrs(attr_keys=[seg_label_attr])[
-                    seg_label_attr
-                ].to_list()
+                tracks.graph.node_attrs(attr_keys=[label_key])[label_key].to_list()
             )
             assert unique_vals == label_vals
         else:
@@ -151,7 +153,7 @@ def test_export_to_geff(
         export_dir,
         overwrite=True,
         save_segmentation=save_segmentation,
-        seg_label_attr=seg_label_attr,
+        seg_relabel=seg_relabel,
     )
     z = zarr.open((export_dir / "tracks.geff").as_posix(), mode="r")
     assert isinstance(z, zarr.Group)
@@ -175,7 +177,7 @@ def test_export_to_geff(
         export_dir,
         node_ids=node_ids,
         save_segmentation=save_segmentation,
-        seg_label_attr=seg_label_attr,
+        seg_relabel=seg_relabel,
     )
     z = zarr.open((export_dir / "tracks.geff").as_posix(), mode="r")
     assert isinstance(z, zarr.Group)
@@ -190,10 +192,14 @@ def test_export_to_geff(
         seg_zarr = zarr.open(str(seg_path), mode="r")
         assert isinstance(seg_zarr, zarr.Array)
         assert seg_zarr.shape == tracks.segmentation.shape
-        if seg_label_attr is not None:
+        if seg_relabel is not None:
+            if seg_relabel == "lineage":
+                label_key = tracks.features.lineage_key
+            else:
+                label_key = tracks.features.tracklet_key
             kept_vals = set(
                 tracks.graph.filter(node_ids=[1, 3, 4, 6])
-                .node_attrs(attr_keys=[seg_label_attr])[seg_label_attr]
+                .node_attrs(attr_keys=[label_key])[label_key]
                 .to_list()
             )
             unique_vals = set(seg_zarr[:].flatten()) - {0}
@@ -219,9 +225,10 @@ def test_export_to_geff_seg_tiff(get_tracks, ndim, tmp_path):
     seg_arr = tifffile.imread(str(tmp_path / "segmentation.tif"))
     assert seg_arr.shape == tracks.segmentation.shape
 
-    # values should be track_ids (default seg_label_attr="track_id")
+    # values should be tracklet_ids (default seg_relabel="tracklet")
     unique_vals = set(seg_arr.flatten()) - {0}
-    track_ids = set(tracks.graph.node_attrs(attr_keys=["track_id"])["track_id"].to_list())
+    label_key = tracks.features.tracklet_key
+    track_ids = set(tracks.graph.node_attrs(attr_keys=[label_key])[label_key].to_list())
     assert unique_vals == track_ids
 
     # Check metadata references the tiff path with ../../ prefix (sibling of geff dir)

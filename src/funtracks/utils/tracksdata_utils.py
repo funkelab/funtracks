@@ -154,8 +154,8 @@ def create_empty_graphview_graph(
         graph_td.add_node_attr_key("mask", pl.Object)
     if "bbox" in (node_attributes or []):
         graph_td.add_node_attr_key("bbox", pl.Array(pl.Int64, 2 * (ndim - 1)))
-    if "track_id" in (node_attributes or []):
-        graph_td.add_node_attr_key("track_id", default_value=-1, dtype=pl.Int64)
+    if "tracklet_id" in (node_attributes or []):
+        graph_td.add_node_attr_key("tracklet_id", default_value=-1, dtype=pl.Int64)
 
     for attr in node_attributes or []:
         if attr not in graph_td.node_attr_keys():

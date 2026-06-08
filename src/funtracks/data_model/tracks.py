@@ -80,7 +80,7 @@ class Tracks:
                 - List/tuple of strings for multi-axis (one attribute per axis)
                 Defaults to "pos" if None.
             tracklet_attr (str | None): Graph attribute name for tracklet/track IDs.
-                Defaults to "track_id" if None.
+                Defaults to "tracklet_id" if None.
             lineage_attr (str | None): Graph attribute name for lineage IDs.
                 Defaults to "lineage_id" if None.
             scale (list[float] | None): Scaling factors for each dimension (including
@@ -91,7 +91,7 @@ class Tracks:
                 definitions. If provided, time_attr/pos_attr/tracklet_attr are ignored.
                 Assumes that all features in the dict already exist on the graph (will
                 be activated but not recomputed). If None, core computed features (pos,
-                track_id) are auto-detected by checking if they exist on the graph.
+                tracklet_id) are auto-detected by checking if they exist on the graph.
             _segmentation (GraphArrayView | None): Internal parameter for reusing an
                 existing GraphArrayView instance. Not intended for public use.
         """
@@ -185,8 +185,9 @@ class Tracks:
                 - Single string: one attribute containing position array (e.g., "pos")
                 - List/tuple: multiple attributes, one per axis (e.g., ["y", "x"])
                 - None: defaults to "pos"
-            tracklet_key: Graph attribute name for tracklet/track IDs (e.g., "track_id").
-                If None, defaults to "track_id"
+            tracklet_key: Graph attribute name for tracklet/track IDs
+                (e.g., "tracklet_id").
+                If None, defaults to "tracklet_id"
             lineage_key: Graph attribute name for lineage IDs (e.g., "lineage_id").
                 if None, defaults to "lineage_id"
 
@@ -198,7 +199,7 @@ class Tracks:
         if pos_attr is None:
             pos_attr = "pos"
         if tracklet_key is None:
-            tracklet_key = "track_id"
+            tracklet_key = "tracklet_id"
         if lineage_key is None:
             lineage_key = "lineage_id"
 

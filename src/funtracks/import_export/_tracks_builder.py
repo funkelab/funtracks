@@ -93,7 +93,6 @@ def flatten_name_map(
 
 
 # defining constants here because they are only used in the context of import
-TRACK_KEY = "track_id"
 SEG_KEY = "seg_id"
 
 
@@ -398,7 +397,7 @@ class TracksBuilder(ABC):
         Validates:
         - Graph structure (unique nodes, valid edges, etc.)
         - Spatial_dims features have correct array shapes
-        - Optional properties (lineage_id, track_id) - removed with warning if invalid
+        - Optional properties (lineage_id, tracklet_id) - removed with warning if invalid
 
         Raises:
             ValueError: If required validation fails
