@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1780938718936,
+  "lastUpdate": 1780938769631,
   "repoUrl": "https://github.com/funkelab/funtracks",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -713,6 +713,37 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 2.557963895999997 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "malinmayorc@janelia.hhmi.org",
+            "name": "Caroline Malin-Mayor",
+            "username": "cmalinmayor"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bb3bff8ab8cb83173a4f7a6d925492766a931269",
+          "message": "Merge pull request #231 from funkelab/115-relabel-seg-logic\n\nSeparate segmentation relabeling and validity checks",
+          "timestamp": "2026-06-08T13:12:17-04:00",
+          "tree_id": "3ff79e7f30f1dda5f929f30b3c1df91ccd7f0d28",
+          "url": "https://github.com/funkelab/funtracks/commit/bb3bff8ab8cb83173a4f7a6d925492766a931269"
+        },
+        "date": 1780938767490,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_compute_graph_from_seg",
+            "value": 0.4742610627187196,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 2.1085433289999855 sec\nrounds: 1"
           }
         ]
       }
