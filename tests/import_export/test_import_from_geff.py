@@ -2,6 +2,7 @@ import dask.array as da
 import numpy as np
 import pytest
 import tifffile
+import zarr
 from geff.testing.data import create_mock_geff
 
 from funtracks.data_model import SolutionTracks
@@ -981,3 +982,36 @@ def test_featuredict_survives_geff_roundtrip(tmp_path):
     assert imported.features.position_key == st.features.position_key
     assert imported.features.tracklet_key == st.features.tracklet_key
     assert imported.features.lineage_key == st.features.lineage_key
+
+
+def test_invalid_featuredict_in_geff_falls_back_to_autodetect(get_tracks, tmp_path):
+    """If the stored FeatureDict JSON is corrupted or invalid,
+    import_from_geff should silently fall back to auto-detection
+    instead of raising an exception.
+    """
+    tracks = get_tracks(ndim=3, with_seg=False, is_solution=True)
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    export_to_geff(tracks, run_dir, save_segmentation=False)
+
+    # Corrupt the FeatureDict in GEFF metadata
+    geff_path = run_dir / "tracks.geff"
+    z = zarr.open(str(geff_path), mode="r+")
+    attrs = dict(z.attrs)
+    geff_attrs = dict(attrs["geff"])
+    extra = dict(geff_attrs["extra"])
+    # Replace with garbage that will cause FeatureDict.from_json to raise KeyError
+    extra["funtracks"] = {"features": {"not_a_valid_featuredict": True}}
+    geff_attrs["extra"] = extra
+    attrs["geff"] = geff_attrs
+    z.attrs.clear()
+    z.attrs.update(attrs)
+
+    # Should not raise — falls back to auto-detection
+    imported = import_from_geff(geff_path)
+
+    # Verify the import produced a working SolutionTracks with auto-detected features
+    assert imported.features.time_key is not None
+    assert imported.features.position_key is not None
+    assert imported.features.tracklet_key is not None
+    assert set(tracks.graph.node_ids()) == set(imported.graph.node_ids())
