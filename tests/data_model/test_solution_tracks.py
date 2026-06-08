@@ -127,13 +127,12 @@ def test_export_to_csv_with_display_names(
 
     assert len(lines) == tracks.graph.num_nodes() + 1  # add header
 
-    # With display names: ID, Parent ID, Time, Solution, y, x, Tracklet ID,
+    # With display names: ID, Parent ID, Time, y, x, Tracklet ID,
     # Lineage ID, Area
     header = [
         "ID",
         "Parent ID",
         "Time",
-        "Solution",
         "y",
         "x",
         "Tracklet ID",
@@ -152,13 +151,12 @@ def test_export_to_csv_with_display_names(
 
     assert len(lines) == tracks.graph.num_nodes() + 1  # add header
 
-    # With display names: ID, Parent ID, Time, Solution, z, y, x,
+    # With display names: ID, Parent ID, Time, z, y, x,
     # Tracklet ID, Lineage ID, Volume
     header = [
         "ID",
         "Parent ID",
         "Time",
-        "Solution",
         "z",
         "y",
         "x",
