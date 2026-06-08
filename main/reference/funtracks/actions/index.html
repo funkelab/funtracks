@@ -2499,7 +2499,6 @@ Annotator. Defaults to None.</p>
     <span class="n">tracks</span><span class="p">:</span> <span class="n">SolutionTracks</span><span class="p">,</span>
     <span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">,</span>
     <span class="n">attributes</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
-    <span class="n">mask</span><span class="p">:</span> <span class="n">Mask</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span>
 </code></pre></div>
 
@@ -2509,13 +2508,11 @@ Annotator. Defaults to None.</p>
 
 
 
-        <p>Action for adding new nodes. If a segmentation should also be added, the
-mask for the node should be provided. The label to set the mask will
-be taken from the node id. The existing pixel values are assumed to be
-zero - you must explicitly update any other segmentations that were overwritten
-using an UpdateNodes action if you want to be able to undo the action.</p>
+        <p>Action for adding new nodes.</p>
+<p>All node attributes (including mask and bbox if applicable) should be
+provided in the <code>attributes</code> dict.</p>
 
-        <p>Create an action to add a new node, with optional segmentation</p>
+        <p>Create an action to add a new node.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -2534,11 +2531,11 @@ using an UpdateNodes action if you want to be able to undo the action.</p>
                 <code>tracks</code>
             </td>
             <td>
-                  <code><span title="Tracks">Tracks</span></code>
+                  <code><a class="autorefs autorefs-internal" title="            SolutionTracks (funtracks.data_model.solution_tracks.SolutionTracks)" href="../data_model/solution_tracks/#funtracks.data_model.solution_tracks.SolutionTracks">SolutionTracks</a></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The Tracks to add the node to</p>
+                <p>The Tracks to add the node to.</p>
               </div>
             </td>
             <td>
@@ -2554,7 +2551,7 @@ using an UpdateNodes action if you want to be able to undo the action.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>A node id</p>
+                <p>A node id.</p>
               </div>
             </td>
             <td>
@@ -2566,40 +2563,63 @@ using an UpdateNodes action if you want to be able to undo the action.</p>
                 <code>attributes</code>
             </td>
             <td>
-                  <code><span title="Attrs">Attrs</span></code>
+                  <code><span title="dict">dict</span>[<span title="str">str</span>, <span title="typing.Any">Any</span>]</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Includes times, track_ids, and optionally positions</p>
+                <p>Node attributes including time, track_id, and
+optionally position, mask, bbox, etc.</p>
               </div>
             </td>
             <td>
                 <em>required</em>
             </td>
           </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
           <tr class="doc-section-item">
             <td>
-                <code>mask</code>
-            </td>
-            <td>
-                  <code><span title="tracksdata.nodes.Mask">Mask</span> | None</code>
+                  <code><span title="ValueError">ValueError</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The segmentation mask associated with
-the node. Defaults to None.</p>
+                <p>If time attribute is not in attributes.</p>
               </div>
             </td>
+          </tr>
+          <tr class="doc-section-item">
             <td>
-                  <code>None</code>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If track_id is not in attributes.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If neither position nor a mask feature is in attributes.</p>
+              </div>
             </td>
           </tr>
       </tbody>
     </table>
-        <p>Raises:
-    ValueError: If time attribute is not in attributes.
-    ValueError: If track_id is not in attributes.
-    ValueError: If mask is None and position is not in attributes.</p>
 
 
 
@@ -2830,11 +2850,7 @@ Examples: AddNode, DeleteEdge, UpdateNodeSeg, etc.</p>
 
 
 </h2>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">DeleteNode</span><span class="p">(</span>
-    <span class="n">tracks</span><span class="p">:</span> <span class="n">SolutionTracks</span><span class="p">,</span>
-    <span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">,</span>
-    <span class="n">mask</span><span class="p">:</span> <span class="n">Mask</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<span class="p">)</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">DeleteNode</span><span class="p">(</span><span class="n">tracks</span><span class="p">:</span> <span class="n">SolutionTracks</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -2843,9 +2859,8 @@ Examples: AddNode, DeleteEdge, UpdateNodeSeg, etc.</p>
 
 
 
-        <p>Action of deleting existing node
-If the tracks contain a segmentation, this action also constructs a reversible
-operation for setting involved masks to zero</p>
+        <p>Action of deleting an existing node.</p>
+<p>Saves all node feature values so the action can be inverted.</p>
 
 
 
@@ -2881,7 +2896,7 @@ operation for setting involved masks to zero</p>
 
     <div class="doc doc-contents ">
 
-        <p>Invert this action, and provide inverse segmentation operation if given</p>
+        <p>Invert this action to re-add the node with its saved attributes.</p>
 
 
     </div>
@@ -3071,6 +3086,7 @@ values for the given nodes.</p>
     <span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">,</span>
     <span class="n">mask</span><span class="p">:</span> <span class="n">Mask</span><span class="p">,</span>
     <span class="n">added</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">mask_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">td</span><span class="o">.</span><span class="n">DEFAULT_ATTR_KEYS</span><span class="o">.</span><span class="n">MASK</span><span class="p">,</span>
 <span class="p">)</span>
 </code></pre></div>
 
@@ -3159,6 +3175,23 @@ values for the given nodes.</p>
             </td>
             <td>
                   <code>True</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>mask_key</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The feature key for the mask column.
+Defaults to the standard mask key.</p>
+              </div>
+            </td>
+            <td>
+                  <code><span title="tracksdata.DEFAULT_ATTR_KEYS.MASK">MASK</span></code>
             </td>
           </tr>
       </tbody>

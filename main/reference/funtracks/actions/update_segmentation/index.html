@@ -1945,6 +1945,7 @@
     <span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">,</span>
     <span class="n">mask</span><span class="p">:</span> <span class="n">Mask</span><span class="p">,</span>
     <span class="n">added</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">mask_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">td</span><span class="o">.</span><span class="n">DEFAULT_ATTR_KEYS</span><span class="o">.</span><span class="n">MASK</span><span class="p">,</span>
 <span class="p">)</span>
 </code></pre></div>
 
@@ -2033,6 +2034,23 @@
             </td>
             <td>
                   <code>True</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>mask_key</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The feature key for the mask column.
+Defaults to the standard mask key.</p>
+              </div>
+            </td>
+            <td>
+                  <code><span title="tracksdata.DEFAULT_ATTR_KEYS.MASK">MASK</span></code>
             </td>
           </tr>
       </tbody>
