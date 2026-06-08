@@ -990,7 +990,7 @@ def test_featuredict_survives_geff_roundtrip(tmp_path):
         None,  # pos — special-cased, slot unused
         0.0,  # area
         np.array([0.0, 0.0]),  # ellipse_axis_radii — must be Array(Float64, 2)
-        None,  # track_id — special-cased, slot unused
+        -1,  # track_id
         -1,  # lineage_id
         1,  # solution
         None,  # mask — special-cased, slot unused
