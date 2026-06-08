@@ -122,6 +122,9 @@ def export_to_csv(
             # Skip derived features (e.g. bbox managed by mask)
             if feature_name in derived_keys:
                 continue
+            # Skip solution — graph is already filtered to solution=True
+            if feature_name == "solution":
+                continue
             feature_names.append(feature_name)
             num_values = feature_dict.get("num_values", 1)
 
