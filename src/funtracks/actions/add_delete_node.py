@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import tracksdata as td
+
 from ._base import BasicAction
 
 if TYPE_CHECKING:
@@ -10,16 +12,12 @@ if TYPE_CHECKING:
     from funtracks.data_model.solution_tracks import SolutionTracks
     from funtracks.data_model.tracks import Node
 
-import tracksdata as td
-from tracksdata.nodes import Mask
-
 
 class AddNode(BasicAction):
-    """Action for adding new nodes. If a segmentation should also be added, the
-    mask for the node should be provided. The label to set the mask will
-    be taken from the node id. The existing pixel values are assumed to be
-    zero - you must explicitly update any other segmentations that were overwritten
-    using an UpdateNodes action if you want to be able to undo the action.
+    """Action for adding new nodes.
+
+    All node attributes (including mask and bbox if applicable) should be
+    provided in the ``attributes`` dict.
     """
 
     def __init__(
@@ -27,20 +25,19 @@ class AddNode(BasicAction):
         tracks: SolutionTracks,
         node: Node,
         attributes: dict[str, Any],
-        mask: Mask | None = None,
     ):
-        """Create an action to add a new node, with optional segmentation
+        """Create an action to add a new node.
 
         Args:
-            tracks (Tracks): The Tracks to add the node to
-            node (Node): A node id
-            attributes (Attrs): Includes times, track_ids, and optionally positions
-            mask (Mask | None, optional): The segmentation mask associated with
-                the node. Defaults to None.
+            tracks: The Tracks to add the node to.
+            node: A node id.
+            attributes: Node attributes including time, tracklet_id, and
+                optionally position, mask, bbox, etc.
+
         Raises:
             ValueError: If time attribute is not in attributes.
             ValueError: If track_id is not in attributes.
-            ValueError: If mask is None and position is not in attributes.
+            ValueError: If neither position nor a mask feature is in attributes.
         """
         super().__init__(tracks)
         self.tracks: SolutionTracks  # Narrow type from base class
@@ -57,21 +54,20 @@ class AddNode(BasicAction):
         if track_id_key not in attributes:
             raise ValueError(f"Must provide a {track_id_key} attribute for node {node}")
 
-        # Check for position - handle both single key and list of keys
-        if mask is None:
+        # Check for position — not needed if the default mask is in attributes
+        # (position will be computed from the mask by annotators)
+        if td.DEFAULT_ATTR_KEYS.MASK not in attributes:
             if isinstance(pos_key, list):
-                # Multi-axis position keys
                 if not all(key in attributes for key in pos_key):
                     raise ValueError(
                         f"Must provide position or segmentation for node {node}"
                     )
             else:
-                # Single position key
                 if pos_key not in attributes:
                     raise ValueError(
                         f"Must provide position or segmentation for node {node}"
                     )
-        self.mask = mask
+
         self.attributes = attributes
         self._apply()
 
@@ -80,66 +76,46 @@ class AddNode(BasicAction):
         return DeleteNode(self.tracks, self.node)
 
     def _apply(self) -> None:
-        """Apply the action, and set segmentation if provided in self.mask"""
-        attrs = dict(self.attributes)
-
-        if self.tracks.segmentation is not None and self.mask is not None:
-            attrs[td.DEFAULT_ATTR_KEYS.MASK] = self.mask
-            attrs[td.DEFAULT_ATTR_KEYS.BBOX] = self.mask.bbox
-
-        self.tracks.graph.add_node(attrs=attrs, index=self.node, validate_keys=False)
+        """Add the node with all attributes from self.attributes."""
+        self.tracks.graph.add_node(
+            attrs=dict(self.attributes), index=self.node, validate_keys=False
+        )
 
         # Always notify annotators - they will check their own preconditions
         self.tracks.notify_annotators(self)
 
 
 class DeleteNode(BasicAction):
-    """Action of deleting existing node
-    If the tracks contain a segmentation, this action also constructs a reversible
-    operation for setting involved masks to zero
+    """Action of deleting an existing node.
+
+    Saves all node feature values so the action can be inverted.
     """
 
     def __init__(
         self,
         tracks: SolutionTracks,
         node: Node,
-        mask: Mask | None = None,
     ):
         super().__init__(tracks)
         self.tracks: SolutionTracks  # Narrow type from base class
         self.node = int(node)
 
         # Save all node feature values from the features dict
-        self.attributes = {}
+        # (mask, bbox, and solution are now registered as Features, so they're
+        # captured here automatically)
+        self.attributes: dict[str, Any] = {}
         for key in self.tracks.features.node_features:
             val = self.tracks.get_node_attr(node, key)
             if val is not None:
                 self.attributes[key] = val
 
-        if td.DEFAULT_ATTR_KEYS.MASK in self.tracks.graph.node_attr_keys():
-            self.attributes[td.DEFAULT_ATTR_KEYS.MASK] = self.tracks.get_nodes_attr(
-                [self.node], td.DEFAULT_ATTR_KEYS.MASK
-            )[0]
-            self.attributes[td.DEFAULT_ATTR_KEYS.BBOX] = self.tracks.get_nodes_attr(
-                [self.node], td.DEFAULT_ATTR_KEYS.BBOX
-            )[0]
-
-        mask = self.tracks.get_mask(node) if mask is None else mask
-
-        self.mask = mask
         self._apply()
 
     def inverse(self) -> BasicAction:
-        """Invert this action, and provide inverse segmentation operation if given"""
-
-        return AddNode(self.tracks, self.node, self.attributes, mask=self.mask)
+        """Invert this action to re-add the node with its saved attributes."""
+        return AddNode(self.tracks, self.node, self.attributes)
 
     def _apply(self) -> None:
-        """ASSUMES THERE ARE NO INCIDENT EDGES - raises valueerror if an edge will be
-        removed by this operation
-        Steps:
-        - Remove nodes from graph
-        - Update annotators
-        """
+        """Remove the node from the graph."""
         self.tracks.graph.remove_node(self.node)
         self.tracks.notify_annotators(self)

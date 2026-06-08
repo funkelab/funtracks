@@ -151,22 +151,30 @@ def _make_graph(
     """
 
     node_attributes = []
+    node_default_values = []
     edge_attributes = []
     if with_pos:
         node_attributes.append("pos")
+        node_default_values.append(0.0)
     if with_track_id:
         node_attributes.append("track_id")
+        node_default_values.append(-1)
         node_attributes.append("lineage_id")
+        node_default_values.append(-1)
     if with_area:
         node_attributes.append("area")
+        node_default_values.append(0.0)
     if with_iou:
         edge_attributes.append("iou")
     if with_masks:
         node_attributes.append(td.DEFAULT_ATTR_KEYS.MASK)
+        node_default_values.append(0.0)
         node_attributes.append(td.DEFAULT_ATTR_KEYS.BBOX)
+        node_default_values.append(0.0)
 
     graph = create_empty_graphview_graph(
         node_attributes=node_attributes,
+        node_default_values=node_default_values,
         edge_attributes=edge_attributes,
         database=database,
         position_attrs=["pos"] if with_pos else None,
@@ -367,6 +375,8 @@ def get_tracks(get_graph) -> Callable[..., "Tracks | SolutionTracks"]:
         IoU,
         LineageID,
         Position,
+        SegBbox,
+        SegMask,
         Solution,
         Time,
         TrackletID,
@@ -390,6 +400,8 @@ def get_tracks(get_graph) -> Callable[..., "Tracks | SolutionTracks"]:
         }
 
         if with_seg:
+            features_dict["mask"] = SegMask(ndim)
+            features_dict["bbox"] = SegBbox(ndim)
             features_dict["area"] = Area(ndim=ndim)
             features_dict["iou"] = IoU()
         if is_solution:

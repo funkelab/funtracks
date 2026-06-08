@@ -6,7 +6,7 @@ from typing import Any, Literal, TypedDict
 from typing_extensions import NotRequired
 
 # Type alias for feature value types
-ValueType = Literal["int", "float", "str", "bool"]
+ValueType = Literal["int", "float", "str", "bool", "mask"]
 
 # A feature applies to one or more graph element types
 FeatureScope = Literal["node", "edge"]
@@ -36,6 +36,10 @@ class Feature(TypedDict):
         spatial_dims (bool): Optional. If True, num_values must match the number
             of spatial dimensions (e.g., 2 for 2D, 3 for 3D). Used for features
             like Position and EllipsoidAxes.
+        derived_features (list[str]): Optional. Feature keys that are derived
+            from this feature and should be cascade-deleted when this feature
+            is removed. For example, SegMask lists the bbox key here so that
+            deleting the mask also deletes the bounding box.
     """
 
     feature_type: FeatureType
@@ -45,3 +49,4 @@ class Feature(TypedDict):
     value_names: NotRequired[Sequence[str]]
     default_value: Any
     spatial_dims: NotRequired[bool]
+    derived_features: NotRequired[list[str]]

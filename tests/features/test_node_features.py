@@ -4,6 +4,8 @@ from funtracks.features import (
     EllipsoidAxes,
     Perimeter,
     Position,
+    SegBbox,
+    SegMask,
     Solution,
     Time,
 )
@@ -92,6 +94,36 @@ def test_solution_feature():
     assert feat["num_values"] == 1
     assert feat["display_name"] == "Solution"
     assert feat["default_value"] is True
+
+
+def test_seg_mask_feature():
+    """Test that SegMask() returns a valid Feature TypedDict"""
+    feat = SegMask(ndim=3)
+    assert feat["feature_type"] == "node"
+    assert feat["value_type"] == "mask"
+    assert feat["num_values"] == 1
+    assert feat["display_name"] == "Segmentation mask"
+    assert feat["default_value"] is None
+    assert feat["derived_features"] == ["bbox"]
+
+    # Custom bbox_key
+    feat = SegMask(ndim=3, bbox_key="nuc_bbox")
+    assert feat["derived_features"] == ["nuc_bbox"]
+
+
+def test_seg_bbox_feature():
+    """Test that SegBbox() returns a valid Feature TypedDict"""
+    # ndim=3 means 2D+time -> 2 spatial dimensions -> 4 bbox values
+    feat = SegBbox(ndim=3)
+    assert feat["feature_type"] == "node"
+    assert feat["value_type"] == "int"
+    assert feat["num_values"] == 4
+    assert feat["display_name"] == "Bounding box"
+    assert feat["default_value"] is None
+
+    # ndim=4 means 3D+time -> 3 spatial dimensions -> 6 bbox values
+    feat = SegBbox(ndim=4)
+    assert feat["num_values"] == 6
 
 
 def test_feature_as_dict():
