@@ -1920,7 +1920,9 @@ Use: from funtracks.import_export import export_to_geff</p>
     <span class="n">node_ids</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">zarr_format</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
     <span class="n">save_segmentation</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-    <span class="n">seg_label_attr</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="s2">&quot;track_id&quot;</span><span class="p">,</span>
+    <span class="n">seg_relabel</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span>
+        <span class="s2">&quot;tracklet&quot;</span><span class="p">,</span> <span class="s2">&quot;lineage&quot;</span><span class="p">,</span> <span class="kc">None</span>
+    <span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;tracklet&quot;</span><span class="p">,</span>
     <span class="n">seg_file_format</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;zarr&quot;</span><span class="p">,</span> <span class="s2">&quot;tiff&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;zarr&quot;</span><span class="p">,</span>
 <span class="p">)</span>
 </code></pre></div>
@@ -2043,20 +2045,21 @@ the graph when segmentation is present. Defaults to True.</p>
           </tr>
           <tr class="doc-section-item">
             <td>
-                <code>seg_label_attr</code>
+                <code>seg_relabel</code>
             </td>
             <td>
-                  <code><span title="str">str</span> | None</code>
+                  <code><span title="typing.Literal">Literal</span>[&#39;tracklet&#39;, &#39;lineage&#39;, None]</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Node attribute used to paint cell labels in the
-exported segmentation. Defaults to "track_id". When None, original
-segmentation labels (node IDs) are preserved.</p>
+                <p>How to relabel cells in the exported segmentation.
+"tracklet" (default): paint by tracklet ID.
+"lineage": paint by lineage ID.
+None: preserve original labels (node IDs).</p>
               </div>
             </td>
             <td>
-                  <code>&#39;track_id&#39;</code>
+                  <code>&#39;tracklet&#39;</code>
             </td>
           </tr>
           <tr class="doc-section-item">

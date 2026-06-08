@@ -2069,10 +2069,10 @@
 
 
 
-        <p>Difference from Tracks: every node must have a track_id</p>
+        <p>Difference from Tracks: every node must have a tracklet id</p>
 
         <p>Initialize a SolutionTracks object.</p>
-<p>SolutionTracks extends Tracks to ensure every node has a track_id. A
+<p>SolutionTracks extends Tracks to ensure every node has a tracklet id. A
 TrackAnnotator is automatically added to manage track IDs.</p>
 
 
@@ -2151,7 +2151,7 @@ Defaults to "pos" if None.</p>
             <td>
               <div class="doc-md-description">
                 <p>Graph attribute name for tracklet/track IDs.
-Defaults to "track_id" if None.</p>
+Defaults to "tracklet_id" if None.</p>
               </div>
             </td>
             <td>
@@ -2222,7 +2222,8 @@ If None, inferred from segmentation or scale.</p>
 definitions. If provided, time_attr/pos_attr/tracklet_attr are ignored.
 Assumes that all features in the dict already exist on the graph (will
 be activated but not recomputed). If None, core computed features (pos,
-area, track_id) are auto-detected by checking if they exist on the graph.</p>
+area, tracklet_id) are auto-detected by checking if they exist on the
+graph.</p>
               </div>
             </td>
             <td>

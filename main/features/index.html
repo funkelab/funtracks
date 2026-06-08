@@ -979,6 +979,67 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#feature-keys-and-graph-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feature Keys and Graph Attributes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Feature Keys and Graph Attributes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#two-layers-metadata-vs-semantics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two Layers: Metadata vs. Semantics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#default-vs-custom-attribute-names" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Default vs. Custom Attribute Names
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#computed-features-and-key-names" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Computed Features and Key Names
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-custom-keys-are-useful" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why Custom Keys Are Useful
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#initialization-lifecycle" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3141,6 +3202,67 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#feature-keys-and-graph-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feature Keys and Graph Attributes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Feature Keys and Graph Attributes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#two-layers-metadata-vs-semantics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Two Layers: Metadata vs. Semantics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#default-vs-custom-attribute-names" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Default vs. Custom Attribute Names
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#computed-features-and-key-names" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Computed Features and Key Names
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-custom-keys-are-useful" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why Custom Keys Are Useful
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#initialization-lifecycle" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3880,7 +4002,7 @@ features, time_key, position_key, tracklet_key, and lineage_key</p>
 
     <div class="doc doc-contents ">
 
-        <p>Register the tracklet/track_id feature and set the tracklet_key.</p>
+        <p>Register the tracklet feature and set the tracklet_key.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -4581,7 +4703,7 @@ Provides coordinated compute/update/enable/disable operations across all annotat
   <p>annotators = AnnotatorRegistry([
     RegionpropsAnnotator(tracks, pos_key="centroid"),
     EdgeAnnotator(tracks),
-    TrackAnnotator(tracks, tracklet_key="track_id"),
+    TrackAnnotator(tracks, tracklet_key="tracklet_id"),
 ])</p>
 <h4 id="funtracks.annotators.AnnotatorRegistry--can-use-as-a-list">Can use as a list</h4>
 <p>annotators.append(MyCustomAnnotator(tracks))</p>
@@ -5247,7 +5369,7 @@ Defaults to "pos" if None.</p>
             <td>
               <div class="doc-md-description">
                 <p>Graph attribute name for tracklet/track IDs.
-Defaults to "track_id" if None.</p>
+Defaults to "tracklet_id" if None.</p>
               </div>
             </td>
             <td>
@@ -5318,7 +5440,7 @@ If None, inferred from segmentation or scale.</p>
 definitions. If provided, time_attr/pos_attr/tracklet_attr are ignored.
 Assumes that all features in the dict already exist on the graph (will
 be activated but not recomputed). If None, core computed features (pos,
-track_id) are auto-detected by checking if they exist on the graph.</p>
+tracklet_id) are auto-detected by checking if they exist on the graph.</p>
               </div>
             </td>
             <td>
@@ -6447,6 +6569,61 @@ Defaults to the standard mask key.</p>
     Tracks *-- FeatureDict : has one
     Tracks *-- AnnotatorRegistry : has one
     GraphAnnotator --&gt; Tracks : references</code></pre>
+<h2 id="feature-keys-and-graph-attributes">Feature Keys and Graph Attributes</h2>
+<h3 id="two-layers-metadata-vs-semantics">Two Layers: Metadata vs. Semantics</h3>
+<p>The <code>Feature</code> TypedDict is pure <strong>metadata</strong> — it describes <em>how</em> to handle a feature's
+data (value type, number of values, display name, spatial dimensions). It does not
+describe <em>what</em> the feature means.</p>
+<p>The <strong>semantic meaning</strong> of a feature — "this attribute stores tracklet IDs" or "this
+attribute stores positions" — is tracked by special key pointers on <code>FeatureDict</code>:</p>
+<ul>
+<li><code>FeatureDict.time_key</code> — which graph attribute stores time</li>
+<li><code>FeatureDict.position_key</code> — which graph attribute stores position</li>
+<li><code>FeatureDict.tracklet_key</code> — which graph attribute stores tracklet IDs</li>
+<li><code>FeatureDict.lineage_key</code> — which graph attribute stores lineage IDs</li>
+</ul>
+<p>These pointers are the <strong>source of truth</strong> for where core semantic concepts live on
+the graph. The rest of funtracks (export, validation, annotators) reads these pointers
+rather than assuming hardcoded attribute names.</p>
+<h3 id="default-vs-custom-attribute-names">Default vs. Custom Attribute Names</h3>
+<p>Each core semantic feature has a default attribute name (e.g., <code>"tracklet_id"</code> for
+tracklet IDs, <code>"pos"</code> for position). These defaults are used when no explicit name is
+provided:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># Uses default: tracklet_key=&quot;tracklet_id&quot;</span>
+<span class="n">tracks</span> <span class="o">=</span> <span class="n">SolutionTracks</span><span class="p">(</span><span class="n">graph</span><span class="o">=</span><span class="n">graph</span><span class="p">)</span>
+
+<span class="c1"># Uses custom attribute name</span>
+<span class="n">tracks</span> <span class="o">=</span> <span class="n">SolutionTracks</span><span class="p">(</span><span class="n">graph</span><span class="o">=</span><span class="n">graph</span><span class="p">,</span> <span class="n">tracklet_attr</span><span class="o">=</span><span class="s2">&quot;my_track_col&quot;</span><span class="p">)</span>
+</code></pre></div>
+<p>Custom attribute names are also supported through <code>FeatureDict</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="n">fd</span> <span class="o">=</span> <span class="n">FeatureDict</span><span class="p">(</span>
+    <span class="n">features</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;my_track_col&quot;</span><span class="p">:</span> <span class="n">TrackletID</span><span class="p">(),</span> <span class="s2">&quot;my_lineage&quot;</span><span class="p">:</span> <span class="n">LineageID</span><span class="p">()},</span>
+    <span class="n">tracklet_key</span><span class="o">=</span><span class="s2">&quot;my_track_col&quot;</span><span class="p">,</span>
+    <span class="n">lineage_key</span><span class="o">=</span><span class="s2">&quot;my_lineage&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">tracks</span> <span class="o">=</span> <span class="n">SolutionTracks</span><span class="p">(</span><span class="n">graph</span><span class="o">=</span><span class="n">graph</span><span class="p">,</span> <span class="n">features</span><span class="o">=</span><span class="n">fd</span><span class="p">)</span>
+</code></pre></div>
+<p>When a <code>FeatureDict</code> is provided, the <code>tracklet_attr</code>/<code>pos_attr</code>/<code>time_attr</code> arguments
+are ignored — the <code>FeatureDict</code> is the sole authority.</p>
+<h3 id="computed-features-and-key-names">Computed Features and Key Names</h3>
+<p>Annotators (e.g., <code>TrackAnnotator</code>, <code>RegionpropsAnnotator</code>) accept custom key names
+in their constructors:</p>
+<div class="highlight"><pre><span></span><code><span class="n">TrackAnnotator</span><span class="p">(</span><span class="n">tracks</span><span class="p">,</span> <span class="n">tracklet_key</span><span class="o">=</span><span class="s2">&quot;my_track&quot;</span><span class="p">,</span> <span class="n">lineage_key</span><span class="o">=</span><span class="s2">&quot;my_lineage&quot;</span><span class="p">)</span>
+<span class="n">RegionpropsAnnotator</span><span class="p">(</span><span class="n">tracks</span><span class="p">,</span> <span class="n">pos_key</span><span class="o">=</span><span class="s2">&quot;coordinates&quot;</span><span class="p">)</span>
+</code></pre></div>
+<p>When constructing <code>Tracks</code> or <code>SolutionTracks</code> directly, you have full control over
+which attribute names are used.</p>
+<p><strong>Through the import path</strong> (<code>tracks_from_df</code>, <code>import_from_geff</code>), computed features
+always use their default key names. The <code>node_name_map</code> controls what the <em>source</em>
+column is called, but the builder always renames it to the standard key before adding
+it to the graph. For example, <code>{"tracklet_id": "Track ID"}</code> loads the <code>"Track ID"</code>
+column and stores it as <code>"tracklet_id"</code> on the graph.</p>
+<h3 id="why-custom-keys-are-useful">Why Custom Keys Are Useful</h3>
+<p>Renaming attributes on a graph is O(n) — it requires iterating all nodes. If an
+external data source uses <code>"track"</code> as the tracklet column name, a user can construct
+a <code>Tracks</code> object that uses <code>"track"</code> directly, avoiding the cost of a rename. The
+<code>FeatureDict</code> key pointer tells funtracks where to find the data regardless of the
+attribute name.</p>
 <h2 id="initialization-lifecycle">Initialization Lifecycle</h2>
 <p>Here's what happens when you create a <code>Tracks</code> instance.</p>
 <div class="highlight"><pre><span></span><code><span class="n">tracks</span> <span class="o">=</span> <span class="n">Tracks</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">segmentation</span><span class="p">,</span> <span class="n">ndim</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
@@ -6468,7 +6645,7 @@ features are already present, activate those, and compute any missing ones from 
 <ol>
 <li><strong><code>pos</code> (position)</strong>: Always auto-detected for RegionpropsAnnotator</li>
 <li><strong><code>area</code></strong>: Always auto-detected (for backward compatibility)</li>
-<li><strong><code>track_id</code> (tracklet_id)</strong>: Always auto-detected for TrackAnnotator</li>
+<li><strong><code>tracklet_id</code></strong>: Always auto-detected for TrackAnnotator</li>
 </ol>
 <h3 id="example-scenarios">Example Scenarios</h3>
 <p><strong>Scenario 1: Loading tracks from CSV with pre-computed features</strong>
