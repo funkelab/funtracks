@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1780600820238,
+  "lastUpdate": 1780938718936,
   "repoUrl": "https://github.com/funkelab/funtracks",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -682,6 +682,37 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 2.8644984479999493 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "malinmayorc@janelia.hhmi.org",
+            "name": "Caroline Malin-Mayor",
+            "username": "cmalinmayor"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a019b94ea2941d9a2787708ce3c4cf0269cd297e",
+          "message": "Merge pull request #222 from funkelab/register-mask-bbox-features\n\nRegister mask/bbox as Features, simplify DeleteNode",
+          "timestamp": "2026-06-08T13:11:27-04:00",
+          "tree_id": "371784eeac7cd16dfa1fd0849f669900ab0274c6",
+          "url": "https://github.com/funkelab/funtracks/commit/a019b94ea2941d9a2787708ce3c4cf0269cd297e"
+        },
+        "date": 1780938717923,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_compute_graph_from_seg",
+            "value": 0.39093593211528316,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 2.557963895999997 sec\nrounds: 1"
           }
         ]
       }
