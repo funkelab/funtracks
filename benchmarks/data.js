@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1780940966131,
+  "lastUpdate": 1780942923554,
   "repoUrl": "https://github.com/funkelab/funtracks",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -806,6 +806,37 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 2.822265224000006 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "malinmayorc@janelia.hhmi.org",
+            "name": "Caroline Malin-Mayor",
+            "username": "cmalinmayor"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "778d42af7566a3c8163a28849a7ea71377294116",
+          "message": "Merge pull request #223 from funkelab/solution-refactor\n\nRegister solution as a Feature with joint node and edge type",
+          "timestamp": "2026-06-08T14:21:31-04:00",
+          "tree_id": "c9f5d9ba68e3c85cb0202f6a7d5e6cd5a73a0604",
+          "url": "https://github.com/funkelab/funtracks/commit/778d42af7566a3c8163a28849a7ea71377294116"
+        },
+        "date": 1780942922456,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_compute_graph_from_seg",
+            "value": 0.38216689511571783,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 2.6166578340000015 sec\nrounds: 1"
           }
         ]
       }
