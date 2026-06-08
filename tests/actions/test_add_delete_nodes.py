@@ -40,13 +40,15 @@ def test_add_delete_nodes(get_tracks, ndim, with_seg):
     empty_seg = np.zeros_like(tracks.segmentation) if with_seg else None
     tracks.graph = empty_graph
     segmentation_shape = (5, 100, 100) if ndim == 3 else (5, 100, 100, 100)
-    tracks.segmentation = (
-        GraphArrayView(
-            graph=tracks.graph, shape=segmentation_shape, attr_key="node_id", offset=0
+    if with_seg:
+        tracks._segmentations["mask"] = GraphArrayView(
+            graph=tracks.graph,
+            shape=segmentation_shape,
+            attr_key="node_id",
+            offset=0,
         )
-        if with_seg
-        else None
-    )
+    else:
+        tracks._segmentations.clear()
 
     # add all the nodes from graph_2d/seg_2d
     nodes = list(reference_graph.node_ids())
