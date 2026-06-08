@@ -115,14 +115,15 @@ def export_to_csv(
             for derived_key in fd.get("derived_features", []):
                 derived_keys.add(derived_key)
 
-        for feature_name, feature_dict in tracks.features.items():
-            if feature_dict["feature_type"] != "node":
-                continue
+        for feature_name, feature_dict in tracks.features.node_features.items():
             # Skip mask features — they contain binary objects, not scalar values
             if feature_dict.get("value_type") == "mask":
                 continue
             # Skip derived features (e.g. bbox managed by mask)
             if feature_name in derived_keys:
+                continue
+            # Skip solution — graph is already filtered to solution=True
+            if feature_name == "solution":
                 continue
             feature_names.append(feature_name)
             num_values = feature_dict.get("num_values", 1)

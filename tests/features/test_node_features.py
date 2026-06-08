@@ -6,6 +6,7 @@ from funtracks.features import (
     Position,
     SegBbox,
     SegMask,
+    Solution,
     Time,
 )
 
@@ -83,6 +84,16 @@ def test_perimeter_feature():
 
     feat = Perimeter(ndim=4)
     assert feat["display_name"] == "Surface Area"
+
+
+def test_solution_feature():
+    """Test that Solution() returns a valid Feature TypedDict for node and edge."""
+    feat = Solution()
+    assert feat["feature_type"] == ["node", "edge"]
+    assert feat["value_type"] == "bool"
+    assert feat["num_values"] == 1
+    assert feat["display_name"] == "Solution"
+    assert feat["default_value"] is True
 
 
 def test_seg_mask_feature():

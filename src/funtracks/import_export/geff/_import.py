@@ -220,12 +220,6 @@ class GeffTracksBuilder(TracksBuilder):
         Returns:
             Inferred node_name_map mapping standard keys to source property names
         """
-        import tracksdata as td
-
-        # Tracksdata-internal attributes are added by the builder and should not
-        # appear in the node name map (avoids collision with edge-side solution attr).
-        internal_attrs = {td.DEFAULT_ATTR_KEYS.SOLUTION}
-
         geff_axes = getattr(self, "_geff_axes", [])
         if geff_axes:
             time_axes = [ax.name for ax in geff_axes if ax.type == "time"]
@@ -237,9 +231,8 @@ class GeffTracksBuilder(TracksBuilder):
                     "time": time_axes[0],
                     "pos": space_axes,
                 }
-                # Pass all remaining non-internal properties through unchanged
                 for prop in self.importable_node_props:
-                    if prop not in axis_props and prop not in internal_attrs:
+                    if prop not in axis_props:
                         node_name_map[prop] = prop
                 return node_name_map
 

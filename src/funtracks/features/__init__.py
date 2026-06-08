@@ -1,7 +1,7 @@
 from ._edge_features import IoU
 from ._feature import Feature, ValueType
 from ._feature_dict import FeatureDict
-from ._node_features import Position, SegBbox, SegMask, Time
+from ._node_features import Position, SegBbox, SegMask, Solution, Time
 from ._regionprops_features import (
     Area,
     Circularity,
@@ -18,6 +18,7 @@ __all__ = [
     "Position",
     "SegBbox",
     "SegMask",
+    "Solution",
     "Time",
     "EllipsoidAxes",
     "Circularity",
