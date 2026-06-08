@@ -1361,6 +1361,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#funtracks.features.Solution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;Solution
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#funtracks.features.Time" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2278,6 +2289,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#funtracks.features.Solution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;Solution
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#funtracks.features.Time" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2383,12 +2405,13 @@ standard defaults.</p>
           <tr class="doc-section-item">
             <td><code><span title="funtracks.features.Feature.feature_type">feature_type</span></code></td>
             <td>
-                  <code><span title="typing.Literal">Literal</span>[&#39;node&#39;, &#39;edge&#39;]</code>
+                  <code><span title="funtracks.features._feature.FeatureType">FeatureType</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Specifies which graph elements
-the feature applies to.</p>
+                <p>Which graph elements the feature applies to.
+A single string ("node" or "edge") or a list of them
+(e.g. ["node", "edge"]).</p>
               </div>
             </td>
           </tr>
@@ -2701,7 +2724,7 @@ Provides convenient access to time and position features through properties.</p>
 
     <div class="doc doc-contents ">
 
-        <p>A dict of all edge features</p>
+        <p>A dict of all features that apply to edges</p>
 
     </div>
 
@@ -2721,7 +2744,7 @@ Provides convenient access to time and position features through properties.</p>
 
     <div class="doc doc-contents ">
 
-        <p>A dict of all node features</p>
+        <p>A dict of all features that apply to nodes</p>
 
     </div>
 
@@ -3730,6 +3753,49 @@ feature. Defaults to <code>"bbox"</code>.</p>
             <td>
               <div class="doc-md-description">
                 <p>A feature dict representing a segmentation mask.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="funtracks.features.Solution" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">Solution</span>
+
+
+</h2>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">Solution</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Feature</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>A feature to hold the boolean solution status of nodes and edges.</p>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+<th>Name</th>          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+<td><code>Feature</code></td>            <td>
+                  <code><a class="autorefs autorefs-internal" title="            Feature (funtracks.features._feature.Feature)" href="#funtracks.features.Feature">Feature</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A feature dict representing solution status.</p>
               </div>
             </td>
           </tr>

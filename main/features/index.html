@@ -3391,12 +3391,13 @@ standard defaults.</p>
           <tr class="doc-section-item">
             <td><code><span title="funtracks.features.Feature.feature_type">feature_type</span></code></td>
             <td>
-                  <code><span title="typing.Literal">Literal</span>[&#39;node&#39;, &#39;edge&#39;]</code>
+                  <code><span title="funtracks.features._feature.FeatureType">FeatureType</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Specifies which graph elements
-the feature applies to.</p>
+                <p>Which graph elements the feature applies to.
+A single string ("node" or "edge") or a list of them
+(e.g. ["node", "edge"]).</p>
               </div>
             </td>
           </tr>
@@ -3701,7 +3702,7 @@ Provides convenient access to time and position features through properties.</p>
 
     <div class="doc doc-contents ">
 
-        <p>A dict of all edge features</p>
+        <p>A dict of all features that apply to edges</p>
 
     </div>
 
@@ -3721,7 +3722,7 @@ Provides convenient access to time and position features through properties.</p>
 
     <div class="doc doc-contents ">
 
-        <p>A dict of all node features</p>
+        <p>A dict of all features that apply to nodes</p>
 
     </div>
 
