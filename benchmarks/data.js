@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1780938769631,
+  "lastUpdate": 1780940155022,
   "repoUrl": "https://github.com/funkelab/funtracks",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -744,6 +744,37 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 2.1085433289999855 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "malinmayorc@janelia.hhmi.org",
+            "name": "Caroline Malin-Mayor",
+            "username": "cmalinmayor"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e06901e0d5a795ffca3ff7d1c608a98dee77bf34",
+          "message": "Merge pull request #226 from funkelab/fix-tracklet-attr-forwarding\n\nMinimal changes to get desired tracklet id functionality",
+          "timestamp": "2026-06-08T13:35:24-04:00",
+          "tree_id": "8a6b14f3a7b29cd46eb1b73b109b9a68b01e4fc0",
+          "url": "https://github.com/funkelab/funtracks/commit/e06901e0d5a795ffca3ff7d1c608a98dee77bf34"
+        },
+        "date": 1780940154019,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_compute_graph_from_seg",
+            "value": 0.34535225678775827,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 2.895594224000007 sec\nrounds: 1"
           }
         ]
       }
