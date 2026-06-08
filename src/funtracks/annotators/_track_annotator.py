@@ -286,7 +286,7 @@ class TrackAnnotator(GraphAnnotator):
             action (BasicAction): The action that triggered this update.
         """
 
-        # Only update if track_id feature is enabled
+        # Only update if the tracklet feature is enabled
         if self.tracklet_key not in self.features:
             return
 

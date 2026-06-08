@@ -151,22 +151,30 @@ def _make_graph(
     """
 
     node_attributes = []
+    node_default_values = []
     edge_attributes = []
     if with_pos:
         node_attributes.append("pos")
+        node_default_values.append(0.0)
     if with_track_id:
         node_attributes.append("track_id")
+        node_default_values.append(-1)
         node_attributes.append("lineage_id")
+        node_default_values.append(-1)
     if with_area:
         node_attributes.append("area")
+        node_default_values.append(0.0)
     if with_iou:
         edge_attributes.append("iou")
     if with_masks:
         node_attributes.append(td.DEFAULT_ATTR_KEYS.MASK)
+        node_default_values.append(0.0)
         node_attributes.append(td.DEFAULT_ATTR_KEYS.BBOX)
+        node_default_values.append(0.0)
 
     graph = create_empty_graphview_graph(
         node_attributes=node_attributes,
+        node_default_values=node_default_values,
         edge_attributes=edge_attributes,
         database=database,
         position_attrs=["pos"] if with_pos else None,
@@ -239,7 +247,7 @@ def _make_graph(
     nodes_attrs_list = []
     for node_id, attrs in base_nodes:
         node_attrs: dict[str, Any] = dict(attrs)  # Start with time
-        node_attrs["solution"] = 1
+        node_attrs["solution"] = True
         if with_pos:
             # TODO: don't hardcode "pos" and other column names
             node_attrs["pos"] = positions[node_id]
@@ -258,10 +266,10 @@ def _make_graph(
         nodes_attrs_list.append(node_attrs)
 
     edges = [
-        {"source_id": 1, "target_id": 2, "solution": 1},
-        {"source_id": 1, "target_id": 3, "solution": 1},
-        {"source_id": 3, "target_id": 4, "solution": 1},
-        {"source_id": 4, "target_id": 5, "solution": 1},
+        {"source_id": 1, "target_id": 2, "solution": True},
+        {"source_id": 1, "target_id": 3, "solution": True},
+        {"source_id": 3, "target_id": 4, "solution": True},
+        {"source_id": 4, "target_id": 5, "solution": True},
     ]
 
     graph.bulk_add_nodes(nodes=nodes_attrs_list, indices=nodes_id_list)
@@ -369,6 +377,7 @@ def get_tracks(get_graph) -> Callable[..., "Tracks | SolutionTracks"]:
         Position,
         SegBbox,
         SegMask,
+        Solution,
         Time,
         TrackletID,
     )
@@ -384,9 +393,10 @@ def get_tracks(get_graph) -> Callable[..., "Tracks | SolutionTracks"]:
         graph = get_graph(ndim=ndim, is_solution=is_solution, with_seg=with_seg)
 
         # Build FeatureDict based on what exists in the graph
-        features_dict = {
+        features_dict: dict[str, Any] = {
             "t": Time(),
             "pos": Position(axes=axis_names),
+            "solution": Solution(),
         }
 
         if with_seg:
@@ -513,7 +523,7 @@ def graph_2d_with_nuclear_and_membrane(tmp_path) -> td.graph.GraphView:
 
     for node_id, attrs in base_nodes:
         node_attrs = dict(attrs)
-        node_attrs["solution"] = 1
+        node_attrs["solution"] = True
         node_attrs["track_id"] = track_ids[node_id]
         node_attrs["lineage_id"] = lineage_ids[node_id]
         center: tuple[float, float] = tuple(attrs["pos"])  # type: ignore[arg-type,assignment]
@@ -547,10 +557,10 @@ def graph_2d_with_nuclear_and_membrane(tmp_path) -> td.graph.GraphView:
         nodes_attrs_list.append(node_attrs)
 
     edges = [
-        {"source_id": 1, "target_id": 2, "solution": 1},
-        {"source_id": 1, "target_id": 3, "solution": 1},
-        {"source_id": 3, "target_id": 4, "solution": 1},
-        {"source_id": 4, "target_id": 5, "solution": 1},
+        {"source_id": 1, "target_id": 2, "solution": True},
+        {"source_id": 1, "target_id": 3, "solution": True},
+        {"source_id": 3, "target_id": 4, "solution": True},
+        {"source_id": 4, "target_id": 5, "solution": True},
     ]
 
     graph.bulk_add_nodes(nodes=nodes_attrs_list, indices=nodes_id_list)

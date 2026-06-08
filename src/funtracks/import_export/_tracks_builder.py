@@ -32,7 +32,7 @@ from funtracks.import_export._utils import (
 )
 from funtracks.import_export._validation import (
     validate_edge_name_map,
-    validate_feature_key_collisions,
+    validate_graph_seg_match,
     validate_in_memory_geff,
     validate_node_name_map,
     validate_spatial_dims,
@@ -92,7 +92,6 @@ def flatten_name_map(
 
 
 # defining constants here because they are only used in the context of import
-TRACK_KEY = "track_id"
 SEG_KEY = "seg_id"
 
 
@@ -263,9 +262,6 @@ class TracksBuilder(ABC):
         Checks for edges:
         - All mapped edge properties exist in importable_edge_props
 
-        Checks for both:
-        - No feature key collisions between node and edge features
-
         Note: Array shapes for spatial_dims features are validated after loading
         via validate_spatial_dims().
 
@@ -297,9 +293,6 @@ class TracksBuilder(ABC):
                 available_features=self.available_computed_features,
                 ndim=self.ndim,
             )
-
-        # Check for feature key collisions between nodes and edges
-        validate_feature_key_collisions(self.node_name_map, self.edge_name_map)
 
     def prepare(
         self,
@@ -397,7 +390,7 @@ class TracksBuilder(ABC):
         Validates:
         - Graph structure (unique nodes, valid edges, etc.)
         - Spatial_dims features have correct array shapes
-        - Optional properties (lineage_id, track_id) - removed with warning if invalid
+        - Optional properties (lineage_id, tracklet_id) - removed with warning if invalid
 
         Raises:
             ValueError: If required validation fails
@@ -497,7 +490,7 @@ class TracksBuilder(ABC):
         node_attrs = []
         for idx in range(len(self.in_memory_geff["node_ids"])):
             node_attr = {}
-            node_attr[td.DEFAULT_ATTR_KEYS.SOLUTION] = 1  # Add default solution value
+            node_attr["solution"] = True  # Add default solution value
             for key, prop in self.in_memory_geff["node_props"].items():
                 # force time key to be "t" in graph
                 if key == self.TIME_ATTR:
@@ -517,7 +510,7 @@ class TracksBuilder(ABC):
             edge_attr = {}
             edge_attr["source_id"] = int(self.in_memory_geff["edge_ids"][idx][0])
             edge_attr["target_id"] = int(self.in_memory_geff["edge_ids"][idx][1])
-            edge_attr[td.DEFAULT_ATTR_KEYS.SOLUTION] = 1  # Default solution value
+            edge_attr["solution"] = True  # Default solution value
             for key, prop in self.in_memory_geff["edge_props"].items():
                 value = prop["values"][idx]
                 if prop.get("missing") is not None and prop["missing"][idx]:
@@ -533,6 +526,15 @@ class TracksBuilder(ABC):
 
         if self.TIME_ATTR != "t":
             graph.remove_node_attr_key(self.TIME_ATTR)
+
+        # create_empty_graphview_graph returns a filtered view, but that view is
+        # a snapshot at filter time; nodes/edges added afterwards (potentially with
+        # solution=False) bypass the filter. Re-filter the populated root so
+        # solution=False rows are actually excluded.
+        graph = graph._root.filter(
+            td.NodeAttr("solution") == True,  # noqa: E712
+            td.EdgeAttr("solution") == True,  # noqa: E712
+        ).subgraph()
 
         return graph
 
@@ -584,8 +586,6 @@ class TracksBuilder(ABC):
         # sample_node = next(iter(graph.node_ids()))
         has_position = "pos" in graph.node_attr_keys()
         if has_position:
-            from funtracks.import_export._validation import validate_graph_seg_match
-
             validate_graph_seg_match(graph, seg_array, scale, self.axis_names)
 
         # Check if relabeling is needed (seg_id != node_id)

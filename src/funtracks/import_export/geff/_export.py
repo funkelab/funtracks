@@ -12,7 +12,7 @@ from geff_spec import GeffMetadata
 
 from funtracks.utils import remove_tilde, setup_zarr_group
 
-from .._export_segmentation import export_segmentation
+from .._export_segmentation import export_segmentation, resolve_relabel_attr
 from .._utils import filter_graph_with_ancestors
 
 if TYPE_CHECKING:
@@ -28,7 +28,7 @@ def export_to_geff(
     node_ids: set[int] | None = None,
     zarr_format: Literal[2, 3] = 2,
     save_segmentation: bool = True,
-    seg_label_attr: str | None = "track_id",
+    seg_relabel: Literal["tracklet", "lineage", None] = "tracklet",
     seg_file_format: Literal["zarr", "tiff"] = "zarr",
 ):
     """Export the Tracks graph to geff.
@@ -44,9 +44,10 @@ def export_to_geff(
             for maximum compatibility.
         save_segmentation (bool): If True, saves the segmentation array alongside
             the graph when segmentation is present. Defaults to True.
-        seg_label_attr (str | None): Node attribute used to paint cell labels in the
-            exported segmentation. Defaults to "track_id". When None, original
-            segmentation labels (node IDs) are preserved.
+        seg_relabel: How to relabel cells in the exported segmentation.
+            "tracklet" (default): paint by tracklet ID.
+            "lineage": paint by lineage ID.
+            None: preserve original labels (node IDs).
         seg_file_format: Output format for the segmentation, either "zarr" or "tiff".
             Defaults to "zarr".
     """
@@ -108,15 +109,16 @@ def export_to_geff(
             tracks,
             seg_parent / seg_name,
             file_format=seg_file_format,
-            label_attr=seg_label_attr,
+            relabel=seg_relabel,
             zarr_format=zarr_format,
             node_ids=set(nodes_to_keep) if node_ids is not None else None,
         )
+        label_prop = resolve_relabel_attr(tracks, seg_relabel) or "node_id"
         metadata.related_objects = [
             {
                 "path": f"{rel_prefix}/{seg_name}",
                 "type": "labels",
-                "label_prop": seg_label_attr or "node_id",
+                "label_prop": label_prop,
             }
         ]
 

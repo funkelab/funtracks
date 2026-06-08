@@ -43,7 +43,7 @@ class UserAddNode(ActionGroup):
             tracks (SolutionTracks): the tracks to add the node to
             node (int): The node id of the new node to add
             attributes (dict[str, Any]): A dictionary from attribute strings to values.
-                Must contain "time" and "track_id".
+                Must contain "time" and tracks.features.tracklet_key.
             pixels (tuple[np.ndarray, ...] | None, optional): The pixels of the associated
                 segmentation to add to the tracks. Defaults to None.
             force (bool, optional): Whether to force the action by removing any
@@ -57,7 +57,8 @@ class UserAddNode(ActionGroup):
         Raises:
             InvalidActionError: If the action cannot be completed because of one of
             following reasons:
-                    - attributes dictionary does not contain `time` or `track_id`.
+                    - attributes dictionary does not contain `time` or
+                    tracks.features.tracklet_key.
                     - a node with given ID already exists in the tracks.
                     - a node is trying to be added to a track that divided in a previous
                     time point (forceable).

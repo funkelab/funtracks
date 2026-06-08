@@ -287,7 +287,7 @@ def infer_node_name_map(
     node_features = {
         k: v
         for k, v in available_computed_features.items()
-        if v.get("feature_type") == "node"
+        if "node" in v["feature_type"]
     }
 
     # Setup: Build list of standard fields and display name mapping
@@ -347,7 +347,7 @@ def infer_edge_name_map(
         edge_features = {
             k: v
             for k, v in available_computed_features.items()
-            if v.get("feature_type") == "edge"
+            if "edge" in v["feature_type"]
         }
 
     # Extract edge feature keys and display name mapping

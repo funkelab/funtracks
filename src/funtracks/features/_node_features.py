@@ -23,6 +23,21 @@ def Time() -> Feature:
     }
 
 
+def Solution() -> Feature:
+    """A feature to hold the boolean solution status of nodes and edges.
+
+    Returns:
+        Feature: A feature dict representing solution status.
+    """
+    return {
+        "feature_type": ["node", "edge"],
+        "value_type": "bool",
+        "num_values": 1,
+        "display_name": "Solution",
+        "default_value": True,
+    }
+
+
 def SegMask(ndim: int, bbox_key: str = "bbox") -> Feature:
     """A feature to hold a segmentation mask for a node.
 

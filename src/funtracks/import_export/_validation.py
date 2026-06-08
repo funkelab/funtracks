@@ -26,12 +26,11 @@ def validate_graph_seg_match(
     segmentation: da.Array,
     scale: list[float],
     position_attr: list[str],
-) -> bool:
+) -> None:
     """Validate if the graph matches the provided segmentation data.
 
     Checks if the seg_id value of the last node matches the pixel value at the
-    (scaled) node coordinates. Returns a boolean indicating whether relabeling
-    of the segmentation to match node id values is required.
+    (scaled) node coordinates.
 
     Args:
         graph: tracksdata graph with standard keys
@@ -39,17 +38,10 @@ def validate_graph_seg_match(
         scale: Scaling information (pixel to world coordinates)
         position_attr: Position keys (e.g., ["y", "x"] or ["z", "y", "x"])
 
-    Returns:
-        bool: True if relabeling from seg_id to node_id is required.
+    Raises:
+        ValueError: If the graph has no nodes, a node coordinate is out of
+            bounds, or the segmentation pixel value does not match the seg id.
     """
-    # Check segmentation dimensions match graph dimensionality
-    ndim = len(position_attr) + 1  # +1 for time
-    if len(segmentation.shape) != ndim:
-        raise ValueError(
-            f"Segmentation has {len(segmentation.shape)} dimensions but graph has "
-            f"{ndim} dimensions (time + {len(position_attr)} spatial dims)"
-        )
-
     # Get the last node for validation
     node_ids = list(graph.node_ids())
     if not node_ids:
@@ -94,13 +86,6 @@ def validate_graph_seg_match(
     if not seg_id_at_coord:
         error_msg = "Error testing seg id:\n" + "\n".join(f"- {e}" for e in errors)
         raise ValueError(error_msg)
-
-    # TODO: The relabeling check (seg_id != node_id) is duplicated in
-    # TracksBuilder.handle_segmentation. Consider deduplicating by either:
-    # 1. Using this return value in the caller, or
-    # 2. Removing the return value and making this purely a validation function
-    # Return True if relabeling is needed (seg_id != node_id)
-    return last_node_id != seg_id
 
 
 def validate_node_name_map(
@@ -291,40 +276,6 @@ def validate_edge_name_map(
         validate_spatial_dims_in_name_map(edge_name_map, available_features, ndim)
 
 
-def validate_feature_key_collisions(
-    name_map: dict[str, str | list[str]],
-    edge_name_map: dict[str, str | list[str]] | None,
-) -> None:
-    """Validate that node and edge feature keys don't overlap.
-
-    Feature keys must be unique across both node and edge features because
-    they share the same namespace in FeatureDict.
-
-    Args:
-        name_map: Mapping from standard keys to node property names
-        edge_name_map: Optional mapping from standard keys to edge property names
-
-    Raises:
-        ValueError: If any keys appear in both name_map and edge_name_map
-    """
-    if edge_name_map is None:
-        return
-
-    # Get the standard keys (not the source property names) from both maps
-    node_keys = set(name_map.keys())
-    edge_keys = set(edge_name_map.keys())
-
-    # Find overlapping keys
-    colliding_keys = node_keys & edge_keys
-
-    if colliding_keys:
-        raise ValueError(
-            f"Feature keys cannot be shared between nodes and edges. "
-            f"Colliding keys: {sorted(colliding_keys)}. "
-            f"Please use unique keys for node and edge features."
-        )
-
-
 def validate_spatial_dims(
     in_memory_geff: InMemoryGeff,
     available_features: dict,
@@ -380,7 +331,7 @@ def validate_in_memory_geff(in_memory_geff: InMemoryGeff) -> None:
     - validate_no_repeated_edges: No duplicate edges
 
     Validates optional properties (warns and removes if invalid):
-    - validate_tracklets: track_id must form valid tracklets
+    - validate_tracklets: tracklet_id must form valid tracklets
     - validate_lineages: lineage_id must form valid lineages
 
     Args:
@@ -411,16 +362,16 @@ def validate_in_memory_geff(in_memory_geff: InMemoryGeff) -> None:
         raise ValueError(f"Repeated edges found in data:\n{invalid_edges}")
 
     # Validate tracklet_id if present (optional - remove if invalid)
-    if "track_id" in node_props:
-        tracklet_ids = node_props["track_id"]["values"]
+    if "tracklet_id" in node_props:
+        tracklet_ids = node_props["tracklet_id"]["values"]
         valid, errors = validate_tracklets(node_ids, edge_ids, tracklet_ids)
         if not valid:
             warn(
-                f"track_id validation failed:\n{chr(10).join(errors)}\n"
-                "Removing track_id from data.",
+                f"tracklet_id validation failed:\n{chr(10).join(errors)}\n"
+                "Removing tracklet_id from data.",
                 stacklevel=2,
             )
-            del node_props["track_id"]
+            del node_props["tracklet_id"]
 
     # Validate lineage_id if present (optional - remove if invalid)
     if "lineage_id" in node_props:

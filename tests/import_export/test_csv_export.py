@@ -61,16 +61,17 @@ def test_export_solution_to_csv_with_seg_zarr(
     assert isinstance(seg_zarr, zarr.Array)
     assert seg_zarr.shape == tracks.segmentation.shape
 
-    # values should be track_ids (not node_ids) — default seg_label_attr="track_id"
+    # values should be tracklet_ids (not node_ids) — default seg_relabel="tracklet"
     seg_arr = seg_zarr[:]
     unique_vals = set(seg_arr.flatten()) - {0}
-    track_ids = set(tracks.graph.node_attrs(attr_keys=["track_id"])["track_id"].to_list())
+    label_key = tracks.features.tracklet_key
+    track_ids = set(tracks.graph.node_attrs(attr_keys=[label_key])[label_key].to_list())
     assert unique_vals == track_ids
 
 
 @pytest.mark.parametrize("ndim", [3, 4], ids=["2d", "3d"])
 def test_export_solution_to_csv_with_seg_tiff(get_tracks, tmp_path, ndim):
-    """Test exporting tracks to CSV + segmentation as tiff painted by track_id."""
+    """Test exporting tracks to CSV + segmentation as tiff painted by tracklet ID."""
     tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
     temp_file = tmp_path / "test_export.csv"
     seg_file = tmp_path / "test_export_seg.tif"
@@ -86,9 +87,10 @@ def test_export_solution_to_csv_with_seg_tiff(get_tracks, tmp_path, ndim):
     seg_arr = tifffile.imread(str(seg_file))
     assert seg_arr.shape == tracks.segmentation.shape
 
-    # values should be track_ids (not node_ids) — default seg_label_attr="track_id"
+    # values should be tracklet_ids (not node_ids) — default seg_relabel="tracklet"
     unique_vals = set(seg_arr.flatten()) - {0}
-    track_ids = set(tracks.graph.node_attrs(attr_keys=["track_id"])["track_id"].to_list())
+    label_key = tracks.features.tracklet_key
+    track_ids = set(tracks.graph.node_attrs(attr_keys=[label_key])[label_key].to_list())
     assert unique_vals == track_ids
 
 
@@ -103,7 +105,7 @@ def test_export_solution_to_csv_with_seg_original_labels(get_tracks, tmp_path, n
         temp_file,
         export_seg=True,
         seg_path=seg_dir,
-        seg_label_attr=None,
+        seg_relabel=None,
     )
 
     seg_zarr = zarr.open(str(seg_dir), mode="r")

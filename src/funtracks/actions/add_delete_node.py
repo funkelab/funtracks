@@ -31,7 +31,7 @@ class AddNode(BasicAction):
         Args:
             tracks: The Tracks to add the node to.
             node: A node id.
-            attributes: Node attributes including time, track_id, and
+            attributes: Node attributes including time, tracklet_id, and
                 optionally position, mask, bbox, etc.
 
         Raises:
