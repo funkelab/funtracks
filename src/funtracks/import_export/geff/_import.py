@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from typing import TYPE_CHECKING
 
 import tracksdata as td
@@ -167,6 +168,19 @@ class GeffTracksBuilder(TracksBuilder):
 
         # Store axes metadata for use in infer_node_name_map
         self._geff_axes = metadata.axes or []
+
+        # Read funtracks FeatureDict from GEFF extra metadata if present
+        # This will be passed to SolutionTracks via the base build() method
+        if metadata.extra and "funtracks" in metadata.extra:
+            funtracks_extra = metadata.extra["funtracks"]
+            if "features" in funtracks_extra:
+                try:
+                    from funtracks.features import FeatureDict
+
+                    self.features = FeatureDict.from_json(funtracks_extra["features"])
+                except (KeyError, ValueError, TypeError):
+                    # If FeatureDict loading fails, features will remain None
+                    pass
 
         # Read segmentation_shape written by export_to_geff (stored as an extra
         # zarr attribute alongside the geff metadata).
@@ -344,14 +358,28 @@ def import_from_geff(
 
     builder = GeffTracksBuilder()
     builder.prepare(directory)
-    if node_name_map is not None:
+    # When a FeatureDict was loaded from the GEFF metadata, the attribute
+    # names in the graph already match the FeatureDict keys. A user-provided
+    # name_map would rename those columns, making them inconsistent with the
+    # stored FeatureDict. So we only apply the user's name_map when no
+    # FeatureDict was found (i.e. old/external GEFFs).
+    has_feature_dict = getattr(builder, "features", None) is not None
+    if has_feature_dict and (node_name_map is not None or edge_name_map is not None):
+        warnings.warn(
+            "Ignoring user-provided name_map because a FeatureDict was "
+            "loaded from the GEFF metadata. The stored FeatureDict already "
+            "defines the attribute names.",
+            UserWarning,
+            stacklevel=2,
+        )
+    if node_name_map is not None and not has_feature_dict:
         builder.node_name_map = node_name_map
-    if edge_name_map is not None:
+    if edge_name_map is not None and not has_feature_dict:
         builder.edge_name_map = edge_name_map
     return builder.build(
         directory,
         segmentation_path,
         scale=scale,
-        node_name_map=node_name_map,
+        node_name_map=builder.node_name_map,
         database=database,
     )

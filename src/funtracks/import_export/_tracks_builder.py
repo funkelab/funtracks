@@ -763,17 +763,28 @@ class TracksBuilder(ABC):
         # 7. Create SolutionTracks
         # construct_graph() always stores time as "t" (tracksdata convention),
         # regardless of TIME_ATTR, so we pass "t" here explicitly.
-        tracks = SolutionTracks(
-            graph=graph,
-            pos_attr="pos",
-            time_attr="t",
-            ndim=self.ndim,
-            scale=scale,
-        )
+        # If a FeatureDict was loaded (e.g., from GEFF metadata), use it directly
+        if hasattr(self, "features") and self.features is not None:
+            tracks = SolutionTracks(
+                graph=graph,
+                ndim=self.ndim,
+                scale=scale,
+                features=self.features,
+            )
+        else:
+            tracks = SolutionTracks(
+                graph=graph,
+                pos_attr="pos",
+                time_attr="t",
+                ndim=self.ndim,
+                scale=scale,
+            )
 
         # 8. Enable and register features from name maps
-        self.enable_features(tracks, self.node_name_map, feature_type="node")
-        if self.edge_name_map is not None:
-            self.enable_features(tracks, self.edge_name_map, feature_type="edge")
+        # Skip if we already loaded a complete FeatureDict
+        if not (hasattr(self, "features") and self.features is not None):
+            self.enable_features(tracks, self.node_name_map, feature_type="node")
+            if self.edge_name_map is not None:
+                self.enable_features(tracks, self.edge_name_map, feature_type="edge")
 
         return tracks
