@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1780942923554,
+  "lastUpdate": 1780945655438,
   "repoUrl": "https://github.com/funkelab/funtracks",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -837,6 +837,37 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 2.6166578340000015 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "malinmayorc@janelia.hhmi.org",
+            "name": "Caroline Malin-Mayor",
+            "username": "cmalinmayor"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "267c9f672287b4bd8545bf903893cc358740a79c",
+          "message": "Merge pull request #234 from funkelab/save-featuredict-in-geff\n\nStore and load FeatureDict in GEFF metadata",
+          "timestamp": "2026-06-08T15:07:03-04:00",
+          "tree_id": "e8ae206b936299c5315c31473c28a42bab814cd3",
+          "url": "https://github.com/funkelab/funtracks/commit/267c9f672287b4bd8545bf903893cc358740a79c"
+        },
+        "date": 1780945654407,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_compute_graph_from_seg",
+            "value": 0.3860627895470433,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 2.590252226000004 sec\nrounds: 1"
           }
         ]
       }
