@@ -106,7 +106,7 @@ class GraphAnnotator:
     def compute(self, feature_keys: list[str] | None = None) -> None:
         """Compute a set of features and add them to the tracks.
 
-        This involves both updating the node/edge attributes on the tracks.graph
+        This involves both updating the node/edge attributes on the tracks.graph_solution
         and adding the features to the FeatureDict, if necessary. This is distinct
         from `update` to allow more efficient bulk computation of features.
 
@@ -123,8 +123,9 @@ class GraphAnnotator:
     def update(self, action: BasicAction) -> None:
         """Update a set of features based on the given action.
 
-        This involves both updating the node or edge attributes on the tracks.graph
-        and adding the features to the FeatureDict, if necessary. This is distinct
+        This involves both updating the node or edge attributes on the
+        tracks.graph_solution and adding the features to the FeatureDict, if
+        necessary. This is distinct
         from `compute` to allow more efficient computation of features for single
         elements.
 

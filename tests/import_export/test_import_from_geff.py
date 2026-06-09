@@ -262,7 +262,7 @@ def test_duplicate_values_in_name_map(valid_geff):
     tracks = import_from_geff(store, node_name_map)
 
     # Both time and seg_id should be present with same values
-    for node_id in tracks.graph.node_ids():
+    for node_id in tracks.graph_solution.node_ids():
         assert tracks.get_node_attr(node_id, "seg_id") == tracks.get_node_attr(
             node_id, "t"
         )
@@ -316,11 +316,11 @@ def test_tracks_with_segmentation(valid_geff, invalid_geff, valid_segmentation, 
     assert hasattr(tracks, "segmentation")
     assert tracks.segmentation.shape == valid_segmentation.shape
     # Get last node by ID (don't rely on iteration order)
-    last_node = max(tracks.graph.node_ids())
+    last_node = max(tracks.graph_solution.node_ids())
     # With composite pos, position is stored as an array
-    pos = tracks.graph.nodes[last_node]["pos"]
+    pos = tracks.graph_solution.nodes[last_node]["pos"]
     coords = [
-        tracks.graph.nodes[last_node]["t"],
+        tracks.graph_solution.nodes[last_node]["t"],
         pos[0],  # y
         pos[1],  # x
     ]
@@ -333,10 +333,10 @@ def test_tracks_with_segmentation(valid_geff, invalid_geff, valid_segmentation, 
     )  # test that the seg id has been relabeled
 
     # Check that only requested features are present and area is loaded from geff
-    data = tracks.graph.nodes[last_node]
-    assert "random_feature" in tracks.graph.node_attr_keys()
-    assert "random_feature2" not in tracks.graph.node_attr_keys()
-    assert "area" in tracks.graph.node_attr_keys()
+    data = tracks.graph_solution.nodes[last_node]
+    assert "random_feature" in tracks.graph_solution.node_attr_keys()
+    assert "random_feature2" not in tracks.graph_solution.node_attr_keys()
+    assert "area" in tracks.graph_solution.node_attr_keys()
     assert data["area"] == 21  # loaded directly from geff, not recomputed
 
     # Test that import fails with ValueError when invalid seg_ids are provided.
@@ -418,8 +418,8 @@ def test_features_loaded_from_name_map(valid_geff, valid_segmentation, tmp_path)
         assert key in tracks.features
 
     # Get last node by ID (don't rely on iteration order)
-    max_node_id = max(tracks.graph.node_ids())
-    data = tracks.graph.nodes[max_node_id]
+    max_node_id = max(tracks.graph_solution.node_ids())
+    data = tracks.graph_solution.nodes[max_node_id]
 
     # All requested features should be present and loaded from geff
     for key in feature_keys:
@@ -541,13 +541,13 @@ def test_import_from_geff_roundtrip_auto_axes(tmp_path):
     # import_from_geff must read segmentation_shape back from zarr attrs and
     # reconstruct a segmentation (GraphArrayView) — not return segmentation=None.
     tracks = import_from_geff(tracks_path)
-    assert tracks.graph.num_nodes() == 1
+    assert tracks.graph_solution.num_nodes() == 1
     assert tracks.segmentation is not None, (
         "segmentation should be reconstructed from masks after round-trip"
     )
     assert tracks.segmentation.shape == (5, 100, 100)
 
-    node1 = tracks.graph.nodes[1]
+    node1 = tracks.graph_solution.nodes[1]
 
     assert node1["pos"] is not None
     np.testing.assert_array_almost_equal(node1["pos"], [50.0, 50.0])
@@ -664,13 +664,13 @@ def test_get_time_works_after_import(valid_geff):
     name_map = {"time": "t", "pos": ["y", "x"]}
     tracks = import_from_geff(store, name_map)
 
-    for node_id in tracks.graph.node_ids():
+    for node_id in tracks.graph_solution.node_ids():
         # This must not raise KeyError: 'time'
         t = tracks.get_time(node_id)
         assert isinstance(t, int), f"get_time() should return int, got {type(t)}"
 
     # get_times() on all nodes must also work
-    all_node_ids = list(tracks.graph.node_ids())
+    all_node_ids = list(tracks.graph_solution.node_ids())
     times = tracks.get_times(all_node_ids)
     assert len(times) == len(all_node_ids)
 
@@ -710,7 +710,7 @@ def test_bool_node_property_schema(geff_with_bool_prop):
     name_map = {"time": "t", "pos": ["y", "x"], "is_dividing": "is_dividing"}
     tracks = import_from_geff(geff_with_bool_prop, name_map)
 
-    df = tracks.graph.node_attrs(attr_keys=["is_dividing"])
+    df = tracks.graph_solution.node_attrs(attr_keys=["is_dividing"])
     assert df["is_dividing"].dtype == pl.Boolean, (
         f"Expected pl.Boolean schema for 'is_dividing', got {df['is_dividing'].dtype}. "
         "Likely cause: np.bool_ default_value fell through to int in construct_graph()."
@@ -729,10 +729,10 @@ def test_bool_node_property_values(geff_with_bool_prop):
     name_map = {"time": "t", "pos": ["y", "x"], "is_dividing": "is_dividing"}
     tracks = import_from_geff(geff_with_bool_prop, name_map)
 
-    node_ids = sorted(tracks.graph.node_ids())
+    node_ids = sorted(tracks.graph_solution.node_ids())
     expected = [True, False, True, False, True]
     for node_id, exp in zip(node_ids, expected, strict=True):
-        val = tracks.graph.nodes[node_id]["is_dividing"]
+        val = tracks.graph_solution.nodes[node_id]["is_dividing"]
         assert type(val) is bool, (
             f"Expected Python bool for 'is_dividing', got {type(val)} for node {node_id}"
             "Likely cause: np.bool_ value not cast to bool in construct_graph()."
@@ -768,14 +768,16 @@ def test_3d_pos_survives_sql_roundtrip(tmp_path):
     tracks = import_from_geff(store, name_map)
 
     # Verify the RX graph has correct Array dtype for 3D pos
-    df_rx = tracks.graph.node_attrs(attr_keys=["pos"])
+    df_rx = tracks.graph_solution.node_attrs(attr_keys=["pos"])
     assert df_rx["pos"].dtype == pl.Array(pl.Float64, 3), (
         f"RX graph pos should be Array(Float64, 3), got {df_rx['pos'].dtype}"
     )
 
     # Convert to SQL and reload — this is where the schema mismatch used to surface
     db_path = str(tmp_path / "test.db")
-    td.graph.SQLGraph.from_other(tracks.graph, drivername="sqlite", database=db_path)
+    td.graph.SQLGraph.from_other(
+        tracks.graph_solution, drivername="sqlite", database=db_path
+    )
     sql_graph2 = td.graph.SQLGraph("sqlite", db_path)
 
     df_sql = sql_graph2.node_attrs(attr_keys=["pos"])
@@ -826,7 +828,8 @@ def test_geff_roundtrip_preserves_tracklet_ids(get_tracks, tmp_path):
     """End-to-end round-trip: export then import should preserve tracklet IDs."""
     tracks_in = get_tracks(ndim=3, with_seg=False, is_solution=True)
     expected = {
-        int(nid): tracks_in.get_track_id(int(nid)) for nid in tracks_in.graph.node_ids()
+        int(nid): tracks_in.get_track_id(int(nid))
+        for nid in tracks_in.graph_solution.node_ids()
     }
 
     export_dir = tmp_path / "export"
@@ -1075,7 +1078,9 @@ def test_invalid_featuredict_in_geff_falls_back_to_autodetect(get_tracks, tmp_pa
     assert imported.features.time_key is not None
     assert imported.features.position_key is not None
     assert imported.features.tracklet_key is not None
-    assert set(tracks.graph.node_ids()) == set(imported.graph.node_ids())
+    assert set(tracks.graph_solution.node_ids()) == set(
+        imported.graph_solution.node_ids()
+    )
 
 
 def test_import_from_geff_respects_external_solution_column(tmp_path):
@@ -1112,7 +1117,7 @@ def test_import_from_geff_respects_external_solution_column(tmp_path):
 
     tracks = import_from_geff(tracks_path)
 
-    node_ids = set(tracks.graph.node_ids())
+    node_ids = set(tracks.graph_solution.node_ids())
     assert node_ids == {1, 3}, (
         "Node 2 has solution=False in the geff file and should be filtered out "
         f"by import_from_geff. Got node_ids={node_ids}."

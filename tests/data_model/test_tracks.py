@@ -96,7 +96,7 @@ def test_nodes_edges(graph_2d_with_segmentation):
     assert set(tracks.nodes()) == {1, 2, 3, 4, 5, 6}
     assert len(tracks.edges()) == 4  # rx graph starts from 0, sql from 1,
     # so direct comparison of edges depends on backend
-    assert set(map(tuple, tracks.graph.edge_list())) == {
+    assert set(map(tuple, tracks.graph_solution.edge_list())) == {
         (1, 2),
         (1, 3),
         (3, 4),
@@ -225,7 +225,7 @@ def test_get_new_node_ids(graph_2d_with_position):
     assert 1 not in ids  # existing nodes skipped
     assert 2 not in ids
     for node_id in ids:
-        assert not tracks.graph.has_node(node_id)
+        assert not tracks.graph_solution.has_node(node_id)
 
     # second call must not overlap with first
     ids2 = tracks._get_new_node_ids(2)
@@ -241,7 +241,9 @@ def test_undo_redo(graph_2d_with_segmentation):
     assert tracks.redo() is False
 
     # Perform an action - add a custom attribute
-    tracks.graph.add_node_attr_key("custom_label", default_value=None, dtype=pl.Object)
+    tracks.graph_solution.add_node_attr_key(
+        "custom_label", default_value=None, dtype=pl.Object
+    )
 
     action1 = UpdateNodeAttrs(tracks, node=1, attrs={"custom_label": "test_value"})
     tracks.action_history.add_new_action(action1)
@@ -262,7 +264,9 @@ def test_undo_redo(graph_2d_with_segmentation):
     assert tracks.redo() is False
 
     # Perform another action
-    tracks.graph.add_node_attr_key("another_label", default_value=None, dtype=pl.Object)
+    tracks.graph_solution.add_node_attr_key(
+        "another_label", default_value=None, dtype=pl.Object
+    )
     action2 = UpdateNodeAttrs(tracks, node=2, attrs={"another_label": "second_value"})
     tracks.action_history.add_new_action(action2)
     assert tracks.get_node_attr(2, "another_label") == "second_value"
@@ -313,14 +317,14 @@ def test_add_feature_mask_creates_both_columns():
     graph = create_empty_graphview_graph(ndim=3)
     tracks = Tracks(graph, ndim=3, **track_attrs)
 
-    assert "nuc_mask" not in tracks.graph.node_attr_keys()
-    assert "nuc_bbox" not in tracks.graph.node_attr_keys()
+    assert "nuc_mask" not in tracks.graph_solution.node_attr_keys()
+    assert "nuc_bbox" not in tracks.graph_solution.node_attr_keys()
 
     tracks.add_feature("nuc_mask", SegMask(ndim=3, bbox_key="nuc_bbox"))
     tracks.add_feature("nuc_bbox", SegBbox(ndim=3))
 
-    assert "nuc_mask" in tracks.graph.node_attr_keys()
-    assert "nuc_bbox" in tracks.graph.node_attr_keys()
+    assert "nuc_mask" in tracks.graph_solution.node_attr_keys()
+    assert "nuc_bbox" in tracks.graph_solution.node_attr_keys()
     assert "nuc_mask" in tracks.features
     assert "nuc_bbox" in tracks.features
 
@@ -333,15 +337,15 @@ def test_delete_feature_mask_removes_both_columns(
 
     assert "mask" in tracks.features
     assert "bbox" in tracks.features
-    assert "mask" in tracks.graph.node_attr_keys()
-    assert "bbox" in tracks.graph.node_attr_keys()
+    assert "mask" in tracks.graph_solution.node_attr_keys()
+    assert "bbox" in tracks.graph_solution.node_attr_keys()
 
     tracks.delete_feature("mask")
 
     assert "mask" not in tracks.features
     assert "bbox" not in tracks.features
-    assert "mask" not in tracks.graph.node_attr_keys()
-    assert "bbox" not in tracks.graph.node_attr_keys()
+    assert "mask" not in tracks.graph_solution.node_attr_keys()
+    assert "bbox" not in tracks.graph_solution.node_attr_keys()
 
 
 def test_update_mask_syncs_bbox(graph_2d_with_segmentation):
@@ -353,8 +357,8 @@ def test_update_mask_syncs_bbox(graph_2d_with_segmentation):
     new_mask = make_2d_disk_mask(center=(30, 30), radius=10)
     tracks.update_mask(1, new_mask)
 
-    stored_mask = tracks.graph.nodes[1][td.DEFAULT_ATTR_KEYS.MASK]
-    stored_bbox = tracks.graph.nodes[1][td.DEFAULT_ATTR_KEYS.BBOX]
+    stored_mask = tracks.graph_solution.nodes[1][td.DEFAULT_ATTR_KEYS.MASK]
+    stored_bbox = tracks.graph_solution.nodes[1][td.DEFAULT_ATTR_KEYS.BBOX]
 
     assert stored_mask is new_mask
     assert np.array_equal(stored_bbox, new_mask.bbox)

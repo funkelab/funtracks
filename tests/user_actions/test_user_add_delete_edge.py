@@ -14,17 +14,17 @@ class TestUserAddDeleteEdge:
         edge = (4, 6)
         old_child = 5
         old_track_id = tracks.get_track_id(old_child)
-        assert not tracks.graph.has_edge(*edge)
+        assert not tracks.graph_solution.has_edge(*edge)
         action = UserAddEdge(tracks, edge)
-        assert tracks.graph.has_edge(*edge)
+        assert tracks.graph_solution.has_edge(*edge)
         assert tracks.get_track_id(old_child) != old_track_id
 
         inverse = action.inverse()
-        assert not tracks.graph.has_edge(*edge)
+        assert not tracks.graph_solution.has_edge(*edge)
         assert tracks.get_track_id(old_child) == old_track_id
 
         inverse.inverse()
-        assert tracks.graph.has_edge(*edge)
+        assert tracks.graph_solution.has_edge(*edge)
         assert tracks.get_track_id(old_child) != old_track_id
 
     def test_user_add_merge_edge(self, get_tracks, ndim, with_seg):
@@ -32,8 +32,8 @@ class TestUserAddDeleteEdge:
         # add an edge from 2 to 4 (there is already an edge from 3 to 4)
         edge = (2, 4)
         old_edge = (3, 4)
-        assert not tracks.graph.has_edge(*edge)
-        assert tracks.graph.has_edge(*old_edge)
+        assert not tracks.graph_solution.has_edge(*edge)
+        assert tracks.graph_solution.has_edge(*old_edge)
         with pytest.raises(
             InvalidActionError, match="Cannot make a merge edge in a tracking solution"
         ):
@@ -43,16 +43,16 @@ class TestUserAddDeleteEdge:
             match="Removing edge .* to add new edge without merging.",
         ):
             action = UserAddEdge(tracks, edge, force=True)
-        assert tracks.graph.has_edge(*edge)
-        assert not tracks.graph.has_edge(*old_edge)
+        assert tracks.graph_solution.has_edge(*edge)
+        assert not tracks.graph_solution.has_edge(*old_edge)
 
         inverse = action.inverse()
-        assert not tracks.graph.has_edge(*edge)
-        assert tracks.graph.has_edge(*old_edge)
+        assert not tracks.graph_solution.has_edge(*edge)
+        assert tracks.graph_solution.has_edge(*old_edge)
 
         inverse.inverse()
-        assert tracks.graph.has_edge(*edge)
-        assert not tracks.graph.has_edge(*old_edge)
+        assert tracks.graph_solution.has_edge(*edge)
+        assert not tracks.graph_solution.has_edge(*old_edge)
 
     def test_user_delete_edge(self, get_tracks, ndim, with_seg):
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
@@ -62,18 +62,18 @@ class TestUserAddDeleteEdge:
 
         old_track_id = tracks.get_track_id(old_child)
         new_track_id = tracks.get_track_id(1)
-        assert tracks.graph.has_edge(*edge)
+        assert tracks.graph_solution.has_edge(*edge)
 
         action = UserDeleteEdge(tracks, edge)
-        assert not tracks.graph.has_edge(*edge)
+        assert not tracks.graph_solution.has_edge(*edge)
         assert tracks.get_track_id(old_child) == new_track_id
 
         inverse = action.inverse()
-        assert tracks.graph.has_edge(*edge)
+        assert tracks.graph_solution.has_edge(*edge)
         assert tracks.get_track_id(old_child) == old_track_id
 
         double_inv = inverse.inverse()
-        assert not tracks.graph.has_edge(*edge)
+        assert not tracks.graph_solution.has_edge(*edge)
         assert tracks.get_track_id(old_child) == new_track_id
 
         # TODO: error if edge doesn't exist?
@@ -84,18 +84,18 @@ class TestUserAddDeleteEdge:
         old_child = 5
 
         old_track_id = tracks.get_track_id(old_child)
-        assert tracks.graph.has_edge(*edge)
+        assert tracks.graph_solution.has_edge(*edge)
 
         action = UserDeleteEdge(tracks, edge)
-        assert not tracks.graph.has_edge(*edge)
+        assert not tracks.graph_solution.has_edge(*edge)
         assert tracks.get_track_id(old_child) != old_track_id
 
         inverse = action.inverse()
-        assert tracks.graph.has_edge(*edge)
+        assert tracks.graph_solution.has_edge(*edge)
         assert tracks.get_track_id(old_child) == old_track_id
 
         inverse.inverse()
-        assert not tracks.graph.has_edge(*edge)
+        assert not tracks.graph_solution.has_edge(*edge)
         assert tracks.get_track_id(old_child) != old_track_id
 
 
@@ -127,7 +127,7 @@ def test_delete_edge_triple_div(get_tracks):
     attrs["solution"] = True
     attrs["iou"] = 0.9
 
-    tracks.graph.add_edge(
+    tracks.graph_solution.add_edge(
         source_id=1,
         target_id=6,
         attrs=attrs,

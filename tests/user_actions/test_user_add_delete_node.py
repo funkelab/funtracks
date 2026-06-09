@@ -55,7 +55,7 @@ class TestUserAddDeleteNode:
             del attributes["pos"]
         else:
             pixels = None
-        graph = tracks.graph
+        graph = tracks.graph_solution
         assert not graph.has_node(node_id)
         assert graph.has_edge(4, 5)
         action = UserAddNode(tracks, node_id, attributes, pixels=pixels)
@@ -88,7 +88,7 @@ class TestUserAddDeleteNode:
         # delete node in middle of track. Should skip-connect 3 and 5 with span 3
         node_id = 4
 
-        graph = tracks.graph
+        graph = tracks.graph_solution
         assert graph.has_node(node_id)
         assert graph.has_edge(3, node_id)
         assert graph.has_edge(node_id, 5)
@@ -128,7 +128,7 @@ class TestUserAddDeleteNode:
         node_id = 2
         sib = 3
 
-        graph = tracks.graph
+        graph = tracks.graph_solution
         assert graph.has_node(node_id)
         assert graph.has_edge(parent_node, node_id)
         parent_track_id = tracks.get_track_id(parent_node)
@@ -159,7 +159,7 @@ class TestUserAddDeleteNode:
         """Test bulk deletion of multiple nodes in a single action."""
         # Graph structure: 1 → 2, 1 → 3 → 4 → 5, and 6 (separate)
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
-        graph = tracks.graph
+        graph = tracks.graph_solution
 
         # Save original state
         original_nodes = set(graph.node_ids())

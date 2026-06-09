@@ -101,7 +101,7 @@ class SolutionTracks(Tracks):
         if (
             tracks.features.tracklet_key is not None
             and (
-                tracks.graph.node_attrs(attr_keys=tracks.features.tracklet_key)[
+                tracks.graph_solution.node_attrs(attr_keys=tracks.features.tracklet_key)[
                     tracks.features.tracklet_key
                 ]
                 == -1
@@ -111,7 +111,7 @@ class SolutionTracks(Tracks):
             force_recompute = True
 
         soln_tracks = cls(
-            tracks.graph,
+            tracks.graph_solution,
             scale=tracks.scale,
             ndim=tracks.ndim,
             features=tracks.features,
@@ -164,7 +164,9 @@ class SolutionTracks(Tracks):
         if self.features.tracklet_key is None:
             raise ValueError("Tracklet key not initialized in features")
         tracklet_key = self.features.tracklet_key
-        df = self.graph.node_attrs(attr_keys=[td.DEFAULT_ATTR_KEYS.NODE_ID, tracklet_key])
+        df = self.graph_solution.node_attrs(
+            attr_keys=[td.DEFAULT_ATTR_KEYS.NODE_ID, tracklet_key]
+        )
         id_to_val = dict(
             zip(
                 df[td.DEFAULT_ATTR_KEYS.NODE_ID].to_list(),

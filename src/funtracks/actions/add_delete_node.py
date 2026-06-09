@@ -77,7 +77,7 @@ class AddNode(BasicAction):
 
     def _apply(self) -> None:
         """Add the node with all attributes from self.attributes."""
-        self.tracks.graph.add_node(
+        self.tracks.graph_solution.add_node(
             attrs=dict(self.attributes), index=self.node, validate_keys=False
         )
 
@@ -117,5 +117,5 @@ class DeleteNode(BasicAction):
 
     def _apply(self) -> None:
         """Remove the node from the graph."""
-        self.tracks.graph.remove_node(self.node)
+        self.tracks.graph_solution.remove_node(self.node)
         self.tracks.notify_annotators(self)

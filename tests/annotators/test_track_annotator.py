@@ -41,9 +41,9 @@ class TestTrackAnnotator:
 
         # Compute values
         ann.compute()
-        for node in tracks.graph.node_ids():
+        for node in tracks.graph_solution.node_ids():
             for key in all_features:
-                assert tracks.graph.nodes[node][key] is not None
+                assert tracks.graph_solution.nodes[node][key] is not None
 
         lineages = [
             [1, 2, 3, 4, 5],
@@ -79,7 +79,9 @@ class TestTrackAnnotator:
         node_id = 6
         edge_id = (4, 6)
         attrs = {"iou": 0, "solution": True} if with_seg else {"solution": True}
-        tracks.graph.add_edge(source_id=edge_id[0], target_id=edge_id[1], attrs=attrs)
+        tracks.graph_solution.add_edge(
+            source_id=edge_id[0], target_id=edge_id[1], attrs=attrs
+        )
         to_remove_key = ann.lineage_key
         orig_lin = tracks.get_node_attr(node_id, ann.lineage_key)
         orig_tra = tracks.get_node_attr(node_id, ann.tracklet_key)
@@ -155,7 +157,7 @@ class TestTrackAnnotator:
         source_node = 3
         target_node = 4
 
-        edge = next(e for e in tracks.graph.edge_list() if set(e) == {3, 4})
+        edge = next(e for e in tracks.graph_solution.edge_list() if set(e) == {3, 4})
 
         expected_lineage_id = ann.max_lineage_id + 1
         UserDeleteEdge(tracks, edge=edge)

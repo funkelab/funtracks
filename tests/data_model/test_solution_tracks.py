@@ -43,7 +43,7 @@ def test_from_tracks_cls(graph_2d_with_segmentation):
         scale=(2, 2, 2),
     )
     solution_tracks = SolutionTracks.from_tracks(tracks)
-    assert solution_tracks.graph == tracks.graph
+    assert solution_tracks.graph_solution == tracks.graph_solution
     assert solution_tracks.segmentation == tracks.segmentation
     assert solution_tracks.features.time_key == tracks.features.time_key
     assert solution_tracks.features.position_key == tracks.features.position_key
@@ -63,7 +63,7 @@ def test_from_tracks_cls_recompute(graph_2d_with_segmentation):
     )
     # delete track id (default value -1) on one node triggers reassignment of
     # track_ids even when recompute is False.
-    tracks.graph.nodes[1][tracks.features.tracklet_key] = -1
+    tracks.graph_solution.nodes[1][tracks.features.tracklet_key] = -1
     solution_tracks = SolutionTracks.from_tracks(tracks)
     # should have reassigned new track_id to node 6
     assert solution_tracks.get_node_attr(6, solution_tracks.features.tracklet_key) == 4
@@ -125,7 +125,7 @@ def test_export_to_csv_with_display_names(
     with open(temp_file) as f:
         lines = f.readlines()
 
-    assert len(lines) == tracks.graph.num_nodes() + 1  # add header
+    assert len(lines) == tracks.graph_solution.num_nodes() + 1  # add header
 
     # With display names: ID, Parent ID, Time, y, x, Tracklet ID,
     # Lineage ID, Area
@@ -149,7 +149,7 @@ def test_export_to_csv_with_display_names(
     with open(temp_file) as f:
         lines = f.readlines()
 
-    assert len(lines) == tracks.graph.num_nodes() + 1  # add header
+    assert len(lines) == tracks.graph_solution.num_nodes() + 1  # add header
 
     # With display names: ID, Parent ID, Time, z, y, x,
     # Tracklet ID, Lineage ID, Volume

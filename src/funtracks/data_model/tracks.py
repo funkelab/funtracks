@@ -52,8 +52,10 @@ class Tracks:
     position attribute. Edges in the graph represent links across time.
 
     Attributes:
-        graph (td.graph.GraphView): A graph with nodes representing detections and
-            and edges representing links across time.
+        graph_solution (td.graph.GraphView): A solution=True view of the full graph,
+            with nodes representing detections and edges representing links across time.
+        graph_full (td.graph.GraphView): The full graph: every node/edge ever known,
+            including soft-deleted (solution=False) ones. Backs graph_solution.
         features (FeatureDict): Dictionary of features tracked on graph nodes/edges.
         annotators (AnnotatorRegistry): List of annotators that compute features.
         scale (list[float] | None): How much to scale each dimension by, including time.
@@ -103,7 +105,7 @@ class Tracks:
             _segmentation (GraphArrayView | None): Internal parameter for reusing an
                 existing GraphArrayView instance. Not intended for public use.
         """
-        self.graph = graph
+        self.graph_solution = graph
         if _segmentation is not None:
             # Reuse provided segmentation instance (internal use only)
             self.segmentation = _segmentation
@@ -172,6 +174,16 @@ class Tracks:
             self._activate_features_from_dict()
         else:
             self._setup_core_computed_features()
+
+    @property
+    def graph_full(self) -> td.graph.GraphView:
+        """The full graph: every node/edge ever known, including soft-deleted
+        (solution=False) ones. `graph_solution` is a solution=True view of this.
+
+        Backed by the solution view's root, so the two can never drift: rebuilding
+        graph_solution via graph_full.filter(...).subgraph() keeps the same root.
+        """
+        return self.graph_solution._root
 
     def _get_feature_set(
         self,
@@ -247,7 +259,7 @@ class Tracks:
         # else: single pos_attr with segmentation - RegionpropsAnnotator will handle it
 
         # Register solution feature when present on the graph
-        if "solution" in self.graph.node_attr_keys():
+        if "solution" in self.graph_solution.node_attr_keys():
             feature_dict["solution"] = Solution()
 
         # Register mask and bbox features if segmentation exists
@@ -326,11 +338,11 @@ class Tracks:
             bool: True if the key is on the first sampled node or there are no nodes,
                 and False if missing from the first node.
         """
-        if self.graph.num_nodes() == 0:
+        if self.graph_solution.num_nodes() == 0:
             return True
 
         # Check which attributes exist
-        node_attrs = set(self.graph.node_attr_keys())
+        node_attrs = set(self.graph_solution.node_attr_keys())
         return key in node_attrs
 
     def _setup_core_computed_features(self) -> None:
@@ -368,10 +380,10 @@ class Tracks:
                 self.enable_features([key])
 
     def nodes(self):
-        return np.array(self.graph.node_ids())
+        return np.array(self.graph_solution.node_ids())
 
     def edges(self):
-        return np.array(self.graph.edge_ids())
+        return np.array(self.graph_solution.edge_ids())
 
     def in_degree(self, nodes: np.ndarray | None = None) -> np.ndarray:
         """Get the in-degree edge_ids of the nodes in the graph."""
@@ -380,9 +392,11 @@ class Tracks:
             if not isinstance(nodes, np.ndarray):
                 nodes = np.array(nodes)
 
-            return np.array([self.graph.in_degree(node.item()) for node in nodes])
+            return np.array(
+                [self.graph_solution.in_degree(node.item()) for node in nodes]
+            )
         else:
-            return np.array(self.graph.in_degree())
+            return np.array(self.graph_solution.in_degree())
 
     def out_degree(self, nodes: np.ndarray | None = None) -> np.ndarray:
         if nodes is not None:
@@ -390,15 +404,17 @@ class Tracks:
             if not isinstance(nodes, np.ndarray):
                 nodes = np.array(nodes)
 
-            return np.array([self.graph.out_degree(node.item()) for node in nodes])
+            return np.array(
+                [self.graph_solution.out_degree(node.item()) for node in nodes]
+            )
         else:
-            return np.array(self.graph.out_degree())
+            return np.array(self.graph_solution.out_degree())
 
     def predecessors(self, node: int) -> list[int]:
-        return list(self.graph.predecessors(node))
+        return list(self.graph_solution.predecessors(node))
 
     def successors(self, node: int) -> list[int]:
-        return list(self.graph.successors(node))
+        return list(self.graph_solution.successors(node))
 
     def get_positions(self, nodes: Iterable[Node], incl_time: bool = False) -> np.ndarray:
         """Get the positions of nodes in the graph. Optionally include the
@@ -430,7 +446,7 @@ class Tracks:
             + ([self.features.time_key] if incl_time else [])
         )
 
-        df = self.graph.node_attrs(attr_keys=attr_keys)
+        df = self.graph_solution.node_attrs(attr_keys=attr_keys)
         id_to_row = {
             nid: i for i, nid in enumerate(df[td.DEFAULT_ATTR_KEYS.NODE_ID].to_list())
         }
@@ -505,7 +521,7 @@ class Tracks:
         For a single node use get_time() instead.
         """
         nodes = list(nodes)
-        df = self.graph.node_attrs(
+        df = self.graph_solution.node_attrs(
             attr_keys=[td.DEFAULT_ATTR_KEYS.NODE_ID, self.features.time_key]
         )
         id_to_val = dict(
@@ -546,7 +562,7 @@ class Tracks:
         if self.segmentation is None:
             return None
 
-        mask = self.graph.nodes[node][mask_key]
+        mask = self.graph_solution.nodes[node][mask_key]
         return mask
 
     def update_mask(
@@ -563,13 +579,13 @@ class Tracks:
             mask_key: The feature key for the mask column.
                 Defaults to the standard mask key.
         """
-        self.graph.nodes[node][mask_key] = mask
+        self.graph_solution.nodes[node][mask_key] = mask
         mask_feature = self.features.get(mask_key)
         if mask_feature is not None:
             # NOTE: all derived features of a mask are currently assumed to be
             # its bounding box. Revisit if non-bbox derived features are added.
             for derived_key in mask_feature.get("derived_features", []):
-                self.graph.nodes[node][derived_key] = mask.bbox
+                self.graph_solution.nodes[node][derived_key] = mask.bbox
 
     def undo(self) -> bool:
         """Undo the last performed action from the action history.
@@ -603,10 +619,13 @@ class Tracks:
         Returns:
             list[Node]: A list of new node ids.
         """
+        # Check against graph_full, not the solution view: a soft-deleted
+        # (solution=False) node still occupies its id in the full graph, so reissuing
+        # it to a genuinely new node would collide with the still-present root node.
         ids = [self.node_id_counter + i for i in range(n)]
         self.node_id_counter += n
         for idx, _id in enumerate(ids):
-            while self.graph.has_node(_id):
+            while self.graph_full.has_node(_id):
                 _id = self.node_id_counter
                 self.node_id_counter += 1
             ids[idx] = _id
@@ -638,34 +657,36 @@ class Tracks:
     def _set_node_attr(self, node: Node, attr: str, value: Any):
         if isinstance(value, np.ndarray):
             value = list(value)
-        self.graph.nodes[node][attr] = value
+        self.graph_solution.nodes[node][attr] = value
 
     def _set_nodes_attr(self, nodes: Iterable[Node], attr: str, values: Iterable[Any]):
         nodes_list = list(nodes)
         values_list = list(values)
         if nodes_list:
-            self.graph.update_node_attrs(attrs={attr: values_list}, node_ids=nodes_list)
+            self.graph_solution.update_node_attrs(
+                attrs={attr: values_list}, node_ids=nodes_list
+            )
 
     def get_node_attr(self, node: Node, attr: str):
-        return self.graph.nodes[int(node)][attr]
+        return self.graph_solution.nodes[int(node)][attr]
 
     def get_nodes_attr(self, nodes: Iterable[Node], attr: str):
         return [self.get_node_attr(node, attr) for node in nodes]
 
     def _set_edge_attr(self, edge: Edge, attr: str, value: Any):
-        edge_id = self.graph.edge_id(edge[0], edge[1])
-        self.graph.update_edge_attrs(attrs={attr: value}, edge_ids=[edge_id])
+        edge_id = self.graph_solution.edge_id(edge[0], edge[1])
+        self.graph_solution.update_edge_attrs(attrs={attr: value}, edge_ids=[edge_id])
 
     def _set_edges_attr(self, edges: Iterable[Edge], attr: str, values: Iterable[Any]):
         for edge, value in zip(edges, values, strict=False):
-            edge_id = self.graph.edge_id(edge[0], edge[1])
-            self.graph.update_edge_attrs(attrs={attr: value}, edge_ids=[edge_id])
+            edge_id = self.graph_solution.edge_id(edge[0], edge[1])
+            self.graph_solution.update_edge_attrs(attrs={attr: value}, edge_ids=[edge_id])
 
     def get_edge_attr(self, edge: Edge, attr: str):
-        if attr not in self.graph.edge_attr_keys():
+        if attr not in self.graph_solution.edge_attr_keys():
             return None
-        edge_id = self.graph.edge_id(edge[0], edge[1])
-        return self.graph.edges[edge_id][attr]
+        edge_id = self.graph_solution.edge_id(edge[0], edge[1])
+        return self.graph_solution.edges[edge_id][attr]
 
     def get_edges_attr(self, edges: Iterable[Edge], attr: str):
         return [self.get_edge_attr(edge, attr) for edge in edges]
@@ -752,19 +773,19 @@ class Tracks:
 
         # Perform custom graph operations when a feature is added
         ft = feature["feature_type"]
-        if "node" in ft and key not in self.graph.node_attr_keys():
+        if "node" in ft and key not in self.graph_solution.node_attr_keys():
             # "mask" value_type maps to pl.Object via to_polars_dtype
             dtype = to_polars_dtype(feature["value_type"])
             num_values = feature.get("num_values")
             if num_values is not None and num_values > 1:
                 dtype = pl.Array(dtype, num_values)
-            self.graph.add_node_attr_key(
+            self.graph_solution.add_node_attr_key(
                 key,
                 default_value=feature["default_value"],
                 dtype=dtype,
             )
-        if "edge" in ft and key not in self.graph.edge_attr_keys():
-            self.graph.add_edge_attr_key(
+        if "edge" in ft and key not in self.graph_solution.edge_attr_keys():
+            self.graph_solution.add_edge_attr_key(
                 key,
                 default_value=feature["default_value"],
                 dtype=to_polars_dtype(feature["value_type"]),
@@ -800,7 +821,7 @@ class Tracks:
             return
 
         # Perform custom graph operations when a feature is deleted
-        if "node" in feature_type and key in self.graph.node_attr_keys():
-            self.graph.remove_node_attr_key(key)
-        if "edge" in feature_type and key in self.graph.edge_attr_keys():
-            self.graph.remove_edge_attr_key(key)
+        if "node" in feature_type and key in self.graph_solution.node_attr_keys():
+            self.graph_solution.remove_node_attr_key(key)
+        if "edge" in feature_type and key in self.graph_solution.edge_attr_keys():
+            self.graph_solution.remove_edge_attr_key(key)

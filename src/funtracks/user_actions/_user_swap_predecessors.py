@@ -40,7 +40,7 @@ class UserSwapPredecessors(ActionGroup):
             raise InvalidActionError("You can only swap a pair of two nodes.")
 
         node1, node2 = nodes
-        graph = tracks.graph
+        graph = tracks.graph_solution
 
         # Find predecessors
         pred1 = graph.predecessors(node1)[0] if graph.predecessors(node1) else None

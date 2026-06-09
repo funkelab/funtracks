@@ -56,7 +56,7 @@ def export_to_geff(
 
     if node_ids is not None:
         nodes_to_keep = filter_graph_with_ancestors(
-            tracks.graph, node_ids
+            tracks.graph_solution, node_ids
         )  # include the ancestors to make sure the graph is valid and has no missing
         # parent nodes.
 
@@ -139,7 +139,7 @@ def export_to_geff(
     # GeffMetadata has no segmentation_shape field, so it must be stored separately.
     # This allows import_from_geff to reconstruct the segmentation (GraphArrayView)
     # without requiring an external segmentation file.
-    seg_shape = tracks.graph.metadata.get("segmentation_shape")
+    seg_shape = tracks.graph_solution.metadata.get("segmentation_shape")
     if seg_shape is not None:
         import zarr as _zarr
 
@@ -168,7 +168,7 @@ def split_position_attr(tracks: Tracks) -> tuple[td.graph.GraphView, list[str] |
 
     if isinstance(pos_key, str):
         # Position is stored as a single attribute, need to split
-        new_graph = tracks.graph.detach()
+        new_graph = tracks.graph_solution.detach()
         new_graph = new_graph.filter().subgraph()
 
         # Register new attribute keys
@@ -200,6 +200,6 @@ def split_position_attr(tracks: Tracks) -> tuple[td.graph.GraphView, list[str] |
         return new_graph, new_keys
     elif pos_key is not None:
         # Position is already split into separate attributes
-        return tracks.graph, list(pos_key)
+        return tracks.graph_solution, list(pos_key)
     else:
-        return tracks.graph, None
+        return tracks.graph_solution, None

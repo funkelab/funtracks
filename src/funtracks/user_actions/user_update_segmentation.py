@@ -62,7 +62,7 @@ class UserUpdateSegmentation(ActionGroup):
                 "Can only update one time point at a time"
             )
             time = int(all_pixels[0][0])
-            if self.tracks.graph.has_node(new_value):
+            if self.tracks.graph_solution.has_node(new_value):
                 mask_pixels = pixels_to_td_mask(all_pixels, self.tracks.ndim)
                 self.actions.append(
                     UpdateNodeSeg(tracks, new_value, mask_pixels, added=True)
@@ -96,7 +96,7 @@ class UserUpdateSegmentation(ActionGroup):
             time = pixels[0][0]
             # check if all pixels of old_value are removed
             mask_pixels = pixels_to_td_mask(pixels, self.tracks.ndim)
-            mask_old_value = self.tracks.graph.nodes[old_value]["mask"]
+            mask_old_value = self.tracks.graph_solution.nodes[old_value]["mask"]
             # If pixels fully overlaps with old_value mask, delete node
             if mask_pixels.intersection(mask_old_value) == mask_old_value.mask.sum():
                 self.actions.append(

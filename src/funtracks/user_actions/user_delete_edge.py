@@ -32,11 +32,11 @@ class UserDeleteEdge(ActionGroup):
         """
         super().__init__(tracks, actions=[])
         self.tracks: SolutionTracks  # Narrow type from base class
-        if not self.tracks.graph.has_edge(*edge):
+        if not self.tracks.graph_solution.has_edge(*edge):
             raise InvalidActionError(f"Edge {edge} not in solution, can't remove")
 
         self.actions.append(DeleteEdge(tracks, edge))
-        out_degree = self.tracks.graph.out_degree(edge[0])
+        out_degree = self.tracks.graph_solution.out_degree(edge[0])
         if out_degree == 0:  # removed a normal (non division) edge
             # orphaned segment gets new track id and new lineage id
             new_track_id = self.tracks.get_next_track_id()
@@ -46,7 +46,7 @@ class UserDeleteEdge(ActionGroup):
             )
         elif out_degree == 1:  # removed a division edge
             # sibling gets parent's track id (lineage stays the same)
-            sibling = next(iter(self.tracks.graph.successors(edge[0])))
+            sibling = next(iter(self.tracks.graph_solution.successors(edge[0])))
             new_track_id = self.tracks.get_track_id(edge[0])
             self.actions.append(UpdateTrackIDs(self.tracks, sibling, new_track_id))
             # orphaned child gets a new lineage id (now a separate component)

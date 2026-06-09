@@ -57,13 +57,13 @@ def test_enable_disable_features(graph_2d_with_segmentation):
         **track_attrs,
     )
 
-    nodes = list(tracks.graph.node_ids())
-    edges = list(tracks.graph.edge_ids())
+    nodes = list(tracks.graph_solution.node_ids())
+    edges = list(tracks.graph_solution.edge_ids())
 
     # Core features (time, pos) should be in tracks.features and computed
     assert "pos" in tracks.features
     assert "t" in tracks.features
-    assert tracks.graph.nodes[nodes[0]]["pos"] is not None
+    assert tracks.graph_solution.nodes[nodes[0]]["pos"] is not None
 
     # area and other features should NOT be in tracks.features initially
     assert "area" not in tracks.features
@@ -78,9 +78,9 @@ def test_enable_disable_features(graph_2d_with_segmentation):
     assert "circularity" in tracks.features
 
     # Verify values are actually computed on the graph
-    assert tracks.graph.nodes[nodes[0]]["circularity"] is not None
+    assert tracks.graph_solution.nodes[nodes[0]]["circularity"] is not None
     if edges:
-        assert None not in tracks.graph.edge_attrs()["iou"].to_list()
+        assert None not in tracks.graph_solution.edge_attrs()["iou"].to_list()
 
     # Disable one feature
     tracks.disable_features(["area"])
@@ -92,7 +92,7 @@ def test_enable_disable_features(graph_2d_with_segmentation):
     assert "circularity" in tracks.features
 
     # Values no longer exist in the graph for tracksdata
-    # assert tracks.graph.nodes[1]["area"] is not None
+    # assert tracks.graph_solution.nodes[1]["area"] is not None
 
     # Disable the remaining enabled features
     tracks.disable_features(["pos", "iou", "circularity"])

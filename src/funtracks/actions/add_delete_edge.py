@@ -47,25 +47,25 @@ class AddEdge(BasicAction):
         """
         # Check that both endpoints exist before computing edge attributes
         for node in self.edge:
-            if not self.tracks.graph.has_node(node):
+            if not self.tracks.graph_solution.has_node(node):
                 raise ValueError(
                     f"Cannot add edge {self.edge}: endpoint {node} not in graph yet"
                 )
 
-        if self.tracks.graph.has_edge(*self.edge):
+        if self.tracks.graph_solution.has_edge(*self.edge):
             raise ValueError(f"Edge {self.edge} already exists in the graph")
 
         attrs = dict(self.attributes)
 
         # Fill in missing edge attributes with schema defaults (includes
         # solution and any other registered edge attrs).
-        schemas = self.tracks.graph._edge_attr_schemas()
-        for attr in self.tracks.graph.edge_attr_keys():
+        schemas = self.tracks.graph_solution._edge_attr_schemas()
+        for attr in self.tracks.graph_solution.edge_attr_keys():
             if attr not in attrs:
                 attrs[attr] = schemas[attr].default_value
 
         # Create edge attributes for this specific edge
-        self.tracks.graph.add_edge(
+        self.tracks.graph_solution.add_edge(
             source_id=self.edge[0],
             target_id=self.edge[1],
             attrs=attrs,
@@ -89,7 +89,7 @@ class DeleteEdge(BasicAction):
         """
         super().__init__(tracks)
         self.edge = edge
-        if not self.tracks.graph.has_edge(*self.edge):
+        if not self.tracks.graph_solution.has_edge(*self.edge):
             raise ValueError(f"Edge {self.edge} not in the graph, and cannot be removed")
 
         # Save all edge feature values from the features dict
@@ -106,5 +106,5 @@ class DeleteEdge(BasicAction):
         return AddEdge(self.tracks, self.edge, attributes=self.attributes)
 
     def _apply(self) -> None:
-        self.tracks.graph.remove_edge(*self.edge)
+        self.tracks.graph_solution.remove_edge(*self.edge)
         self.tracks.notify_annotators(self)

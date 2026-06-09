@@ -108,12 +108,14 @@ def test_export_to_geff(
             else:
                 label_key = tracks.features.tracklet_key
             label_vals = set(
-                tracks.graph.node_attrs(attr_keys=[label_key])[label_key].to_list()
+                tracks.graph_solution.node_attrs(attr_keys=[label_key])[
+                    label_key
+                ].to_list()
             )
             assert unique_vals == label_vals
         else:
             # values should be original node_ids
-            node_ids_set = set(tracks.graph.node_ids())
+            node_ids_set = set(tracks.graph_solution.node_ids())
             assert unique_vals == node_ids_set
     else:
         assert not seg_path.exists()
@@ -198,7 +200,7 @@ def test_export_to_geff(
             else:
                 label_key = tracks.features.tracklet_key
             kept_vals = set(
-                tracks.graph.filter(node_ids=[1, 3, 4, 6])
+                tracks.graph_solution.filter(node_ids=[1, 3, 4, 6])
                 .node_attrs(attr_keys=[label_key])[label_key]
                 .to_list()
             )
@@ -228,7 +230,9 @@ def test_export_to_geff_seg_tiff(get_tracks, ndim, tmp_path):
     # values should be tracklet_ids (default seg_relabel="tracklet")
     unique_vals = set(seg_arr.flatten()) - {0}
     label_key = tracks.features.tracklet_key
-    track_ids = set(tracks.graph.node_attrs(attr_keys=[label_key])[label_key].to_list())
+    track_ids = set(
+        tracks.graph_solution.node_attrs(attr_keys=[label_key])[label_key].to_list()
+    )
     assert unique_vals == track_ids
 
     # Check metadata references the tiff path with ../../ prefix (sibling of geff dir)

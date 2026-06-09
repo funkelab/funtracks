@@ -155,15 +155,15 @@ def export_to_csv(
 
     # Determine which nodes to export
     if node_ids is None:
-        node_to_keep = tracks.graph.node_ids()
+        node_to_keep = tracks.graph_solution.node_ids()
     else:
-        node_to_keep = filter_graph_with_ancestors(tracks.graph, node_ids)
+        node_to_keep = filter_graph_with_ancestors(tracks.graph_solution, node_ids)
 
     # Write CSV file
     rows: list[dict[str, Any]] = []
 
     for node_id in node_to_keep:
-        parents = list(tracks.graph.predecessors(node_id))
+        parents = list(tracks.graph_solution.predecessors(node_id))
         parent_id = "" if len(parents) == 0 else parents[0]
 
         row: dict[str, Any]

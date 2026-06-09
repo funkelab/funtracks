@@ -45,7 +45,7 @@ def resolve_relabel_attr(
     else:
         return None
 
-    existing_attrs = tracks.graph.node_attr_keys()
+    existing_attrs = tracks.graph_solution.node_attr_keys()
     if label_attr not in existing_attrs:
         raise ValueError(
             f"relabel='{relabel}' resolved to attribute '{label_attr}', "
@@ -97,9 +97,9 @@ def export_segmentation(
 
     if label_attr is not None:
         graph = (
-            tracks.graph.filter(node_ids=list(node_ids)).subgraph()
+            tracks.graph_solution.filter(node_ids=list(node_ids)).subgraph()
             if node_ids is not None
-            else tracks.graph
+            else tracks.graph_solution
         )
         view = GraphArrayView(graph, label_attr, shape=shape)
 

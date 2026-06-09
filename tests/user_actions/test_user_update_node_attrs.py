@@ -11,9 +11,15 @@ class TestUserUpdateNodeAttrs:
         """Test basic node attribute update functionality."""
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
 
-        tracks.graph.add_node_attr_key("label", default_value=None, dtype=pl.Object)
-        tracks.graph.add_node_attr_key("confidence", default_value=0, dtype=pl.Float64)
-        tracks.graph.add_node_attr_key("validated", default_value=False, dtype=pl.Boolean)
+        tracks.graph_solution.add_node_attr_key(
+            "label", default_value=None, dtype=pl.Object
+        )
+        tracks.graph_solution.add_node_attr_key(
+            "confidence", default_value=0, dtype=pl.Float64
+        )
+        tracks.graph_solution.add_node_attr_key(
+            "validated", default_value=False, dtype=pl.Boolean
+        )
 
         # Add custom attributes to update
         custom_attrs = {"label": "my_label", "confidence": 0.95, "validated": True}
@@ -45,8 +51,12 @@ class TestUserUpdateNodeAttrs:
         """Test updating attributes that already exist."""
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
 
-        tracks.graph.add_node_attr_key("label", default_value=None, dtype=pl.Object)
-        tracks.graph.add_node_attr_key("score", default_value=None, dtype=pl.Float64)
+        tracks.graph_solution.add_node_attr_key(
+            "label", default_value=None, dtype=pl.Object
+        )
+        tracks.graph_solution.add_node_attr_key(
+            "score", default_value=None, dtype=pl.Float64
+        )
 
         # Set initial custom attributes
         tracks._set_node_attr(1, "label", "old_label")
@@ -99,7 +109,9 @@ class TestUserUpdateNodeAttrs:
     def test_action_history_integration(self, get_tracks, ndim, with_seg):
         """Test that action integrates properly with action history."""
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
-        tracks.graph.add_node_attr_key("label", default_value=None, dtype=pl.Object)
+        tracks.graph_solution.add_node_attr_key(
+            "label", default_value=None, dtype=pl.Object
+        )
 
         # Initially empty
         assert len(tracks.action_history.undo_stack) == 0
