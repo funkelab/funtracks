@@ -15,7 +15,7 @@ from funtracks.utils.tracksdata_utils import (
 if TYPE_CHECKING:
     from typing import Any
 
-    from funtracks.data_model import SolutionTracks, Tracks
+    from funtracks.data_model import Tracks
 
 
 def make_2d_disk_mask(center=(50, 50), radius=20) -> Mask:
@@ -303,7 +303,7 @@ def graph_2d_with_position(tmp_path) -> td.graph.GraphView:
 
 @pytest.fixture
 def graph_2d_with_track_id(tmp_path) -> td.graph.GraphView:
-    """Graph with 2D positions and track_id - for SolutionTracks without segmentation."""
+    """Graph with 2D positions and track_id - for Tracks without segmentation."""
     db_path = str(tmp_path / "graph_2d_track_id.db")
     return _make_graph(ndim=3, with_pos=True, with_track_id=True, database=db_path)
 
@@ -332,7 +332,7 @@ def graph_3d_with_position(tmp_path) -> td.graph.GraphView:
 
 @pytest.fixture
 def graph_3d_with_track_id(tmp_path) -> td.graph.GraphView:
-    """Graph with 3D positions and track_id - for SolutionTracks without segmentation."""
+    """Graph with 3D positions and track_id - for Tracks without segmentation."""
     db_path = str(tmp_path / "graph_3d_track_id.db")
     return _make_graph(ndim=4, with_pos=True, with_track_id=True, database=db_path)
 
@@ -353,13 +353,13 @@ def graph_3d_with_segmentation(tmp_path) -> td.graph.GraphView:
 
 
 @pytest.fixture
-def get_tracks(get_graph) -> Callable[..., "Tracks | SolutionTracks"]:
-    """Factory fixture to create Tracks or SolutionTracks instances.
+def get_tracks(get_graph) -> Callable[..., "Tracks"]:
+    """Factory fixture to create Tracks or Tracks instances.
 
     Returns a factory function that can be called with:
         ndim: 3 for 2D spatial + time, 4 for 3D spatial + time
         with_seg: Whether to include segmentation (mask/bbox as node attributes)
-        is_solution: Whether to return SolutionTracks instead of Tracks
+        is_solution: Whether to return Tracks instead of Tracks
 
     Example:
         tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
@@ -368,7 +368,7 @@ def get_tracks(get_graph) -> Callable[..., "Tracks | SolutionTracks"]:
         Uses a pre-built FeatureDict to avoid recomputing features that already
         exist in the test graph fixtures.
     """
-    from funtracks.data_model import SolutionTracks, Tracks
+    from funtracks.data_model import Tracks
     from funtracks.features import (
         Area,
         FeatureDict,
@@ -386,7 +386,7 @@ def get_tracks(get_graph) -> Callable[..., "Tracks | SolutionTracks"]:
         ndim: int,
         with_seg: bool = True,
         is_solution: bool = False,
-    ) -> Tracks | SolutionTracks:
+    ) -> Tracks:
         # Determine axis names based on ndim
         axis_names = ["z", "y", "x"] if ndim == 4 else ["y", "x"]
 
@@ -418,7 +418,7 @@ def get_tracks(get_graph) -> Callable[..., "Tracks | SolutionTracks"]:
 
         # Create the appropriate Tracks type with pre-built FeatureDict
         if is_solution:
-            return SolutionTracks(
+            return Tracks(
                 graph,
                 ndim=ndim,
                 features=feature_dict,

@@ -1,6 +1,6 @@
 from funtracks.actions import AddNode
 from funtracks.actions.action_history import ActionHistory
-from funtracks.data_model import SolutionTracks
+from funtracks.data_model import Tracks
 from funtracks.utils.tracksdata_utils import create_empty_graphview_graph
 
 # https://github.com/zaboople/klonk/blob/master/TheGURQ.md
@@ -12,7 +12,7 @@ def test_action_history():
         node_attributes=["track_id", "pos"],
         edge_attributes=[],
     )
-    tracks = SolutionTracks(empty_graph, ndim=3, tracklet_attr="track_id", time_attr="t")
+    tracks = Tracks(empty_graph, ndim=3, tracklet_attr="track_id", time_attr="t")
     pos = [0, 1]
     action1 = AddNode(tracks, node=0, attributes={"t": 0, "pos": pos, "track_id": 1})
 

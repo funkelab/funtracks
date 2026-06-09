@@ -8,7 +8,7 @@ from funtracks.actions import (
     AddEdge,
     DeleteEdge,
 )
-from funtracks.data_model import SolutionTracks
+from funtracks.data_model import Tracks
 from funtracks.features import FeatureDict, LineageID, Position, Time, TrackletID
 from funtracks.utils.tracksdata_utils import create_empty_graphview_graph
 
@@ -205,7 +205,7 @@ def test_add_edge_with_unregistered_edge_attr(tmp_path):
         indices=[1, 2],
     )
 
-    # Wrap in SolutionTracks without registering "custom_score" in features —
+    # Wrap in Tracks without registering "custom_score" in features —
     # this is the scenario that triggers the bug.
     features = FeatureDict(
         features={
@@ -219,7 +219,7 @@ def test_add_edge_with_unregistered_edge_attr(tmp_path):
         tracklet_key="track_id",
         lineage_key="lineage_id",
     )
-    tracks = SolutionTracks(graph, ndim=3, features=features)
+    tracks = Tracks(graph, ndim=3, features=features)
 
     # Sanity: "custom_score" is in the graph schema but NOT in tracks.features.
     assert "custom_score" in tracks.graph_solution.edge_attr_keys()

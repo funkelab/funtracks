@@ -15,7 +15,7 @@ from ..actions.add_delete_node import AddNode
 from .user_delete_edge import UserDeleteEdge
 
 if TYPE_CHECKING:
-    from funtracks.data_model.solution_tracks import SolutionTracks
+    from funtracks.data_model.tracks import Tracks
 
 
 class UserAddNode(ActionGroup):
@@ -30,7 +30,7 @@ class UserAddNode(ActionGroup):
 
     def __init__(
         self,
-        tracks: SolutionTracks,
+        tracks: Tracks,
         node: int,
         attributes: dict[str, Any],
         pixels: tuple[np.ndarray, ...] | None = None,
@@ -39,7 +39,7 @@ class UserAddNode(ActionGroup):
     ):
         """
         Args:
-            tracks (SolutionTracks): the tracks to add the node to
+            tracks (Tracks): the tracks to add the node to
             node (int): The node id of the new node to add
             attributes (dict[str, Any]): A dictionary from attribute strings to values.
                 Must contain "time" and tracks.features.tracklet_key.
@@ -63,7 +63,7 @@ class UserAddNode(ActionGroup):
                     time point (forceable).
         """
         super().__init__(tracks, actions=[])
-        self.tracks: SolutionTracks  # Narrow type from base class
+        self.tracks: Tracks  # Narrow type from base class
 
         # Get keys from tracks features
         time_key = tracks.features.time_key

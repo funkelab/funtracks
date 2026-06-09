@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from funtracks.data_model import SolutionTracks
+from funtracks.data_model import Tracks
 from funtracks.import_export import tracks_from_df
 
 
@@ -42,7 +42,7 @@ class TestDataFrameImportBasic:
         """Test importing 2D DataFrame."""
         tracks = tracks_from_df(simple_df_2d)
 
-        assert isinstance(tracks, SolutionTracks)
+        assert isinstance(tracks, Tracks)
         assert tracks.graph_solution.num_nodes() == 4
         assert tracks.graph_solution.num_edges() == 3
         assert tracks.ndim == 3

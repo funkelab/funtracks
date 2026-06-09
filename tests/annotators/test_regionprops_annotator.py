@@ -4,7 +4,7 @@ from tracksdata.nodes import Mask
 
 from funtracks.actions import UpdateNodeSeg, UpdateTrackIDs
 from funtracks.annotators import RegionpropsAnnotator
-from funtracks.data_model import SolutionTracks, Tracks
+from funtracks.data_model import Tracks
 
 track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
 
@@ -177,7 +177,7 @@ class TestRegionpropsAnnotator:
         segmentation.
         """
         graph = get_graph(ndim, is_solution=True, with_seg=True)
-        tracks = SolutionTracks(
+        tracks = Tracks(
             graph,
             ndim=ndim,
             **track_attrs,

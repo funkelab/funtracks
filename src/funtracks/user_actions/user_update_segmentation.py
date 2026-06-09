@@ -12,13 +12,13 @@ from .user_add_node import UserAddNode
 from .user_delete_node import UserDeleteNode
 
 if TYPE_CHECKING:
-    from funtracks.data_model import SolutionTracks
+    from funtracks.data_model import Tracks
 
 
 class UserUpdateSegmentation(ActionGroup):
     def __init__(
         self,
-        tracks: SolutionTracks,
+        tracks: Tracks,
         new_value: int,
         updated_pixels: list[tuple[tuple[np.ndarray, ...], int]],
         current_track_id: int,
@@ -30,7 +30,7 @@ class UserUpdateSegmentation(ActionGroup):
         add_node action doesn't have anything with pixels.
 
         Args:
-            tracks (SolutionTracks): The solution tracks that the user is updating.
+            tracks (Tracks): The solution tracks that the user is updating.
             new_value (int): The new value that the user painted with
             updated_pixels (list[tuple[tuple[np.ndarray, ...], int]]): A list of node
                 update actions, consisting of a numpy multi-index, pointing to the array
@@ -42,7 +42,7 @@ class UserUpdateSegmentation(ActionGroup):
                 Defaults to False.
         """
         super().__init__(tracks, actions=[])
-        self.tracks: SolutionTracks  # Narrow type from base class
+        self.tracks: Tracks  # Narrow type from base class
         node_to_select = None
         if self.tracks.segmentation is None:
             raise ValueError("Cannot update non-existing segmentation.")

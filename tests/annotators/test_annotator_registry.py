@@ -1,9 +1,11 @@
 import pytest
 
 from funtracks.annotators import EdgeAnnotator, RegionpropsAnnotator, TrackAnnotator
-from funtracks.data_model import SolutionTracks, Tracks
+from funtracks.data_model import Tracks
 
 track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
+# A plain (non-solution) Tracks declares no tracklet_attr, so no TrackAnnotator.
+plain_attrs = {"time_attr": "t"}
 
 
 def test_annotator_registry_init_with_segmentation(
@@ -14,18 +16,18 @@ def test_annotator_registry_init_with_segmentation(
     tracks = Tracks(
         graph_2d_with_segmentation,
         ndim=3,
-        **track_attrs,
+        **plain_attrs,
     )
 
     annotator_types = [type(ann) for ann in tracks.annotators]
     assert RegionpropsAnnotator in annotator_types
     assert EdgeAnnotator in annotator_types
-    assert TrackAnnotator not in annotator_types  # Not a SolutionTracks
+    assert TrackAnnotator not in annotator_types  # No tracklet_attr -> no track ids
 
 
 def test_annotator_registry_init_without_segmentation(graph_2d_with_position):
     """Test AnnotatorRegistry doesn't create annotators without segmentation."""
-    tracks = Tracks(graph_2d_with_position, ndim=3, **track_attrs)
+    tracks = Tracks(graph_2d_with_position, ndim=3, **plain_attrs)
 
     annotator_types = [type(ann) for ann in tracks.annotators]
     assert RegionpropsAnnotator not in annotator_types
@@ -36,9 +38,9 @@ def test_annotator_registry_init_without_segmentation(graph_2d_with_position):
 def test_annotator_registry_init_solution_tracks(
     graph_2d_with_segmentation,
 ):
-    """Test AnnotatorRegistry creates all annotators for SolutionTracks with
+    """Test AnnotatorRegistry creates all annotators for Tracks with
     segmentation."""
-    tracks = SolutionTracks(
+    tracks = Tracks(
         graph_2d_with_segmentation,
         ndim=3,
         **track_attrs,
@@ -122,7 +124,7 @@ def test_area_on_graph_not_auto_activated(graph_2d_with_segmentation):
 
 def test_get_available_features(graph_2d_with_segmentation):
     """Test get_available_features returns all features from all annotators."""
-    tracks = SolutionTracks(
+    tracks = Tracks(
         graph_2d_with_segmentation,
         ndim=3,
         **track_attrs,

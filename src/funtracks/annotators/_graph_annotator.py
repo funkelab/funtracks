@@ -35,7 +35,7 @@ class GraphAnnotator:
         """Check if this annotator can annotate the given tracks.
 
         Subclasses should override this method to specify their requirements
-        (e.g., segmentation, SolutionTracks, etc.).
+        (e.g., segmentation, Tracks, etc.).
 
         Args:
             tracks: The tracks to check compatibility with

@@ -5,7 +5,7 @@ import tifffile
 import zarr
 from geff.testing.data import create_mock_geff
 
-from funtracks.data_model import SolutionTracks
+from funtracks.data_model import Tracks
 from funtracks.import_export import export_to_geff, import_from_geff
 from funtracks.import_export.geff._import import GeffTracksBuilder, import_graph_from_geff
 from funtracks.utils.tracksdata_utils import create_empty_graphview_graph
@@ -501,13 +501,15 @@ def test_import_from_geff_roundtrip_auto_axes(tmp_path):
         indices=[1],
     )
     # The graph carries segmentation_shape in its metadata (set by motile-tracker),
-    # but no dense segmentation array is attached to the SolutionTracks object.
+    # but no dense segmentation array is attached to the Tracks object.
     graph._update_metadata(segmentation_shape=(5, 100, 100))
 
     run_dir = tmp_path / "run"
     run_dir.mkdir()
 
-    st = SolutionTracks(graph, ndim=3, time_attr="t")
+    st = Tracks(
+        graph, ndim=3, time_attr="t", tracklet_attr="track_id", lineage_attr="lineage_id"
+    )
     export_to_geff(st, run_dir)
 
     tracks_path = run_dir / "tracks.geff"
@@ -625,7 +627,9 @@ def test_import_from_geff_warns_missing_segmentation_shape(tmp_path):
 
     run_dir = tmp_path / "run"
     run_dir.mkdir()
-    st = SolutionTracks(graph, ndim=3, time_attr="t")
+    st = Tracks(
+        graph, ndim=3, time_attr="t", tracklet_attr="track_id", lineage_attr="lineage_id"
+    )
     export_to_geff(st, run_dir)
 
     tracks_path = run_dir / "tracks.geff"
@@ -652,11 +656,11 @@ def test_import_from_geff_warns_missing_segmentation_shape(tmp_path):
 
 
 def test_get_time_works_after_import(valid_geff):
-    """Regression test: tracks.get_time() must work on a SolutionTracks returned by
+    """Regression test: tracks.get_time() must work on a Tracks returned by
     import_from_geff().
 
     Previously, TracksBuilder.build() stored time as "t" in the graph (tracksdata
-    convention) but created SolutionTracks(time_attr=TIME_ATTR) where TIME_ATTR="time".
+    convention) but created Tracks(time_attr=TIME_ATTR) where TIME_ATTR="time".
     This caused features.time_key="time" while the graph only had attribute "t",
     making get_time() raise KeyError: 'time'.
     """
@@ -914,7 +918,9 @@ def test_embedded_seg_ellipse_axis_radii_feature_metadata(tmp_path):
     run_dir = tmp_path / "run"
     run_dir.mkdir()
 
-    st = SolutionTracks(graph, ndim=3, time_attr="t")
+    st = Tracks(
+        graph, ndim=3, time_attr="t", tracklet_attr="track_id", lineage_attr="lineage_id"
+    )
     export_to_geff(st, run_dir)
 
     # Remove FeatureDict from GEFF metadata to simulate old/external GEFF
@@ -1027,7 +1033,9 @@ def test_featuredict_survives_geff_roundtrip(tmp_path):
     run_dir = tmp_path / "run"
     run_dir.mkdir()
 
-    st = SolutionTracks(graph, ndim=3, time_attr="t")
+    st = Tracks(
+        graph, ndim=3, time_attr="t", tracklet_attr="track_id", lineage_attr="lineage_id"
+    )
     # Customize metadata that auto-detection cannot reproduce.
     pos_key = st.features.position_key
     assert isinstance(pos_key, str)
@@ -1074,7 +1082,7 @@ def test_invalid_featuredict_in_geff_falls_back_to_autodetect(get_tracks, tmp_pa
     # Should not raise — falls back to auto-detection
     imported = import_from_geff(geff_path)
 
-    # Verify the import produced a working SolutionTracks with auto-detected features
+    # Verify the import produced a working Tracks with auto-detected features
     assert imported.features.time_key is not None
     assert imported.features.position_key is not None
     assert imported.features.tracklet_key is not None

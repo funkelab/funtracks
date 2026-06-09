@@ -4,7 +4,7 @@ import pytest
 import tifffile
 import zarr
 
-from funtracks.data_model import SolutionTracks, Tracks
+from funtracks.data_model import Tracks
 from funtracks.import_export import export_to_geff
 
 
@@ -51,8 +51,7 @@ def test_export_to_geff(
                 graph.nodes[node][key] = pos[i]
         graph.remove_node_attr_key("pos")
         # Create Tracks with split position attributes
-        tracks_cls = SolutionTracks if is_solution else Tracks
-        tracks = tracks_cls(
+        tracks = Tracks(
             graph,
             time_attr="t",
             pos_attr=pos_keys,

@@ -9,8 +9,7 @@ from ._base import BasicAction
 if TYPE_CHECKING:
     from typing import Any
 
-    from funtracks.data_model.solution_tracks import SolutionTracks
-    from funtracks.data_model.tracks import Node
+    from funtracks.data_model.tracks import Node, Tracks
 
 
 class AddNode(BasicAction):
@@ -22,7 +21,7 @@ class AddNode(BasicAction):
 
     def __init__(
         self,
-        tracks: SolutionTracks,
+        tracks: Tracks,
         node: Node,
         attributes: dict[str, Any],
     ):
@@ -40,7 +39,7 @@ class AddNode(BasicAction):
             ValueError: If neither position nor a mask feature is in attributes.
         """
         super().__init__(tracks)
-        self.tracks: SolutionTracks  # Narrow type from base class
+        self.tracks: Tracks  # Narrow type from base class
         self.node = int(node)
 
         # Get keys from tracks features
@@ -93,11 +92,11 @@ class DeleteNode(BasicAction):
 
     def __init__(
         self,
-        tracks: SolutionTracks,
+        tracks: Tracks,
         node: Node,
     ):
         super().__init__(tracks)
-        self.tracks: SolutionTracks  # Narrow type from base class
+        self.tracks: Tracks  # Narrow type from base class
         self.node = int(node)
 
         # Save all node feature values from the features dict

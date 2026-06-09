@@ -13,7 +13,7 @@ from .._tracks_builder import TracksBuilder, flatten_name_map
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from funtracks.data_model.solution_tracks import SolutionTracks
+    from funtracks.data_model.tracks import Tracks
 
 
 # defining constants here because they are only used in the context of import
@@ -170,7 +170,7 @@ class GeffTracksBuilder(TracksBuilder):
         self._geff_axes = metadata.axes or []
 
         # Read funtracks FeatureDict from GEFF extra metadata if present
-        # This will be passed to SolutionTracks via the base build() method
+        # This will be passed to Tracks via the base build() method
         if metadata.extra and "funtracks" in metadata.extra:
             funtracks_extra = metadata.extra["funtracks"]
             if "features" in funtracks_extra:
@@ -321,7 +321,7 @@ def import_from_geff(
     scale: list[float] | None = None,
     edge_name_map: dict[str, str | list[str]] | None = None,
     database: str | None = None,
-) -> SolutionTracks:
+) -> Tracks:
     """Import tracks from GEFF format.
 
     Args:
@@ -341,7 +341,7 @@ def import_from_geff(
             If None (default), an in-memory/temp graph is used.
 
     Returns:
-        SolutionTracks object
+        Tracks object
     """
     # Filter out None values and "None" strings from node_name_map
     # (e.g., {"lineage_id": None} or {"lineage_id": "None"})

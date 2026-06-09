@@ -8,7 +8,6 @@ import rustworkx as rx
 import tracksdata as td
 
 from funtracks.actions import AddNode, DeleteNode, UpdateTrackIDs
-from funtracks.data_model import SolutionTracks
 from funtracks.features import LineageID, TrackletID
 
 from ._graph_annotator import GraphAnnotator
@@ -17,6 +16,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
     from funtracks.actions import BasicAction
+    from funtracks.data_model import Tracks
     from funtracks.features import Feature
 
 
@@ -25,7 +25,7 @@ DEFAULT_LINEAGE_KEY = "lineage_id"
 
 
 class TrackAnnotator(GraphAnnotator):
-    """A graph annotator to compute tracklet and lineage IDs for SolutionTracks only.
+    """A graph annotator to compute tracklet and lineage IDs for Tracks only.
 
     Currently, updating the tracklet and lineage IDs is left to Actions.
 
@@ -38,7 +38,7 @@ class TrackAnnotator(GraphAnnotator):
         max_lineage_id (int): the maximum lineage id used in the tracks
 
     Args:
-        tracks (SolutionTracks): The tracks to be annotated. Must be a solution.
+        tracks (Tracks): The tracks to be annotated. Must be a solution.
         tracklet_key (str | None, optional): A key that already holds the tracklet ids
             on the graph. If provided, must be there for every node and already hold
             valid tracklet ids. Defaults to None.
@@ -48,7 +48,7 @@ class TrackAnnotator(GraphAnnotator):
 
 
     Raises:
-        ValueError: if the provided Tracks are not SolutionTracks (not a binary lineage
+        ValueError: if the provided Tracks are not Tracks (not a binary lineage
             tree)
     """
 
@@ -56,15 +56,16 @@ class TrackAnnotator(GraphAnnotator):
     def can_annotate(cls, tracks) -> bool:
         """Check if this annotator can annotate the given tracks.
 
-        Requires tracks to be a SolutionTracks instance.
+        Track ids are only meaningful when the tracks declares a tracklet_key (i.e.
+        it represents a solution). A None tracklet_key means a plain candidate graph.
 
         Args:
             tracks: The tracks to check compatibility with
 
         Returns:
-            True if tracks is a SolutionTracks instance, False otherwise
+            True if tracks.features.tracklet_key is set, False otherwise
         """
-        return isinstance(tracks, SolutionTracks)
+        return tracks.features.tracklet_key is not None
 
     @classmethod
     def get_available_features(cls, ndim: int = 3) -> dict[str, Feature]:
@@ -87,14 +88,11 @@ class TrackAnnotator(GraphAnnotator):
 
     def __init__(
         self,
-        tracks: SolutionTracks,
+        tracks: Tracks,
         tracklet_key: str | None = DEFAULT_TRACKLET_KEY,
         lineage_key: str | None = DEFAULT_LINEAGE_KEY,
     ):
-        if not isinstance(tracks, SolutionTracks):
-            raise ValueError("Currently the TrackAnnotator only works on SolutionTracks")
-
-        self.tracks: SolutionTracks  # Narrow type from base class
+        self.tracks: Tracks  # Narrow type from base class
         self.tracklet_key = (
             tracklet_key if tracklet_key is not None else DEFAULT_TRACKLET_KEY
         )

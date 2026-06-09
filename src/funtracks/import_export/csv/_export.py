@@ -12,11 +12,11 @@ from .._export_segmentation import export_segmentation
 from .._utils import filter_graph_with_ancestors
 
 if TYPE_CHECKING:
-    from funtracks.data_model.solution_tracks import SolutionTracks
+    from funtracks.data_model.tracks import Tracks
 
 
 def export_to_csv(
-    tracks: SolutionTracks,
+    tracks: Tracks,
     outfile: Path | str,
     color_dict: dict[int, np.ndarray] | None = None,
     node_ids: set[int] | None = None,
@@ -36,7 +36,7 @@ def export_to_csv(
     tiff. If a color dictionary is provided, it will also export the tracklet colors.
 
     Args:
-        tracks: SolutionTracks object containing the tracking data to export
+        tracks: Tracks object containing the tracking data to export
         outfile: Path to output CSV file
         color_dict: dict[int, np.ndarray], optional. If provided, will be used to save the
             hex colors.

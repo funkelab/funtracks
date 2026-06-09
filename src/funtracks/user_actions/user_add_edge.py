@@ -11,14 +11,14 @@ from ..actions.update_track_id import UpdateTrackIDs
 from .user_delete_edge import UserDeleteEdge
 
 if TYPE_CHECKING:
-    from funtracks.data_model import SolutionTracks
+    from funtracks.data_model import Tracks
 
 
 class UserAddEdge(ActionGroup):
     """Assumes that the endpoints already exist and have track ids.
 
     Args:
-        tracks (SolutionTracks): the tracks to add the edge to
+        tracks (Tracks): the tracks to add the edge to
         edge (tuple[int, int]): The edge to add
         force (bool, optional): Whether to force the action by removing any conflicting
             edges. Defaults to False.
@@ -29,13 +29,13 @@ class UserAddEdge(ActionGroup):
 
     def __init__(
         self,
-        tracks: SolutionTracks,
+        tracks: Tracks,
         edge: tuple[int, int],
         force: bool = False,
         _top_level: bool = True,
     ):
         super().__init__(tracks, actions=[])
-        self.tracks: SolutionTracks  # Narrow type from base class
+        self.tracks: Tracks  # Narrow type from base class
         source, target = edge
         if not tracks.graph_solution.has_node(source):
             raise InvalidActionError(

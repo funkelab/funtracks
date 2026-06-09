@@ -101,12 +101,12 @@ class TestTrackAnnotator:
         assert tracks.get_node_attr(node_id, ann.tracklet_key) != orig_tra
 
     def test_invalid(self, get_tracks, ndim, with_seg) -> None:
-        # Create regular Tracks (not SolutionTracks) to test error handling
+        # A plain Tracks (no tracklet_key) is not a track-id candidate, so no
+        # TrackAnnotator is registered.
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=False)
-        with pytest.raises(
-            ValueError, match="Currently the TrackAnnotator only works on SolutionTracks"
-        ):
-            TrackAnnotator(tracks)  # type: ignore
+        assert tracks.features.tracklet_key is None
+        assert not TrackAnnotator.can_annotate(tracks)
+        assert tracks.track_annotator is None
 
     def test_ignores_irrelevant_actions(self, get_tracks, ndim, with_seg):
         """Test that TrackAnnotator ignores actions that don't affect track IDs."""
