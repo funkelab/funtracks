@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1780945655438,
+  "lastUpdate": 1781116977874,
   "repoUrl": "https://github.com/funkelab/funtracks",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -868,6 +868,37 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 2.590252226000004 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "malinmayorc@janelia.hhmi.org",
+            "name": "Caroline Malin-Mayor",
+            "username": "cmalinmayor"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "10641a13c06ecf2e11b125db643ea4b1e4d8991a",
+          "message": "Merge pull request #238 from funkelab/237-exporting-a-set-of-nodes-still-exports-the-full-segmentation\n\nExclusively export segmentation labels part of the subgraph when node_ids is not None",
+          "timestamp": "2026-06-10T14:42:23-04:00",
+          "tree_id": "0a5837ff9e8482afd13a6af3fa4306c76e7abb08",
+          "url": "https://github.com/funkelab/funtracks/commit/10641a13c06ecf2e11b125db643ea4b1e4d8991a"
+        },
+        "date": 1781116976068,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_compute_graph_from_seg",
+            "value": 0.3947354352889475,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 2.533342361999999 sec\nrounds: 1"
           }
         ]
       }
