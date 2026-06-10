@@ -95,18 +95,30 @@ def export_segmentation(
 
     shape = tracks.segmentation.shape
 
+    graph = (
+        tracks.graph.filter(node_ids=list(node_ids)).subgraph()
+        if node_ids is not None
+        else tracks.graph
+    )
+
     if label_attr is not None:
-        graph = (
-            tracks.graph.filter(node_ids=list(node_ids)).subgraph()
-            if node_ids is not None
-            else tracks.graph
-        )
         view = GraphArrayView(graph, label_attr, shape=shape)
 
         def get_frame(t: int) -> np.ndarray:
             return np.array(view[t])
 
         dtype = view.dtype
+
+    elif node_ids is not None:
+        seg = tracks.segmentation
+        allowed = np.array(list(node_ids))
+
+        def get_frame(t: int) -> np.ndarray:
+            frame = np.array(seg[t])
+            return np.where(np.isin(frame, allowed), frame, 0)
+
+        dtype = seg.dtype
+
     else:
         seg = tracks.segmentation
 
