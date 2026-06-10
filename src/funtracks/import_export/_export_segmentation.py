@@ -80,7 +80,7 @@ def export_segmentation(
         zarr_format: Zarr format version. Only used when file_format="zarr".
             Defaults to 2.
         node_ids: Optional subset of node IDs to include. Cells not in this set
-            are painted as 0 (background). Has no effect when relabel is None.
+            are painted as 0 (background).
 
     Raises:
         ValueError: If tracks.segmentation is None.
