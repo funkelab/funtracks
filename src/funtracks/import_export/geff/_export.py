@@ -90,17 +90,20 @@ def export_to_geff(
             }
         )
 
+    # Include the FeatureDict in metadata only for full exports.
+    # Subgroup exports do not necessarily have valid tracklet/lineage IDs are no
+    # and thus are not valid SolutionTracks
+    extra: dict = {}
+    if node_ids is None:
+        extra["funtracks"] = {"features": tracks.features.dump_json()}
+
     metadata = GeffMetadata(
         geff_version=geff_spec.__version__,
         directed=True,
         node_props_metadata={},
         edge_props_metadata={},
         axes=axes,
-        extra={
-            "funtracks": {
-                "features": tracks.features.dump_json(),
-            }
-        },
+        extra=extra,
     )
 
     # Save segmentation if present and requested
