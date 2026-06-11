@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1781116977874,
+  "lastUpdate": 1781214651327,
   "repoUrl": "https://github.com/funkelab/funtracks",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -899,6 +899,37 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 2.533342361999999 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "malinmayorc@janelia.hhmi.org",
+            "name": "Caroline Malin-Mayor",
+            "username": "cmalinmayor"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1d01a4ccbcc0aaf93e84477e85b6e4a5d2c1db54",
+          "message": "Merge pull request #240 from funkelab/239-group-export-import\n\nDon't include FeatureDict when exporting subgroup",
+          "timestamp": "2026-06-11T17:50:21-04:00",
+          "tree_id": "c40a8a457a113dc0993615e236a4e8f873de65e2",
+          "url": "https://github.com/funkelab/funtracks/commit/1d01a4ccbcc0aaf93e84477e85b6e4a5d2c1db54"
+        },
+        "date": 1781214650299,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_compute_graph_from_seg",
+            "value": 0.38982543149387167,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 2.565250800000001 sec\nrounds: 1"
           }
         ]
       }
