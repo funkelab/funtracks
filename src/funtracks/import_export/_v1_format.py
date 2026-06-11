@@ -124,9 +124,7 @@ def load_v1_tracks(
         attrs.setdefault("lineage_attr", "lineage_id")
 
     with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore", message="Provided both FeatureDict and pos_attr or time_attr"
-        )
+        warnings.filterwarnings("ignore", message="Provided both FeatureDict and pos")
         tracks = Tracks(graph_td, **attrs)
     return tracks
 
