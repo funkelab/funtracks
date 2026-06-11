@@ -221,10 +221,11 @@ class Tracks:
                 - List/tuple: multiple attributes, one per axis (e.g., ["y", "x"])
                 - None: defaults to "pos"
             tracklet_key: Graph attribute name for tracklet/track IDs
-                (e.g., "tracklet_id").
-                If None, defaults to "tracklet_id"
+                (e.g., "tracklet_id"). Left None unless explicitly provided — a non-None
+                tracklet_key is the signal that this Tracks wants track ids (registers a
+                TrackAnnotator). No default is applied.
             lineage_key: Graph attribute name for lineage IDs (e.g., "lineage_id").
-                if None, defaults to "lineage_id"
+                Left None unless explicitly provided (see tracklet_key). No default.
 
         Returns:
             FeatureDict initialized with time feature and position if no segmentation
@@ -460,7 +461,10 @@ class Tracks:
             + ([self.features.time_key] if incl_time else [])
         )
 
-        df = self.graph_solution.node_attrs(attr_keys=attr_keys)
+        # Read from graph_full (consistent with get_position / the attr-helper policy):
+        # positions are intrinsic node attrs, so this also resolves soft-deleted
+        # (solution=False) nodes instead of KeyError-ing like a graph_solution query.
+        df = self.graph_full.node_attrs(attr_keys=attr_keys)
         id_to_row = {
             nid: i for i, nid in enumerate(df[td.DEFAULT_ATTR_KEYS.NODE_ID].to_list())
         }

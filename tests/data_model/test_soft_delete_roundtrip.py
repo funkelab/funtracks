@@ -134,3 +134,30 @@ def test_mid_track_delete_leaves_skip_edge_candidate_in_full(get_tracks, ndim):
     assert tracks.graph_full.has_edge(3, 5)
     assert tracks.graph_full.edge_id(3, 5) is not None
     assert 4 in tracks.graph_full.node_ids()
+
+
+@pytest.mark.parametrize("ndim", [3, 4])
+def test_attr_reads_resolve_for_soft_deleted_node(get_tracks, ndim):
+    """Regression: attribute reads must resolve for soft-deleted (solution=False) nodes,
+    and the bulk `get_positions` must agree with the single-node `get_position`. The bulk
+    path previously queried `graph_solution` and KeyError'd on a soft-deleted node while
+    `get_position` (graph_full) succeeded — a latent inconsistency invisible to tests that
+    only ever query in-solution nodes.
+    """
+    tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
+    pos_single_before = tracks.get_position(5)
+    pos_bulk_before = tracks.get_positions([5])[0].tolist()
+    assert pos_bulk_before == pytest.approx(pos_single_before)
+
+    UserDeleteNode(tracks, 5)
+    assert 5 not in tracks.graph_solution.node_ids()  # soft-deleted
+
+    # Both single and bulk position reads still resolve (graph_full) and agree.
+    pos_single_after = tracks.get_position(5)
+    pos_bulk_after = tracks.get_positions([5])[0].tolist()
+    assert pos_single_after == pytest.approx(pos_single_before)
+    assert pos_bulk_after == pytest.approx(pos_single_before)
+
+    # Other intrinsic attrs resolve too.
+    assert tracks.get_node_attr(5, "area") is not None
+    assert tracks.get_time(5) is not None
