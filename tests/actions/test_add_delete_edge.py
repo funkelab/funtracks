@@ -30,7 +30,7 @@ def test_add_delete_edges(get_tracks, ndim, with_seg):
 
     action = ActionGroup(tracks=tracks, actions=[AddEdge(tracks, edge) for edge in edges])
 
-    with pytest.raises(ValueError, match="Edge .* already exists in the graph"):
+    with pytest.raises(ValueError, match="Edge .* already exists in the solution"):
         AddEdge(tracks, (1, 2))
 
     # TODO: What if adding an edge that already exists?
@@ -81,7 +81,9 @@ def test_add_delete_edges(get_tracks, ndim, with_seg):
 
 def test_add_edge_missing_endpoint(get_tracks):
     tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
-    with pytest.raises(ValueError, match="Cannot add edge .*: endpoint .* not in graph"):
+    with pytest.raises(
+        ValueError, match="Cannot add edge .*: endpoint .* not in solution"
+    ):
         AddEdge(tracks, (10, 11))
 
 

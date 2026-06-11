@@ -108,6 +108,19 @@ class Tracks:
                 existing GraphArrayView instance. Not intended for public use.
         """
         self.graph_solution = graph
+        # Depth-1 invariant: graph_full is defined as graph_solution._root (one hop),
+        # so the root must be a base graph, NOT itself a GraphView. A nested view
+        # (base -> crop -> solution) would silently make graph_full mean "the crop"
+        # instead of "every node ever known", breaking the AddNode revive-vs-new check
+        # (graph_full.has_node) and any annotator registered on graph_full. Fail loudly
+        # rather than corrupt data if cropping is ever introduced upstream.
+        if isinstance(graph._root, td.graph.GraphView):
+            raise ValueError(
+                "Tracks requires graph_solution to be a direct view of a base graph "
+                "(graph_solution._root must not itself be a GraphView). A nested view "
+                "chain (e.g. a crop of a crop) violates the depth-1 assumption that "
+                "graph_full = graph_solution._root is the full graph."
+            )
         if _segmentation is not None:
             # Reuse provided segmentation instance (internal use only)
             self.segmentation = _segmentation
