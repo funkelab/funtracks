@@ -73,6 +73,11 @@ class RegionpropsAnnotator(GraphAnnotator):
         """
         return tracks.segmentation is not None
 
+    @property
+    def graph(self):
+        """Regionprops features are intrinsic detections → computed on the full graph."""
+        return self.tracks.graph_full
+
     def __init__(
         self,
         tracks: Tracks,
@@ -170,10 +175,10 @@ class RegionpropsAnnotator(GraphAnnotator):
         all_node_ids = []
         all_values: dict[str, list] = {key: [] for key in keys_to_compute}
 
-        for node_id in self.tracks.graph_solution.node_ids():
-            if not self.tracks.graph_solution.has_node(node_id):
+        for node_id in self.graph.node_ids():
+            if not self.graph.has_node(node_id):
                 continue
-            mask = self.tracks.graph_solution.nodes[node_id]["mask"]
+            mask = self.graph.nodes[node_id]["mask"]
             for region in regionprops_extended(mask, spacing=spacing):
                 all_node_ids.append(node_id)
                 for key in keys_to_compute:
@@ -203,7 +208,7 @@ class RegionpropsAnnotator(GraphAnnotator):
         spacing = None if self.tracks.scale is None else tuple(self.tracks.scale[1:])
         for region in regionprops_extended(mask, spacing=spacing):
             # Skip labels that aren't nodes in the graph (e.g., unselected detections)
-            if not self.tracks.graph_solution.has_node(node_id):
+            if not self.graph.has_node(node_id):
                 continue
             for key in feature_keys:
                 value = getattr(region, self.regionprops_names[key])
@@ -240,7 +245,7 @@ class RegionpropsAnnotator(GraphAnnotator):
 
         time = self.tracks.get_time(node)
 
-        if self.tracks.graph_solution.nodes[node]["mask"].mask.sum() == 0:
+        if self.graph.nodes[node]["mask"].mask.sum() == 0:
             warnings.warn(
                 f"Cannot find label {node} in frame {time}: "
                 "updating regionprops values to None",
@@ -250,7 +255,7 @@ class RegionpropsAnnotator(GraphAnnotator):
                 value = None
                 self.tracks._set_node_attr(node, key, value)
         else:
-            mask = self.tracks.graph_solution.nodes[node]["mask"]
+            mask = self.graph.nodes[node]["mask"]
             self._regionprops_update(node, mask, keys_to_compute)
 
     def change_key(self, old_key: str, new_key: str) -> None:

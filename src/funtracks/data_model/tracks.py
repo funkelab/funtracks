@@ -535,7 +535,7 @@ class Tracks:
         For a single node use get_time() instead.
         """
         nodes = list(nodes)
-        df = self.graph_solution.node_attrs(
+        df = self.graph_full.node_attrs(
             attr_keys=[td.DEFAULT_ATTR_KEYS.NODE_ID, self.features.time_key]
         )
         id_to_val = dict(
@@ -668,39 +668,45 @@ class Tracks:
             )
         return ndim
 
+    # NOTE: the low-level attribute get/set helpers below target `graph_full`, not the
+    # solution view. Attribute *values* are intrinsic to a node/edge and live on the full
+    # graph; the solution view is a membership filter over it. Because graph_full ⊇
+    # graph_solution and their attr dicts are shared by reference, writing via graph_full
+    # is identical to writing via the view for any in-solution node (the view sees it
+    # automatically) and additionally works for soft-deleted (solution=False) candidates.
     def _set_node_attr(self, node: Node, attr: str, value: Any):
         if isinstance(value, np.ndarray):
             value = list(value)
-        self.graph_solution.nodes[node][attr] = value
+        self.graph_full.nodes[node][attr] = value
 
     def _set_nodes_attr(self, nodes: Iterable[Node], attr: str, values: Iterable[Any]):
         nodes_list = list(nodes)
         values_list = list(values)
         if nodes_list:
-            self.graph_solution.update_node_attrs(
+            self.graph_full.update_node_attrs(
                 attrs={attr: values_list}, node_ids=nodes_list
             )
 
     def get_node_attr(self, node: Node, attr: str):
-        return self.graph_solution.nodes[int(node)][attr]
+        return self.graph_full.nodes[int(node)][attr]
 
     def get_nodes_attr(self, nodes: Iterable[Node], attr: str):
         return [self.get_node_attr(node, attr) for node in nodes]
 
     def _set_edge_attr(self, edge: Edge, attr: str, value: Any):
-        edge_id = self.graph_solution.edge_id(edge[0], edge[1])
-        self.graph_solution.update_edge_attrs(attrs={attr: value}, edge_ids=[edge_id])
+        edge_id = self.graph_full.edge_id(edge[0], edge[1])
+        self.graph_full.update_edge_attrs(attrs={attr: value}, edge_ids=[edge_id])
 
     def _set_edges_attr(self, edges: Iterable[Edge], attr: str, values: Iterable[Any]):
         for edge, value in zip(edges, values, strict=False):
-            edge_id = self.graph_solution.edge_id(edge[0], edge[1])
-            self.graph_solution.update_edge_attrs(attrs={attr: value}, edge_ids=[edge_id])
+            edge_id = self.graph_full.edge_id(edge[0], edge[1])
+            self.graph_full.update_edge_attrs(attrs={attr: value}, edge_ids=[edge_id])
 
     def get_edge_attr(self, edge: Edge, attr: str):
-        if attr not in self.graph_solution.edge_attr_keys():
+        if attr not in self.graph_full.edge_attr_keys():
             return None
-        edge_id = self.graph_solution.edge_id(edge[0], edge[1])
-        return self.graph_solution.edges[edge_id][attr]
+        edge_id = self.graph_full.edge_id(edge[0], edge[1])
+        return self.graph_full.edges[edge_id][attr]
 
     def get_edges_attr(self, edges: Iterable[Edge], attr: str):
         return [self.get_edge_attr(edge, attr) for edge in edges]
