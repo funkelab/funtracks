@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 import tifffile
 import zarr
@@ -195,3 +196,91 @@ def test_ignore_edge_features_at_export(get_tracks, tmp_path):
 
     assert "Area" in lines[0]
     assert "IoU" not in lines[0]
+
+
+@pytest.mark.parametrize("seg_relabel", ["tracklet", "lineage", None])
+@pytest.mark.parametrize("seg_file_format", ["zarr", "tiff"])
+def test_export_solution_to_csv_with_seg_and_node_subset(
+    get_tracks,
+    tmp_path,
+    seg_relabel,
+    seg_file_format,
+):
+    """
+    Test CSV export with segmentation + node subset filtering.
+
+    node_ids passed to export_to_csv are expanded (including ancestors),
+    and segmentation must only include the resulting graph nodes, and nothing else.
+    """
+
+    tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
+
+    csv_file = tmp_path / "export.csv"
+    seg_path = tmp_path / "seg"
+
+    export_to_csv(
+        tracks,
+        csv_file,
+        node_ids={4, 6},
+        export_seg=True,
+        seg_path=seg_path,
+        seg_file_format=seg_file_format,
+        seg_relabel=seg_relabel,
+    )
+
+    # 1. Validate CSV node export
+    with open(csv_file) as f:
+        lines = f.readlines()
+
+    assert len(lines) >= 2  # header + at least 1 row
+
+    header = lines[0].strip().split(",")
+    assert "id" in header
+
+    exported_ids = {int(line.split(",")[header.index("id")]) for line in lines[1:]}
+
+    # CSV should include expanded graph nodes (NOT just requested subset)
+    expected_graph_nodes = {1, 3, 4, 6}
+    assert exported_ids == expected_graph_nodes
+
+    # 2. Validate segmentation
+    if seg_file_format == "zarr":
+        seg = zarr.open(str(seg_path), mode="r")
+        seg_arr = np.asarray(seg[:])
+    else:
+        seg_arr = tifffile.imread(str(seg_path))
+
+    assert seg_arr.shape == tracks.segmentation.shape
+
+    unique_vals = set(seg_arr.flatten()) - {0}
+
+    original = np.asarray(tracks.segmentation[:])
+
+    graph_nodes = expected_graph_nodes
+
+    if seg_relabel is None:
+        expected = np.where(np.isin(original, list(graph_nodes)), original, 0)
+
+        np.testing.assert_array_equal(seg_arr, expected)
+        assert unique_vals == graph_nodes
+
+    else:
+        if seg_relabel == "lineage":
+            label_key = tracks.features.lineage_key
+        else:
+            label_key = tracks.features.tracklet_key
+
+        labels = tracks.graph_solution.node_attrs(attr_keys=[label_key])[
+            label_key
+        ].to_list()
+        node_to_label = dict(zip(tracks.graph_solution.node_ids(), labels, strict=True))
+
+        expected = np.zeros_like(original)
+
+        for n in graph_nodes:
+            expected[original == n] = node_to_label[n]
+
+        np.testing.assert_array_equal(seg_arr, expected)
+
+        expected_vals = {node_to_label[n] for n in graph_nodes}
+        assert unique_vals == expected_vals

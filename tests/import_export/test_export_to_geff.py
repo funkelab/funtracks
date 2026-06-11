@@ -184,8 +184,10 @@ def test_export_to_geff(
     assert isinstance(z, zarr.Group)
 
     node_ids_array = z["nodes/ids"][:]
-    assert np.array_equal(np.sort(node_ids_array), np.array([1, 3, 4, 6])), (
-        f"Unexpected node IDs: found {node_ids_array}, expected {[1, 3, 4, 6]}"
+    expected_graph_nodes = np.array([1, 3, 4, 6])
+
+    assert np.array_equal(np.sort(node_ids_array), expected_graph_nodes), (
+        f"Unexpected node IDs: found {node_ids_array}, expected {expected_graph_nodes}"
     )
 
     seg_path = export_dir / "segmentation"
@@ -193,18 +195,44 @@ def test_export_to_geff(
         seg_zarr = zarr.open(str(seg_path), mode="r")
         assert isinstance(seg_zarr, zarr.Array)
         assert seg_zarr.shape == tracks.segmentation.shape
-        if seg_relabel is not None:
+
+        exported = np.asarray(seg_zarr[:])
+        original = np.asarray(tracks.segmentation[:])
+
+        # segmentation must include ALL nodes in exported graph (including ancestors)
+        graph_nodes = set(expected_graph_nodes)
+
+        if seg_relabel is None:
+            # identity labeling case
+            expected = np.where(np.isin(original, list(graph_nodes)), original, 0)
+            np.testing.assert_array_equal(exported, expected)
+
+            assert set(exported.flatten()) - {0} == graph_nodes
+
+        else:
             if seg_relabel == "lineage":
                 label_key = tracks.features.lineage_key
             else:
                 label_key = tracks.features.tracklet_key
-            kept_vals = set(
-                tracks.graph_solution.filter(node_ids=[1, 3, 4, 6])
-                .node_attrs(attr_keys=[label_key])[label_key]
-                .to_list()
+
+            labels = tracks.graph_solution.node_attrs(attr_keys=[label_key])[label_key]
+
+            node_to_label = dict(
+                zip(tracks.graph_solution.node_ids(), labels.to_list(), strict=True)
             )
-            unique_vals = set(seg_zarr[:].flatten()) - {0}
-            assert unique_vals == kept_vals
+
+            # build expected segmentation from full graph node set
+            expected = np.zeros_like(original)
+
+            for n in graph_nodes:
+                expected[original == n] = node_to_label[n]
+
+            np.testing.assert_array_equal(exported, expected)
+
+            # verify all graph node labels appear in output
+            unique_vals = set(exported.flatten()) - {0}
+            expected_vals = {node_to_label[n] for n in graph_nodes}
+            assert unique_vals == expected_vals
     else:
         assert not seg_path.exists()
 

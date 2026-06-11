@@ -103,6 +103,15 @@ class DeleteNode(BasicAction):
     """Action of deleting an existing node.
 
     Saves all node feature values so the action can be inverted.
+
+    Low-level action — not meant to be used directly. It soft-deletes only the
+    node itself (incident edges are dropped from the view by
+    ``remove_node_from_view`` but keep ``solution=True`` in ``graph_full``).
+    Managing the incident edges' solution flags is the responsibility of the
+    enclosing user action (``UserDeleteNode``), which soft-deletes each incident
+    edge with its own ``DeleteEdge`` first. Applying a bare ``DeleteNode`` to a
+    node that still has in-solution edges therefore leaves ``graph_full``'s edge
+    flags inconsistent with ``graph_solution`` — always go through the user action.
     """
 
     def __init__(

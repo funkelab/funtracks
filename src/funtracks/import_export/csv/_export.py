@@ -155,14 +155,14 @@ def export_to_csv(
 
     # Determine which nodes to export
     if node_ids is None:
-        node_to_keep = tracks.graph_solution.node_ids()
+        nodes_to_keep = tracks.graph_solution.node_ids()
     else:
-        node_to_keep = filter_graph_with_ancestors(tracks.graph_solution, node_ids)
+        nodes_to_keep = filter_graph_with_ancestors(tracks.graph_solution, node_ids)
 
     # Write CSV file
     rows: list[dict[str, Any]] = []
 
-    for node_id in node_to_keep:
+    for node_id in nodes_to_keep:
         parents = list(tracks.graph_solution.predecessors(node_id))
         parent_id = "" if len(parents) == 0 else parents[0]
 
@@ -235,4 +235,5 @@ def export_to_csv(
             file_format=seg_file_format,
             relabel=seg_relabel,
             zarr_format=zarr_format,
+            node_ids=nodes_to_keep,
         )

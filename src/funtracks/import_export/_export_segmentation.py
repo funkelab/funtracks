@@ -80,7 +80,7 @@ def export_segmentation(
         zarr_format: Zarr format version. Only used when file_format="zarr".
             Defaults to 2.
         node_ids: Optional subset of node IDs to include. Cells not in this set
-            are painted as 0 (background). Has no effect when relabel is None.
+            are painted as 0 (background).
 
     Raises:
         ValueError: If tracks.segmentation is None.
@@ -107,6 +107,17 @@ def export_segmentation(
             return np.array(view[t])
 
         dtype = view.dtype
+
+    elif node_ids is not None:
+        seg = tracks.segmentation
+        allowed = np.array(list(node_ids))
+
+        def get_frame(t: int) -> np.ndarray:
+            frame = np.array(seg[t])
+            return np.where(np.isin(frame, allowed), frame, 0)
+
+        dtype = seg.dtype
+
     else:
         seg = tracks.segmentation
 

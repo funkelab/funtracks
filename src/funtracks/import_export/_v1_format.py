@@ -108,12 +108,11 @@ def load_v1_tracks(
         )
         features[td.DEFAULT_ATTR_KEYS.BBOX] = SegBbox(ndim)
 
-    # filtering the warnings because the default values of time_attr and pos_attr are
-    # not None. Therefore, new style Tracks attrs that have features instead of
-    # pos_attr and time_attr will always trigger the warning. Updating default values
-    # is breaking, and manually setting the attrs to None if features is present will
-    # break if the attrs are changed/removed in the future. Can remove in v2.0.
-    # Import at runtime to avoid circular dependency
+    # Defensive: suppress Tracks.__init__'s "provided both FeatureDict and attr"
+    # warning in case a save carries both a stored FeatureDict and explicit
+    # pos/time/tracklet attrs. With a FeatureDict present we pass no attr args, so
+    # this normally does not fire, but keep the guard for forward-compat. Can remove
+    # in v2.0. Import at runtime to avoid circular dependency.
     from ..data_model import Tracks
 
     # A solution save must come back with track ids. When the stored attrs don't carry
