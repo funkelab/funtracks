@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1781214651327,
+  "lastUpdate": 1781275050637,
   "repoUrl": "https://github.com/funkelab/funtracks",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -930,6 +930,37 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 2.565250800000001 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "malinmayorc@janelia.hhmi.org",
+            "name": "Caroline Malin-Mayor",
+            "username": "cmalinmayor"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "32c30ed9f6b594a39a714568223335514d5015bc",
+          "message": "Merge pull request #242 from funkelab/numcodecs-version\n\nBe less restrictive about numcodecs version",
+          "timestamp": "2026-06-12T10:36:56-04:00",
+          "tree_id": "f65dcc099509c13202fde3ac37f494d86738fd36",
+          "url": "https://github.com/funkelab/funtracks/commit/32c30ed9f6b594a39a714568223335514d5015bc"
+        },
+        "date": 1781275048594,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_compute_graph_from_seg",
+            "value": 0.5119334115024249,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 1.9533790480000022 sec\nrounds: 1"
           }
         ]
       }
