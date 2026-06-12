@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1781275050637,
+  "lastUpdate": 1781284700507,
   "repoUrl": "https://github.com/funkelab/funtracks",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -961,6 +961,37 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 1.9533790480000022 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "malinmayorc@janelia.hhmi.org",
+            "name": "Caroline Malin-Mayor",
+            "username": "cmalinmayor"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c4194d223bc1d48354f32bcfa82a5dc9ceb089cb",
+          "message": "Merge pull request #243 from funkelab/deploy-prerelease-labels\n\nMark GitHub releases as draft/prerelease based on tag name",
+          "timestamp": "2026-06-12T13:17:49-04:00",
+          "tree_id": "ba2b6753f0a4714850c684578e625c27c8f33923",
+          "url": "https://github.com/funkelab/funtracks/commit/c4194d223bc1d48354f32bcfa82a5dc9ceb089cb"
+        },
+        "date": 1781284699390,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_compute_graph_from_seg",
+            "value": 0.3964363360929472,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 2.5224731160000005 sec\nrounds: 1"
           }
         ]
       }
