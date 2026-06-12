@@ -405,8 +405,11 @@ class TracksBuilder(ABC):
             ndim=self.ndim,
         )
 
-        # Validate graph structure and optional properties
-        validate_in_memory_geff(self.in_memory_geff)
+        # Validate graph structure and optional properties.
+        # Skip when a FeatureDict was pre-loaded (e.g. from GEFF metadata):
+        # the data came from a valid funtracks Tracks object, so we trust it.
+        if not (hasattr(self, "features") and self.features is not None):
+            validate_in_memory_geff(self.in_memory_geff)
 
     def construct_graph(
         self,

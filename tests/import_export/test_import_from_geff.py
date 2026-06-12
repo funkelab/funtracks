@@ -1091,6 +1091,57 @@ def test_invalid_featuredict_in_geff_falls_back_to_autodetect(get_tracks, tmp_pa
     )
 
 
+def test_subgroup_export_omits_featuredict_and_recomputes_on_import(get_tracks, tmp_path):
+    """Exporting a subgroup (node_ids provided) should omit the FeatureDict
+    from GEFF metadata, so that reimport recomputes tracklet/lineage IDs
+    for the subgraph topology instead of using stale IDs from the original.
+
+    Regression test for https://github.com/funkelab/funtracks/issues/239:
+    Previously, the FeatureDict was always exported, even for subgroups.
+    On reimport, validation would strip the now-invalid tracklet_id but the
+    FeatureDict still referenced it, causing KeyError: 'tracklet_id'.
+    """
+    tracks = get_tracks(ndim=3, with_seg=False, is_solution=True)
+
+    # Export only a subset: nodes 1, 3, 4, 5 (one branch of the division).
+    # filter_graph_with_ancestors will include node 1 as ancestor of 3.
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    export_to_geff(tracks, run_dir, node_ids={3, 4, 5}, save_segmentation=False)
+
+    geff_path = run_dir / "tracks.geff"
+
+    # Verify no FeatureDict in the GEFF metadata
+    from geff_spec import GeffMetadata
+
+    meta = GeffMetadata.read(geff_path)
+    has_features = (
+        meta.extra is not None
+        and "funtracks" in meta.extra
+        and "features" in meta.extra["funtracks"]
+    )
+    assert not has_features, (
+        "Subgroup export should not include a FeatureDict in GEFF metadata"
+    )
+
+    # Import should succeed — takes the auto-detect path and recomputes IDs
+    imported = import_from_geff(geff_path)
+
+    assert isinstance(imported, SolutionTracks)
+    assert imported.features.tracklet_key is not None
+
+    # The subgraph is a linear chain (1→3→4→5, no divisions), so all nodes
+    # should share a single tracklet_id and a single lineage_id.
+    track_ids = {imported.get_track_id(nid) for nid in imported.graph.node_ids()}
+    assert len(track_ids) == 1, (
+        f"Linear chain should have one tracklet_id, got {track_ids}"
+    )
+    lineage_ids = {imported.get_lineage_id(nid) for nid in imported.graph.node_ids()}
+    assert len(lineage_ids) == 1, (
+        f"Linear chain should have one lineage_id, got {lineage_ids}"
+    )
+
+
 def test_import_from_geff_respects_external_solution_column(tmp_path):
     """A geff produced externally (e.g. by a tracksdata solver) may carry a
     'solution' column with mixed True/False values on nodes. Funtracks must
