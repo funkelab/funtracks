@@ -26,4 +26,6 @@ jobs:
           password: ${{ secrets.PYPI_API_TOKEN }}
       - uses: softprops/action-gh-release@v2
         with:
+          draft: ${{ contains(github.ref_name, '-dev') }}
+          prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-a') || contains(github.ref_name, '-b') }}
           generate_release_notes: true
