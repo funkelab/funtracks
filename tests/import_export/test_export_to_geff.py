@@ -110,6 +110,27 @@ def test_export_seg_relabel_non_solution_raises(get_tracks, seg_relabel, tmp_pat
         export_to_geff(tracks, export_dir, seg_relabel=seg_relabel)
 
 
+def test_export_segmentation_non_solution(get_tracks, tmp_path):
+    """Non-solution tracks export segmentation fine with seg_relabel=None."""
+    tracks = get_tracks(ndim=3, with_seg=True, is_solution=False)
+
+    export_dir = tmp_path / "export"
+    export_dir.mkdir()
+    export_to_geff(tracks, export_dir, seg_relabel=None)
+
+    z = _assert_valid_geff_export(export_dir, tracks.graph.num_nodes())
+
+    # No relabel: segmentation pixels keep original node_ids
+    seg_zarr = zarr.open(str(export_dir / "segmentation"), mode="r")
+    assert isinstance(seg_zarr, zarr.Array)
+    assert seg_zarr.shape == tracks.segmentation.shape
+    assert set(seg_zarr[:].flatten()) - {0} == set(tracks.graph.node_ids())
+
+    attrs = dict(z.attrs)
+    assert "segmentation_shape" in attrs
+    assert tuple(attrs["segmentation_shape"]) == tracks.segmentation.shape
+
+
 # --- Position attribute splitting ---
 
 
@@ -246,6 +267,11 @@ def test_export_overwrite(get_tracks, tmp_path):
     export_to_geff(tracks, export_dir, overwrite=True)
 
     _assert_valid_geff_export(export_dir, tracks.graph.num_nodes())
+
+    # Segmentation is still written correctly alongside the overwritten dir
+    seg_zarr = zarr.open(str(export_dir / "segmentation"), mode="r")
+    assert isinstance(seg_zarr, zarr.Array)
+    assert seg_zarr.shape == tracks.segmentation.shape
 
 
 def test_export_non_directory_raises(get_tracks, tmp_path):
