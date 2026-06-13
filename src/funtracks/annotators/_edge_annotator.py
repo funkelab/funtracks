@@ -41,6 +41,12 @@ class EdgeAnnotator(GraphAnnotator):
         """
         return tracks.segmentation is not None
 
+    @property
+    def graph(self):
+        """IoU is an intrinsic link feature → computed on the full graph (all edges,
+        including soft-deleted/candidate ones, so they stay ready for re-solving)."""
+        return self.tracks.graph_full
+
     @classmethod
     def get_available_features(cls, ndim: int = 3) -> dict[str, Feature]:
         """Get all features that can be computed by this annotator.
@@ -82,14 +88,14 @@ class EdgeAnnotator(GraphAnnotator):
         # TODO: add skip edges
         if self.iou_key in keys_to_compute:
             nodes_by_frame = defaultdict(list)
-            for n in self.tracks.graph.node_ids():
+            for n in self.graph.node_ids():
                 nodes_by_frame[self.tracks.get_time(n)].append(n)
 
             for t in range(self.tracks.segmentation.shape[0] - 1):
                 nodes_in_t = nodes_by_frame[t]
                 edges = []
                 for node in nodes_in_t:
-                    for succ in self.tracks.graph.successors(node):
+                    for succ in self.graph.successors(node):
                         edges.append((node, succ))
                 self._iou_update(edges)
 
@@ -105,8 +111,8 @@ class EdgeAnnotator(GraphAnnotator):
         """
         for edge in edges:
             source, target = edge
-            mask1 = self.tracks.graph.nodes[source]["mask"]
-            mask2 = self.tracks.graph.nodes[target]["mask"]
+            mask1 = self.graph.nodes[source]["mask"]
+            mask2 = self.graph.nodes[target]["mask"]
             iou = mask1.iou(mask2)
             self.tracks._set_edge_attr(edge, self.iou_key, iou)
 
@@ -136,16 +142,16 @@ class EdgeAnnotator(GraphAnnotator):
             # Get all incident edges to the modified node
             modified_node = action.node
             edges_to_update = []
-            for pred in self.tracks.graph.predecessors(modified_node):
+            for pred in self.graph.predecessors(modified_node):
                 edges_to_update.append((pred, modified_node))
-            for succ in self.tracks.graph.successors(modified_node):
+            for succ in self.graph.successors(modified_node):
                 edges_to_update.append((modified_node, succ))
 
         # Update IoU for each edge
         for edge in edges_to_update:
             source, target = edge
-            mask1 = self.tracks.graph.nodes[source]["mask"]
-            mask2 = self.tracks.graph.nodes[target]["mask"]
+            mask1 = self.graph.nodes[source]["mask"]
+            mask2 = self.graph.nodes[target]["mask"]
             if mask1.mask.sum() == 0 or mask2.mask.sum() == 0:
                 empty_node = source if mask1.mask.sum() == 0 else target
                 frame = self.tracks.get_time(empty_node)

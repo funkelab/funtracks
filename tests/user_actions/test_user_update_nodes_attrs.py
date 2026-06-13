@@ -12,8 +12,12 @@ class TestUserUpdateNodesAttrs:
         """Test basic bulk node attribute update functionality."""
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
 
-        tracks.graph.add_node_attr_key("label", default_value=None, dtype=pl.Object)
-        tracks.graph.add_node_attr_key("confidence", default_value=0, dtype=pl.Float64)
+        tracks.graph_solution.add_node_attr_key(
+            "label", default_value=None, dtype=pl.Object
+        )
+        tracks.graph_solution.add_node_attr_key(
+            "confidence", default_value=0, dtype=pl.Float64
+        )
 
         attrs = {"label": ["my_label", "my_label"], "confidence": [0.95, 0.95]}
         UserUpdateNodesAttrs(tracks, nodes=[1, 2], attrs=attrs)
@@ -25,7 +29,9 @@ class TestUserUpdateNodesAttrs:
     def test_single_history_entry(self, get_tracks, ndim, with_seg):
         """Updating multiple nodes creates only one history entry."""
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
-        tracks.graph.add_node_attr_key("label", default_value=None, dtype=pl.Object)
+        tracks.graph_solution.add_node_attr_key(
+            "label", default_value=None, dtype=pl.Object
+        )
 
         action = UserUpdateNodesAttrs(
             tracks, nodes=[1, 2, 3], attrs={"label": ["x", "x", "x"]}
@@ -37,7 +43,9 @@ class TestUserUpdateNodesAttrs:
     def test_undo_redo(self, get_tracks, ndim, with_seg):
         """Undo restores all nodes' attrs to defaults; redo re-applies them."""
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
-        tracks.graph.add_node_attr_key("score", default_value=0, dtype=pl.Float64)
+        tracks.graph_solution.add_node_attr_key(
+            "score", default_value=0, dtype=pl.Float64
+        )
 
         action = UserUpdateNodesAttrs(tracks, nodes=[1, 2], attrs={"score": [0.9, 0.9]})
 
@@ -57,7 +65,9 @@ class TestUserUpdateNodesAttrs:
     def test_per_node_attrs(self, get_tracks, ndim, with_seg):
         """Test bulk update with different values per node."""
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
-        tracks.graph.add_node_attr_key("score", default_value=0, dtype=pl.Float64)
+        tracks.graph_solution.add_node_attr_key(
+            "score", default_value=0, dtype=pl.Float64
+        )
 
         UserUpdateNodesAttrs(tracks, nodes=[1, 2], attrs={"score": [0.1, 0.9]})
 
@@ -69,7 +79,7 @@ class TestUserUpdateNodesAttrs:
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
         spatial_dims = ndim - 1
 
-        tracks.graph.add_node_attr_key(
+        tracks.graph_solution.add_node_attr_key(
             "custom_pos", default_value=None, dtype=pl.Array(pl.Float64, spatial_dims)
         )
 

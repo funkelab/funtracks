@@ -2,7 +2,7 @@ import numpy as np
 import polars as pl
 
 from funtracks.actions import AddNode
-from funtracks.data_model import SolutionTracks, Tracks
+from funtracks.data_model import Tracks
 from funtracks.import_export import export_to_csv
 from funtracks.user_actions import UserUpdateSegmentation
 from funtracks.utils.tracksdata_utils import (
@@ -14,7 +14,7 @@ track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
 
 
 def test_recompute_track_ids(graph_2d_with_track_id):
-    tracks = SolutionTracks(
+    tracks = Tracks(
         graph_2d_with_track_id,
         ndim=3,
         **track_attrs,
@@ -23,7 +23,7 @@ def test_recompute_track_ids(graph_2d_with_track_id):
 
 
 def test_next_track_id(graph_2d_with_track_id):
-    tracks = SolutionTracks(graph_2d_with_track_id, ndim=3, **track_attrs)
+    tracks = Tracks(graph_2d_with_track_id, ndim=3, **track_attrs)
     assert tracks.get_next_track_id() == 6
     AddNode(
         tracks,
@@ -42,8 +42,8 @@ def test_from_tracks_cls(graph_2d_with_segmentation):
         tracklet_attr=track_attrs["tracklet_attr"],
         scale=(2, 2, 2),
     )
-    solution_tracks = SolutionTracks.from_tracks(tracks)
-    assert solution_tracks.graph == tracks.graph
+    solution_tracks = Tracks.from_tracks(tracks)
+    assert solution_tracks.graph_solution == tracks.graph_solution
     assert solution_tracks.segmentation == tracks.segmentation
     assert solution_tracks.features.time_key == tracks.features.time_key
     assert solution_tracks.features.position_key == tracks.features.position_key
@@ -63,8 +63,8 @@ def test_from_tracks_cls_recompute(graph_2d_with_segmentation):
     )
     # delete track id (default value -1) on one node triggers reassignment of
     # track_ids even when recompute is False.
-    tracks.graph.nodes[1][tracks.features.tracklet_key] = -1
-    solution_tracks = SolutionTracks.from_tracks(tracks)
+    tracks.graph_solution.nodes[1][tracks.features.tracklet_key] = -1
+    solution_tracks = Tracks.from_tracks(tracks)
     # should have reassigned new track_id to node 6
     assert solution_tracks.get_node_attr(6, solution_tracks.features.tracklet_key) == 4
     assert (
@@ -73,7 +73,7 @@ def test_from_tracks_cls_recompute(graph_2d_with_segmentation):
 
 
 def test_update_segmentation(graph_2d_with_segmentation):
-    tracks = SolutionTracks(
+    tracks = Tracks(
         graph_2d_with_segmentation,
         ndim=3,
         **track_attrs,
@@ -94,7 +94,7 @@ def test_next_track_id_empty():
         node_attributes=["pos", "track_id"],
         edge_attributes=[],
     )
-    tracks = SolutionTracks(graph, ndim=4, **track_attrs)
+    tracks = Tracks(graph, ndim=4, **track_attrs)
     assert tracks.get_next_track_id() == 1
 
 
@@ -104,7 +104,7 @@ def test_get_lineage_id_without_lineage_key(graph_2d_with_track_id):
     graph.add_node(
         attrs={"t": 1, "pos": [0, 0], "track_id": 1}, index=7, validate_keys=False
     )
-    tracks = SolutionTracks(graph, ndim=3, **track_attrs)
+    tracks = Tracks(graph, ndim=3, **track_attrs)
 
     # Unset lineage_key to test the None path
     tracks.features.lineage_key = None
@@ -118,14 +118,14 @@ def test_export_to_csv_with_display_names(
 ):
     """Test CSV export with use_display_names=True option."""
     # Test 2D with display names
-    tracks = SolutionTracks(graph_2d_with_segmentation, **track_attrs, ndim=3)
+    tracks = Tracks(graph_2d_with_segmentation, **track_attrs, ndim=3)
     tracks.enable_features(["area"])
     temp_file = tmp_path / "test_export_2d_display.csv"
     export_to_csv(tracks, temp_file, use_display_names=True)
     with open(temp_file) as f:
         lines = f.readlines()
 
-    assert len(lines) == tracks.graph.num_nodes() + 1  # add header
+    assert len(lines) == tracks.graph_solution.num_nodes() + 1  # add header
 
     # With display names: ID, Parent ID, Time, y, x, Tracklet ID,
     # Lineage ID, Area
@@ -142,14 +142,14 @@ def test_export_to_csv_with_display_names(
     assert lines[0].strip().split(",") == header
 
     # Test 3D with display names (area display name is "Volume" in 3D)
-    tracks = SolutionTracks(graph_3d_with_segmentation, **track_attrs, ndim=4)
+    tracks = Tracks(graph_3d_with_segmentation, **track_attrs, ndim=4)
     tracks.enable_features(["area"])
     temp_file = tmp_path / "test_export_3d_display.csv"
     export_to_csv(tracks, temp_file, use_display_names=True)
     with open(temp_file) as f:
         lines = f.readlines()
 
-    assert len(lines) == tracks.graph.num_nodes() + 1  # add header
+    assert len(lines) == tracks.graph_solution.num_nodes() + 1  # add header
 
     # With display names: ID, Parent ID, Time, z, y, x,
     # Tracklet ID, Lineage ID, Volume
@@ -171,7 +171,7 @@ def test_multi_axis_pos_attr_with_segmentation(graph_3d_with_segmentation):
     """pos_attr as list should be respected even when segmentation is present.
 
     Scenario: graph has both a "pos" column AND individual z/y/x columns with
-    distinct values. SolutionTracks(pos_attr=['z','y','x']) should use z/y/x
+    distinct values. Tracks(pos_attr=['z','y','x']) should use z/y/x
     as the position_key, not fall back to "pos".
     """
     graph = graph_3d_with_segmentation
@@ -187,7 +187,7 @@ def test_multi_axis_pos_attr_with_segmentation(graph_3d_with_segmentation):
         graph.nodes[node]["y"] = float(pos[1]) + offset
         graph.nodes[node]["x"] = float(pos[2]) + offset
 
-    tracks = SolutionTracks(
+    tracks = Tracks(
         graph=graph,
         pos_attr=["z", "y", "x"],
         ndim=4,
@@ -204,5 +204,5 @@ def test_multi_axis_pos_attr_with_segmentation(graph_3d_with_segmentation):
     expected = [float(original_pos[i]) + offset for i in range(3)]
     assert list(pos_from_tracks) == expected, (
         f"Expected positions from z/y/x ({expected}), "
-        f"got {list(pos_from_tracks)} — SolutionTracks used 'pos' instead"
+        f"got {list(pos_from_tracks)} — Tracks used 'pos' instead"
     )

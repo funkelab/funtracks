@@ -21,7 +21,7 @@ from ..conftest import make_2d_disk_mask, make_3d_sphere_mask
 def test_add_delete_nodes(get_tracks, ndim, with_seg):
     # Get a tracks instance
     tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
-    reference_graph = tracks.graph
+    reference_graph = tracks.graph_solution
     reference_seg = np.asarray(tracks.segmentation).copy() if with_seg else None
 
     # Start with an empty Tracks
@@ -38,11 +38,14 @@ def test_add_delete_nodes(get_tracks, ndim, with_seg):
         ndim=ndim,
     )
     empty_seg = np.zeros_like(tracks.segmentation) if with_seg else None
-    tracks.graph = empty_graph
+    tracks.graph_solution = empty_graph
     segmentation_shape = (5, 100, 100) if ndim == 3 else (5, 100, 100, 100)
     tracks.segmentation = (
         GraphArrayView(
-            graph=tracks.graph, shape=segmentation_shape, attr_key="node_id", offset=0
+            graph=tracks.graph_solution,
+            shape=segmentation_shape,
+            attr_key="node_id",
+            offset=0,
         )
         if with_seg
         else None
@@ -78,8 +81,8 @@ def test_add_delete_nodes(get_tracks, ndim, with_seg):
         actions.append(AddNode(tracks, node, attributes=attrs))
     action = ActionGroup(tracks=tracks, actions=actions)
 
-    assert set(tracks.graph.node_ids()) == set(reference_graph.node_ids())
-    data_tracks = tracks.graph.node_attrs()
+    assert set(tracks.graph_solution.node_ids()) == set(reference_graph.node_ids())
+    data_tracks = tracks.graph_solution.node_attrs()
     data_reference = reference_graph.node_attrs()
     if with_seg:
         assert_array_almost_equal(tracks.segmentation, reference_seg)
@@ -95,14 +98,14 @@ def test_add_delete_nodes(get_tracks, ndim, with_seg):
 
     # Invert the action to delete all the nodes
     del_nodes = action.inverse()
-    assert set(tracks.graph.node_ids()) == set(empty_graph.node_ids())
+    assert set(tracks.graph_solution.node_ids()) == set(empty_graph.node_ids())
     if with_seg:
         assert_array_almost_equal(tracks.segmentation, empty_seg)
 
     # Re-invert the action to add back all the nodes and their attributes
     del_nodes.inverse()
-    assert set(tracks.graph.node_ids()) == set(reference_graph.node_ids())
-    data_tracks = tracks.graph.node_attrs()
+    assert set(tracks.graph_solution.node_ids()) == set(reference_graph.node_ids())
+    data_tracks = tracks.graph_solution.node_attrs()
     data_reference = reference_graph.node_attrs()
     if with_seg:
         assert_array_almost_equal(tracks.segmentation, reference_seg)
@@ -197,36 +200,44 @@ def test_custom_attributes_preserved(get_tracks, ndim, with_seg):
     node_id = 100
     action = AddNode(tracks, node_id, custom_attrs.copy())
     # Verify all attributes are present after adding
-    assert tracks.graph.has_node(node_id)
+    assert tracks.graph_solution.has_node(node_id)
     for key, value in custom_attrs.items():
         if key == "pos":
-            assert_array_almost_equal(tracks.graph.nodes[node_id][key], np.array(value))
+            assert_array_almost_equal(
+                tracks.graph_solution.nodes[node_id][key], np.array(value)
+            )
         elif key == "mask":
             continue
         elif key == "bbox":
-            assert_array_equal(np.asarray(tracks.graph.nodes[node_id][key]), value)
+            assert_array_equal(
+                np.asarray(tracks.graph_solution.nodes[node_id][key]), value
+            )
         else:
-            assert tracks.graph.nodes[node_id][key] == value, (
+            assert tracks.graph_solution.nodes[node_id][key] == value, (
                 f"Attribute {key} not preserved after add"
             )
 
     # Delete the node
     delete_action = action.inverse()
-    assert node_id not in tracks.graph.node_ids()
+    assert node_id not in tracks.graph_solution.node_ids()
 
     # Re-add the node by inverting the delete
     delete_action.inverse()
-    assert node_id in tracks.graph.node_ids()
+    assert node_id in tracks.graph_solution.node_ids()
 
     # Verify all custom attributes are still present after re-adding
     for key, value in custom_attrs.items():
         if key == "pos":
-            assert_array_almost_equal(tracks.graph.nodes[node_id][key], np.array(value))
+            assert_array_almost_equal(
+                tracks.graph_solution.nodes[node_id][key], np.array(value)
+            )
         elif key == "mask":
             continue
         elif key == "bbox":
-            assert_array_equal(np.asarray(tracks.graph.nodes[node_id][key]), value)
+            assert_array_equal(
+                np.asarray(tracks.graph_solution.nodes[node_id][key]), value
+            )
         else:
-            assert tracks.graph.nodes[node_id][key] == value, (
+            assert tracks.graph_solution.nodes[node_id][key] == value, (
                 f"Attribute {key} not preserved after delete/re-add cycle"
             )

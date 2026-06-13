@@ -45,31 +45,40 @@ class AddEdge(BasicAction):
         Raises:
             ValueError if an endpoint of the edge does not exist
         """
-        # Check that both endpoints exist before computing edge attributes
+        # Check that both endpoints exist in the solution before adding the edge
         for node in self.edge:
-            if not self.tracks.graph.has_node(node):
+            if not self.tracks.graph_solution.has_node(node):
                 raise ValueError(
-                    f"Cannot add edge {self.edge}: endpoint {node} not in graph yet"
+                    f"Cannot add edge {self.edge}: endpoint {node} not in solution yet"
                 )
 
-        if self.tracks.graph.has_edge(*self.edge):
-            raise ValueError(f"Edge {self.edge} already exists in the graph")
+        if self.tracks.graph_solution.has_edge(*self.edge):
+            raise ValueError(f"Edge {self.edge} already exists in the solution")
 
-        attrs = dict(self.attributes)
+        if self.tracks.graph_full.has_edge(*self.edge):
+            # Revive a soft-deleted edge (already present in the full graph as a
+            # candidate): flip solution=True and re-surface it in the solution view.
+            edge_id = self.tracks.graph_full.edge_id(self.edge[0], self.edge[1])
+            self.tracks.graph_full.update_edge_attrs(
+                attrs={"solution": True}, edge_ids=[edge_id]
+            )
+            self.tracks.graph_solution.add_edge_to_view(self.edge[0], self.edge[1])
+        else:
+            attrs = dict(self.attributes)
 
-        # Fill in missing edge attributes with schema defaults (includes
-        # solution and any other registered edge attrs).
-        schemas = self.tracks.graph._edge_attr_schemas()
-        for attr in self.tracks.graph.edge_attr_keys():
-            if attr not in attrs:
-                attrs[attr] = schemas[attr].default_value
+            # Fill in missing edge attributes with schema defaults (includes
+            # solution and any other registered edge attrs).
+            schemas = self.tracks.graph_solution._edge_attr_schemas()
+            for attr in self.tracks.graph_solution.edge_attr_keys():
+                if attr not in attrs:
+                    attrs[attr] = schemas[attr].default_value
 
-        # Create edge attributes for this specific edge
-        self.tracks.graph.add_edge(
-            source_id=self.edge[0],
-            target_id=self.edge[1],
-            attrs=attrs,
-        )
+            # Create edge attributes for this specific edge
+            self.tracks.graph_solution.add_edge(
+                source_id=self.edge[0],
+                target_id=self.edge[1],
+                attrs=attrs,
+            )
 
         # Notify annotators to recompute features (will overwrite computed ones)
         self.tracks.notify_annotators(self)
@@ -89,7 +98,7 @@ class DeleteEdge(BasicAction):
         """
         super().__init__(tracks)
         self.edge = edge
-        if not self.tracks.graph.has_edge(*self.edge):
+        if not self.tracks.graph_solution.has_edge(*self.edge):
             raise ValueError(f"Edge {self.edge} not in the graph, and cannot be removed")
 
         # Save all edge feature values from the features dict
@@ -106,5 +115,12 @@ class DeleteEdge(BasicAction):
         return AddEdge(self.tracks, self.edge, attributes=self.attributes)
 
     def _apply(self) -> None:
-        self.tracks.graph.remove_edge(*self.edge)
+        """Soft-delete the edge: flag solution=False in the full graph and remove it
+        from the solution view only. The edge is preserved in graph_full (as a
+        candidate) so the delete is reversible."""
+        edge_id = self.tracks.graph_full.edge_id(self.edge[0], self.edge[1])
+        self.tracks.graph_full.update_edge_attrs(
+            attrs={"solution": False}, edge_ids=[edge_id]
+        )
+        self.tracks.graph_solution.remove_edge_from_view(self.edge[0], self.edge[1])
         self.tracks.notify_annotators(self)

@@ -123,3 +123,7 @@ explicit_package_bases = true
 exclude_also = [
     "if TYPE_CHECKING:",
 ]
+
+#remove this after tracksdata PR is merged:
+[tool.uv.sources]
+tracksdata = { git = "https://github.com/TeunHuijben/tracksdata.git", rev = "040ed9f03c0f64c587355e9fb6c7f9f08d09855c" }

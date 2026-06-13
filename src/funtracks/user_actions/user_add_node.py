@@ -15,7 +15,7 @@ from ..actions.add_delete_node import AddNode
 from .user_delete_edge import UserDeleteEdge
 
 if TYPE_CHECKING:
-    from funtracks.data_model.solution_tracks import SolutionTracks
+    from funtracks.data_model.tracks import Tracks
 
 
 class UserAddNode(ActionGroup):
@@ -30,7 +30,7 @@ class UserAddNode(ActionGroup):
 
     def __init__(
         self,
-        tracks: SolutionTracks,
+        tracks: Tracks,
         node: int,
         attributes: dict[str, Any],
         pixels: tuple[np.ndarray, ...] | None = None,
@@ -39,7 +39,7 @@ class UserAddNode(ActionGroup):
     ):
         """
         Args:
-            tracks (SolutionTracks): the tracks to add the node to
+            tracks (Tracks): the tracks to add the node to
             node (int): The node id of the new node to add
             attributes (dict[str, Any]): A dictionary from attribute strings to values.
                 Must contain "time" and tracks.features.tracklet_key.
@@ -63,7 +63,7 @@ class UserAddNode(ActionGroup):
                     time point (forceable).
         """
         super().__init__(tracks, actions=[])
-        self.tracks: SolutionTracks  # Narrow type from base class
+        self.tracks: Tracks  # Narrow type from base class
 
         # Get keys from tracks features
         time_key = tracks.features.time_key
@@ -77,7 +77,7 @@ class UserAddNode(ActionGroup):
             raise InvalidActionError(
                 f"Cannot add node without track id. Please add {track_id_key} attribute"
             )
-        if self.tracks.graph.has_node(node):
+        if self.tracks.graph_solution.has_node(node):
             raise InvalidActionError(
                 f"Node {node} already exists in the tracks, cannot add."
             )
@@ -98,7 +98,7 @@ class UserAddNode(ActionGroup):
         pred, succ = self.tracks.get_track_neighbors(track_id, time)
 
         # check if you are adding a node to a track that divided previously
-        if pred is not None and self.tracks.graph.out_degree(int(pred)) == 2:
+        if pred is not None and self.tracks.graph_solution.out_degree(int(pred)) == 2:
             if not force:
                 raise InvalidActionError(
                     "Cannot add node here - upstream division event detected.",
@@ -118,11 +118,11 @@ class UserAddNode(ActionGroup):
         # downstream
         elif succ is not None:
             # check pred of succ
-            preds = self.tracks.graph.predecessors(succ)
+            preds = self.tracks.graph_solution.predecessors(succ)
             pred_of_succ = preds[0] if preds else None
             if (
                 pred_of_succ is not None
-                and self.tracks.graph.out_degree(pred_of_succ) == 2
+                and self.tracks.graph_solution.out_degree(pred_of_succ) == 2
             ):
                 if not force:
                     raise InvalidActionError(

@@ -23,7 +23,7 @@ def test_export_solution_to_csv(get_tracks, tmp_path, ndim, expected_header):
     with open(temp_file) as f:
         lines = f.readlines()
 
-    assert len(lines) == tracks.graph.num_nodes() + 1  # add header
+    assert len(lines) == tracks.graph_solution.num_nodes() + 1  # add header
     assert lines[0].strip().split(",") == expected_header
 
     # Check first data line (node 1: t=0, pos=[50, 50] or [50, 50, 50], track_id=1)
@@ -54,7 +54,7 @@ def test_export_solution_to_csv_with_seg_zarr(
     with open(temp_file) as f:
         lines = f.readlines()
 
-    assert len(lines) == tracks.graph.num_nodes() + 1  # add header
+    assert len(lines) == tracks.graph_solution.num_nodes() + 1  # add header
     assert lines[0].strip().split(",") == expected_header
 
     # check the segmentation zarr
@@ -66,7 +66,9 @@ def test_export_solution_to_csv_with_seg_zarr(
     seg_arr = seg_zarr[:]
     unique_vals = set(seg_arr.flatten()) - {0}
     label_key = tracks.features.tracklet_key
-    track_ids = set(tracks.graph.node_attrs(attr_keys=[label_key])[label_key].to_list())
+    track_ids = set(
+        tracks.graph_solution.node_attrs(attr_keys=[label_key])[label_key].to_list()
+    )
     assert unique_vals == track_ids
 
 
@@ -91,7 +93,9 @@ def test_export_solution_to_csv_with_seg_tiff(get_tracks, tmp_path, ndim):
     # values should be tracklet_ids (not node_ids) — default seg_relabel="tracklet"
     unique_vals = set(seg_arr.flatten()) - {0}
     label_key = tracks.features.tracklet_key
-    track_ids = set(tracks.graph.node_attrs(attr_keys=[label_key])[label_key].to_list())
+    track_ids = set(
+        tracks.graph_solution.node_attrs(attr_keys=[label_key])[label_key].to_list()
+    )
     assert unique_vals == track_ids
 
 
@@ -116,7 +120,7 @@ def test_export_solution_to_csv_with_seg_original_labels(get_tracks, tmp_path, n
     # values should be node_ids (original labels), not track_ids
     seg_arr = seg_zarr[:]
     unique_vals = set(seg_arr.flatten()) - {0}
-    node_ids = set(tracks.graph.node_ids())
+    node_ids = set(tracks.graph_solution.node_ids())
     assert unique_vals == node_ids
 
 
@@ -128,7 +132,7 @@ def test_export_with_color_dict(get_tracks, tmp_path):
     temp_file = tmp_path / "test_export_colors.csv"
 
     # Build a color dict: node_id → [R, G, B] floats in [0, 1]
-    node_ids = list(tracks.graph.node_ids())
+    node_ids = list(tracks.graph_solution.node_ids())
     color_dict = {
         node_id: np.array([0.1 * (i % 10), 0.5, 0.9])
         for i, node_id in enumerate(node_ids)
@@ -266,8 +270,10 @@ def test_export_solution_to_csv_with_seg_and_node_subset(
         else:
             label_key = tracks.features.tracklet_key
 
-        labels = tracks.graph.node_attrs(attr_keys=[label_key])[label_key].to_list()
-        node_to_label = dict(zip(tracks.graph.node_ids(), labels, strict=True))
+        labels = tracks.graph_solution.node_attrs(attr_keys=[label_key])[
+            label_key
+        ].to_list()
+        node_to_label = dict(zip(tracks.graph_solution.node_ids(), labels, strict=True))
 
         expected = np.zeros_like(original)
 

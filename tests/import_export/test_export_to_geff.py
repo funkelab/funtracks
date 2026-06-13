@@ -4,7 +4,7 @@ import pytest
 import tifffile
 import zarr
 
-from funtracks.data_model import SolutionTracks, Tracks
+from funtracks.data_model import Tracks
 from funtracks.import_export import export_to_geff
 
 
@@ -51,8 +51,7 @@ def test_export_to_geff(
                 graph.nodes[node][key] = pos[i]
         graph.remove_node_attr_key("pos")
         # Create Tracks with split position attributes
-        tracks_cls = SolutionTracks if is_solution else Tracks
-        tracks = tracks_cls(
+        tracks = Tracks(
             graph,
             time_attr="t",
             pos_attr=pos_keys,
@@ -108,12 +107,14 @@ def test_export_to_geff(
             else:
                 label_key = tracks.features.tracklet_key
             label_vals = set(
-                tracks.graph.node_attrs(attr_keys=[label_key])[label_key].to_list()
+                tracks.graph_solution.node_attrs(attr_keys=[label_key])[
+                    label_key
+                ].to_list()
             )
             assert unique_vals == label_vals
         else:
             # values should be original node_ids
-            node_ids_set = set(tracks.graph.node_ids())
+            node_ids_set = set(tracks.graph_solution.node_ids())
             assert unique_vals == node_ids_set
     else:
         assert not seg_path.exists()
@@ -214,10 +215,10 @@ def test_export_to_geff(
             else:
                 label_key = tracks.features.tracklet_key
 
-            labels = tracks.graph.node_attrs(attr_keys=[label_key])[label_key]
+            labels = tracks.graph_solution.node_attrs(attr_keys=[label_key])[label_key]
 
             node_to_label = dict(
-                zip(tracks.graph.node_ids(), labels.to_list(), strict=True)
+                zip(tracks.graph_solution.node_ids(), labels.to_list(), strict=True)
             )
 
             # build expected segmentation from full graph node set
@@ -256,7 +257,9 @@ def test_export_to_geff_seg_tiff(get_tracks, ndim, tmp_path):
     # values should be tracklet_ids (default seg_relabel="tracklet")
     unique_vals = set(seg_arr.flatten()) - {0}
     label_key = tracks.features.tracklet_key
-    track_ids = set(tracks.graph.node_attrs(attr_keys=[label_key])[label_key].to_list())
+    track_ids = set(
+        tracks.graph_solution.node_attrs(attr_keys=[label_key])[label_key].to_list()
+    )
     assert unique_vals == track_ids
 
     # Check metadata references the tiff path with ../../ prefix (sibling of geff dir)

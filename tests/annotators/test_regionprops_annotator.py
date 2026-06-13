@@ -4,7 +4,7 @@ from tracksdata.nodes import Mask
 
 from funtracks.actions import UpdateNodeSeg, UpdateTrackIDs
 from funtracks.annotators import RegionpropsAnnotator
-from funtracks.data_model import SolutionTracks, Tracks
+from funtracks.data_model import Tracks
 
 track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
 
@@ -39,9 +39,9 @@ class TestRegionpropsAnnotator:
         tracks.enable_features(list(rp_ann.all_features.keys()))
 
         for key in rp_ann.all_features:
-            assert key in tracks.graph.node_attr_keys()
-            for node_id in tracks.graph.node_ids():
-                value = tracks.graph.nodes[node_id][key]
+            assert key in tracks.graph_solution.node_attr_keys()
+            for node_id in tracks.graph_solution.node_ids():
+                value = tracks.graph_solution.nodes[node_id][key]
                 assert value is not None
 
     def test_update_all(self, get_graph, ndim):
@@ -69,7 +69,7 @@ class TestRegionpropsAnnotator:
         UpdateNodeSeg(tracks, node_id, removal, added=False)
         assert tracks.get_node_attr(node_id, "area") == expected_area
         for key in rp_ann.features:
-            assert key in tracks.graph.node_attr_keys()
+            assert key in tracks.graph_solution.node_attr_keys()
 
         # segmentation is fully erased and you try to update
         node_id = 1
@@ -80,8 +80,8 @@ class TestRegionpropsAnnotator:
             UpdateNodeSeg(tracks, node_id, mask, added=False)
         # all regionprops features should be the defaults, because seg doesn't exist
         for key in rp_ann.features:
-            actual = tracks.graph.nodes[node_id][key]
-            expected = tracks.graph._node_attr_schemas()[key].default_value
+            actual = tracks.graph_solution.nodes[node_id][key]
+            expected = tracks.graph_solution._node_attr_schemas()[key].default_value
             # Convert to numpy arrays for comparison (handles both scalar and array types)
             actual_np = np.asarray(actual)
             expected_np = np.asarray(expected)
@@ -105,7 +105,7 @@ class TestRegionpropsAnnotator:
         tracks.disable_features([to_remove_key])
 
         rp_ann.compute()
-        assert to_remove_key not in tracks.graph.node_attr_keys()
+        assert to_remove_key not in tracks.graph_solution.node_attr_keys()
 
         # add it back in
         tracks.enable_features([to_remove_key])
@@ -155,7 +155,7 @@ class TestRegionpropsAnnotator:
         # Force recomputation so regionprops runs with the given scale as spacing
         tracks.enable_features(["pos"])
 
-        pos = np.array(tracks.graph.nodes[6]["pos"])
+        pos = np.array(tracks.graph_solution.nodes[6]["pos"])
         expected = pixel_centroid * np.array(scale[1:])
 
         bug_value = np.array([1.5] * len(pixel_centroid)) * np.array(
@@ -177,7 +177,7 @@ class TestRegionpropsAnnotator:
         segmentation.
         """
         graph = get_graph(ndim, is_solution=True, with_seg=True)
-        tracks = SolutionTracks(
+        tracks = Tracks(
             graph,
             ndim=ndim,
             **track_attrs,
@@ -192,7 +192,9 @@ class TestRegionpropsAnnotator:
         # RegionpropsAnnotator, it would recompute area back to initial_area and
         # the assertion below would fail.
         fake_area = initial_area + 999
-        tracks.graph.update_node_attrs(attrs={"area": [fake_area]}, node_ids=[node_id])
+        tracks.graph_solution.update_node_attrs(
+            attrs={"area": [fake_area]}, node_ids=[node_id]
+        )
 
         original_track_id = tracks.get_track_id(node_id)
         new_track_id = original_track_id + 100

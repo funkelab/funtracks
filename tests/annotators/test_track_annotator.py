@@ -41,9 +41,9 @@ class TestTrackAnnotator:
 
         # Compute values
         ann.compute()
-        for node in tracks.graph.node_ids():
+        for node in tracks.graph_solution.node_ids():
             for key in all_features:
-                assert tracks.graph.nodes[node][key] is not None
+                assert tracks.graph_solution.nodes[node][key] is not None
 
         lineages = [
             [1, 2, 3, 4, 5],
@@ -79,7 +79,9 @@ class TestTrackAnnotator:
         node_id = 6
         edge_id = (4, 6)
         attrs = {"iou": 0, "solution": True} if with_seg else {"solution": True}
-        tracks.graph.add_edge(source_id=edge_id[0], target_id=edge_id[1], attrs=attrs)
+        tracks.graph_solution.add_edge(
+            source_id=edge_id[0], target_id=edge_id[1], attrs=attrs
+        )
         to_remove_key = ann.lineage_key
         orig_lin = tracks.get_node_attr(node_id, ann.lineage_key)
         orig_tra = tracks.get_node_attr(node_id, ann.tracklet_key)
@@ -99,12 +101,12 @@ class TestTrackAnnotator:
         assert tracks.get_node_attr(node_id, ann.tracklet_key) != orig_tra
 
     def test_invalid(self, get_tracks, ndim, with_seg) -> None:
-        # Create regular Tracks (not SolutionTracks) to test error handling
+        # A plain Tracks (no tracklet_key) is not a track-id candidate, so no
+        # TrackAnnotator is registered.
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=False)
-        with pytest.raises(
-            ValueError, match="Currently the TrackAnnotator only works on SolutionTracks"
-        ):
-            TrackAnnotator(tracks)  # type: ignore
+        assert tracks.features.tracklet_key is None
+        assert not TrackAnnotator.can_annotate(tracks)
+        assert tracks.track_annotator is None
 
     def test_ignores_irrelevant_actions(self, get_tracks, ndim, with_seg):
         """Test that TrackAnnotator ignores actions that don't affect track IDs."""
@@ -155,7 +157,7 @@ class TestTrackAnnotator:
         source_node = 3
         target_node = 4
 
-        edge = next(e for e in tracks.graph.edge_list() if set(e) == {3, 4})
+        edge = next(e for e in tracks.graph_solution.edge_list() if set(e) == {3, 4})
 
         expected_lineage_id = ann.max_lineage_id + 1
         UserDeleteEdge(tracks, edge=edge)
