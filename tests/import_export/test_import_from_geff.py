@@ -992,7 +992,7 @@ def test_featuredict_survives_geff_roundtrip(tmp_path):
         np.array([0.0, 0.0]),  # ellipse_axis_radii — must be Array(Float64, 2)
         -1,  # track_id
         -1,  # lineage_id
-        1,  # solution
+        True,  # solution — always registered as Boolean
         None,  # mask — special-cased, slot unused
         None,  # bbox — special-cased, slot unused
     ]
@@ -1012,7 +1012,7 @@ def test_featuredict_survives_geff_roundtrip(tmp_path):
                 "ellipse_axis_radii": np.array([20.0, 15.0]),
                 "track_id": 1,
                 "lineage_id": 1,
-                "solution": 1,
+                "solution": True,
                 td.DEFAULT_ATTR_KEYS.MASK: _make_mask(bbox),
                 td.DEFAULT_ATTR_KEYS.BBOX: np.array(bbox, dtype=np.int64),
             }

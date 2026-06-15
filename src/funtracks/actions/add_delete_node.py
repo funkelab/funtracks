@@ -77,9 +77,13 @@ class AddNode(BasicAction):
 
     def _apply(self) -> None:
         """Add the node with all attributes from self.attributes."""
-        self.tracks.graph.add_node(
-            attrs=dict(self.attributes), index=self.node, validate_keys=False
-        )
+        attrs = dict(self.attributes)
+        # A node added to a Tracks graph is by definition part of the solution,
+        # so default `solution` to True rather than the column schema default,
+        # which can be wrong on graphs loaded from geff. An explicit
+        # caller-provided value still wins.
+        attrs.setdefault("solution", True)
+        self.tracks.graph.add_node(attrs=attrs, index=self.node, validate_keys=False)
 
         # Always notify annotators - they will check their own preconditions
         self.tracks.notify_annotators(self)

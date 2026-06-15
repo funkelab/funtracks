@@ -506,6 +506,9 @@ class TracksBuilder(ABC):
             for key in graph.node_attr_keys():
                 if key not in node_attr:
                     node_attr[key] = None  # type: ignore[assignment]
+            # `solution` is a Boolean attr; geff may serialise it as float (0.0/1.0).
+            if node_attr.get("solution") is not None:
+                node_attr["solution"] = bool(node_attr["solution"])
             node_attrs.append(node_attr)
 
         edge_attrs = []
@@ -522,6 +525,9 @@ class TracksBuilder(ABC):
             for key in graph.edge_attr_keys():
                 if key not in edge_attr:
                     edge_attr[key] = None  # type: ignore[assignment]
+            # `solution` is a Boolean attr; geff may serialise it as float (0.0/1.0).
+            if edge_attr.get("solution") is not None:
+                edge_attr["solution"] = bool(edge_attr["solution"])
             edge_attrs.append(edge_attr)
 
         graph.bulk_add_nodes(nodes=node_attrs, indices=node_ids)
