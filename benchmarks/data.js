@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1781284700507,
+  "lastUpdate": 1781633579655,
   "repoUrl": "https://github.com/funkelab/funtracks",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -992,6 +992,37 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 2.5224731160000005 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "malinmayorc@janelia.hhmi.org",
+            "name": "Caroline Malin-Mayor",
+            "username": "cmalinmayor"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "136297f0405db5fd3f3c64a4e4e6ffae5bbd7892",
+          "message": "Merge pull request #244 from funkelab/test-speedup\n\nSplit test_export_to_geff into focused tests for speed",
+          "timestamp": "2026-06-16T14:12:24-04:00",
+          "tree_id": "0a735cda21de20b885005bce0df9ca92f1ba6a92",
+          "url": "https://github.com/funkelab/funtracks/commit/136297f0405db5fd3f3c64a4e4e6ffae5bbd7892"
+        },
+        "date": 1781633577869,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_compute_graph_from_seg",
+            "value": 0.5123922477596432,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 1.9516298389999989 sec\nrounds: 1"
           }
         ]
       }
