@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1781633579655,
+  "lastUpdate": 1781633601880,
   "repoUrl": "https://github.com/funkelab/funtracks",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -1023,6 +1023,37 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 1.9516298389999989 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "malinmayorc@janelia.hhmi.org",
+            "name": "Caroline Malin-Mayor",
+            "username": "cmalinmayor"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "08e56ee9a33fc72278723d8a6c5f81e345579dcf",
+          "message": "Merge pull request #246 from funkelab/fix-solution-flag-corruption\n\nFix solution attr corruption during editing and loading",
+          "timestamp": "2026-06-16T14:12:42-04:00",
+          "tree_id": "32afe4f8107be7d4e926f7fff13c38ab3d4df386",
+          "url": "https://github.com/funkelab/funtracks/commit/08e56ee9a33fc72278723d8a6c5f81e345579dcf"
+        },
+        "date": 1781633600824,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_compute_graph_from_seg",
+            "value": 0.39687082483334973,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 2.519711546999986 sec\nrounds: 1"
           }
         ]
       }
