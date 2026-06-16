@@ -62,7 +62,11 @@ class AddEdge(BasicAction):
         schemas = self.tracks.graph._edge_attr_schemas()
         for attr in self.tracks.graph.edge_attr_keys():
             if attr not in attrs:
-                attrs[attr] = schemas[attr].default_value
+                # An edge added to a Tracks graph is by definition part of the
+                # solution, so default `solution` to True rather than the schema
+                # default, which can be wrong (e.g. Float64/0.0) on graphs loaded
+                # from geff. An explicit caller-provided value still wins.
+                attrs[attr] = True if attr == "solution" else schemas[attr].default_value
 
         # Create edge attributes for this specific edge
         self.tracks.graph.add_edge(
