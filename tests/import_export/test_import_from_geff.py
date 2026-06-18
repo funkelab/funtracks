@@ -1001,7 +1001,7 @@ def test_featuredict_survives_geff_roundtrip(tmp_path):
         np.array([0.0, 0.0]),  # ellipse_axis_radii — must be Array(Float64, 2)
         -1,  # track_id
         -1,  # lineage_id
-        1,  # solution
+        True,  # solution — always registered as Boolean
         None,  # mask — special-cased, slot unused
         None,  # bbox — special-cased, slot unused
     ]
@@ -1021,7 +1021,7 @@ def test_featuredict_survives_geff_roundtrip(tmp_path):
                 "ellipse_axis_radii": np.array([20.0, 15.0]),
                 "track_id": 1,
                 "lineage_id": 1,
-                "solution": 1,
+                "solution": True,
                 td.DEFAULT_ATTR_KEYS.MASK: _make_mask(bbox),
                 td.DEFAULT_ATTR_KEYS.BBOX: np.array(bbox, dtype=np.int64),
             }
@@ -1127,16 +1127,18 @@ def test_subgroup_export_omits_featuredict_and_recomputes_on_import(get_tracks, 
     # Import should succeed — takes the auto-detect path and recomputes IDs
     imported = import_from_geff(geff_path)
 
-    assert isinstance(imported, SolutionTracks)
+    assert isinstance(imported, Tracks)
     assert imported.features.tracklet_key is not None
 
     # The subgraph is a linear chain (1→3→4→5, no divisions), so all nodes
     # should share a single tracklet_id and a single lineage_id.
-    track_ids = {imported.get_track_id(nid) for nid in imported.graph.node_ids()}
+    track_ids = {imported.get_track_id(nid) for nid in imported.graph_solution.node_ids()}
     assert len(track_ids) == 1, (
         f"Linear chain should have one tracklet_id, got {track_ids}"
     )
-    lineage_ids = {imported.get_lineage_id(nid) for nid in imported.graph.node_ids()}
+    lineage_ids = {
+        imported.get_lineage_id(nid) for nid in imported.graph_solution.node_ids()
+    }
     assert len(lineage_ids) == 1, (
         f"Linear chain should have one lineage_id, got {lineage_ids}"
     )

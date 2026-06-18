@@ -90,9 +90,13 @@ class AddNode(BasicAction):
             )
             self.tracks.graph_solution.add_node_to_view(self.node)
         else:
-            # Genuinely new node (solution defaults to True via the schema).
+            # Genuinely new node — default `solution` to True rather than the
+            # column schema default, which can be wrong (e.g. Float64/0.0) on
+            # graphs loaded from geff. An explicit caller-provided value still wins.
+            attrs = dict(self.attributes)
+            attrs.setdefault("solution", True)
             self.tracks.graph_solution.add_node(
-                attrs=dict(self.attributes), index=self.node, validate_keys=False
+                attrs=attrs, index=self.node, validate_keys=False
             )
 
         # Always notify annotators - they will check their own preconditions

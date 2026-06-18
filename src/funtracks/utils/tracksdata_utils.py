@@ -158,7 +158,9 @@ def create_empty_graphview_graph(
         graph_td.add_node_attr_key("tracklet_id", default_value=-1, dtype=pl.Int64)
 
     for attr in node_attributes or []:
-        if attr not in graph_td.node_attr_keys():
+        # `solution` is handled by the dedicated Boolean/True branch below; never
+        # let the generic loop register it (e.g. as Float64/0.0 from a geff import).
+        if attr != "solution" and attr not in graph_td.node_attr_keys():
             default_value = node_default_values[(node_attributes or []).index(attr)]
             graph_td.add_node_attr_key(
                 attr,
@@ -171,7 +173,9 @@ def create_empty_graphview_graph(
             )
 
     for attr in edge_attributes or []:
-        if attr not in graph_td.edge_attr_keys():
+        # `solution` is handled by the dedicated Boolean/True branch below; never
+        # let the generic loop register it (e.g. as Float64/0.0 from a geff import).
+        if attr != "solution" and attr not in graph_td.edge_attr_keys():
             default_value = edge_default_values[(edge_attributes or []).index(attr)]
             graph_td.add_edge_attr_key(
                 attr,
