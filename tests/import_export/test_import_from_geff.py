@@ -1124,8 +1124,20 @@ def test_subgroup_export_omits_featuredict_and_recomputes_on_import(get_tracks, 
         "Subgroup export should not include a FeatureDict in GEFF metadata"
     )
 
-    # Import should succeed — takes the auto-detect path and recomputes IDs
-    imported = import_from_geff(geff_path)
+    # Import should succeed and recompute IDs for the new subgraph topology.
+    # The source graph used "track_id" (not "tracklet_id") as the column name;
+    # the axes-based auto-inference identity-maps it, so we provide the correct
+    # mapping explicitly.
+    imported = import_from_geff(
+        geff_path,
+        node_name_map={
+            "time": "t",
+            "pos": ["y", "x"],
+            "tracklet_id": "track_id",
+            "lineage_id": "lineage_id",
+            "solution": "solution",
+        },
+    )
 
     assert isinstance(imported, Tracks)
     assert imported.features.tracklet_key is not None
