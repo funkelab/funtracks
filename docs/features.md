@@ -353,7 +353,7 @@ tracks.disable_features(["area"])
         def compute(self, feature_keys=None):
             # Compute feature values in bulk
             if "custom" in self.features:
-                for node in self.tracks.graph.node_ids():
+                for node in self.tracks.graph_solution.node_ids():
                     value = self._compute_custom(node)
                     self.tracks[node]["custom"] = value
 
