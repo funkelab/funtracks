@@ -5,7 +5,7 @@ import tifffile
 import zarr
 
 from funtracks.data_model import SolutionTracks, Tracks
-from funtracks.import_export import export_to_geff
+from funtracks.import_export import export_to_geff, import_from_geff, write_to_geff
 
 
 def _assert_valid_geff_export(export_dir, expected_num_nodes=None):
@@ -351,3 +351,94 @@ def test_export_to_geff_seg_tiff(get_tracks, ndim, tmp_path):
     z = zarr.open((export_dir / "tracks.geff").as_posix(), mode="r")
     related = dict(z.attrs)["geff"].get("related_objects", [])
     assert any(obj["path"] == "../../segmentation.tif" for obj in related)
+
+
+# --- write_to_geff ---
+
+
+@pytest.mark.parametrize("ndim", [3, 4])
+def test_write_to_geff_roundtrip(get_tracks, ndim, tmp_path):
+    """write_to_geff then import_from_geff recovers the tracks."""
+    tracks = get_tracks(ndim=ndim, with_seg=False, is_solution=True)
+
+    geff_path = tmp_path / "my_tracks.geff"
+    write_to_geff(tracks, geff_path)
+
+    loaded = import_from_geff(geff_path)
+
+    assert loaded.graph.num_nodes() == tracks.graph.num_nodes()
+    assert loaded.graph.num_edges() == tracks.graph.num_edges()
+    assert set(loaded.graph.node_ids()) == set(tracks.graph.node_ids())
+    assert loaded.features.dump_json() == tracks.features.dump_json()
+
+
+def test_write_to_geff_no_parent_container(get_tracks, tmp_path):
+    """write_to_geff writes directly to the path — no parent .zgroup or
+    tracks.geff subfolder."""
+    tracks = get_tracks(ndim=3, with_seg=False, is_solution=True)
+
+    geff_path = tmp_path / "my_tracks.geff"
+    write_to_geff(tracks, geff_path)
+
+    # The store is at the given path, not nested inside it
+    z = zarr.open(str(geff_path), mode="r")
+    assert "geff" in dict(z.attrs)
+    assert "nodes" in z
+
+    # No .zgroup/.zattrs at the parent level (tmp_path is not a zarr group)
+    assert not (tmp_path / ".zgroup").exists()
+    assert not (tmp_path / ".zattrs").exists()
+
+
+def test_write_to_geff_overwrite(get_tracks, tmp_path):
+    """write_to_geff with overwrite=True replaces existing store."""
+    tracks = get_tracks(ndim=3, with_seg=False, is_solution=True)
+
+    geff_path = tmp_path / "my_tracks.geff"
+    write_to_geff(tracks, geff_path)
+    write_to_geff(tracks, geff_path, overwrite=True)
+
+    loaded = import_from_geff(geff_path)
+    assert loaded.graph.num_nodes() == tracks.graph.num_nodes()
+
+
+def test_write_to_geff_no_overwrite_raises(get_tracks, tmp_path):
+    """write_to_geff with overwrite=False raises on existing store."""
+    tracks = get_tracks(ndim=3, with_seg=False, is_solution=True)
+
+    geff_path = tmp_path / "my_tracks.geff"
+    write_to_geff(tracks, geff_path)
+
+    with pytest.raises(FileExistsError):
+        write_to_geff(tracks, geff_path, overwrite=False)
+
+
+def test_write_to_geff_metadata(get_tracks, tmp_path):
+    """write_to_geff stores axes and FeatureDict metadata."""
+    tracks = get_tracks(ndim=3, with_seg=False, is_solution=True)
+
+    geff_path = tmp_path / "my_tracks.geff"
+    write_to_geff(tracks, geff_path)
+
+    z = zarr.open(str(geff_path), mode="r")
+    attrs = dict(z.attrs)
+
+    axes = attrs["geff"]["axes"]
+    assert len(axes) == 3
+    assert [ax["type"] for ax in axes] == ["time", "space", "space"]
+
+    assert "funtracks" in attrs["geff"].get("extra", {})
+    assert "features" in attrs["geff"]["extra"]["funtracks"]
+
+
+def test_write_to_geff_segmentation_shape(get_tracks, tmp_path):
+    """write_to_geff writes segmentation_shape when masks are present."""
+    tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
+
+    geff_path = tmp_path / "my_tracks.geff"
+    write_to_geff(tracks, geff_path)
+
+    z = zarr.open(str(geff_path), mode="r")
+    attrs = dict(z.attrs)
+    assert "segmentation_shape" in attrs
+    assert tuple(attrs["segmentation_shape"]) == tracks.segmentation.shape
