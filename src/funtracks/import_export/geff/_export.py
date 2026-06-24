@@ -21,6 +21,38 @@ if TYPE_CHECKING:
     from funtracks.data_model.tracks import Tracks
 
 
+def write_to_geff(
+    tracks: Tracks,
+    path: Path,
+    overwrite: bool = False,
+    zarr_format: Literal[2, 3] = 2,
+):
+    """Write tracks directly to a geff store at the given path.
+
+    Unlike :func:`export_to_geff` (which creates a parent zarr container with
+    a ``tracks.geff`` subfolder and optional segmentation), this writes the
+    geff store directly to *path*.  Intended for internal save/load workflows
+    where the user picks the ``.geff`` path.
+
+    Args:
+        tracks: Tracks object containing a graph to save.
+        path: Destination path for the geff store.
+        overwrite: If True, overwrites an existing store at *path*.
+        zarr_format: Zarr format version to use. Defaults to 2.
+    """
+    path = remove_tilde(path)
+    path = path.resolve(strict=False)
+
+    graph, metadata = _build_geff_metadata(tracks, include_features=True)
+    graph.to_geff(
+        geff_store=path,
+        geff_metadata=metadata,
+        zarr_format=zarr_format,
+        overwrite=overwrite,
+    )
+    _write_segmentation_shape(path, tracks)
+
+
 def export_to_geff(
     tracks: Tracks,
     directory: Path,
@@ -64,47 +96,10 @@ def export_to_geff(
     mode: Literal["w", "w-"] = "w" if overwrite else "w-"
     setup_zarr_group(directory, zarr_format=zarr_format, mode=mode)
 
-    # update the graph to split the position into separate attrs, if they are currently
-    # together in a list
-    graph, axis_names = split_position_attr(tracks)
-    if axis_names is None:
-        axis_names = []
-    axis_names.insert(0, tracks.features.time_key)
-    if axis_names is not None:
-        axis_types = (
-            ["time", "space", "space"]
-            if tracks.ndim == 3
-            else ["time", "space", "space", "space"]
-        )
-    if tracks.scale is None:
-        tracks.scale = (1.0,) * tracks.ndim
-
-    # Create axes metadata
-    axes = []
-    for name, axis_type, scale in zip(axis_names, axis_types, tracks.scale, strict=True):
-        axes.append(
-            {
-                "name": name,
-                "type": axis_type,
-                "scale": scale,
-            }
-        )
-
     # Include the FeatureDict in metadata only for full exports.
-    # Subgroup exports do not necessarily have valid tracklet/lineage IDs are no
+    # Subgroup exports do not necessarily have valid tracklet/lineage IDs
     # and thus are not valid SolutionTracks
-    extra: dict = {}
-    if node_ids is None:
-        extra["funtracks"] = {"features": tracks.features.dump_json()}
-
-    metadata = GeffMetadata(
-        geff_version=geff_spec.__version__,
-        directed=True,
-        node_props_metadata={},
-        edge_props_metadata={},
-        axes=axes,
-        extra=extra,
-    )
+    graph, metadata = _build_geff_metadata(tracks, include_features=(node_ids is None))
 
     # Save segmentation if present and requested
     if save_segmentation and tracks.segmentation is not None:
@@ -138,15 +133,72 @@ def export_to_geff(
     tracks_path = directory / "tracks.geff"
     graph.to_geff(geff_store=tracks_path, geff_metadata=metadata, zarr_format=zarr_format)
 
-    # Write segmentation_shape as an extra zarr attribute when masks are present.
-    # GeffMetadata has no segmentation_shape field, so it must be stored separately.
-    # This allows import_from_geff to reconstruct the segmentation (GraphArrayView)
-    # without requiring an external segmentation file.
+    _write_segmentation_shape(tracks_path, tracks)
+
+
+def _build_geff_metadata(
+    tracks: Tracks,
+    include_features: bool = True,
+) -> tuple[td.graph.GraphView, GeffMetadata]:
+    """Build the geff metadata and prepare the graph for writing.
+
+    Returns the (possibly modified) graph with split position attributes
+    and the GeffMetadata object.
+    """
+    # update the graph to split the position into separate attrs, if they are currently
+    # together in a list
+    graph, axis_names = split_position_attr(tracks)
+    if axis_names is None:
+        axis_names = []
+    axis_names.insert(0, tracks.features.time_key)
+    if axis_names is not None:
+        axis_types = (
+            ["time", "space", "space"]
+            if tracks.ndim == 3
+            else ["time", "space", "space", "space"]
+        )
+    if tracks.scale is None:
+        tracks.scale = (1.0,) * tracks.ndim
+
+    # Create axes metadata
+    axes = []
+    for name, axis_type, scale in zip(axis_names, axis_types, tracks.scale, strict=True):
+        axes.append(
+            {
+                "name": name,
+                "type": axis_type,
+                "scale": scale,
+            }
+        )
+
+    extra: dict = {}
+    if include_features:
+        extra["funtracks"] = {"features": tracks.features.dump_json()}
+
+    metadata = GeffMetadata(
+        geff_version=geff_spec.__version__,
+        directed=True,
+        node_props_metadata={},
+        edge_props_metadata={},
+        axes=axes,
+        extra=extra,
+    )
+
+    return graph, metadata
+
+
+def _write_segmentation_shape(geff_path: Path, tracks: Tracks) -> None:
+    """Write segmentation_shape as an extra zarr attribute when masks are present.
+
+    GeffMetadata has no segmentation_shape field, so it must be stored separately.
+    This allows import_from_geff to reconstruct the segmentation (GraphArrayView)
+    without requiring an external segmentation file.
+    """
     seg_shape = tracks.graph.metadata.get("segmentation_shape")
     if seg_shape is not None:
         import zarr as _zarr
 
-        z = _zarr.open(str(tracks_path), mode="a")
+        z = _zarr.open(str(geff_path), mode="a")
         attrs = dict(z.attrs)
         attrs["segmentation_shape"] = list(seg_shape)
         z.attrs.update(attrs)
