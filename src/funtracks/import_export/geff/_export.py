@@ -151,12 +151,11 @@ def _build_geff_metadata(
     if axis_names is None:
         axis_names = []
     axis_names.insert(0, tracks.features.time_key)
-    if axis_names is not None:
-        axis_types = (
-            ["time", "space", "space"]
-            if tracks.ndim == 3
-            else ["time", "space", "space", "space"]
-        )
+    axis_types = (
+        ["time", "space", "space"]
+        if tracks.ndim == 3
+        else ["time", "space", "space", "space"]
+    )
     if tracks.scale is None:
         tracks.scale = (1.0,) * tracks.ndim
 

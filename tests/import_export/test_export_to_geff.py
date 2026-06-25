@@ -362,9 +362,10 @@ def test_export_to_geff_seg_tiff(get_tracks, ndim, tmp_path):
 
 
 @pytest.mark.parametrize("ndim", [3, 4])
-def test_write_to_geff_roundtrip(get_tracks, ndim, tmp_path):
+@pytest.mark.parametrize("with_seg", [False, True])
+def test_write_to_geff_roundtrip(get_tracks, ndim, with_seg, tmp_path):
     """write_to_geff then import_from_geff recovers the tracks."""
-    tracks = get_tracks(ndim=ndim, with_seg=False, is_solution=True)
+    tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
 
     geff_path = tmp_path / "my_tracks.geff"
     write_to_geff(tracks, geff_path)
@@ -375,6 +376,13 @@ def test_write_to_geff_roundtrip(get_tracks, ndim, tmp_path):
     assert loaded.graph_solution.num_edges() == tracks.graph_solution.num_edges()
     assert set(loaded.graph_solution.node_ids()) == set(tracks.graph_solution.node_ids())
     assert loaded.features.dump_json() == tracks.features.dump_json()
+
+    if with_seg:
+        assert loaded.segmentation is not None
+        assert loaded.segmentation.shape == tracks.segmentation.shape
+        np.testing.assert_array_equal(
+            np.asarray(loaded.segmentation[:]), np.asarray(tracks.segmentation[:])
+        )
 
 
 def test_write_to_geff_no_parent_container(get_tracks, tmp_path):
