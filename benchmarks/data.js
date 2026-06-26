@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1782484064047,
+  "lastUpdate": 1782484425881,
   "repoUrl": "https://github.com/funkelab/funtracks",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -1147,6 +1147,37 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 2.065561613 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "malinmayorc@janelia.hhmi.org",
+            "name": "Caroline Malin-Mayor",
+            "username": "cmalinmayor"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9733fd04214f52c4e33ef0616b5d54475fdc8b9d",
+          "message": "Merge pull request #253 from funkelab/geff-export-refactor\n\nRefactor geff export to work for internal save as well",
+          "timestamp": "2026-06-26T10:33:09-04:00",
+          "tree_id": "4b027c101a2110c01bf1b42b7875f9b94d4f58ef",
+          "url": "https://github.com/funkelab/funtracks/commit/9733fd04214f52c4e33ef0616b5d54475fdc8b9d"
+        },
+        "date": 1782484423958,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_compute_graph_from_seg",
+            "value": 0.3367766561870547,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 2.9693269460000025 sec\nrounds: 1"
           }
         ]
       }
