@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1782497477881,
+  "lastUpdate": 1782499495746,
   "repoUrl": "https://github.com/funkelab/funtracks",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -1216,6 +1216,44 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 41.51123433699996 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "malinmayorc@janelia.hhmi.org",
+            "name": "Caroline Malin-Mayor",
+            "username": "cmalinmayor"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6baed08b871c2d4ca2d2185acf41e2d47e699365",
+          "message": "Merge pull request #255 from funkelab/faster-track-lineage-ids\n\nFaster track|lineage id calculation",
+          "timestamp": "2026-06-26T14:44:07-04:00",
+          "tree_id": "52897b71d8f789f1561e4d6cff08763df600606a",
+          "url": "https://github.com/funkelab/funtracks/commit/6baed08b871c2d4ca2d2185acf41e2d47e699365"
+        },
+        "date": 1782499493739,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_compute_graph_from_seg",
+            "value": 0.3409918022293815,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 2.932621820999998 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_graph_to_solution",
+            "value": 0.11005921239886254,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 9.086018136999996 sec\nrounds: 1"
           }
         ]
       }
