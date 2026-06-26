@@ -202,13 +202,13 @@ class TrackAnnotator(GraphAnnotator):
         lineages_internal = rx.weakly_connected_components(
             self.tracks.graph_solution.rx_graph
         )
-        lineages_external = []
-        for lin in lineages_internal:
-            node_ids_internal = list(lin)
-            node_ids_external = [
-                self.tracks.graph_solution.node_ids()[nid] for nid in node_ids_internal
-            ]
-            lineages_external.append(node_ids_external)
+        # Map each component's internal node indices to external ids in one batched
+        # call. node_ids() rebuilds the full external-id list on every call, so calling
+        # it per node (as before) was O(N^2).
+        lineages_external = [
+            self.tracks.graph_solution._map_to_external(list(lin))
+            for lin in lineages_internal
+        ]
 
         max_id, ids_to_nodes = self._assign_ids(lineages_external, self.lineage_key)
         self.max_lineage_id = max_id
@@ -220,32 +220,23 @@ class TrackAnnotator(GraphAnnotator):
         After removing division edges, each connected component will get a unique ID,
         and the relevant class attributes will be updated.
         """
-        graph_copy = self.tracks.graph_solution.detach().filter().subgraph()
-
-        parents = [
-            node
-            for node, degree in zip(
-                self.tracks.graph_solution.node_ids(),
-                self.tracks.graph_solution.out_degree(),
-                strict=True,
-            )
-            if degree >= 2
-        ]
-
-        # Remove all intertrack edges from a copy of the original graph
-        for parent in parents:
-            all_edges = self.tracks.graph_solution.edge_list()
-            daughters = [edge[1] for edge in all_edges if edge[0] == parent]
-
-            for daughter in daughters:
-                graph_copy.remove_edge(parent, daughter)
+        # Work on a plain copy of the underlying rustworkx graph and strip the
+        # intertrack (division) edges there. Removing edges through the GraphView is
+        # slow because each remove_edge syncs the view's bidirectional edge maps,
+        # whereas rustworkx edge removal is in-memory. copy() preserves node indices,
+        # so components map back through the original graph's id mapping.
+        rx_copy = self.tracks.graph_solution.rx_graph.copy()
+        for node in rx_copy.node_indices():
+            if rx_copy.out_degree(node) >= 2:
+                for _, daughter, _ in list(rx_copy.out_edges(node)):
+                    rx_copy.remove_edge(node, daughter)
 
         track_id = 1
         all_node_ids = []
         all_track_ids = []
-        for tracklet in rx.weakly_connected_components(graph_copy.rx_graph):
-            node_ids_internal = list(tracklet)
-            node_ids_external = [graph_copy.node_ids()[nid] for nid in node_ids_internal]
+        for tracklet in rx.weakly_connected_components(rx_copy):
+            # Batched internal -> external mapping (see _assign_lineage_ids).
+            node_ids_external = self.tracks.graph_solution._map_to_external(list(tracklet))
             all_node_ids.extend(node_ids_external)
             all_track_ids.extend([track_id] * len(node_ids_external))
             self.tracklet_id_to_nodes[track_id] = node_ids_external
