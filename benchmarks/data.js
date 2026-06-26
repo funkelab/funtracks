@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1782327584704,
+  "lastUpdate": 1782484064047,
   "repoUrl": "https://github.com/funkelab/funtracks",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -1116,6 +1116,37 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 3.144728353000005 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "malinmayorc@janelia.hhmi.org",
+            "name": "Caroline Malin-Mayor",
+            "username": "cmalinmayor"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "38447a89d76a9ff061d67fb4bae8a18be05e4309",
+          "message": "Merge pull request #250 from funkelab/fix/subgroup-import-test-name-map\n\nProvide explicit node_name_map in test for subgroup export/import",
+          "timestamp": "2026-06-26T10:27:09-04:00",
+          "tree_id": "13a5c121b61c53a2e39a94dfeead11b5d6a3f43d",
+          "url": "https://github.com/funkelab/funtracks/commit/38447a89d76a9ff061d67fb4bae8a18be05e4309"
+        },
+        "date": 1782484061993,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_compute_graph_from_seg",
+            "value": 0.48412983360375805,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 2.065561613 sec\nrounds: 1"
           }
         ]
       }
