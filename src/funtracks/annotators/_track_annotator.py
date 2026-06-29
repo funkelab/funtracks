@@ -236,7 +236,9 @@ class TrackAnnotator(GraphAnnotator):
         all_track_ids = []
         for tracklet in rx.weakly_connected_components(rx_copy):
             # Batched internal -> external mapping (see _assign_lineage_ids).
-            node_ids_external = self.tracks.graph_solution._map_to_external(list(tracklet))
+            node_ids_external = self.tracks.graph_solution._map_to_external(
+                list(tracklet)
+            )
             all_node_ids.extend(node_ids_external)
             all_track_ids.extend([track_id] * len(node_ids_external))
             self.tracklet_id_to_nodes[track_id] = node_ids_external
