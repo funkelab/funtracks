@@ -27,7 +27,7 @@ def test_save_load(
         f"tests/data/format_v1/test_save_load_{prefill_track_ids}_{ndim}_{with_seg}_0"
     )
 
-    loaded = load_v1_tracks(data_path, solution=prefill_track_ids)
+    loaded = load_v1_tracks(data_path)
     assert loaded.ndim == ndim
     # Check feature keys and important properties match (allow tuple vs list diff)
     assert loaded.features.time_key == tracks.features.time_key
@@ -118,7 +118,7 @@ def test_load_without_features(tmp_path, graph_2d_with_segmentation):
     shutil.copytree(reference_path, tracks_path)
 
     # Load the original data first to verify it loads correctly
-    load_v1_tracks(tracks_path, solution=True)
+    load_v1_tracks(tracks_path)
 
     # Modify the copy to test backward compatibility
     attrs_path = tracks_path / "attrs.json"
