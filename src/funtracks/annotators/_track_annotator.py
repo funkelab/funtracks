@@ -25,9 +25,12 @@ DEFAULT_LINEAGE_KEY = "lineage_id"
 
 
 class TrackAnnotator(GraphAnnotator):
-    """A graph annotator to compute tracklet and lineage IDs for Tracks only.
+    """A graph annotator that computes tracklet and lineage IDs on the solution view.
 
-    Currently, updating the tracklet and lineage IDs is left to Actions.
+    Registered on every Tracks — track ids are a core feature, not a separate "type"
+    of tracks. It reads/iterates `graph_solution`; on an empty solution view it simply
+    computes nothing until nodes are added. Updating the ids after construction is left
+    to Actions.
 
     Attributes:
         tracklet_id_to_nodes (dict[int, list[int]]): A mapping from tracklet ids to
@@ -38,34 +41,13 @@ class TrackAnnotator(GraphAnnotator):
         max_lineage_id (int): the maximum lineage id used in the tracks
 
     Args:
-        tracks (Tracks): The tracks to be annotated. Must be a solution.
-        tracklet_key (str | None, optional): A key that already holds the tracklet ids
-            on the graph. If provided, must be there for every node and already hold
-            valid tracklet ids. Defaults to None.
-        lineage_key (str | None, optional): A key that already holds the lineage ids
-            on the graph. If provided, must be there for every node and already hold
-            valid lineage ids. Defaults to None.
-
-
-    Raises:
-        ValueError: if the provided Tracks are not Tracks (not a binary lineage
-            tree)
+        tracks (Tracks): The tracks to annotate.
+        tracklet_key (str | None, optional): The node attribute holding tracklet ids.
+            If the graph already holds valid ids under this key they are reused;
+            otherwise they are computed. Defaults to DEFAULT_TRACKLET_KEY.
+        lineage_key (str | None, optional): The node attribute holding lineage ids.
+            Same semantics as tracklet_key. Defaults to DEFAULT_LINEAGE_KEY.
     """
-
-    @classmethod
-    def can_annotate(cls, tracks) -> bool:
-        """Check if this annotator can annotate the given tracks.
-
-        Track ids are only meaningful when the tracks declares a tracklet_key (i.e.
-        it represents a solution). A None tracklet_key means a plain candidate graph.
-
-        Args:
-            tracks: The tracks to check compatibility with
-
-        Returns:
-            True if tracks.features.tracklet_key is set, False otherwise
-        """
-        return tracks.features.tracklet_key is not None
 
     @property
     def graph(self):

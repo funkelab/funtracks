@@ -101,17 +101,6 @@ def test_export_without_seg_on_tracks(get_tracks, tmp_path):
     assert "segmentation_shape" not in attrs
 
 
-@pytest.mark.parametrize("seg_relabel", ["tracklet", "lineage"])
-def test_export_seg_relabel_non_solution_raises(get_tracks, seg_relabel, tmp_path):
-    """Relabeling by tracklet/lineage on non-solution tracks raises ValueError."""
-    tracks = get_tracks(ndim=3, with_seg=True, is_solution=False)
-
-    export_dir = tmp_path / "export"
-    export_dir.mkdir()
-    with pytest.raises(ValueError):
-        export_to_geff(tracks, export_dir, seg_relabel=seg_relabel)
-
-
 def test_export_segmentation_non_solution(get_tracks, tmp_path):
     """Non-solution tracks export segmentation fine with seg_relabel=None."""
     tracks = get_tracks(ndim=3, with_seg=True, is_solution=False)

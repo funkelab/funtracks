@@ -100,13 +100,13 @@ class TestTrackAnnotator:
         assert tracks.get_node_attr(node_id, ann.lineage_key) != orig_lin
         assert tracks.get_node_attr(node_id, ann.tracklet_key) != orig_tra
 
-    def test_invalid(self, get_tracks, ndim, with_seg) -> None:
-        # A plain Tracks (no tracklet_key) is not a track-id candidate, so no
-        # TrackAnnotator is registered.
+    def test_always_has_track_annotator(self, get_tracks, ndim, with_seg) -> None:
+        # Every Tracks has a tracklet key and a registered TrackAnnotator, even when
+        # built without explicit track attributes (no "plain" vs "solution" split).
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=False)
-        assert tracks.features.tracklet_key is None
-        assert not TrackAnnotator.can_annotate(tracks)
-        assert tracks.track_annotator is None
+        assert tracks.features.tracklet_key is not None
+        assert tracks.features.lineage_key is not None
+        assert isinstance(tracks.track_annotator, TrackAnnotator)
 
     def test_ignores_irrelevant_actions(self, get_tracks, ndim, with_seg):
         """Test that TrackAnnotator ignores actions that don't affect track IDs."""

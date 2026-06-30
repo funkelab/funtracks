@@ -84,8 +84,6 @@ class UserUpdateSegmentation(ActionGroup):
             else:
                 time_key = tracks.features.time_key
                 tracklet_key = tracks.features.tracklet_key
-                if tracklet_key is None:
-                    raise ValueError("Track ID key is not set in tracks features")
                 attrs: dict[str, int] = {
                     time_key: time,
                     tracklet_key: current_track_id,

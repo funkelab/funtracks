@@ -17,6 +17,7 @@ from tracksdata.array import GraphArrayView
 from tracksdata.nodes import Mask
 
 from funtracks.actions.action_history import ActionHistory
+from funtracks.annotators import TrackAnnotator
 from funtracks.features import (
     Feature,
     FeatureDict,
@@ -90,11 +91,11 @@ class Tracks:
                 - List/tuple of strings for multi-axis (one attribute per axis)
                 Defaults to "pos" if None.
             tracklet_attr (str | None): Graph attribute name for tracklet/track IDs.
-                If set (non-None), a TrackAnnotator is registered and track ids are
-                computed/maintained. If None, this is a plain (candidate) Tracks with
-                no track ids.
-            lineage_attr (str | None): Graph attribute name for lineage IDs. Only used
-                when tracklet_attr is set.
+                Defaults to "tracklet_id" if None. Every Tracks gets a TrackAnnotator
+                and track ids (no "plain" vs "solution" distinction); existing ids on
+                the graph are reused, otherwise they are computed.
+            lineage_attr (str | None): Graph attribute name for lineage IDs.
+                Defaults to "lineage_id" if None.
             scale (list[float] | None): Scaling factors for each dimension (including
                 time). If None, all dimensions scaled by 1.0.
             ndim (int | None): Number of dimensions (3 for 2D+time, 4 for 3D+time).
@@ -190,6 +191,11 @@ class Tracks:
         else:
             self._setup_core_computed_features()
 
+        # 4. Enforce the track-id invariant on BOTH paths: every Tracks has a tracklet
+        # key and a registered TrackAnnotator, with tracklet_id/lineage_id registered
+        # and computed. A provided FeatureDict that omitted them is completed here.
+        self._ensure_track_features()
+
     @property
     def graph_full(self) -> td.graph.GraphView:
         """The full graph: every node/edge ever known, including soft-deleted
@@ -220,12 +226,10 @@ class Tracks:
                 - Single string: one attribute containing position array (e.g., "pos")
                 - List/tuple: multiple attributes, one per axis (e.g., ["y", "x"])
                 - None: defaults to "pos"
-            tracklet_key: Graph attribute name for tracklet/track IDs
-                (e.g., "tracklet_id"). Left None unless explicitly provided — a non-None
-                tracklet_key is the signal that this Tracks wants track ids (registers a
-                TrackAnnotator). No default is applied.
-            lineage_key: Graph attribute name for lineage IDs (e.g., "lineage_id").
-                Left None unless explicitly provided (see tracklet_key). No default.
+            tracklet_key: Graph attribute name for tracklet/track IDs.
+                Defaults to "tracklet_id" if None (every Tracks gets track ids).
+            lineage_key: Graph attribute name for lineage IDs.
+                Defaults to "lineage_id" if None.
 
         Returns:
             FeatureDict initialized with time feature and position if no segmentation
@@ -234,9 +238,11 @@ class Tracks:
         time_key = time_attr if time_attr is not None else "time"
         if pos_attr is None:
             pos_attr = "pos"
-        # tracklet_key / lineage_key are left None unless explicitly provided: a
-        # non-None tracklet_key is the signal that this Tracks wants track ids, which
-        # is what triggers TrackAnnotator registration (see TrackAnnotator.can_annotate).
+        # Every Tracks has a tracklet/lineage key (no "plain" vs "solution" split):
+        # default them like time/pos. _ensure_track_features() then registers and
+        # computes the ids; on an empty solution view that is a no-op.
+        tracklet_key = tracklet_key if tracklet_key is not None else "tracklet_id"
+        lineage_key = lineage_key if lineage_key is not None else "lineage_id"
 
         # Build static features dict - always include time
         features: dict[str, Feature] = {time_key: Time()}
@@ -304,7 +310,6 @@ class Tracks:
             AnnotatorRegistry,
             EdgeAnnotator,
             RegionpropsAnnotator,
-            TrackAnnotator,
         )
 
         annotator_list: list[GraphAnnotator] = []
@@ -361,15 +366,14 @@ class Tracks:
         return key in node_attrs
 
     def _setup_core_computed_features(self) -> None:
-        """Sets up core computed features (position, tracklet, lineage).
+        """Sets up core computed position features.
 
-        Registers position/tracklet/lineage features from annotators into
-        FeatureDict.  For each core feature:
-        - Activates any features that are detected to already exist on the graph
-        - Enables (computes) any features that don't exist yet
+        Registers the position feature from the RegionpropsAnnotator into the
+        FeatureDict, activating it if it already exists on the graph or computing it
+        otherwise. Track-id features are handled separately by _ensure_track_features.
         """
         # Import here to avoid circular dependency
-        from funtracks.annotators import RegionpropsAnnotator, TrackAnnotator
+        from funtracks.annotators import RegionpropsAnnotator
 
         core_features: list[str] = []
         for annotator in self.annotators:
@@ -378,14 +382,12 @@ class Tracks:
                 if self.features.position_key is None:
                     self.features.position_key = pos_key
                 core_features.append(pos_key)
-            elif isinstance(annotator, TrackAnnotator):
-                tracklet_key = annotator.tracklet_key
-                self.features.tracklet_key = tracklet_key
-                core_features.append(tracklet_key)
-                lineage_key = annotator.lineage_key
-                self.features.lineage_key = lineage_key
-                core_features.append(lineage_key)
-        for key in core_features:
+        self._register_core_features(core_features)
+
+    def _register_core_features(self, keys: list[str]) -> None:
+        """Register each key as a feature: activate it if it already exists on the
+        graph, otherwise enable (compute) it."""
+        for key in keys:
             if self._check_existing_feature(key):
                 if key not in self.features:
                     feature, _ = self.annotators.all_features[key]
@@ -393,6 +395,22 @@ class Tracks:
                 self.annotators.activate_features([key])
             else:
                 self.enable_features([key])
+
+    def _ensure_track_features(self) -> None:
+        """Ensure the track-id core features exist on this Tracks.
+
+        Every Tracks has a registered TrackAnnotator and a tracklet key (no "plain"
+        vs "solution" split). This syncs features.tracklet_key/lineage_key from the
+        annotator and registers + computes (or activates, if already present)
+        tracklet_id/lineage_id. Runs on both the provided-FeatureDict and the
+        auto-detect construction paths; a no-op on an empty solution view.
+        """
+        annotator = self.track_annotator
+        if annotator is None:
+            return
+        self.features.tracklet_key = annotator.tracklet_key
+        self.features.lineage_key = annotator.lineage_key
+        self._register_core_features([annotator.tracklet_key, annotator.lineage_key])
 
     def nodes(self):
         return np.array(self.graph_solution.node_ids())
@@ -826,28 +844,18 @@ class Tracks:
             self.graph_solution.remove_edge_attr_key(key)
 
     # ========== Track ID management (solution view) ==========
-    # These operate on the solution view via the TrackAnnotator. They are only
-    # meaningful when this Tracks has track ids (i.e. a tracklet_key is set and a
-    # TrackAnnotator is registered).
+    # These operate on the solution view via the TrackAnnotator, which every Tracks
+    # has (track ids are a core feature). On an empty solution view they are no-ops.
 
     @property
     def track_annotator(self):
-        """The registered TrackAnnotator, or None if this Tracks has no track ids."""
-        from funtracks.annotators import TrackAnnotator
-
+        """The registered TrackAnnotator. Always present (every Tracks has track ids);
+        returns None only in the degenerate case where no TrackAnnotator was
+        registered."""
         for annotator in self.annotators:
             if isinstance(annotator, TrackAnnotator):
                 return annotator
         return None
-
-    def _require_track_annotator(self):
-        annotator = self.track_annotator
-        if annotator is None:
-            raise ValueError(
-                "This Tracks has no TrackAnnotator (no tracklet_key set); track id "
-                "operations are unavailable."
-            )
-        return annotator
 
     @classmethod
     def from_tracks(cls, tracks: Tracks) -> Tracks:
@@ -885,11 +893,7 @@ class Tracks:
 
     @property
     def max_track_id(self) -> int:
-        return self._require_track_annotator().max_tracklet_id
-
-    @property
-    def track_id_to_node(self) -> dict[int, list[int]]:
-        return self._require_track_annotator().tracklet_id_to_nodes
+        return self.track_annotator.max_tracklet_id
 
     def get_next_track_id(self) -> int:
         """Return the next available track_id.
@@ -897,7 +901,7 @@ class Tracks:
         The max_tracklet_id in TrackAnnotator is updated automatically when
         a node is added or track IDs are updated via UpdateTrackIDs.
         """
-        return self._require_track_annotator().max_tracklet_id + 1
+        return self.track_annotator.max_tracklet_id + 1
 
     def get_next_lineage_id(self) -> int:
         """Return the next available lineage_id.
@@ -905,11 +909,9 @@ class Tracks:
         The max_lineage_id in TrackAnnotator is updated automatically when
         a node is added or lineage IDs are updated via UpdateTrackIDs.
         """
-        return self._require_track_annotator().max_lineage_id + 1
+        return self.track_annotator.max_lineage_id + 1
 
     def get_track_id(self, node) -> int:
-        if self.features.tracklet_key is None:
-            raise ValueError("Tracklet key not initialized in features")
         track_id = self.get_node_attr(node, self.features.tracklet_key)
         return track_id
 
@@ -918,8 +920,6 @@ class Tracks:
         NOTE: always fetches the entire graph internally. Optimised for bulk (all-node)
         calls. For small subsets or single nodes use get_track_id() instead."""
 
-        if self.features.tracklet_key is None:
-            raise ValueError("Tracklet key not initialized in features")
         tracklet_key = self.features.tracklet_key
         df = self.graph_solution.node_attrs(
             attr_keys=[td.DEFAULT_ATTR_KEYS.NODE_ID, tracklet_key]
@@ -963,13 +963,12 @@ class Tracks:
             track id, and the first node after time with the given track id,
             or Nones if there are no such nodes.
         """
-        annotator = self._require_track_annotator()
         if (
-            track_id not in annotator.tracklet_id_to_nodes
-            or len(annotator.tracklet_id_to_nodes[track_id]) == 0
+            track_id not in self.track_annotator.tracklet_id_to_nodes
+            or len(self.track_annotator.tracklet_id_to_nodes[track_id]) == 0
         ):
             return None, None
-        candidates = annotator.tracklet_id_to_nodes[track_id]
+        candidates = self.track_annotator.tracklet_id_to_nodes[track_id]
         candidates.sort(key=lambda n: self.get_time(n))
 
         pred = None
@@ -995,7 +994,7 @@ class Tracks:
         Returns:
             True if a node with given track id exists at given time point.
         """
-        nodes = self.track_id_to_node.get(track_id)
+        nodes = self.track_annotator.tracklet_id_to_nodes.get(track_id)
         if not nodes:
             return False
 

@@ -4,7 +4,8 @@ from funtracks.annotators import EdgeAnnotator, RegionpropsAnnotator, TrackAnnot
 from funtracks.data_model import Tracks
 
 track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
-# A plain (non-solution) Tracks declares no tracklet_attr, so no TrackAnnotator.
+# Even without an explicit tracklet_attr, every Tracks gets a TrackAnnotator and a
+# default tracklet key (no "plain" vs "solution" split).
 plain_attrs = {"time_attr": "t"}
 
 
@@ -22,17 +23,18 @@ def test_annotator_registry_init_with_segmentation(
     annotator_types = [type(ann) for ann in tracks.annotators]
     assert RegionpropsAnnotator in annotator_types
     assert EdgeAnnotator in annotator_types
-    assert TrackAnnotator not in annotator_types  # No tracklet_attr -> no track ids
+    assert TrackAnnotator in annotator_types  # every Tracks has track ids
 
 
 def test_annotator_registry_init_without_segmentation(graph_2d_with_position):
-    """Test AnnotatorRegistry doesn't create annotators without segmentation."""
+    """Without segmentation: no regionprops/edge annotators, but a TrackAnnotator is
+    still registered (track ids are a core feature of every Tracks)."""
     tracks = Tracks(graph_2d_with_position, ndim=3, **plain_attrs)
 
     annotator_types = [type(ann) for ann in tracks.annotators]
     assert RegionpropsAnnotator not in annotator_types
     assert EdgeAnnotator not in annotator_types
-    assert TrackAnnotator not in annotator_types
+    assert TrackAnnotator in annotator_types
 
 
 def test_annotator_registry_init_solution_tracks(

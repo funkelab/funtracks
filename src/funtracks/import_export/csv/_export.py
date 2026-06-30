@@ -210,7 +210,7 @@ def export_to_csv(
 
         track_id_to_hex = {}
 
-        for track_id, nodes in tracks.track_id_to_node.items():
+        for track_id, nodes in tracks.track_annotator.tracklet_id_to_nodes.items():
             if not nodes:
                 continue
             first_node = nodes[0]
