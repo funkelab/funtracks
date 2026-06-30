@@ -857,40 +857,6 @@ class Tracks:
                 return annotator
         return None
 
-    @classmethod
-    def from_tracks(cls, tracks: Tracks) -> Tracks:
-        """Return a Tracks with track ids, recomputing them if any are missing."""
-        force_recompute = False
-        # Check if all nodes have a value at features.tracklet_key before trusting
-        # existing track IDs
-        if (
-            tracks.features.tracklet_key is not None
-            and (
-                tracks.graph_solution.node_attrs(attr_keys=tracks.features.tracklet_key)[
-                    tracks.features.tracklet_key
-                ]
-                == -1
-            ).any()
-        ):
-            # Attributes are no longer None, so -1 now means non-computed
-            force_recompute = True
-
-        soln_tracks = cls(
-            tracks.graph_solution,
-            scale=tracks.scale,
-            ndim=tracks.ndim,
-            features=tracks.features,
-            _segmentation=tracks.segmentation,
-        )
-        if force_recompute:
-            soln_tracks.enable_features(
-                [
-                    soln_tracks.features.tracklet_key,  # type: ignore[list-item]
-                    soln_tracks.features.lineage_key,  # type: ignore[list-item]
-                ]
-            )
-        return soln_tracks
-
     @property
     def max_track_id(self) -> int:
         return self.track_annotator.max_tracklet_id
