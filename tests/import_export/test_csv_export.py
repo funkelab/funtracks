@@ -284,3 +284,41 @@ def test_export_solution_to_csv_with_seg_and_node_subset(
 
         expected_vals = {node_to_label[n] for n in graph_nodes}
         assert unique_vals == expected_vals
+
+
+def test_export_full_vs_solution(get_tracks, tmp_path):
+    """export_full=True includes soft-deleted (solution=False) nodes and surfaces the
+    'Solution' column; the default exports only the solution view."""
+    import pandas as pd
+
+    from funtracks.user_actions import UserDeleteNode
+
+    tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
+    # Soft-delete a leaf node: dropped from the solution view, kept in graph_full.
+    UserDeleteNode(tracks, 5)
+    sol_n = tracks.graph_solution.num_nodes()
+    full_n = tracks.graph_full.num_nodes()
+    assert full_n == sol_n + 1
+
+    # Default: solution view only — node 5 absent.
+    sol_file = tmp_path / "sol.csv"
+    export_to_csv(tracks, sol_file)
+    sol = pd.read_csv(sol_file)
+    assert len(sol) == sol_n
+    assert 5 not in set(sol["id"])
+
+    # export_full=True: full graph — node 5 present.
+    full_file = tmp_path / "full.csv"
+    export_to_csv(tracks, full_file, export_full=True)
+    full = pd.read_csv(full_file)
+    assert len(full) == full_n
+    assert 5 in set(full["id"])
+
+    # With display names, the full export carries a 'Solution' column distinguishing
+    # the soft-deleted node (False) from the rest (True).
+    disp_file = tmp_path / "full_disp.csv"
+    export_to_csv(tracks, disp_file, export_full=True, use_display_names=True)
+    disp = pd.read_csv(disp_file)
+    assert "Solution" in disp.columns
+    assert not bool(disp.loc[disp["ID"] == 5, "Solution"].iloc[0])
+    assert bool(disp.loc[disp["ID"] == 1, "Solution"].iloc[0])
