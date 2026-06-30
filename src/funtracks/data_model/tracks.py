@@ -53,10 +53,11 @@ class Tracks:
     position attribute. Edges in the graph represent links across time.
 
     Attributes:
-        graph_solution (td.graph.GraphView): A solution=True view of the full graph,
-            with nodes representing detections and edges representing links across time.
-        graph_full (td.graph.GraphView): The full graph: every node/edge ever known,
-            including soft-deleted (solution=False) ones. Backs graph_solution.
+        graph_full (td.graph.BaseGraph): The full graph (first-class): every node/edge
+            ever known, including soft-deleted (solution=False) candidates. Nodes
+            represent detections, edges represent links across time.
+        graph_solution (td.graph.GraphView): A solution==True view derived from
+            graph_full; the user-visible tracking solution.
         features (FeatureDict): Dictionary of features tracked on graph nodes/edges.
         annotators (AnnotatorRegistry): List of annotators that compute features.
         scale (list[float] | None): How much to scale each dimension by, including time.
@@ -68,7 +69,7 @@ class Tracks:
 
     def __init__(
         self,
-        graph: td.graph.GraphView,
+        graph: td.graph.BaseGraph,
         time_attr: str | None = None,
         pos_attr: str | tuple[str, ...] | list[str] | None = None,
         tracklet_attr: str | None = None,
@@ -81,8 +82,9 @@ class Tracks:
         """Initialize a Tracks object.
 
         Args:
-            graph (td.graph.GraphView): tracksdata directed graph with nodes as detections
-                and edges as links.
+            graph (td.graph.BaseGraph): the full base graph (graph_full) with nodes as
+                detections and edges as links. Must be a base graph, not a view;
+                graph_solution is built internally as its solution==True view.
             time_attr (str | None): Graph attribute name for time. Defaults to "time"
                 if None.
             pos_attr (str | tuple[str, ...] | list[str] | None): Graph attribute
@@ -108,20 +110,23 @@ class Tracks:
             _segmentation (GraphArrayView | None): Internal parameter for reusing an
                 existing GraphArrayView instance. Not intended for public use.
         """
-        self.graph_solution = graph
-        # Depth-1 invariant: graph_full is defined as graph_solution._root (one hop),
-        # so the root must be a base graph, NOT itself a GraphView. A nested view
-        # (base -> crop -> solution) would silently make graph_full mean "the crop"
-        # instead of "every node ever known", breaking the AddNode revive-vs-new check
-        # (graph_full.has_node) and any annotator registered on graph_full. Fail loudly
-        # rather than corrupt data if cropping is ever introduced upstream.
-        if isinstance(graph._root, td.graph.GraphView):
+        # graph_full is the first-class object: the base graph holding every node/edge
+        # ever known, including soft-deleted (solution=False) candidates. graph_solution
+        # is derived from it as a solution==True view.
+        if isinstance(graph, td.graph.GraphView):
             raise ValueError(
-                "Tracks requires graph_solution to be a direct view of a base graph "
-                "(graph_solution._root must not itself be a GraphView). A nested view "
-                "chain (e.g. a crop of a crop) violates the depth-1 assumption that "
-                "graph_full = graph_solution._root is the full graph."
+                "Tracks requires the full base graph (graph_full), not a GraphView. "
+                "graph_solution is built internally as a solution==True view of it."
             )
+        if "solution" not in graph.node_attr_keys():
+            graph.add_node_attr_key("solution", default_value=True, dtype=pl.Boolean)
+        if "solution" not in graph.edge_attr_keys():
+            graph.add_edge_attr_key("solution", default_value=True, dtype=pl.Boolean)
+        self.graph_full = graph
+        self.graph_solution = graph.filter(
+            td.NodeAttr("solution") == True,  # noqa: E712
+            td.EdgeAttr("solution") == True,  # noqa: E712
+        ).subgraph()
         if _segmentation is not None:
             # Reuse provided segmentation instance (internal use only)
             self.segmentation = _segmentation
@@ -133,8 +138,10 @@ class Tracks:
             seg_shape = graph.metadata.get("segmentation_shape")
             if seg_shape is not None:
                 try:
+                    # Render the segmentation from the solution view so soft-deleted
+                    # nodes drop out of the array, mirroring the user-visible graph.
                     array_view = GraphArrayView(
-                        graph=graph,
+                        graph=self.graph_solution,
                         shape=seg_shape,
                         attr_key="node_id",
                         offset=0,
@@ -195,16 +202,6 @@ class Tracks:
         # key and a registered TrackAnnotator, with tracklet_id/lineage_id registered
         # and computed. A provided FeatureDict that omitted them is completed here.
         self._ensure_track_features()
-
-    @property
-    def graph_full(self) -> td.graph.GraphView:
-        """The full graph: every node/edge ever known, including soft-deleted
-        (solution=False) ones. `graph_solution` is a solution=True view of this.
-
-        Backed by the solution view's root, so the two can never drift: rebuilding
-        graph_solution via graph_full.filter(...).subgraph() keeps the same root.
-        """
-        return self.graph_solution._root
 
     def _get_feature_set(
         self,

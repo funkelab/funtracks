@@ -10,7 +10,7 @@ from funtracks.actions import (
 )
 from funtracks.data_model import Tracks
 from funtracks.features import FeatureDict, LineageID, Position, Time, TrackletID
-from funtracks.utils.tracksdata_utils import create_empty_graphview_graph
+from funtracks.utils.tracksdata_utils import create_empty_graph
 
 iou_key = "iou"
 
@@ -179,7 +179,7 @@ def test_add_edge_with_unregistered_edge_attr(tmp_path):
     # Build a graph with "custom_score" on every edge.
     # This mirrors what the motile solver does: it writes edge attributes directly
     # to the graph without going through tracks.add_feature().
-    graph = create_empty_graphview_graph(
+    graph = create_empty_graph(
         node_attributes=["pos", "track_id", "lineage_id"],
         edge_attributes=["custom_score"],
         database=db_path,

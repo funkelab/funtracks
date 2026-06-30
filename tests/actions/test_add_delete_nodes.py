@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+import tracksdata as td
 from numpy.testing import assert_array_almost_equal, assert_array_equal
 from polars.testing import assert_frame_equal
 from tracksdata.array import GraphArrayView
@@ -10,7 +11,7 @@ from funtracks.actions import (
 )
 from funtracks.utils.tracksdata_utils import (
     assert_node_attrs_equal_with_masks,
-    create_empty_graphview_graph,
+    create_empty_graph,
 )
 
 from ..conftest import make_2d_disk_mask, make_3d_sphere_mask
@@ -32,13 +33,19 @@ def test_add_delete_nodes(get_tracks, ndim, with_seg):
         tracks.features.position_key,
     ]
     edge_attributes = ["iou"] if with_seg else []
-    empty_graph = create_empty_graphview_graph(
+    empty_graph = create_empty_graph(
         node_attributes=node_attributes + (["area", "bbox", "mask"] if with_seg else []),
         edge_attributes=edge_attributes,
         ndim=ndim,
     )
     empty_seg = np.zeros_like(tracks.segmentation) if with_seg else None
-    tracks.graph_solution = empty_graph
+    # Reset the tracks onto the empty base graph, mirroring Tracks.__init__: graph_full
+    # is the base graph, graph_solution its solution==True view.
+    tracks.graph_full = empty_graph
+    tracks.graph_solution = empty_graph.filter(
+        td.NodeAttr("solution") == True,  # noqa: E712
+        td.EdgeAttr("solution") == True,  # noqa: E712
+    ).subgraph()
     segmentation_shape = (5, 100, 100) if ndim == 3 else (5, 100, 100, 100)
     tracks.segmentation = (
         GraphArrayView(
@@ -96,9 +103,10 @@ def test_add_delete_nodes(get_tracks, ndim, with_seg):
             check_dtypes=False,
         )
 
-    # Invert the action to delete all the nodes
+    # Invert the action to delete all the nodes. They are soft-deleted, so they remain
+    # in graph_full (empty_graph) with solution=False but drop out of the solution view.
     del_nodes = action.inverse()
-    assert set(tracks.graph_solution.node_ids()) == set(empty_graph.node_ids())
+    assert set(tracks.graph_solution.node_ids()) == set()
     if with_seg:
         assert_array_almost_equal(tracks.segmentation, empty_seg)
 

@@ -8,7 +8,7 @@ from geff.testing.data import create_mock_geff
 from funtracks.data_model import Tracks
 from funtracks.import_export import export_to_geff, import_from_geff
 from funtracks.import_export.geff._import import GeffTracksBuilder, import_graph_from_geff
-from funtracks.utils.tracksdata_utils import create_empty_graphview_graph
+from funtracks.utils.tracksdata_utils import create_empty_graph
 
 
 @pytest.fixture
@@ -472,7 +472,7 @@ def test_import_from_geff_roundtrip_auto_axes(tmp_path):
     import tracksdata as td
     from tracksdata.nodes import Mask
 
-    graph = create_empty_graphview_graph(
+    graph = create_empty_graph(
         node_attributes=[
             "pos",
             "area",
@@ -602,7 +602,7 @@ def test_import_from_geff_warns_missing_segmentation_shape(tmp_path):
     import tracksdata as td
     import zarr as _zarr
 
-    graph = create_empty_graphview_graph(
+    graph = create_empty_graph(
         node_attributes=[
             "pos",
             td.DEFAULT_ATTR_KEYS.MASK,
@@ -748,7 +748,7 @@ def test_3d_pos_survives_sql_roundtrip(tmp_path):
     """Regression test: 3D pos (z, y, x) must keep Array dtype through SQL roundtrip.
 
     The construct_graph() method must pass the correct ndim to
-    create_empty_graphview_graph() so the pos schema is Array(Float64, 3) not
+    create_empty_graph() so the pos schema is Array(Float64, 3) not
     Array(Float64, 2). A schema mismatch causes SQLGraph.from_other() to
     downgrade the column to List(Float64), which breaks downstream callers that
     rely on to_numpy() returning a 2D float64 array.
@@ -878,7 +878,7 @@ def test_embedded_seg_ellipse_axis_radii_feature_metadata(tmp_path):
         td.DEFAULT_ATTR_KEYS.BBOX,
     ]
     # node_default_values must align with node_attributes by index.
-    # pos/mask/bbox are handled by special cases in create_empty_graphview_graph
+    # pos/mask/bbox are handled by special cases in create_empty_graph
     # and their slot values here are never accessed; only area, ellipse_axis_radii,
     # track_id, and lineage_id go through the general loop.
     node_default_values = [
@@ -890,7 +890,7 @@ def test_embedded_seg_ellipse_axis_radii_feature_metadata(tmp_path):
         None,  # mask — special-cased, slot unused
         None,  # bbox — special-cased, slot unused
     ]
-    graph = create_empty_graphview_graph(
+    graph = create_empty_graph(
         node_attributes=node_attributes,
         node_default_values=node_default_values,
         edge_attributes=[],
@@ -1005,7 +1005,7 @@ def test_featuredict_survives_geff_roundtrip(tmp_path):
         None,  # mask — special-cased, slot unused
         None,  # bbox — special-cased, slot unused
     ]
-    graph = create_empty_graphview_graph(
+    graph = create_empty_graph(
         node_attributes=node_attributes,
         node_default_values=node_default_values,
         edge_attributes=[],
@@ -1170,7 +1170,7 @@ def test_import_from_geff_respects_external_solution_column(tmp_path):
     # Separate y/x columns (not a 2-D 'pos' array) so tracksdata's to_geff
     # registers them as space-typed axes — required to exercise the
     # axes-branch of GeffTracksBuilder.infer_node_name_map.
-    graph = create_empty_graphview_graph(
+    graph = create_empty_graph(
         node_attributes=["y", "x"], position_attrs=["y", "x"], ndim=3
     )
     graph.bulk_add_nodes(
@@ -1182,11 +1182,10 @@ def test_import_from_geff_respects_external_solution_column(tmp_path):
         indices=[1, 2, 3],
     )
 
-    # Export the root graph, not the filtered solution-only view, so the
-    # solution=False row survives into the geff (mimicking a solver-produced
-    # geff with rejected nodes).
+    # Export the full base graph so the solution=False row survives into the geff
+    # (mimicking a solver-produced geff with rejected nodes).
     tracks_path = tmp_path / "tracks.geff"
-    graph._root.to_geff(geff_store=tracks_path, zarr_format=2)
+    graph.to_geff(geff_store=tracks_path, zarr_format=2)
 
     tracks = import_from_geff(tracks_path)
 

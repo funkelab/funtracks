@@ -46,11 +46,11 @@ def load_segmentation(segmentation: Path | np.ndarray | da.Array) -> da.Array:
 
 def relabel_segmentation(
     seg_array: da.Array | np.ndarray,
-    graph: td.graph.GraphView,
+    graph: td.graph.BaseGraph,
     node_ids: ArrayLike,
     seg_ids: ArrayLike,
     time_values: ArrayLike,
-) -> tuple[np.ndarray, td.graph.GraphView]:
+) -> tuple[np.ndarray, td.graph.BaseGraph]:
     """Relabel segmentation from seg_id to node_id.
 
     Handles the case where node_id 0 exists by offsetting all node IDs by 1,
@@ -58,7 +58,7 @@ def relabel_segmentation(
 
     Args:
         seg_array: Segmentation array (dask or numpy)
-        graph: tracksdata GraphView (will be relabeled if node_id 0 exists)
+        graph: tracksdata base graph (will be relabeled if node_id 0 exists)
         node_ids: Array of node IDs
         seg_ids: Array of segmentation IDs corresponding to each node
         time_values: Array of time values for each node

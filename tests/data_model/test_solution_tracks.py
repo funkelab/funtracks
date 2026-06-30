@@ -6,7 +6,7 @@ from funtracks.data_model import Tracks
 from funtracks.import_export import export_to_csv
 from funtracks.user_actions import UserUpdateSegmentation
 from funtracks.utils.tracksdata_utils import (
-    create_empty_graphview_graph,
+    create_empty_graph,
     td_mask_to_pixels,
 )
 
@@ -51,7 +51,7 @@ def test_update_segmentation(graph_2d_with_segmentation):
 
 
 def test_next_track_id_empty():
-    graph = create_empty_graphview_graph(
+    graph = create_empty_graph(
         node_attributes=["pos", "track_id"],
         edge_attributes=[],
     )

@@ -54,7 +54,7 @@ An abstract base class for components that compute and update features on a grap
 |-----------|---------|--------------|-------------------|---------------|
 | **RegionpropsAnnotator** | Extracts node features from segmentation using scikit-image's `regionprops` | `segmentation` must not be `None` | `pos`, `area`, `ellipse_axis_radii`, `circularity`, `perimeter` | [📚 API](../reference/funtracks/annotators/#funtracks.annotators.RegionpropsAnnotator) |
 | **EdgeAnnotator** | Computes edge features based on segmentation overlap between consecutive time frames | `segmentation` must not be `None` | `iou` (Intersection over Union) | [📚 API](../reference/funtracks/annotators/#funtracks.annotators.EdgeAnnotator) |
-| **TrackAnnotator** | Computes tracklet and lineage IDs for SolutionTracks | Must be used with `SolutionTracks` (binary tree structure) | `tracklet_id`, `lineage_id` | [📚 API](../reference/funtracks/annotators/#funtracks.annotators.TrackAnnotator) |
+| **TrackAnnotator** | Computes tracklet and lineage IDs | Requires `tracks.features.tracklet_key` to be set (i.e. a tracking solution with a binary-tree structure) | `tracklet_id`, `lineage_id` | [📚 API](../reference/funtracks/annotators/#funtracks.annotators.TrackAnnotator) |
 
 ### 5. AnnotatorRegistry
 
@@ -149,7 +149,8 @@ classDiagram
     }
 
     class Tracks {
-        +graph: td.graph.GraphView
+        +graph_full: td.graph.BaseGraph
+        +graph_solution: td.graph.GraphView
         +segmentation: ndarray|None
         +features: FeatureDict
         +annotators: AnnotatorRegistry
@@ -199,10 +200,10 @@ provided:
 
 ```python
 # Uses default: tracklet_key="tracklet_id"
-tracks = SolutionTracks(graph=graph)
+tracks = Tracks(graph=graph, tracklet_attr="tracklet_id")
 
 # Uses custom attribute name
-tracks = SolutionTracks(graph=graph, tracklet_attr="my_track_col")
+tracks = Tracks(graph=graph, tracklet_attr="my_track_col")
 ```
 
 Custom attribute names are also supported through `FeatureDict`:
@@ -213,7 +214,7 @@ fd = FeatureDict(
     tracklet_key="my_track_col",
     lineage_key="my_lineage",
 )
-tracks = SolutionTracks(graph=graph, features=fd)
+tracks = Tracks(graph=graph, features=fd)
 ```
 
 When a `FeatureDict` is provided, the `tracklet_attr`/`pos_attr`/`time_attr` arguments
@@ -229,7 +230,7 @@ TrackAnnotator(tracks, tracklet_key="my_track", lineage_key="my_lineage")
 RegionpropsAnnotator(tracks, pos_key="coordinates")
 ```
 
-When constructing `Tracks` or `SolutionTracks` directly, you have full control over
+When constructing `Tracks` directly, you have full control over
 which attribute names are used.
 
 **Through the import path** (`tracks_from_df`, `import_from_geff`), computed features
@@ -286,11 +287,11 @@ tracks = tracks_from_df(df, segmentation=seg)
 
 **Scenario 2: Creating tracks from raw segmentation**
 ```python
-from funtracks.utils import create_empty_graphview_graph
+from funtracks.utils import create_empty_graph
 from funtracks.data_model import Tracks
 
 # Create empty graph and add nodes
-graph = create_empty_graphview_graph()
+graph = create_empty_graph()
 graph.add_node(index=1, attrs={"t": 0})
 tracks = Tracks(graph, segmentation=seg)
 # Auto-detection: pos, area don't exist → compute them from segmentation

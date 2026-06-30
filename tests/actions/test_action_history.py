@@ -1,14 +1,14 @@
 from funtracks.actions import AddNode
 from funtracks.actions.action_history import ActionHistory
 from funtracks.data_model import Tracks
-from funtracks.utils.tracksdata_utils import create_empty_graphview_graph
+from funtracks.utils.tracksdata_utils import create_empty_graph
 
 # https://github.com/zaboople/klonk/blob/master/TheGURQ.md
 
 
 def test_action_history():
     history = ActionHistory()
-    empty_graph = create_empty_graphview_graph(
+    empty_graph = create_empty_graph(
         node_attributes=["track_id", "pos"],
         edge_attributes=[],
     )

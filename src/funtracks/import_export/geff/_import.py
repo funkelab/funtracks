@@ -243,7 +243,7 @@ class GeffTracksBuilder(TracksBuilder):
         self,
         node_name_map: dict[str, str | list[str]] | None = None,
         database: str | None = None,
-    ) -> td.graph.GraphView:
+    ) -> td.graph.BaseGraph:
         """Construct graph and prepare embedded segmentation data.
 
         The GEFF format serialises mask data as plain numeric arrays (zarr
