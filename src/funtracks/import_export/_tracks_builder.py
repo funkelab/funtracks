@@ -782,23 +782,14 @@ class TracksBuilder(ABC):
             )
         else:
             # The builder always produces a solution, so declare tracklet/lineage
-            # intent to register a TrackAnnotator. Use the attr name present on the
-            # constructed graph; fall back to the default keys (computed from scratch)
-            # when the source carried no track ids.
-            node_keys = graph.node_attr_keys()
-            tracklet_attr = next(
-                (k for k in ("tracklet_id", "track_id") if k in node_keys),
-                "tracklet_id",
-            )
-            lineage_attr = next(
-                (k for k in ("lineage_id",) if k in node_keys), "lineage_id"
-            )
+            # intent to register a TrackAnnotator. Tracks.__init__ auto-detects whether
+            # these attrs already exist on the graph (activate) or need computing.
             tracks = Tracks(
                 graph=graph,
                 pos_attr="pos",
                 time_attr="t",
-                tracklet_attr=tracklet_attr,
-                lineage_attr=lineage_attr,
+                tracklet_attr="tracklet_id",
+                lineage_attr="lineage_id",
                 ndim=self.ndim,
                 scale=scale,
             )
