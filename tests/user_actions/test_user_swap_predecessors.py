@@ -10,7 +10,7 @@ class TestUserSwapPredecessors:
     @pytest.mark.parametrize("order", [(5, 6), (6, 5)])
     def test_one_predecessor(self, get_tracks, ndim, with_seg, order):
         """Test swapping when one node has a predecessor and one doesn't."""
-        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
 
         # Node 5 (t=4) has pred 4, node 6 (t=4) has no pred
         assert tracks.graph_solution.has_edge(4, 5)
@@ -33,7 +33,7 @@ class TestUserSwapPredecessors:
 
     def test_same_predecessor_raises(self, get_tracks, ndim, with_seg):
         """Test error when both nodes have the same predecessor."""
-        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
 
         # Nodes 2 and 3 both have predecessor 1
         with pytest.raises(InvalidActionError, match="same predecessor"):
@@ -41,7 +41,7 @@ class TestUserSwapPredecessors:
 
     def test_different_predecessors(self, get_tracks, ndim, with_seg):
         """Test swapping when both nodes have different predecessors."""
-        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
 
         UserAddEdge(tracks, (2, 6))
 
@@ -64,7 +64,7 @@ class TestUserSwapPredecessors:
 
     def test_different_times_valid(self, get_tracks, ndim, with_seg):
         """Test swapping nodes at different times when predecessors are valid."""
-        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
 
         # Add edge 2->6 so node 6 (t=4) has pred 2 (t=1)
         # Node 4 (t=2) has pred 3 (t=1)
@@ -84,7 +84,7 @@ class TestUserSwapPredecessors:
 
     def test_different_times_invalid_raises(self, get_tracks, ndim, with_seg):
         """Test error when predecessor would not be before swapped node."""
-        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
 
         # Node 3 (t=1) has pred 1 (t=0), node 4 (t=2) has pred 3 (t=1)
         # pred of 4 (t=1) is not before node 3 (t=1)
@@ -93,7 +93,7 @@ class TestUserSwapPredecessors:
 
     def test_wrong_count_raises(self, get_tracks, ndim, with_seg):
         """Test error when not exactly two nodes provided."""
-        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
 
         with pytest.raises(
             InvalidActionError, match="You can only swap a pair of two nodes"
@@ -107,7 +107,7 @@ class TestUserSwapPredecessors:
 
     def test_no_predecessors_raises(self, get_tracks, ndim, with_seg):
         """Test error when neither node has a predecessor."""
-        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
 
         # Delete edge so node 5 has no predecessor like node 6
         UserDeleteEdge(tracks, (4, 5))

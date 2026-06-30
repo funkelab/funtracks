@@ -18,7 +18,7 @@ def _annotator(tracks, cls):
 
 @pytest.mark.parametrize("ndim", [3, 4])
 def test_regionprops_persist_and_recompute_on_soft_deleted_node(get_tracks, ndim):
-    tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
+    tracks = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
     rp_ann = _annotator(tracks, RegionpropsAnnotator)
     tracks.enable_features(["pos", "area"])
     rp_ann.compute(["area"])
@@ -45,7 +45,7 @@ def test_regionprops_persist_and_recompute_on_soft_deleted_node(get_tracks, ndim
 
 @pytest.mark.parametrize("ndim", [3, 4])
 def test_iou_computed_on_soft_deleted_candidate_edge(get_tracks, ndim):
-    tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
+    tracks = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
     edge_ann = _annotator(tracks, EdgeAnnotator)
     tracks.enable_features(["iou"])
     edge_ann.compute(["iou"])

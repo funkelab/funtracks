@@ -18,7 +18,7 @@ iou_key = "iou"
 @pytest.mark.parametrize("ndim", [3, 4])
 @pytest.mark.parametrize("with_seg", [True, False])
 def test_add_delete_edges(get_tracks, ndim, with_seg):
-    tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+    tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
     reference_graph = tracks.graph_solution
     reference_seg = np.asarray(tracks.segmentation).copy()
 
@@ -80,7 +80,7 @@ def test_add_delete_edges(get_tracks, ndim, with_seg):
 
 
 def test_add_edge_missing_endpoint(get_tracks):
-    tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
     with pytest.raises(
         ValueError, match="Cannot add edge .*: endpoint .* not in solution"
     ):
@@ -88,7 +88,7 @@ def test_add_edge_missing_endpoint(get_tracks):
 
 
 def test_delete_missing_edge(get_tracks):
-    tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
     with pytest.raises(
         ValueError, match="Edge .* not in the graph, and cannot be removed"
     ):
@@ -101,7 +101,7 @@ def test_custom_edge_attributes_preserved(get_tracks, ndim, with_seg):
     """Test custom edge attributes preserved through add/delete/re-add cycles."""
     from funtracks.features import Feature
 
-    tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+    tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
 
     # Register custom edge features so they get saved by DeleteEdge
     custom_features = {

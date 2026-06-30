@@ -20,7 +20,7 @@ from ..conftest import make_2d_disk_mask, make_3d_sphere_mask
 @pytest.mark.parametrize("with_seg", [True, False])
 def test_add_delete_nodes(get_tracks, ndim, with_seg):
     # Get a tracks instance
-    tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+    tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
     reference_graph = tracks.graph_solution
     reference_seg = np.asarray(tracks.segmentation).copy() if with_seg else None
 
@@ -121,19 +121,19 @@ def test_add_delete_nodes(get_tracks, ndim, with_seg):
 
 
 def test_add_node_missing_time(get_tracks):
-    tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
     with pytest.raises(ValueError, match="Must provide a time attribute for node"):
         AddNode(tracks, 8, {})
 
 
 def test_add_node_missing_pos(get_tracks):
-    tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
     # First test: missing track_id raises an error
     with pytest.raises(ValueError, match="Must provide a track_id attribute for node"):
         AddNode(tracks, 8, {"t": 2})
 
     # Second test: with track_id but without segmentation, missing pos raises an error
-    tracks_no_seg = get_tracks(ndim=3, with_seg=False, is_solution=True)
+    tracks_no_seg = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
     with pytest.raises(
         ValueError, match="Must provide position or segmentation for node"
     ):
@@ -146,7 +146,7 @@ def test_custom_attributes_preserved(get_tracks, ndim, with_seg):
     """Test custom node attributes preserved through add/delete/re-add cycles."""
     from funtracks.features import Feature
 
-    tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+    tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
 
     # Register custom features so they get saved by DeleteNode
     custom_features = {

@@ -16,7 +16,7 @@ from funtracks.user_actions import (
 @pytest.mark.parametrize("with_seg", [True, False])
 class TestTrackAnnotator:
     def test_init(self, get_tracks, ndim, with_seg) -> None:
-        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
         ann = TrackAnnotator(tracks)
         # Features start disabled by default
         assert len(ann.all_features) == 2
@@ -32,7 +32,7 @@ class TestTrackAnnotator:
         assert ann.max_tracklet_id == 5
 
     def test_compute_all(self, get_tracks, ndim, with_seg) -> None:
-        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
 
         ann = TrackAnnotator(tracks, tracklet_key=tracks.features.tracklet_key)
         # Enable features
@@ -69,7 +69,7 @@ class TestTrackAnnotator:
             assert len({id_set[0] for id_set in id_sets}) == len(id_sets)
 
     def test_add_remove_feature(self, get_tracks, ndim, with_seg):
-        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
         ann = TrackAnnotator(tracks, tracklet_key=tracks.features.tracklet_key)
         # Enable features
         ann.activate_features(list(ann.all_features.keys()))
@@ -103,7 +103,7 @@ class TestTrackAnnotator:
     def test_always_has_track_annotator(self, get_tracks, ndim, with_seg) -> None:
         # Every Tracks has a tracklet key and a registered TrackAnnotator, even when
         # built without explicit track attributes (no "plain" vs "solution" split).
-        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=False)
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=False)
         assert tracks.features.tracklet_key is not None
         assert tracks.features.lineage_key is not None
         assert isinstance(tracks.track_annotator, TrackAnnotator)
@@ -113,7 +113,7 @@ class TestTrackAnnotator:
         if not with_seg:
             pytest.skip("Test requires segmentation")
 
-        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
         tracks.enable_features(["area", tracks.features.tracklet_key])
 
         node_id = 3
@@ -135,7 +135,7 @@ class TestTrackAnnotator:
     def test_lineage_id_updated_on_add_and_delete_edge(
         self, get_tracks, ndim, with_seg
     ) -> None:
-        tracks = get_tracks(ndim=3, with_seg=False, is_solution=True)
+        tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
         tracks.enable_features(["lineage_id"])
 
         # get the existing TrackAnnotator
@@ -208,7 +208,7 @@ class TestTrackAnnotator:
         - New child (6): keeps same track_id, gets source's lineage_id
         """
         # Graph structure: 1 → 2, 1 → 3 → 4 → 5, and 6 (separate)
-        tracks = get_tracks(ndim=3, with_seg=False, is_solution=True)
+        tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
         tracks.enable_features(["lineage_id"])
         ann = next(a for a in tracks.annotators if isinstance(a, TrackAnnotator))
 
@@ -257,7 +257,7 @@ class TestTrackAnnotator:
         - Orphaned child (2): keeps same track_id, gets new lineage_id
         """
         # Graph structure: 1 → 2, 1 → 3 → 4 → 5, and 6 (separate)
-        tracks = get_tracks(ndim=3, with_seg=False, is_solution=True)
+        tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
         tracks.enable_features(["lineage_id"])
         ann = next(a for a in tracks.annotators if isinstance(a, TrackAnnotator))
 
@@ -289,7 +289,7 @@ class TestTrackAnnotator:
 
     def test_disabled_tracklet_key_does_nothing(self, get_tracks, ndim, with_seg) -> None:
         """Test that TrackAnnotator does nothing when tracklet_key is disabled."""
-        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
         ann = TrackAnnotator(tracks)
 
         # Don't activate any features - they should all be disabled

@@ -16,7 +16,7 @@ from funtracks.import_export import export_to_csv
 )
 def test_export_solution_to_csv(get_tracks, tmp_path, ndim, expected_header):
     """Test exporting tracks to CSV."""
-    tracks = get_tracks(ndim=ndim, with_seg=False, is_solution=True)
+    tracks = get_tracks(ndim=ndim, with_seg=False, prefill_track_ids=True)
     temp_file = tmp_path / "test_export.csv"
     export_to_csv(tracks, temp_file)
 
@@ -46,7 +46,7 @@ def test_export_solution_to_csv_with_seg_zarr(
     get_tracks, tmp_path, ndim, expected_header
 ):
     """Test exporting tracks to CSV + segmentation painted by track_id as zarr."""
-    tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
+    tracks = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
     temp_file = tmp_path / "test_export.csv"
     seg_dir = tmp_path / "test_export_seg"
     export_to_csv(tracks, temp_file, export_seg=True, seg_path=seg_dir)
@@ -75,7 +75,7 @@ def test_export_solution_to_csv_with_seg_zarr(
 @pytest.mark.parametrize("ndim", [3, 4], ids=["2d", "3d"])
 def test_export_solution_to_csv_with_seg_tiff(get_tracks, tmp_path, ndim):
     """Test exporting tracks to CSV + segmentation as tiff painted by tracklet ID."""
-    tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
+    tracks = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
     temp_file = tmp_path / "test_export.csv"
     seg_file = tmp_path / "test_export_seg.tif"
     export_to_csv(
@@ -102,7 +102,7 @@ def test_export_solution_to_csv_with_seg_tiff(get_tracks, tmp_path, ndim):
 @pytest.mark.parametrize("ndim", [3, 4], ids=["2d", "3d"])
 def test_export_solution_to_csv_with_seg_original_labels(get_tracks, tmp_path, ndim):
     """Test exporting tracks to CSV + segmentation with original (node_id) labels."""
-    tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
+    tracks = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
     temp_file = tmp_path / "test_export.csv"
     seg_dir = tmp_path / "test_export_seg"
     export_to_csv(
@@ -128,7 +128,7 @@ def test_export_with_color_dict(get_tracks, tmp_path):
     """Test exporting with a color_dict adds a Tracklet ID Color column."""
     import numpy as np
 
-    tracks = get_tracks(ndim=3, with_seg=False, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
     temp_file = tmp_path / "test_export_colors.csv"
 
     # Build a color dict: node_id → [R, G, B] floats in [0, 1]
@@ -150,7 +150,7 @@ def test_export_with_color_dict(get_tracks, tmp_path):
 
 def test_export_with_display_names(get_tracks, tmp_path):
     """Test exporting with display names."""
-    tracks = get_tracks(ndim=3, with_seg=False, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
     temp_file = tmp_path / "test_export_display.csv"
     export_to_csv(tracks, temp_file, use_display_names=True)
 
@@ -165,7 +165,7 @@ def test_export_with_display_names(get_tracks, tmp_path):
 
 def test_export_filtered_nodes(get_tracks, tmp_path):
     """Test exporting only specific nodes."""
-    tracks = get_tracks(ndim=3, with_seg=False, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
     temp_file = tmp_path / "test_export_filtered.csv"
 
     # Export only nodes 1 and 2 (and their ancestors)
@@ -181,7 +181,7 @@ def test_export_filtered_nodes(get_tracks, tmp_path):
 def test_ignore_edge_features_at_export(get_tracks, tmp_path):
     """Test that edge features are ignored when exporting to csv"""
 
-    tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
     temp_file = tmp_path / "test_export_node_features_only.csv"
 
     # enable node and edge features
@@ -213,7 +213,7 @@ def test_export_solution_to_csv_with_seg_and_node_subset(
     and segmentation must only include the resulting graph nodes, and nothing else.
     """
 
-    tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
 
     csv_file = tmp_path / "export.csv"
     seg_path = tmp_path / "seg"

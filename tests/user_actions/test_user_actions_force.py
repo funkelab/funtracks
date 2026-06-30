@@ -7,7 +7,7 @@ def test_user_force_add_downstream(get_tracks):
     """Test force adding a node of which the track id has an upstream division event.
     Should break the edges of the division event to allow this new edge."""
 
-    tracks = get_tracks(ndim=3, with_seg=False, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
 
     # upstream division, with force
     attrs = {"t": 2, "track_id": 1, "pos": [3, 4]}
@@ -22,7 +22,7 @@ def test_user_force_add_upstream(get_tracks):
     """Test force adding a node upstream, of which the track id co-exists with the parent
     track id. Should break the edge with the parent track to allow this new edge."""
 
-    tracks = get_tracks(ndim=3, with_seg=False, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
 
     # downstream parent division, with force
     attrs = {"t": 0, "track_id": 3, "pos": [3, 4]}
@@ -37,7 +37,7 @@ def test_auto_assign_new_track_id(get_tracks):
     """Test that adding a node with a track id that already exists at the current time
     point raises a warning and auto-assigns a new track id instead."""
 
-    tracks = get_tracks(ndim=3, with_seg=False, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
 
     # existing track id at current time --> allowed, with warning
     with pytest.warns(UserWarning, match="Starting a new track, because track id"):

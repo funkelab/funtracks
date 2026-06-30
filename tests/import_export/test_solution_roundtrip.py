@@ -20,7 +20,7 @@ def _roundtrip(tracks, tmp_path, name="rt.geff"):
 
 
 def test_geff_roundtrip_preserves_solution_schema(get_tracks, tmp_path):
-    tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
     loaded = _roundtrip(tracks, tmp_path)
 
     edge_schema = loaded.graph_solution._edge_attr_schemas()["solution"]
@@ -33,7 +33,7 @@ def test_geff_roundtrip_preserves_solution_schema(get_tracks, tmp_path):
 
 
 def test_add_edge_is_solution_true_after_geff_roundtrip(get_tracks, tmp_path):
-    tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
     loaded = _roundtrip(tracks, tmp_path)
     g = loaded.graph_solution
 
@@ -61,7 +61,7 @@ def test_add_edge_is_solution_true_after_geff_roundtrip(get_tracks, tmp_path):
 
 
 def test_add_node_is_solution_true_after_geff_roundtrip(get_tracks, tmp_path):
-    tracks = get_tracks(ndim=3, with_seg=False, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
     loaded = _roundtrip(tracks, tmp_path)
 
     new_id = max(loaded.graph_solution.node_ids()) + 1

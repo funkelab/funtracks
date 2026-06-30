@@ -9,7 +9,7 @@ from funtracks.user_actions import UserUpdateNodeAttrs
 class TestUserUpdateNodeAttrs:
     def test_user_update_node_attrs(self, get_tracks, ndim, with_seg):
         """Test basic node attribute update functionality."""
-        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
 
         tracks.graph_solution.add_node_attr_key(
             "label", default_value=None, dtype=pl.Object
@@ -49,7 +49,7 @@ class TestUserUpdateNodeAttrs:
 
     def test_user_update_existing_attrs(self, get_tracks, ndim, with_seg):
         """Test updating attributes that already exist."""
-        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
 
         tracks.graph_solution.add_node_attr_key(
             "label", default_value=None, dtype=pl.Object
@@ -77,7 +77,7 @@ class TestUserUpdateNodeAttrs:
 
     def test_protected_time_attr(self, get_tracks, ndim, with_seg):
         """Test that time attribute cannot be updated."""
-        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
         time_key = tracks.features.time_key
 
         with pytest.raises(ValueError, match="Cannot update attribute"):
@@ -85,14 +85,14 @@ class TestUserUpdateNodeAttrs:
 
     def test_protected_track_id_attr(self, get_tracks, ndim, with_seg):
         """Test that track_id attribute cannot be updated."""
-        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
 
         with pytest.raises(ValueError, match="Cannot update attribute"):
             UserUpdateNodeAttrs(tracks, node=1, attrs={"track_id": 999})
 
     def test_protected_area_attr(self, get_tracks, ndim, with_seg):
         """Test that area attribute (managed by annotator) cannot be updated."""
-        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
 
         if with_seg:  # area only exists when segmentation is present
             with pytest.raises(ValueError, match="Cannot update attribute"):
@@ -100,7 +100,7 @@ class TestUserUpdateNodeAttrs:
 
     def test_protected_pos_attr(self, get_tracks, ndim, with_seg):
         """Test that position attribute (managed by annotator) cannot be updated."""
-        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
 
         if with_seg:  # pos is managed by RegionpropsAnnotator when seg exists
             with pytest.raises(ValueError, match="Cannot update attribute"):
@@ -108,7 +108,7 @@ class TestUserUpdateNodeAttrs:
 
     def test_action_history_integration(self, get_tracks, ndim, with_seg):
         """Test that action integrates properly with action history."""
-        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
         tracks.graph_solution.add_node_attr_key(
             "label", default_value=None, dtype=pl.Object
         )

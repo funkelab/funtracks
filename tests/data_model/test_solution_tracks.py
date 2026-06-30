@@ -59,21 +59,6 @@ def test_next_track_id_empty():
     assert tracks.get_next_track_id() == 1
 
 
-def test_get_lineage_id_without_lineage_key(graph_2d_with_track_id):
-    """Test that get_lineage_id returns None when lineage_key is not set."""
-    graph = graph_2d_with_track_id
-    graph.add_node(
-        attrs={"t": 1, "pos": [0, 0], "track_id": 1}, index=7, validate_keys=False
-    )
-    tracks = Tracks(graph, ndim=3, **track_attrs)
-
-    # Unset lineage_key to test the None path
-    tracks.features.lineage_key = None
-
-    # get_lineage_id should return None when lineage_key is not set
-    assert tracks.get_lineage_id(1) is None
-
-
 def test_export_to_csv_with_display_names(
     graph_2d_with_segmentation, graph_3d_with_segmentation, tmp_path
 ):

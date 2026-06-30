@@ -830,7 +830,7 @@ def test_geff_legacy_track_id_preserves_tracklet_ids():
 
 def test_geff_roundtrip_preserves_tracklet_ids(get_tracks, tmp_path):
     """End-to-end round-trip: export then import should preserve tracklet IDs."""
-    tracks_in = get_tracks(ndim=3, with_seg=False, is_solution=True)
+    tracks_in = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
     expected = {
         int(nid): tracks_in.get_track_id(int(nid))
         for nid in tracks_in.graph_solution.node_ids()
@@ -1061,7 +1061,7 @@ def test_invalid_featuredict_in_geff_falls_back_to_autodetect(get_tracks, tmp_pa
     import_from_geff should silently fall back to auto-detection
     instead of raising an exception.
     """
-    tracks = get_tracks(ndim=3, with_seg=False, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
     run_dir = tmp_path / "run"
     run_dir.mkdir()
     export_to_geff(tracks, run_dir, save_segmentation=False)
@@ -1101,7 +1101,7 @@ def test_subgroup_export_omits_featuredict_and_recomputes_on_import(get_tracks, 
     On reimport, validation would strip the now-invalid tracklet_id but the
     FeatureDict still referenced it, causing KeyError: 'tracklet_id'.
     """
-    tracks = get_tracks(ndim=3, with_seg=False, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
 
     # Export only a subset: nodes 1, 3, 4, 5 (one branch of the division).
     # filter_graph_with_ancestors will include node 1 as ancestor of 3.

@@ -43,7 +43,7 @@ def _positions(tracks):
 @pytest.mark.parametrize("ndim", [3, 4])
 @pytest.mark.parametrize("with_seg", [True, False])
 def test_soft_delete_keeps_leaf_node_in_full_graph(get_tracks, ndim, with_seg):
-    tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+    tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
     full_before = _full_state(tracks)
     sol_nodes_before = set(tracks.graph_solution.node_ids())
 
@@ -65,7 +65,7 @@ def test_soft_delete_keeps_leaf_node_in_full_graph(get_tracks, ndim, with_seg):
 @pytest.mark.parametrize("ndim", [3, 4])
 @pytest.mark.parametrize("with_seg", [True, False])
 def test_delete_undo_redo_roundtrip_identity(get_tracks, ndim, with_seg):
-    tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+    tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
     sol_ref = _solution_state(tracks)
     full_ref = _full_state(tracks)
     pos_ref = _positions(tracks)
@@ -89,7 +89,7 @@ def test_delete_undo_redo_roundtrip_identity(get_tracks, ndim, with_seg):
 @pytest.mark.parametrize("ndim", [3, 4])
 def test_repeated_delete_undo_is_stable(get_tracks, ndim):
     """Invariant #4: N undo/redo cycles must not drift the solution view or full graph."""
-    tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
+    tracks = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
     sol_ref = _solution_state(tracks)
     iou_ref = tracks.get_edge_attr((4, 5), "iou")
 
@@ -118,7 +118,7 @@ def test_mid_track_delete_leaves_skip_edge_candidate_in_full(get_tracks, ndim):
     """Deleting a mid-track node adds a reconnection skip-edge (3->5). On undo it is
     soft-deleted, so it persists in graph_full as a solution=False candidate while the
     solution view returns to its original topology."""
-    tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
+    tracks = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
     sol_ref = _solution_state(tracks)
     assert not tracks.graph_full.has_edge(3, 5)
 
@@ -144,7 +144,7 @@ def test_attr_reads_resolve_for_soft_deleted_node(get_tracks, ndim):
     `get_position` (graph_full) succeeded — a latent inconsistency invisible to tests that
     only ever query in-solution nodes.
     """
-    tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
+    tracks = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
     pos_single_before = tracks.get_position(5)
     pos_bulk_before = tracks.get_positions([5])[0].tolist()
     assert pos_bulk_before == pytest.approx(pos_single_before)

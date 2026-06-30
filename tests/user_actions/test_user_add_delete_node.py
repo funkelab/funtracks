@@ -9,7 +9,7 @@ from funtracks.user_actions import UserAddNode, UserDeleteNode, UserDeleteNodes
 @pytest.mark.parametrize("with_seg", [True, False])
 class TestUserAddDeleteNode:
     def test_user_add_invalid_node(self, get_tracks, ndim, with_seg):
-        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
         # duplicate node
         with pytest.raises(InvalidActionError, match="Node .* already exists"):
             attrs = {"t": 5, "track_id": 1}
@@ -34,7 +34,7 @@ class TestUserAddDeleteNode:
             UserAddNode(tracks, node=7, attributes=attrs)
 
     def test_user_add_node(self, get_tracks, ndim, with_seg):
-        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
         # add a node to replace a skip edge between node 4 in time 2 and node 5 in time 4
         node_id = 7
         track_id = 3
@@ -84,7 +84,7 @@ class TestUserAddDeleteNode:
         # TODO: error if node already exists?
 
     def test_user_delete_node(self, get_tracks, ndim, with_seg):
-        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
         # delete node in middle of track. Should skip-connect 3 and 5 with span 3
         node_id = 4
 
@@ -121,7 +121,7 @@ class TestUserAddDeleteNode:
         # TODO: error if node doesn't exist?
 
     def test_user_delete_node_after_division(self, get_tracks, ndim, with_seg):
-        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
         # delete first node after division. Should relabel the other child
         # to be the same track as parent
         parent_node = 1
@@ -158,7 +158,7 @@ class TestUserAddDeleteNode:
     def test_user_delete_nodes(self, get_tracks, ndim, with_seg):
         """Test bulk deletion of multiple nodes in a single action."""
         # Graph structure: 1 → 2, 1 → 3 → 4 → 5, and 6 (separate)
-        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
         graph = tracks.graph_solution
 
         # Save original state

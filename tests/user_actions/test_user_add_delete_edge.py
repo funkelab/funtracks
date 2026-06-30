@@ -8,7 +8,7 @@ from funtracks.user_actions import UserAddEdge, UserDeleteEdge
 @pytest.mark.parametrize("with_seg", [True, False])
 class TestUserAddDeleteEdge:
     def test_user_add_edge(self, get_tracks, ndim, with_seg):
-        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
         # add an edge from 4 to 6 (will make 4 a division and 5 will need to relabel
         # track id)
         edge = (4, 6)
@@ -28,7 +28,7 @@ class TestUserAddDeleteEdge:
         assert tracks.get_track_id(old_child) != old_track_id
 
     def test_user_add_merge_edge(self, get_tracks, ndim, with_seg):
-        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
         # add an edge from 2 to 4 (there is already an edge from 3 to 4)
         edge = (2, 4)
         old_edge = (3, 4)
@@ -55,7 +55,7 @@ class TestUserAddDeleteEdge:
         assert not tracks.graph_solution.has_edge(*old_edge)
 
     def test_user_delete_edge(self, get_tracks, ndim, with_seg):
-        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
         # delete edge (1, 3). (1,2) is now not a division anymore
         edge = (1, 3)
         old_child = 2
@@ -100,7 +100,7 @@ class TestUserAddDeleteEdge:
 
 
 def test_add_edge_missing_node(get_tracks):
-    tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
     with pytest.raises(InvalidActionError, match="Source node .* not in solution yet"):
         UserAddEdge(tracks, (10, 11))
     with pytest.raises(InvalidActionError, match="Target node .* not in solution yet"):
@@ -108,7 +108,7 @@ def test_add_edge_missing_node(get_tracks):
 
 
 def test_add_edge_triple_div(get_tracks):
-    tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
     with pytest.raises(
         InvalidActionError, match="Expected degree of 0 or 1 before adding edge"
     ):
@@ -116,13 +116,13 @@ def test_add_edge_triple_div(get_tracks):
 
 
 def test_delete_missing_edge(get_tracks):
-    tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
     with pytest.raises(InvalidActionError, match="Edge .* not in solution"):
         UserDeleteEdge(tracks, (10, 11))
 
 
 def test_delete_edge_triple_div(get_tracks):
-    tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
     attrs = {}
     attrs["solution"] = True
     attrs["iou"] = 0.9

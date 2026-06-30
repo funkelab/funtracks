@@ -98,7 +98,7 @@ def export_to_geff(
 
     # Include the FeatureDict in metadata only for full exports.
     # Subgroup exports do not necessarily have valid tracklet/lineage IDs
-    # and thus are not valid SolutionTracks
+    # and thus are not valid Tracks
     graph, metadata = _build_geff_metadata(tracks, include_features=(node_ids is None))
 
     # Save segmentation if present and requested

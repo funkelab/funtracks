@@ -133,7 +133,7 @@ class TestEdgeAnnotator:
 
     def test_ignores_irrelevant_actions(self, get_graph, ndim):
         """Test that EdgeAnnotator ignores actions that don't affect edges."""
-        graph = get_graph(ndim, is_solution=True, with_seg=True)
+        graph = get_graph(ndim, prefill_track_ids=True, with_seg=True)
         tracks = Tracks(
             graph,
             ndim=ndim,

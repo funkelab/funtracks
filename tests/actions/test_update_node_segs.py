@@ -10,7 +10,7 @@ from funtracks.actions import UpdateNodeSeg
 @pytest.mark.parametrize("ndim", [3, 4])
 def test_update_node_segs(get_tracks, ndim):
     # Get tracks with segmentation
-    tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
+    tracks = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
     reference_graph = tracks.graph_solution.detach().filter().subgraph()
 
     node = 1

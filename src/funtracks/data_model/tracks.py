@@ -328,15 +328,16 @@ class Tracks:
         if EdgeAnnotator.can_annotate(self):
             annotator_list.append(EdgeAnnotator(self))
 
-        # TrackAnnotator: registered when a tracklet_key is set (checked in can_annotate)
-        if TrackAnnotator.can_annotate(self):
-            annotator_list.append(
-                TrackAnnotator(
-                    self,
-                    tracklet_key=self.features.tracklet_key,
-                    lineage_key=self.features.lineage_key,
-                )
+        # TrackAnnotator is registered on every Tracks — track ids are a core feature,
+        # not a separate "type" of tracks. On an empty solution view it simply computes
+        # nothing until nodes are added.
+        annotator_list.append(
+            TrackAnnotator(
+                self,
+                tracklet_key=self.features.tracklet_key,
+                lineage_key=self.features.lineage_key,
             )
+        )
         return AnnotatorRegistry(annotator_list)
 
     def _activate_features_from_dict(self) -> None:
@@ -406,8 +407,6 @@ class Tracks:
         auto-detect construction paths; a no-op on an empty solution view.
         """
         annotator = self.track_annotator
-        if annotator is None:
-            return
         self.features.tracklet_key = annotator.tracklet_key
         self.features.lineage_key = annotator.lineage_key
         self._register_core_features([annotator.tracklet_key, annotator.lineage_key])
@@ -849,9 +848,8 @@ class Tracks:
 
     @property
     def track_annotator(self):
-        """The registered TrackAnnotator. Always present (every Tracks has track ids);
-        returns None only in the degenerate case where no TrackAnnotator was
-        registered."""
+        """The registered TrackAnnotator — always present, since track ids are a core
+        feature of every Tracks."""
         for annotator in self.annotators:
             if isinstance(annotator, TrackAnnotator):
                 return annotator
@@ -899,17 +897,15 @@ class Tracks:
         )
         return [id_to_val[node] for node in nodes]
 
-    def get_lineage_id(self, node) -> int | None:
+    def get_lineage_id(self, node) -> int:
         """Get the lineage ID for a node.
 
         Args:
             node: The node to get lineage ID for
 
         Returns:
-            The lineage ID, or None if lineage feature is not enabled
+            The lineage ID.
         """
-        if self.features.lineage_key is None:
-            return None
         return self.get_node_attr(node, self.features.lineage_key)
 
     def get_track_neighbors(

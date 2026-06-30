@@ -14,20 +14,20 @@ from funtracks.import_export._v1_format import (
 
 @pytest.mark.parametrize("with_seg", [True, False])
 @pytest.mark.parametrize("ndim", [3, 4])
-@pytest.mark.parametrize("is_solution", [True, False])
+@pytest.mark.parametrize("prefill_track_ids", [True, False])
 def test_save_load(
     get_tracks,
     with_seg,
     ndim,
-    is_solution,
+    prefill_track_ids,
 ):
-    tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=is_solution)
+    tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=prefill_track_ids)
 
     data_path = Path(
-        f"tests/data/format_v1/test_save_load_{is_solution}_{ndim}_{with_seg}_0"
+        f"tests/data/format_v1/test_save_load_{prefill_track_ids}_{ndim}_{with_seg}_0"
     )
 
-    loaded = load_v1_tracks(data_path, solution=is_solution)
+    loaded = load_v1_tracks(data_path, solution=prefill_track_ids)
     assert loaded.ndim == ndim
     # Check feature keys and important properties match (allow tuple vs list diff)
     assert loaded.features.time_key == tracks.features.time_key
@@ -60,12 +60,9 @@ def test_save_load(
     assert loaded.scale == tracks.scale
     assert loaded.ndim == tracks.ndim
 
-    if is_solution:
-        loaded_annotator = loaded.track_annotator
-        tracks_annotator = tracks.track_annotator
-        assert (
-            loaded_annotator.tracklet_id_to_nodes == tracks_annotator.tracklet_id_to_nodes
-        )
+    loaded_annotator = loaded.track_annotator
+    tracks_annotator = tracks.track_annotator
+    assert loaded_annotator.tracklet_id_to_nodes == tracks_annotator.tracklet_id_to_nodes
 
     if with_seg:
         assert_array_almost_equal(loaded.segmentation, tracks.segmentation)
@@ -90,16 +87,16 @@ def test_save_load(
 
 @pytest.mark.parametrize("with_seg", [True, False])
 @pytest.mark.parametrize("ndim", [3, 4])
-@pytest.mark.parametrize("is_solution", [True, False])
+@pytest.mark.parametrize("prefill_track_ids", [True, False])
 def test_delete(
     get_tracks,
     with_seg,
     ndim,
-    is_solution,
+    prefill_track_ids,
     tmp_path,
 ):
     reference_path = Path(
-        f"tests/data/format_v1/test_save_load_{is_solution}_{ndim}_{with_seg}_0"
+        f"tests/data/format_v1/test_save_load_{prefill_track_ids}_{ndim}_{with_seg}_0"
     )
 
     # Copy reference data to temporary location

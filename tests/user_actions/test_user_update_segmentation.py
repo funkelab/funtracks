@@ -26,7 +26,7 @@ class TestUpdateNodeSeg:
         )
 
     def test_user_update_seg_smaller(self, get_tracks, ndim):
-        tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
+        tracks = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
         node_id = 3
         edge = (1, 3)
 
@@ -71,7 +71,7 @@ class TestUpdateNodeSeg:
         assert tracks.get_edge_attr(edge, iou_key) == pytest.approx(0.0, abs=0.01)
 
     def test_user_update_seg_bigger(self, get_tracks, ndim):
-        tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
+        tracks = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
         node_id = 3
         edge = (1, 3)
 
@@ -114,7 +114,7 @@ class TestUpdateNodeSeg:
         assert tracks.get_edge_attr(edge, iou_key) != orig_iou
 
     def test_invalid_action_with_segmentation(self, get_tracks, ndim):
-        tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
+        tracks = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
         node_id = 1
 
         # Paint on top of node 1 with track id 3: because of the downstream division, this
@@ -162,7 +162,7 @@ class TestUpdateNodeSeg:
         # and one for updating existing node 1
 
     def test_user_erase_seg(self, get_tracks, ndim):
-        tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
+        tracks = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
         node_id = 3
         edge = (1, 3)
 
@@ -199,7 +199,7 @@ class TestUpdateNodeSeg:
         entry. Regression test for a bug where the nested UserDeleteNode
         also registered itself, leaving two entries per fill and corrupting
         undo behavior."""
-        tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
+        tracks = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
         node_id = 6
         pixels = td_mask_to_pixels(
             tracks.get_mask(node_id), tracks.get_time(node_id), ndim=tracks.ndim
@@ -217,7 +217,7 @@ class TestUpdateNodeSeg:
         tracks.action_history.undo(). Reproduces bug_paint_undo: the second
         undo crashed because the buggy history had a duplicate UserDeleteNode
         entry that tried to re-add an already-restored node."""
-        tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
+        tracks = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
         pixels_5 = td_mask_to_pixels(
             tracks.get_mask(5), tracks.get_time(5), ndim=tracks.ndim
         )
@@ -244,7 +244,7 @@ class TestUpdateNodeSeg:
         assert tracks.graph_solution.has_node(6)
 
     def test_user_add_seg(self, get_tracks, ndim):
-        tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
+        tracks = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
         # draw a new node just like node 6 but in time 3 (instead of 4)
         old_node_id = 6
         node_id = 7
@@ -286,6 +286,6 @@ class TestUpdateNodeSeg:
 
 
 def test_missing_seg(get_tracks):
-    tracks = get_tracks(ndim=3, with_seg=False, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
     with pytest.raises(ValueError, match="Cannot update non-existing segmentation"):
         UserUpdateSegmentation(tracks, 0, [], 1)
