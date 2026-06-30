@@ -36,7 +36,7 @@ class UserDeleteEdge(ActionGroup):
             raise InvalidActionError(f"Edge {edge} not in solution, can't remove")
 
         self.actions.append(DeleteEdge(tracks, edge))
-        out_degree = self.tracks.graph_solution.out_degree(edge[0])
+        out_degree = len(self.tracks.successors(edge[0]))
         if out_degree == 0:  # removed a normal (non division) edge
             # orphaned segment gets new track id and new lineage id
             new_track_id = self.tracks.get_next_track_id()

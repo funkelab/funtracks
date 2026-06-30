@@ -104,18 +104,6 @@ def test_nodes_edges(graph_2d_with_segmentation):
     }
 
 
-def test_degrees(graph_2d_with_segmentation):
-    tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
-    assert tracks.in_degree(np.array([1])) == 0
-    assert tracks.in_degree(np.array([4])) == 1
-    assert np.array_equal(tracks.in_degree(None), np.array([0, 1, 1, 1, 1, 0]))
-    assert np.array_equal(tracks.out_degree(np.array([1, 4])), np.array([2, 1]))
-    assert np.array_equal(
-        tracks.out_degree(None),
-        np.array([2, 0, 1, 1, 0, 0]),
-    )
-
-
 def test_predecessors_successors(graph_2d_with_segmentation):
     tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
     assert tracks.predecessors(2) == [1]

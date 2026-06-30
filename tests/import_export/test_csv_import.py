@@ -186,7 +186,7 @@ class TestEdgeCases:
         roots = [
             n
             for n in tracks.graph_solution.node_ids()
-            if tracks.graph_solution.in_degree(n) == 0
+            if len(tracks.predecessors(n)) == 0
         ]
         assert len(roots) == 2
 
@@ -260,18 +260,16 @@ class TestEdgeCases:
         roots = [
             n
             for n in tracks.graph_solution.node_ids()
-            if tracks.graph_solution.in_degree(n) == 0
+            if len(tracks.predecessors(n)) == 0
         ]
         assert len(roots) == 1
 
         # Each non-leaf node should have exactly one child
         non_leaves = [
-            n
-            for n in tracks.graph_solution.node_ids()
-            if tracks.graph_solution.out_degree(n) > 0
+            n for n in tracks.graph_solution.node_ids() if len(tracks.successors(n)) > 0
         ]
         for node in non_leaves:
-            assert tracks.graph_solution.out_degree(node) == 1
+            assert len(tracks.successors(node)) == 1
 
     def test_orphaned_node_raises_error(self):
         """Test that node with invalid parent_id raises error."""

@@ -48,7 +48,7 @@ class UserAddEdge(ActionGroup):
 
         # Check if making a merge. If yes and force, remove the other edge and update
         # track ids.
-        in_degree_target = self.tracks.graph_solution.in_degree(target)
+        in_degree_target = len(self.tracks.predecessors(target))  # type: ignore
         if in_degree_target > 0:
             if not force:
                 raise InvalidActionError(
@@ -68,7 +68,7 @@ class UserAddEdge(ActionGroup):
                 )
 
         # update track ids if needed
-        out_degree_source = self.tracks.graph_solution.out_degree(source)
+        out_degree_source = len(self.tracks.successors(source))
         if out_degree_source == 0:  # joining two segments
             # assign the track id and lineage id of the source node to the target
             # and all downstream nodes

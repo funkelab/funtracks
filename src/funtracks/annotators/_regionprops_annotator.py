@@ -73,11 +73,6 @@ class RegionpropsAnnotator(GraphAnnotator):
         """
         return tracks.segmentation is not None
 
-    @property
-    def graph(self):
-        """Regionprops features are intrinsic detections → computed on the full graph."""
-        return self.tracks.graph_full
-
     def __init__(
         self,
         tracks: Tracks,

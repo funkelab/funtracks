@@ -62,7 +62,21 @@ class UserUpdateSegmentation(ActionGroup):
                 "Can only update one time point at a time"
             )
             time = int(all_pixels[0][0])
-            if self.tracks.graph_solution.has_node(new_value):
+            if self.tracks.graph_full.has_node(new_value):
+                # An id that already names a node must take the update path: you cannot
+                # create a *new* node on a taken id. Ids are globally unique across
+                # graph_full (full ⊇ solution, never reused), so graph_full is the
+                # correct "does this id name a node?" check; using graph_solution here
+                # would misroute a soft-deleted id to the add path and silently revive
+                # the old node with stale attributes.
+                # NOTE: reviving a soft-deleted (solution=False) node by painting it
+                # back is not supported yet — UpdateNodeSeg reads the solution view and
+                # would fail. Guard explicitly until revive-by-paint is implemented.
+                if not self.tracks.graph_solution.has_node(new_value):
+                    raise NotImplementedError(
+                        f"Cannot paint onto node {new_value}: it is soft-deleted (not "
+                        "in the solution). Revive-by-paint is not supported yet."
+                    )
                 mask_pixels = pixels_to_td_mask(all_pixels, self.tracks.ndim)
                 self.actions.append(
                     UpdateNodeSeg(tracks, new_value, mask_pixels, added=True)

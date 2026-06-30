@@ -67,6 +67,13 @@ class TrackAnnotator(GraphAnnotator):
         """
         return tracks.features.tracklet_key is not None
 
+    @property
+    def graph(self):
+        """Track ids (`tracklet_id`, `lineage_id`) are derived from the solution
+        topology, so this annotator reads/iterates the solution view, not the full
+        graph (overriding the base default of `graph_full`)."""
+        return self.tracks.graph_solution
+
     @classmethod
     def get_available_features(cls, ndim: int = 3) -> dict[str, Feature]:
         """Get all features that can be computed by this annotator.

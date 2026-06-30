@@ -77,7 +77,7 @@ class UserAddNode(ActionGroup):
             raise InvalidActionError(
                 f"Cannot add node without track id. Please add {track_id_key} attribute"
             )
-        if self.tracks.graph_solution.has_node(node):
+        if self.tracks.graph_full.has_node(node):
             raise InvalidActionError(
                 f"Node {node} already exists in the tracks, cannot add."
             )
@@ -98,7 +98,7 @@ class UserAddNode(ActionGroup):
         pred, succ = self.tracks.get_track_neighbors(track_id, time)
 
         # check if you are adding a node to a track that divided previously
-        if pred is not None and self.tracks.graph_solution.out_degree(int(pred)) == 2:
+        if pred is not None and len(self.tracks.successors(pred)) == 2:
             if not force:
                 raise InvalidActionError(
                     "Cannot add node here - upstream division event detected.",
@@ -122,7 +122,7 @@ class UserAddNode(ActionGroup):
             pred_of_succ = preds[0] if preds else None
             if (
                 pred_of_succ is not None
-                and self.tracks.graph_solution.out_degree(pred_of_succ) == 2
+                and len(self.tracks.successors(pred_of_succ)) == 2
             ):
                 if not force:
                     raise InvalidActionError(

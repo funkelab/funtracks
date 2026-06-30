@@ -41,12 +41,6 @@ class EdgeAnnotator(GraphAnnotator):
         """
         return tracks.segmentation is not None
 
-    @property
-    def graph(self):
-        """IoU is an intrinsic link feature → computed on the full graph (all edges,
-        including soft-deleted/candidate ones, so they stay ready for re-solving)."""
-        return self.tracks.graph_full
-
     @classmethod
     def get_available_features(cls, ndim: int = 3) -> dict[str, Feature]:
         """Get all features that can be computed by this annotator.

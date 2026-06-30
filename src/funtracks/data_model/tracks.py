@@ -400,31 +400,6 @@ class Tracks:
     def edges(self):
         return np.array(self.graph_solution.edge_ids())
 
-    def in_degree(self, nodes: np.ndarray | None = None) -> np.ndarray:
-        """Get the in-degree edge_ids of the nodes in the graph."""
-        if nodes is not None:
-            # make sure nodes is a numpy array
-            if not isinstance(nodes, np.ndarray):
-                nodes = np.array(nodes)
-
-            return np.array(
-                [self.graph_solution.in_degree(node.item()) for node in nodes]
-            )
-        else:
-            return np.array(self.graph_solution.in_degree())
-
-    def out_degree(self, nodes: np.ndarray | None = None) -> np.ndarray:
-        if nodes is not None:
-            # make sure nodes is a numpy array
-            if not isinstance(nodes, np.ndarray):
-                nodes = np.array(nodes)
-
-            return np.array(
-                [self.graph_solution.out_degree(node.item()) for node in nodes]
-            )
-        else:
-            return np.array(self.graph_solution.out_degree())
-
     def predecessors(self, node: int) -> list[int]:
         return list(self.graph_solution.predecessors(node))
 
