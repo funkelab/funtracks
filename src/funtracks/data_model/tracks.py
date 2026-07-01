@@ -862,13 +862,16 @@ class Tracks:
     # has (track ids are a core feature). On an empty solution view they are no-ops.
 
     @property
-    def track_annotator(self):
-        """The registered TrackAnnotator — always present, since track ids are a core
-        feature of every Tracks."""
+    def track_annotator(self) -> TrackAnnotator:
+        """The registered TrackAnnotator. Always present, since track ids are a core
+        feature of every Tracks (_get_annotators registers one unconditionally)."""
         for annotator in self.annotators:
             if isinstance(annotator, TrackAnnotator):
                 return annotator
-        return None
+        raise RuntimeError(
+            "No TrackAnnotator registered on this Tracks — this should be unreachable "
+            "(_get_annotators always registers one)."
+        )
 
     @property
     def max_track_id(self) -> int:
