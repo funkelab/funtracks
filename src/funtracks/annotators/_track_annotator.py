@@ -218,18 +218,23 @@ class TrackAnnotator(GraphAnnotator):
         track_id = 1
         all_node_ids = []
         all_track_ids = []
+        id_to_nodes = {}
         for tracklet in rx.weakly_connected_components(rx_copy):
             # Batched internal -> external mapping (see _assign_lineage_ids).
             node_ids_external = self.graph._map_to_external(list(tracklet))
             all_node_ids.extend(node_ids_external)
             all_track_ids.extend([track_id] * len(node_ids_external))
-            self.tracklet_id_to_nodes[track_id] = node_ids_external
+            id_to_nodes[track_id] = node_ids_external
             track_id += 1
         if all_node_ids:
             self.graph.update_node_attrs(
                 attrs={self.tracks.features.tracklet_key: all_track_ids},
                 node_ids=all_node_ids,
             )
+        # Replace the bookkeeping wholesale (like _assign_lineage_ids) so stale
+        # entries — e.g. a phantom tracklet -1 seeded at init from a graph whose
+        # tracklet column still held the -1 sentinel — don't survive a recompute.
+        self.tracklet_id_to_nodes = id_to_nodes
         self.max_tracklet_id = track_id - 1
 
     def update(self, action: BasicAction) -> None:

@@ -309,3 +309,27 @@ class TestTrackAnnotator:
         assert ann.lineage_id_to_nodes == original_lineage_map
         assert ann.max_tracklet_id == original_max_tracklet
         assert ann.max_lineage_id == original_max_lineage
+
+
+def test_recompute_replaces_stale_bookkeeping(get_tracks):
+    """A tracklet column still holding the -1 sentinel seeds a phantom tracklet -1 in
+    the bookkeeping at annotator init (_get_max_id_and_map only skips None). A full
+    compute() must replace tracklet_id_to_nodes wholesale (like _assign_lineage_ids
+    does), not merge into it — otherwise the phantom entry survives with its nodes
+    duplicated under their real tracklet ids.
+    """
+    tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
+    node_ids = list(tracks.graph_full.node_ids())
+    tracks.graph_full.update_node_attrs(
+        attrs={"track_id": [-1] * len(node_ids)}, node_ids=node_ids
+    )
+
+    ann = TrackAnnotator(tracks, tracklet_key="track_id")
+    ann.activate_features(["track_id", "lineage_id"])
+    ann.compute()
+
+    assert -1 not in ann.tracklet_id_to_nodes
+    # Every solution node appears exactly once across the bookkeeping.
+    all_nodes = sorted(n for ns in ann.tracklet_id_to_nodes.values() for n in ns)
+    assert all_nodes == sorted(tracks.graph_solution.node_ids())
+    assert ann.max_tracklet_id == max(ann.tracklet_id_to_nodes.keys())
