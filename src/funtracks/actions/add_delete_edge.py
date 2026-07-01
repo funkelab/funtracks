@@ -60,8 +60,10 @@ class AddEdge(BasicAction):
             # candidate): flip solution=True, apply any caller-provided attributes (so
             # revive matches the add-new branch), and re-surface it in the solution view.
             edge_id = self.tracks.graph_full.edge_id(self.edge[0], self.edge[1])
-            revive_attrs = {k: v for k, v in self.attributes.items() if k != "solution"}
-            revive_attrs["solution"] = True
+            # Values are wrapped in single-element lists because update_edge_attrs
+            # reads a bare list value (e.g. a vector feature) as one-value-per-edge.
+            revive_attrs = {k: [v] for k, v in self.attributes.items() if k != "solution"}
+            revive_attrs["solution"] = [True]
             self.tracks.graph_full.update_edge_attrs(
                 attrs=revive_attrs, edge_ids=[edge_id]
             )

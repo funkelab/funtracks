@@ -706,7 +706,9 @@ class Tracks:
 
     def _set_edge_attr(self, edge: Edge, attr: str, value: Any):
         edge_id = self.graph_full.edge_id(edge[0], edge[1])
-        self.graph_full.update_edge_attrs(attrs={attr: value}, edge_ids=[edge_id])
+        # Wrap in a single-element list: update_edge_attrs reads a bare list value
+        # (e.g. a vector feature) as one-value-per-edge.
+        self.graph_full.update_edge_attrs(attrs={attr: [value]}, edge_ids=[edge_id])
 
     def _set_edges_attr(self, edges: Iterable[Edge], attr: str, values: Iterable[Any]):
         for edge, value in zip(edges, values, strict=False):
@@ -824,10 +826,14 @@ class Tracks:
                 dtype=dtype,
             )
         if "edge" in ft and key not in self.graph_solution.edge_attr_keys():
+            dtype = to_polars_dtype(feature["value_type"])
+            num_values = feature.get("num_values")
+            if num_values is not None and num_values > 1:
+                dtype = pl.Array(dtype, num_values)
             self.graph_solution.add_edge_attr_key(
                 key,
                 default_value=feature["default_value"],
-                dtype=to_polars_dtype(feature["value_type"]),
+                dtype=dtype,
             )
 
     def delete_feature(self, key: str) -> None:

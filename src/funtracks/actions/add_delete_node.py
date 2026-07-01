@@ -86,8 +86,10 @@ class AddNode(BasicAction):
             # the solution, apply any caller-provided attributes (so revive matches the
             # add-new branch), and re-surface it in the view in place (incident edges
             # are revived separately by AddEdge).
-            revive_attrs = {k: v for k, v in self.attributes.items() if k != "solution"}
-            revive_attrs["solution"] = True
+            # Values are wrapped in single-element lists because update_node_attrs
+            # reads a bare list value (pos, bbox, mask) as one-value-per-node.
+            revive_attrs = {k: [v] for k, v in self.attributes.items() if k != "solution"}
+            revive_attrs["solution"] = [True]
             self.tracks.graph_full.update_node_attrs(
                 attrs=revive_attrs, node_ids=[self.node]
             )

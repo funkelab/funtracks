@@ -197,6 +197,38 @@ def test_add_edge_revive_applies_new_attributes(get_tracks):
     assert tracks.graph_solution.edges[edge_id]["weight"] == 9.9
 
 
+def test_add_edge_revive_applies_new_vector_attributes(get_tracks):
+    """Reviving an edge with a non-scalar (vector) attribute must apply it correctly.
+
+    update_edge_attrs reads a bare list value as one-value-per-edge, so passing a
+    vector attr unwrapped for a single edge raises a size mismatch (or, for a
+    length-1 list, silently unwraps it to its element).
+    """
+    from funtracks.features import Feature
+
+    tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
+    tracks.add_feature(
+        "flow",
+        Feature(
+            feature_type="edge",
+            value_type="float",
+            num_values=2,
+            display_name=["Flow Y", "Flow X"],
+            default_value=None,
+        ),
+    )
+
+    edge = (1, 5)
+    AddEdge(tracks, edge, attributes={"flow": [1.0, 2.0]})
+    DeleteEdge(tracks, edge)  # soft-delete: flow preserved in graph_full
+
+    # Fresh add of the (now soft-deleted) edge with a DIFFERENT flow vector.
+    AddEdge(tracks, edge, attributes={"flow": [3.0, 4.0]})
+
+    edge_id = tracks.graph_solution.edge_id(*edge)
+    assert list(tracks.graph_solution.edges[edge_id]["flow"]) == [3.0, 4.0]
+
+
 def test_add_edge_with_unregistered_edge_attr(tmp_path):
     """AddEdge must not crash when the graph has edge attrs absent from tracks.features.
 
