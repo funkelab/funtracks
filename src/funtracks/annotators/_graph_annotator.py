@@ -64,6 +64,14 @@ class GraphAnnotator:
         (`tracklet_id`, `lineage_id`) are derived from the solution topology. Root and
         view share attribute storage, so writes made here are seen through the solution
         view automatically.
+
+        KNOWN COST: computing over `graph_full` means `compute()`/`update()` run
+        regionprops / mask.iou for every candidate (solution=False) node/edge too. On
+        candidate graphs with many unselected detections (often 10-100x the solution
+        size) this is O(candidates) work that is mostly never read, since revive is rare.
+        This is a deliberate eagerness-for-readiness trade; if it becomes a bottleneck,
+        the lever is lazy compute-on-revive (default to graph_solution and compute a
+        candidate's intrinsic features only when it enters the solution).
         """
         return self.tracks.graph_full
 
