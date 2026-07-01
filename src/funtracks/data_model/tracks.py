@@ -427,15 +427,19 @@ class Tracks:
         return bool((values == -1).any())
 
     def nodes(self):
+        """Return the node ids of the solution graph as a numpy array."""
         return np.array(self.graph_solution.node_ids())
 
     def edges(self):
+        """Return the edge ids of the solution graph as a numpy array."""
         return np.array(self.graph_solution.edge_ids())
 
     def predecessors(self, node: int) -> list[int]:
+        """Return the predecessors of a node in the solution graph."""
         return list(self.graph_solution.predecessors(node))
 
     def successors(self, node: int) -> list[int]:
+        """Return the successors of a node in the solution graph."""
         return list(self.graph_solution.successors(node))
 
     def get_positions(self, nodes: Iterable[Node], incl_time: bool = False) -> np.ndarray:
@@ -447,7 +451,7 @@ class Tracks:
         For a single node use get_position() instead.
 
         Args:
-            node (Iterable[Node]): The node ids in the graph to get the positions of
+            nodes (Iterable[Node]): The node ids in the graph to get the positions of
             incl_time (bool, optional): If true, include the time as the
                 first element of each position array. Defaults to False.
 
@@ -538,6 +542,7 @@ class Tracks:
             self._set_nodes_attr(nodes, self.features.position_key, positions)
 
     def set_position(self, node: Node, position: list | np.ndarray):
+        """Set the position of a single node."""
         self.set_positions([node], np.expand_dims(np.array(position), axis=0))
 
     def get_times(self, nodes: Iterable[Node]) -> Sequence[int]:
@@ -699,9 +704,11 @@ class Tracks:
             )
 
     def get_node_attr(self, node: Node, attr: str):
+        """Get an attribute value for a single node (resolved on graph_full)."""
         return self.graph_full.nodes[int(node)][attr]
 
     def get_nodes_attr(self, nodes: Iterable[Node], attr: str):
+        """Get an attribute value for each of the given nodes."""
         return [self.get_node_attr(node, attr) for node in nodes]
 
     def _set_edge_attr(self, edge: Edge, attr: str, value: Any):
@@ -716,12 +723,17 @@ class Tracks:
             self.graph_full.update_edge_attrs(attrs={attr: value}, edge_ids=[edge_id])
 
     def get_edge_attr(self, edge: Edge, attr: str):
+        """Get an attribute value for a single edge (resolved on graph_full).
+
+        Returns None if the attribute is not registered on the graph.
+        """
         if attr not in self.graph_full.edge_attr_keys():
             return None
         edge_id = self.graph_full.edge_id(edge[0], edge[1])
         return self.graph_full.edges[edge_id][attr]
 
     def get_edges_attr(self, edges: Iterable[Edge], attr: str):
+        """Get an attribute value for each of the given edges."""
         return [self.get_edge_attr(edge, attr) for edge in edges]
 
     # ========== Feature Management ==========
@@ -891,6 +903,7 @@ class Tracks:
 
     @property
     def max_track_id(self) -> int:
+        """The maximum tracklet id currently in use."""
         return self.track_annotator.max_tracklet_id
 
     def get_next_track_id(self) -> int:
@@ -910,6 +923,7 @@ class Tracks:
         return self.track_annotator.max_lineage_id + 1
 
     def get_track_id(self, node) -> int:
+        """Get the tracklet id of a single node."""
         track_id = self.get_node_attr(node, self.features.tracklet_key)
         return track_id
 
