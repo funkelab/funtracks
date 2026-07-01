@@ -128,6 +128,31 @@ def test_add_delete_nodes(get_tracks, ndim, with_seg):
         )
 
 
+def test_add_node_revive_applies_new_attributes(get_tracks):
+    """Re-adding a soft-deleted node with NEW attributes must apply them, not silently
+    keep the values preserved from before the delete.
+
+    Existing tests only re-add via inverse(), which reuses the SAME attrs that
+    soft-delete preserved, so the revive-vs-add-new asymmetry is invisible to them.
+    Mirrors test_add_edge_revive_applies_new_attributes.
+    """
+    from funtracks.actions import DeleteNode
+
+    tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
+
+    node_id = 100
+    AddNode(tracks, node_id, {"t": 2, "track_id": 10, "pos": [50.0, 50.0]})
+    DeleteNode(tracks, node_id)  # soft-delete: attrs preserved in graph_full
+
+    # Fresh add of the (now soft-deleted) node with DIFFERENT attributes.
+    AddNode(tracks, node_id, {"t": 2, "track_id": 11, "pos": [60.0, 60.0]})
+
+    assert tracks.graph_solution.nodes[node_id]["track_id"] == 11
+    assert_array_almost_equal(
+        tracks.graph_solution.nodes[node_id]["pos"], np.array([60.0, 60.0])
+    )
+
+
 def test_add_node_missing_time(get_tracks):
     tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
     with pytest.raises(ValueError, match="Must provide a time attribute for node"):

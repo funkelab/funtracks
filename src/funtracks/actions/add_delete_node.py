@@ -83,10 +83,13 @@ class AddNode(BasicAction):
         """
         if self.tracks.graph_full.has_node(self.node):
             # Revive: same node id, topology preserved in graph_full. Flip it back into
-            # the solution and re-surface it in the view in place (incident edges are
-            # revived separately by AddEdge).
+            # the solution, apply any caller-provided attributes (so revive matches the
+            # add-new branch), and re-surface it in the view in place (incident edges
+            # are revived separately by AddEdge).
+            revive_attrs = {k: v for k, v in self.attributes.items() if k != "solution"}
+            revive_attrs["solution"] = True
             self.tracks.graph_full.update_node_attrs(
-                attrs={"solution": True}, node_ids=[self.node]
+                attrs=revive_attrs, node_ids=[self.node]
             )
             self.tracks.graph_solution.add_node_to_view(self.node)
         else:
