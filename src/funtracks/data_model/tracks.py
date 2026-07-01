@@ -569,7 +569,7 @@ class Tracks:
         if self.segmentation is None:
             return None
 
-        mask = self.graph_solution.nodes[node][mask_key]
+        mask = self.graph_full.nodes[node][mask_key]
         return mask
 
     def update_mask(
@@ -586,13 +586,13 @@ class Tracks:
             mask_key: The feature key for the mask column.
                 Defaults to the standard mask key.
         """
-        self.graph_solution.nodes[node][mask_key] = mask
+        self.graph_full.nodes[node][mask_key] = mask
         mask_feature = self.features.get(mask_key)
         if mask_feature is not None:
             # NOTE: all derived features of a mask are currently assumed to be
             # its bounding box. Revisit if non-bbox derived features are added.
             for derived_key in mask_feature.get("derived_features", []):
-                self.graph_solution.nodes[node][derived_key] = mask.bbox
+                self.graph_full.nodes[node][derived_key] = mask.bbox
 
     def undo(self) -> bool:
         """Undo the last performed action from the action history.
@@ -882,7 +882,7 @@ class Tracks:
         calls. For small subsets or single nodes use get_track_id() instead."""
 
         tracklet_key = self.features.tracklet_key
-        df = self.graph_solution.node_attrs(
+        df = self.graph_full.node_attrs(
             attr_keys=[td.DEFAULT_ATTR_KEYS.NODE_ID, tracklet_key]
         )
         id_to_val = dict(
