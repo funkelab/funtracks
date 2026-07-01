@@ -14,20 +14,20 @@ from funtracks.import_export._v1_format import (
 
 @pytest.mark.parametrize("with_seg", [True, False])
 @pytest.mark.parametrize("ndim", [3, 4])
-@pytest.mark.parametrize("is_solution", [True, False])
+@pytest.mark.parametrize("prefill_track_ids", [True, False])
 def test_save_load(
     get_tracks,
     with_seg,
     ndim,
-    is_solution,
+    prefill_track_ids,
 ):
-    tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=is_solution)
+    tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=prefill_track_ids)
 
     data_path = Path(
-        f"tests/data/format_v1/test_save_load_{is_solution}_{ndim}_{with_seg}_0"
+        f"tests/data/format_v1/test_save_load_{prefill_track_ids}_{ndim}_{with_seg}_0"
     )
 
-    loaded = load_v1_tracks(data_path, solution=is_solution)
+    loaded = load_v1_tracks(data_path)
     assert loaded.ndim == ndim
     # Check feature keys and important properties match (allow tuple vs list diff)
     assert loaded.features.time_key == tracks.features.time_key
@@ -60,12 +60,9 @@ def test_save_load(
     assert loaded.scale == tracks.scale
     assert loaded.ndim == tracks.ndim
 
-    if is_solution:
-        loaded_annotator = loaded.track_annotator
-        tracks_annotator = tracks.track_annotator
-        assert (
-            loaded_annotator.tracklet_id_to_nodes == tracks_annotator.tracklet_id_to_nodes
-        )
+    loaded_annotator = loaded.track_annotator
+    tracks_annotator = tracks.track_annotator
+    assert loaded_annotator.tracklet_id_to_nodes == tracks_annotator.tracklet_id_to_nodes
 
     if with_seg:
         assert_array_almost_equal(loaded.segmentation, tracks.segmentation)
@@ -73,27 +70,33 @@ def test_save_load(
         assert loaded.segmentation is None
 
     # graphs_equal doesn't exist for TracksData, so we check properties
-    assert set(loaded.graph.node_attr_keys()) == set(tracks.graph.node_attr_keys())
-    assert set(loaded.graph.edge_attr_keys()) == set(tracks.graph.edge_attr_keys())
-    assert loaded.graph.num_nodes() == tracks.graph.num_nodes()
-    assert loaded.graph.num_edges() == tracks.graph.num_edges()
-    assert set(loaded.graph.node_ids()) == set(tracks.graph.node_ids())
+    assert set(loaded.graph_solution.node_attr_keys()) == set(
+        tracks.graph_solution.node_attr_keys()
+    )
+    assert set(loaded.graph_solution.edge_attr_keys()) == set(
+        tracks.graph_solution.edge_attr_keys()
+    )
+    assert loaded.graph_solution.num_nodes() == tracks.graph_solution.num_nodes()
+    assert loaded.graph_solution.num_edges() == tracks.graph_solution.num_edges()
+    assert set(loaded.graph_solution.node_ids()) == set(tracks.graph_solution.node_ids())
     # edge_ids dont matter, only the actual edges:
-    assert sorted(loaded.graph.edge_list()) == sorted(tracks.graph.edge_list())
+    assert sorted(loaded.graph_solution.edge_list()) == sorted(
+        tracks.graph_solution.edge_list()
+    )
 
 
 @pytest.mark.parametrize("with_seg", [True, False])
 @pytest.mark.parametrize("ndim", [3, 4])
-@pytest.mark.parametrize("is_solution", [True, False])
+@pytest.mark.parametrize("prefill_track_ids", [True, False])
 def test_delete(
     get_tracks,
     with_seg,
     ndim,
-    is_solution,
+    prefill_track_ids,
     tmp_path,
 ):
     reference_path = Path(
-        f"tests/data/format_v1/test_save_load_{is_solution}_{ndim}_{with_seg}_0"
+        f"tests/data/format_v1/test_save_load_{prefill_track_ids}_{ndim}_{with_seg}_0"
     )
 
     # Copy reference data to temporary location
@@ -115,7 +118,7 @@ def test_load_without_features(tmp_path, graph_2d_with_segmentation):
     shutil.copytree(reference_path, tracks_path)
 
     # Load the original data first to verify it loads correctly
-    load_v1_tracks(tracks_path, solution=True)
+    load_v1_tracks(tracks_path)
 
     # Modify the copy to test backward compatibility
     attrs_path = tracks_path / "attrs.json"

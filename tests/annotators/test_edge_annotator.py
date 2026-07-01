@@ -4,7 +4,7 @@ from tracksdata.nodes import Mask
 
 from funtracks.actions import UpdateNodeSeg, UpdateTrackIDs
 from funtracks.annotators import EdgeAnnotator
-from funtracks.data_model import SolutionTracks, Tracks
+from funtracks.data_model import Tracks
 
 track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
 
@@ -42,7 +42,7 @@ class TestEdgeAnnotator:
         # Compute values
         ann.compute()
         for key in all_features:
-            assert key in tracks.graph.edge_attr_keys()
+            assert key in tracks.graph_solution.edge_attr_keys()
 
     def test_update_all(self, get_graph, ndim) -> None:
         graph = get_graph(ndim, with_seg=True)
@@ -78,7 +78,10 @@ class TestEdgeAnnotator:
         with pytest.warns(match="Cannot find label 1 in frame .*"):
             UpdateNodeSeg(tracks, node_id, mask, added=False)
 
-        assert tracks.graph.edges[tracks.graph.edge_id(*edge_id)]["iou"] == 0
+        assert (
+            tracks.graph_solution.edges[tracks.graph_solution.edge_id(*edge_id)]["iou"]
+            == 0
+        )
 
     def test_add_remove_feature(self, get_graph, ndim):
         graph = get_graph(ndim, with_seg=True)
@@ -130,8 +133,8 @@ class TestEdgeAnnotator:
 
     def test_ignores_irrelevant_actions(self, get_graph, ndim):
         """Test that EdgeAnnotator ignores actions that don't affect edges."""
-        graph = get_graph(ndim, is_solution=True, with_seg=True)
-        tracks = SolutionTracks(
+        graph = get_graph(ndim, prefill_track_ids=True, with_seg=True)
+        tracks = Tracks(
             graph,
             ndim=ndim,
             **track_attrs,
@@ -140,7 +143,7 @@ class TestEdgeAnnotator:
 
         node_id = 3
         edge = (1, 3)
-        edge_id = tracks.graph.edge_id(*edge)
+        edge_id = tracks.graph_solution.edge_id(*edge)
         initial_iou = tracks.get_edge_attr(edge, "iou")
 
         # If we recomputed IoU now, it would be different
@@ -155,6 +158,6 @@ class TestEdgeAnnotator:
         UpdateTrackIDs(tracks, node_id, new_track_id)
 
         # IoU should remain unchanged (no recomputation happened despite seg change)
-        assert tracks.graph.edges[edge_id]["iou"] == initial_iou
+        assert tracks.graph_solution.edges[edge_id]["iou"] == initial_iou
         # But track_id should be updated
         assert tracks.get_track_id(node_id) == new_track_id

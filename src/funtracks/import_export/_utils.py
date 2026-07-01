@@ -71,7 +71,7 @@ def infer_dtype_from_array(arr: ArrayLike) -> ValueType:
 
 
 def filter_graph_with_ancestors(
-    graph: td.graph.GraphView, nodes_to_keep: set[int]
+    graph: td.graph.BaseGraph, nodes_to_keep: set[int]
 ) -> list[int]:
     """Filter a graph to keep only the nodes in `nodes_to_keep` and their ancestors.
 

@@ -10,20 +10,20 @@ from ..actions.add_delete_node import DeleteNode
 from ..actions.update_track_id import UpdateTrackIDs
 
 if TYPE_CHECKING:
-    from funtracks.data_model import SolutionTracks
+    from funtracks.data_model import Tracks
 
 
 class UserDeleteNode(ActionGroup):
     def __init__(
         self,
-        tracks: SolutionTracks,
+        tracks: Tracks,
         node: int,
         pixels: None | tuple[np.ndarray, ...] = None,
         _top_level: bool = True,
     ):
         """
         Args:
-            tracks (SolutionTracks): The tracks to delete the node from.
+            tracks (Tracks): The tracks to delete the node from.
             node (int): The node id to delete.
             pixels (tuple[np.ndarray, ...] | None): The pixels of the node in the
                 segmentation, if known. Will be computed if not provided.
@@ -33,7 +33,7 @@ class UserDeleteNode(ActionGroup):
                 action. Defaults to True.
         """
         super().__init__(tracks, actions=[])
-        self.tracks: SolutionTracks  # Narrow type from base class
+        self.tracks: Tracks  # Narrow type from base class
         # delete adjacent edges
         for pred in self.tracks.predecessors(node):
             siblings = self.tracks.successors(pred)

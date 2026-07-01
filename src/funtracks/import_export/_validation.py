@@ -22,7 +22,7 @@ SEG_KEY = "seg_id"
 
 
 def validate_graph_seg_match(
-    graph: td.graph.GraphView,
+    graph: td.graph.BaseGraph,
     segmentation: da.Array,
     scale: list[float],
     position_attr: list[str],

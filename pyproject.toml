@@ -38,7 +38,7 @@ dependencies =[
     "dask>=2025.5.0",
     "pandas>=2.3.3",
     "zarr>=2.18,<4",
-    "tracksdata[spatial]==0.1.0rc4",
+    "tracksdata[spatial]>=0.1.0rc6",
     "tqdm>=4.66.1",
     # zarr 2.x's util.py imports cbuffer_sizes/cbuffer_metainfo from
     # numcodecs.blosc, which numcodecs >= 0.16 removed. Pin numcodecs per
@@ -107,8 +107,6 @@ unfixable = [
 ]
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["D"]  # no docstrings in tests
-"src/funtracks/data_model/tracks.py" = ["D"]  # Remove this when refactoring tracks
-"src/funtracks/data_model/solution_tracks.py" = ["D"]  # Remove this when refactoring tracks
 "__init__.py" = ["F401"]  # unused imports allowed in __init__.py
 
 # https://docs.astral.sh/ruff/formatter/

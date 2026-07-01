@@ -20,11 +20,11 @@ def _roundtrip(tracks, tmp_path, name="rt.geff"):
 
 
 def test_geff_roundtrip_preserves_solution_schema(get_tracks, tmp_path):
-    tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
     loaded = _roundtrip(tracks, tmp_path)
 
-    edge_schema = loaded.graph._edge_attr_schemas()["solution"]
-    node_schema = loaded.graph._node_attr_schemas()["solution"]
+    edge_schema = loaded.graph_solution._edge_attr_schemas()["solution"]
+    node_schema = loaded.graph_solution._node_attr_schemas()["solution"]
 
     assert edge_schema.dtype == pl.Boolean
     assert edge_schema.default_value is True
@@ -33,9 +33,9 @@ def test_geff_roundtrip_preserves_solution_schema(get_tracks, tmp_path):
 
 
 def test_add_edge_is_solution_true_after_geff_roundtrip(get_tracks, tmp_path):
-    tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
     loaded = _roundtrip(tracks, tmp_path)
-    g = loaded.graph
+    g = loaded.graph_solution
 
     # find any source at frame t and target at t+1 with no edge between them
     rows = list(g.node_attrs(attr_keys=["node_id", "t"]).sort("t").iter_rows(named=True))
@@ -61,10 +61,10 @@ def test_add_edge_is_solution_true_after_geff_roundtrip(get_tracks, tmp_path):
 
 
 def test_add_node_is_solution_true_after_geff_roundtrip(get_tracks, tmp_path):
-    tracks = get_tracks(ndim=3, with_seg=False, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
     loaded = _roundtrip(tracks, tmp_path)
 
-    new_id = max(loaded.graph.node_ids()) + 1
+    new_id = max(loaded.graph_solution.node_ids()) + 1
     AddNode(
         loaded,
         new_id,

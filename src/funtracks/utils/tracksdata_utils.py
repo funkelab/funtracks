@@ -67,7 +67,7 @@ def to_polars_dtype(dtype_or_value: str | Any) -> pl.DataType:
         raise ValueError(f"Unsupported type: {type(dtype_or_value)}")
 
 
-def create_empty_graphview_graph(
+def create_empty_graph(
     node_attributes: list[str] | None = None,
     edge_attributes: list[str] | None = None,
     node_default_values: list[Any] | None = None,
@@ -75,9 +75,9 @@ def create_empty_graphview_graph(
     database: str | None = None,
     position_attrs: list[str] | None = None,
     ndim: int = 3,
-) -> td.graph.GraphView:
+) -> td.graph.BaseGraph:
     """
-    Create an empty tracksdata GraphView with standard node and edge attributes.
+    Create an empty tracksdata base graph with standard node and edge attributes.
     Parameters
     ----------
     node_attributes : list[str] | None
@@ -102,8 +102,9 @@ def create_empty_graphview_graph(
 
     Returns
     -------
-    td.graph.GraphView
-        An empty tracksdata GraphView with standard node and edge attributes.
+    td.graph.BaseGraph
+        An empty tracksdata base graph with standard node and edge attributes
+        (including a `solution` flag). Tracks builds the solution==True view from it.
     """
     if position_attrs is None:
         position_attrs = ["pos"]
@@ -187,12 +188,8 @@ def create_empty_graphview_graph(
     if "solution" not in graph_td.edge_attr_keys():
         graph_td.add_edge_attr_key("solution", default_value=True, dtype=pl.Boolean)
 
-    graph_td_sub = graph_td.filter(
-        td.NodeAttr("solution") == True,  # noqa: E712
-        td.EdgeAttr("solution") == True,  # noqa: E712
-    ).subgraph()
-
-    return graph_td_sub
+    # Return the full base graph; Tracks builds the solution==True view internally.
+    return graph_td
 
 
 def assert_node_attrs_equal_with_masks(
@@ -202,8 +199,8 @@ def assert_node_attrs_equal_with_masks(
     Fully compare the content of two graphs (node attributes and Masks)
     """
 
-    if isinstance(object1, td.graph.GraphView) and (
-        isinstance(object2, td.graph.GraphView)
+    if isinstance(object1, td.graph.BaseGraph) and (
+        isinstance(object2, td.graph.BaseGraph)
     ):
         node_attrs1 = object1.node_attrs()
         node_attrs2 = object2.node_attrs()
@@ -385,21 +382,21 @@ def segmentation_to_masks(
 
 
 def add_masks_and_bboxes_to_graph(
-    graph: td.graph.GraphView,
+    graph: td.graph.BaseGraph,
     segmentation: np.ndarray,
-) -> td.graph.GraphView:
+) -> td.graph.BaseGraph:
     """Add mask and bbox attributes to graph nodes from segmentation.
 
     Parameters
     ----------
-    graph : td.graph.GraphView
+    graph : td.graph.BaseGraph
         Graph to add attributes to
     segmentation : np.ndarray
         Segmentation array of shape (T, Z, Y, X) or (T, Y, X)
 
     Returns
     -------
-    td.graph.GraphView
+    td.graph.BaseGraph
         Graph with 'mask' and 'bbox' attributes added to nodes
     """
 
@@ -480,14 +477,11 @@ def td_relabel_nodes(graph, mapping: dict[int, int]) -> td.graph.IndexedRXGraph:
         }
         new_graph.add_edge(source_id, target_id, attrs)
 
-    new_graph_sub = new_graph.filter(
-        td.NodeAttr("solution") == True,  # noqa: E712
-        td.EdgeAttr("solution") == True,  # noqa: E712
-    ).subgraph()
-    return new_graph_sub
+    # Return the full base graph; Tracks builds the solution==True view internally.
+    return new_graph
 
 
-def convert_graph_nx_to_td(graph_nx: nx.DiGraph) -> td.graph.GraphView:
+def convert_graph_nx_to_td(graph_nx: nx.DiGraph) -> td.graph.BaseGraph:
     """Convert a NetworkX DiGraph to a tracksdata graph.
 
     Args:
@@ -584,10 +578,5 @@ def convert_graph_nx_to_td(graph_nx: nx.DiGraph) -> td.graph.GraphView:
         attrs_copy["solution"] = True
         graph_td.add_edge(source_id, target_id, attrs_copy)
 
-    # Create subgraph (GraphView) with only solution nodes and edges
-    graph_td_sub = graph_td.filter(
-        td.NodeAttr("solution") == True,  # noqa: E712
-        td.EdgeAttr("solution") == True,  # noqa: E712
-    ).subgraph()
-
-    return graph_td_sub
+    # Return the full base graph; Tracks builds the solution==True view internally.
+    return graph_td

@@ -30,7 +30,7 @@ def test_relabel_segmentation(get_tracks):
     segmentation = np.asarray(tracks.segmentation)
 
     # Use only nodes 1 and 2 (single tracklet: node 1 at t=0, node 2 at t=1)
-    subgraph = tracks.graph.filter(node_ids=[1, 2]).subgraph()
+    subgraph = tracks.graph_solution.filter(node_ids=[1, 2]).subgraph()
     relabeled = relabel_segmentation_with_track_id(subgraph, segmentation)
 
     # Nodes 1 and 2 form one tracklet → both get label 1

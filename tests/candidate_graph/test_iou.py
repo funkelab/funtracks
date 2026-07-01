@@ -43,10 +43,12 @@ def test_add_iou_2d(get_tracks):
     add_cand_edges(cand_graph, max_edge_distance=100, node_frame_dict=node_frame_dict)
     add_iou(cand_graph, segmentation_2d, node_frame_dict=node_frame_dict)
 
-    # For edges shared with tracks.graph, iou must agree
+    # For edges shared with tracks.graph_solution, iou must agree
     cand_edges = {tuple(e) for e in cand_graph.edge_list()}
-    ref_edges = {tuple(e) for e in tracks.graph.edge_list()}
+    ref_edges = {tuple(e) for e in tracks.graph_solution.edge_list()}
     for src, tgt in cand_edges & ref_edges:
         cand_iou = cand_graph.edges[cand_graph.edge_id(src, tgt)]["iou"]
-        ref_iou = tracks.graph.edges[tracks.graph.edge_id(src, tgt)]["iou"]
+        ref_iou = tracks.graph_solution.edges[tracks.graph_solution.edge_id(src, tgt)][
+            "iou"
+        ]
         assert cand_iou == pytest.approx(ref_iou, abs=0.01)

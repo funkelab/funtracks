@@ -61,13 +61,13 @@ class UpdateNodeSeg(BasicAction):
 
         if value == 0:
             # val=0 means deleting (part of) the mask
-            mask_old = self.tracks.graph.nodes[self.node][self.mask_key]
+            mask_old = self.tracks.graph_full.nodes[self.node][self.mask_key]
             mask_subtracted = mask_old.__isub__(mask_new)
             self.tracks.update_mask(self.node, mask_subtracted, mask_key=self.mask_key)
 
-        elif self.tracks.graph.has_node(value):
+        elif self.tracks.graph_full.has_node(value):
             # if node already exists:
-            mask_old = self.tracks.graph.nodes[value][self.mask_key]
+            mask_old = self.tracks.graph_full.nodes[value][self.mask_key]
             mask_combined = mask_old.__or__(mask_new)
             self.tracks.update_mask(value, mask_combined, mask_key=self.mask_key)
 

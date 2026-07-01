@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from funtracks.utils.tracksdata_utils import (
-    create_empty_graphview_graph,
+    create_empty_graph,
     pixels_to_td_mask,
     td_mask_to_pixels,
 )
@@ -142,7 +142,7 @@ def test_pixels_coordinate_offset(ndim):
 
 
 def test_memory_graph_survives_thread_boundary():
-    """A GraphView created in a worker thread must remain accessible from the main thread.
+    """A base graph created in a worker thread must stay accessible from the main thread.
 
     Regression test: nodes_from_segmentation previously used database=':memory:',
     which caused 'no such table: Metadata' when the graph crossed a thread boundary
@@ -152,7 +152,7 @@ def test_memory_graph_survives_thread_boundary():
     result = {}
 
     def worker():
-        graph = create_empty_graphview_graph(
+        graph = create_empty_graph(
             node_attributes=["pos"],
             ndim=3,
         )
@@ -165,22 +165,23 @@ def test_memory_graph_survives_thread_boundary():
 
     graph = result["graph"]
 
-    # This calls graph.metadata internally via BaseGraph.from_other().
+    # create_empty_graph now returns the base graph; build a view to exercise
+    # detach(), which calls graph.metadata internally via BaseGraph.from_other().
     # With :memory: + default connection pool it opens a new empty DB → crash.
-    detached = graph.detach()
+    detached = graph.filter().subgraph().detach()
 
     assert detached.num_nodes() == 1
 
 
-def test_create_empty_graphview_graph_with_solution_attr():
+def test_create_empty_graph_with_solution_attr():
     """Test that passing solution as a node/edge attribute does not raise.
 
-    Regression test: create_empty_graphview_graph unconditionally added the
+    Regression test: create_empty_graph unconditionally added the
     solution attribute at the end, even when it was already added via the
     node_attributes / edge_attributes loop, causing a ValueError.
     """
     # Should not raise ValueError even though solution is listed explicitly
-    graph = create_empty_graphview_graph(
+    graph = create_empty_graph(
         node_attributes=["solution"],
         edge_attributes=["solution"],
         node_default_values=[True],

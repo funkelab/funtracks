@@ -12,14 +12,15 @@ from .._export_segmentation import export_segmentation
 from .._utils import filter_graph_with_ancestors
 
 if TYPE_CHECKING:
-    from funtracks.data_model.solution_tracks import SolutionTracks
+    from funtracks.data_model.tracks import Tracks
 
 
 def export_to_csv(
-    tracks: SolutionTracks,
+    tracks: Tracks,
     outfile: Path | str,
     color_dict: dict[int, np.ndarray] | None = None,
     node_ids: set[int] | None = None,
+    export_full: bool = False,
     use_display_names: bool = False,
     export_seg: bool = False,
     seg_path: Path | str | None = None,
@@ -36,12 +37,16 @@ def export_to_csv(
     tiff. If a color dictionary is provided, it will also export the tracklet colors.
 
     Args:
-        tracks: SolutionTracks object containing the tracking data to export
+        tracks: Tracks object containing the tracking data to export
         outfile: Path to output CSV file
         color_dict: dict[int, np.ndarray], optional. If provided, will be used to save the
             hex colors.
         node_ids: Optional set of node IDs to include. If provided, only these
             nodes and their ancestors will be included in the output.
+        export_full: If True, export the full graph (every node/edge, including
+            soft-deleted/candidate ones with solution=False); the "solution" column is
+            then included so the two can be distinguished. If False (default), export
+            only the solution view.
         use_display_names: If True, use feature display names as column headers.
             If False (default), use raw feature keys for backward compatibility.
         export_seg: Whether to export the segmentation alongside the CSV.
@@ -70,6 +75,10 @@ def export_to_csv(
     """
 
     tracklet_key = tracks.features.tracklet_key
+    # Which graph to export: the full graph (incl. solution=False candidates) or just
+    # the solution view. Topology reads (node ids, ancestors, predecessors) go through
+    # this; attribute reads use the tracks helpers, which already target graph_full.
+    graph = tracks.graph_full if export_full else tracks.graph_solution
 
     def convert_numpy_to_python(value):
         """Convert numpy types to native Python types."""
@@ -122,8 +131,10 @@ def export_to_csv(
             # Skip derived features (e.g. bbox managed by mask)
             if feature_name in derived_keys:
                 continue
-            # Skip solution — graph is already filtered to solution=True
-            if feature_name == "solution":
+            # Skip solution unless exporting the full graph: in the solution-only
+            # export it is always True (uninformative); in a full export it
+            # distinguishes solution nodes from soft-deleted/candidate ones.
+            if feature_name == "solution" and not export_full:
                 continue
             feature_names.append(feature_name)
             num_values = feature_dict.get("num_values", 1)
@@ -155,15 +166,15 @@ def export_to_csv(
 
     # Determine which nodes to export
     if node_ids is None:
-        nodes_to_keep = tracks.graph.node_ids()
+        nodes_to_keep = graph.node_ids()
     else:
-        nodes_to_keep = filter_graph_with_ancestors(tracks.graph, node_ids)
+        nodes_to_keep = filter_graph_with_ancestors(graph, node_ids)
 
     # Write CSV file
     rows: list[dict[str, Any]] = []
 
     for node_id in nodes_to_keep:
-        parents = list(tracks.graph.predecessors(node_id))
+        parents = list(graph.predecessors(node_id))
         parent_id = "" if len(parents) == 0 else parents[0]
 
         row: dict[str, Any]
@@ -210,7 +221,7 @@ def export_to_csv(
 
         track_id_to_hex = {}
 
-        for track_id, nodes in tracks.track_id_to_node.items():
+        for track_id, nodes in tracks.track_annotator.tracklet_id_to_nodes.items():
             if not nodes:
                 continue
             first_node = nodes[0]

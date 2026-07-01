@@ -8,7 +8,7 @@ from ..actions._base import ActionGroup
 from .user_delete_node import UserDeleteNode
 
 if TYPE_CHECKING:
-    from funtracks.data_model import SolutionTracks
+    from funtracks.data_model import Tracks
 
 
 class UserDeleteNodes(ActionGroup):
@@ -26,12 +26,12 @@ class UserDeleteNodes(ActionGroup):
 
     def __init__(
         self,
-        tracks: SolutionTracks,
+        tracks: Tracks,
         nodes: list[int],
         pixels: None | list[tuple[np.ndarray, ...]] = None,
     ):
         super().__init__(tracks, actions=[])
-        self.tracks: SolutionTracks  # Narrow type from base class
+        self.tracks: Tracks  # Narrow type from base class
         for i, node in enumerate(nodes):
             self.actions.append(
                 UserDeleteNode(

@@ -35,7 +35,7 @@ class GraphAnnotator:
         """Check if this annotator can annotate the given tracks.
 
         Subclasses should override this method to specify their requirements
-        (e.g., segmentation, SolutionTracks, etc.).
+        (e.g., segmentation, Tracks, etc.).
 
         Args:
             tracks: The tracks to check compatibility with
@@ -51,6 +51,29 @@ class GraphAnnotator:
         self.all_features: dict[str, tuple[Feature, bool]] = {
             key: (feat, False) for key, feat in features.items()
         }
+
+    @property
+    def graph(self):
+        """The graph this annotator iterates over and reads topology/masks from.
+
+        Defaults to the full graph. Detection features (`pos`, `area`, `iou`, ...) are
+        intrinsic to a node/edge — independent of solution membership — so they are
+        computed for *every* node/edge, including soft-deleted (`solution=False`)
+        candidates, keeping them valid for revive and ready for re-solving.
+        `TrackAnnotator` overrides this to `graph_solution`, since track ids
+        (`tracklet_id`, `lineage_id`) are derived from the solution topology. Root and
+        view share attribute storage, so writes made here are seen through the solution
+        view automatically.
+
+        KNOWN COST: computing over `graph_full` means `compute()`/`update()` run
+        regionprops / mask.iou for every candidate (solution=False) node/edge too. On
+        candidate graphs with many unselected detections (often 10-100x the solution
+        size) this is O(candidates) work that is mostly never read, since revive is rare.
+        This is a deliberate eagerness-for-readiness trade; if it becomes a bottleneck,
+        the lever is lazy compute-on-revive (default to graph_solution and compute a
+        candidate's intrinsic features only when it enters the solution).
+        """
+        return self.tracks.graph_full
 
     def activate_features(self, keys: list[str]) -> None:
         """Activate computation of the given features in the annotation process.
@@ -106,7 +129,7 @@ class GraphAnnotator:
     def compute(self, feature_keys: list[str] | None = None) -> None:
         """Compute a set of features and add them to the tracks.
 
-        This involves both updating the node/edge attributes on the tracks.graph
+        This involves both updating the node/edge attributes on `self.graph`
         and adding the features to the FeatureDict, if necessary. This is distinct
         from `update` to allow more efficient bulk computation of features.
 
@@ -123,8 +146,9 @@ class GraphAnnotator:
     def update(self, action: BasicAction) -> None:
         """Update a set of features based on the given action.
 
-        This involves both updating the node or edge attributes on the tracks.graph
-        and adding the features to the FeatureDict, if necessary. This is distinct
+        This involves both updating the node or edge attributes on `self.graph`
+        and adding the features to the FeatureDict, if
+        necessary. This is distinct
         from `compute` to allow more efficient computation of features for single
         elements.
 

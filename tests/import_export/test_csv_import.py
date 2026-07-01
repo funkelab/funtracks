@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from funtracks.data_model import SolutionTracks
+from funtracks.data_model import Tracks
 from funtracks.import_export import tracks_from_df
 
 
@@ -42,9 +42,9 @@ class TestDataFrameImportBasic:
         """Test importing 2D DataFrame."""
         tracks = tracks_from_df(simple_df_2d)
 
-        assert isinstance(tracks, SolutionTracks)
-        assert tracks.graph.num_nodes() == 4
-        assert tracks.graph.num_edges() == 3
+        assert isinstance(tracks, Tracks)
+        assert tracks.graph_solution.num_nodes() == 4
+        assert tracks.graph_solution.num_edges() == 3
         assert tracks.ndim == 3
 
     def test_import_3d(self, df_3d):
@@ -52,7 +52,7 @@ class TestDataFrameImportBasic:
         tracks = tracks_from_df(df_3d)
 
         assert tracks.ndim == 4
-        assert tracks.graph.num_nodes() == 3
+        assert tracks.graph_solution.num_nodes() == 3
         # Check z coordinate
         pos = tracks.get_position(1)
         assert len(pos) == 3  # z, y, x
@@ -80,12 +80,12 @@ class TestDataFrameImportBasic:
         tracks = tracks_from_df(simple_df_2d)
 
         # Check specific edges exist
-        assert tracks.graph.has_edge(1, 2)
-        assert tracks.graph.has_edge(1, 3)
-        assert tracks.graph.has_edge(2, 4)
+        assert tracks.graph_solution.has_edge(1, 2)
+        assert tracks.graph_solution.has_edge(1, 3)
+        assert tracks.graph_solution.has_edge(2, 4)
 
         # Check node 1 has two children (division)
-        assert len(list(tracks.graph.successors(1))) == 2
+        assert len(list(tracks.graph_solution.successors(1))) == 2
 
 
 class TestSegmentationHandling:
@@ -162,8 +162,8 @@ class TestEdgeCases:
 
         tracks = tracks_from_df(df)
 
-        assert tracks.graph.num_nodes() == 1
-        assert tracks.graph.num_edges() == 0
+        assert tracks.graph_solution.num_nodes() == 1
+        assert tracks.graph_solution.num_edges() == 0
 
     def test_multiple_roots(self):
         """Test multiple independent lineages."""
@@ -179,11 +179,15 @@ class TestEdgeCases:
 
         tracks = tracks_from_df(df)
 
-        assert tracks.graph.num_nodes() == 4
-        assert tracks.graph.num_edges() == 2
+        assert tracks.graph_solution.num_nodes() == 4
+        assert tracks.graph_solution.num_edges() == 2
 
         # Should have two root nodes
-        roots = [n for n in tracks.graph.node_ids() if tracks.graph.in_degree(n) == 0]
+        roots = [
+            n
+            for n in tracks.graph_solution.node_ids()
+            if len(tracks.predecessors(n)) == 0
+        ]
         assert len(roots) == 2
 
     def test_division_nan_parent(self):
@@ -207,10 +211,10 @@ class TestEdgeCases:
 
         tracks = tracks_from_df(df)
 
-        assert tracks.graph.num_nodes() == 3
-        assert tracks.graph.num_edges() == 2
+        assert tracks.graph_solution.num_nodes() == 3
+        assert tracks.graph_solution.num_edges() == 2
 
-        children = list(tracks.graph.successors(1))
+        children = list(tracks.graph_solution.successors(1))
         assert set(children) == {2, 3}
 
     def test_division_event(self):
@@ -227,11 +231,11 @@ class TestEdgeCases:
 
         tracks = tracks_from_df(df)
 
-        assert tracks.graph.num_nodes() == 3
-        assert tracks.graph.num_edges() == 2
+        assert tracks.graph_solution.num_nodes() == 3
+        assert tracks.graph_solution.num_edges() == 2
 
         # Node 1 should have two children
-        children = list(tracks.graph.successors(1))
+        children = list(tracks.graph_solution.successors(1))
         assert len(children) == 2
         assert set(children) == {2, 3}
 
@@ -249,19 +253,23 @@ class TestEdgeCases:
 
         tracks = tracks_from_df(df)
 
-        assert tracks.graph.num_nodes() == 10
-        assert tracks.graph.num_edges() == 9
+        assert tracks.graph_solution.num_nodes() == 10
+        assert tracks.graph_solution.num_edges() == 9
 
         # Should form a single linear chain
-        roots = [n for n in tracks.graph.node_ids() if tracks.graph.in_degree(n) == 0]
+        roots = [
+            n
+            for n in tracks.graph_solution.node_ids()
+            if len(tracks.predecessors(n)) == 0
+        ]
         assert len(roots) == 1
 
         # Each non-leaf node should have exactly one child
         non_leaves = [
-            n for n in tracks.graph.node_ids() if tracks.graph.out_degree(n) > 0
+            n for n in tracks.graph_solution.node_ids() if len(tracks.successors(n)) > 0
         ]
         for node in non_leaves:
-            assert tracks.graph.out_degree(node) == 1
+            assert len(tracks.successors(node)) == 1
 
     def test_orphaned_node_raises_error(self):
         """Test that node with invalid parent_id raises error."""
@@ -361,8 +369,8 @@ class TestDuplicateMappings:
         tracks = tracks_from_df(simple_df_2d, node_name_map=name_map)
 
         # Both id and seg_id should be present with same values
-        assert tracks.graph.num_nodes() == 4
-        for node_id in tracks.graph.node_ids():
+        assert tracks.graph_solution.num_nodes() == 4
+        for node_id in tracks.graph_solution.node_ids():
             assert tracks.get_node_attr(node_id, "seg_id") == node_id
 
     def test_duplicate_mapping_with_segmentation(self, simple_df_2d):
@@ -654,7 +662,7 @@ class TestSpatialDimsValidation:
         tracks = tracks_from_df(df, node_name_map=name_map)
         assert tracks is not None
         # The empty mapping should not result in a feature being added
-        assert "ellipse_axis_radii" not in tracks.graph.node_attr_keys()
+        assert "ellipse_axis_radii" not in tracks.graph_solution.node_attr_keys()
 
     def test_import_without_position_with_segmentation(self):
         """Test that position can be omitted when segmentation is provided.
@@ -687,8 +695,8 @@ class TestSpatialDimsValidation:
         assert tracks is not None
 
         # Position should be computed from segmentation centroids
-        assert "pos" in tracks.graph.node_attr_keys()
-        pos_1 = tracks.graph.nodes[1]["pos"]
+        assert "pos" in tracks.graph_solution.node_attr_keys()
+        pos_1 = tracks.graph_solution.nodes[1]["pos"]
         # Centroid of 3x3 region at [2:5, 2:5] is approximately [3, 3]
         np.testing.assert_array_almost_equal(pos_1, [3.0, 3.0], decimal=0)
 

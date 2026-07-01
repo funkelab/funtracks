@@ -9,7 +9,7 @@ from .user_add_edge import UserAddEdge
 from .user_delete_edge import UserDeleteEdge
 
 if TYPE_CHECKING:
-    from funtracks.data_model import SolutionTracks
+    from funtracks.data_model import Tracks
 
 
 class UserSwapPredecessors(ActionGroup):
@@ -19,7 +19,7 @@ class UserSwapPredecessors(ActionGroup):
     must be earlier in time than both nodes for the swap to be valid.
 
     Args:
-        tracks (SolutionTracks): The tracks to perform the swap on.
+        tracks (Tracks): The tracks to perform the swap on.
         nodes (tuple[Node, Node]): A tuple with two nodes.
 
     Raises:
@@ -30,17 +30,17 @@ class UserSwapPredecessors(ActionGroup):
 
     def __init__(
         self,
-        tracks: SolutionTracks,
+        tracks: Tracks,
         nodes: tuple[int, int],
     ):
         super().__init__(tracks, actions=[])
-        self.tracks: SolutionTracks  # narrow type
+        self.tracks: Tracks  # narrow type
 
         if len(nodes) != 2:
             raise InvalidActionError("You can only swap a pair of two nodes.")
 
         node1, node2 = nodes
-        graph = tracks.graph
+        graph = tracks.graph_solution
 
         # Find predecessors
         pred1 = graph.predecessors(node1)[0] if graph.predecessors(node1) else None
