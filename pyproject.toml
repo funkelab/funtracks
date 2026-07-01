@@ -38,7 +38,7 @@ dependencies =[
     "dask>=2025.5.0",
     "pandas>=2.3.3",
     "zarr>=2.18,<4",
-    "tracksdata[spatial]>=0.1.0rc5",
+    "tracksdata[spatial]>=0.1.0rc6",
     "tqdm>=4.66.1",
     # zarr 2.x's util.py imports cbuffer_sizes/cbuffer_metainfo from
     # numcodecs.blosc, which numcodecs >= 0.16 removed. Pin numcodecs per
@@ -123,7 +123,3 @@ explicit_package_bases = true
 exclude_also = [
     "if TYPE_CHECKING:",
 ]
-
-#remove this after tracksdata PR is merged:
-[tool.uv.sources]
-tracksdata = { git = "https://github.com/TeunHuijben/tracksdata.git", rev = "06465dcabb772622aed2ae66417c0b857b4ed35c" }
