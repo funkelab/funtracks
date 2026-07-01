@@ -120,11 +120,9 @@ class TrackAnnotator(GraphAnnotator):
             tuple[int, dict[int, list[int]]]: The maximum id value, and a mapping from
                 ids to a list of nodes with that id.
         """
-        if key not in self.tracks.graph_solution.node_attr_keys():
+        if key not in self.graph.node_attr_keys():
             return 0, {}
-        df = self.tracks.graph_solution.node_attrs(
-            attr_keys=[td.DEFAULT_ATTR_KEYS.NODE_ID, key]
-        )
+        df = self.graph.node_attrs(attr_keys=[td.DEFAULT_ATTR_KEYS.NODE_ID, key])
         id_to_nodes = defaultdict(list)
         for node, _id in zip(df[td.DEFAULT_ATTR_KEYS.NODE_ID], df[key], strict=True):
             if _id is None:
@@ -188,15 +186,12 @@ class TrackAnnotator(GraphAnnotator):
         attributes will be updated.
         """
 
-        lineages_internal = rx.weakly_connected_components(
-            self.tracks.graph_solution.rx_graph
-        )
+        lineages_internal = rx.weakly_connected_components(self.graph.rx_graph)
         # Map each component's internal node indices to external ids in one batched
         # call. node_ids() rebuilds the full external-id list on every call, so calling
         # it per node (as before) was O(N^2).
         lineages_external = [
-            self.tracks.graph_solution._map_to_external(list(lin))
-            for lin in lineages_internal
+            self.graph._map_to_external(list(lin)) for lin in lineages_internal
         ]
 
         max_id, ids_to_nodes = self._assign_ids(lineages_external, self.lineage_key)
@@ -214,7 +209,7 @@ class TrackAnnotator(GraphAnnotator):
         # slow because each remove_edge syncs the view's bidirectional edge maps,
         # whereas rustworkx edge removal is in-memory. copy() preserves node indices,
         # so components map back through the original graph's id mapping.
-        rx_copy = self.tracks.graph_solution.rx_graph.copy()
+        rx_copy = self.graph.rx_graph.copy()
         for node in rx_copy.node_indices():
             if rx_copy.out_degree(node) >= 2:
                 for _, daughter, _ in list(rx_copy.out_edges(node)):
@@ -225,15 +220,13 @@ class TrackAnnotator(GraphAnnotator):
         all_track_ids = []
         for tracklet in rx.weakly_connected_components(rx_copy):
             # Batched internal -> external mapping (see _assign_lineage_ids).
-            node_ids_external = self.tracks.graph_solution._map_to_external(
-                list(tracklet)
-            )
+            node_ids_external = self.graph._map_to_external(list(tracklet))
             all_node_ids.extend(node_ids_external)
             all_track_ids.extend([track_id] * len(node_ids_external))
             self.tracklet_id_to_nodes[track_id] = node_ids_external
             track_id += 1
         if all_node_ids:
-            self.tracks.graph_solution.update_node_attrs(
+            self.graph.update_node_attrs(
                 attrs={self.tracks.features.tracklet_key: all_track_ids},
                 node_ids=all_node_ids,
             )
@@ -303,18 +296,18 @@ class TrackAnnotator(GraphAnnotator):
                         still_in_tracklet = False
 
                 # Continue to all successors
-                next_nodes.extend(self.tracks.graph_solution.successors(node))
+                next_nodes.extend(self.graph.successors(node))
 
             curr_nodes = next_nodes
 
         # Bulk-write all collected node attribute changes in one call each
         if update_tracklet and tracklet_nodes:
-            self.tracks.graph_solution.update_node_attrs(
+            self.graph.update_node_attrs(
                 attrs={self.tracklet_key: [new_tracklet_id] * len(tracklet_nodes)},
                 node_ids=tracklet_nodes,
             )
         if update_lineage and lineage_nodes:
-            self.tracks.graph_solution.update_node_attrs(
+            self.graph.update_node_attrs(
                 attrs={self.lineage_key: [new_lineage_id] * len(lineage_nodes)},
                 node_ids=lineage_nodes,
             )
