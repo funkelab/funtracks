@@ -802,7 +802,15 @@ class Tracks:
         # Add to the features dictionary
         self.features[key] = feature
 
-        # Perform custom graph operations when a feature is added
+        # Perform custom graph operations when a feature is added.
+        #
+        # Schema (attr-key) registration is done on graph_solution (the view), NOT on
+        # graph_full, even though annotators write the VALUES to graph_full. This relies
+        # on a tracksdata invariant: adding an attr key to a view propagates up to its
+        # root, so the column ends up on both. The reverse does NOT hold today — adding
+        # a key directly to the root is not propagated down into an existing view — so
+        # registering on graph_full would leave graph_solution without the column.
+        # If tracksdata ever makes view attr-key additions local, revisit this.
         ft = feature["feature_type"]
         if "node" in ft and key not in self.graph_solution.node_attr_keys():
             # "mask" value_type maps to pl.Object via to_polars_dtype
@@ -851,7 +859,9 @@ class Tracks:
         else:
             return
 
-        # Perform custom graph operations when a feature is deleted
+        # Perform custom graph operations when a feature is deleted. Schema ops go
+        # through graph_solution (the view) and propagate to the root — same tracksdata
+        # invariant as add_feature (see the note there).
         if "node" in feature_type and key in self.graph_solution.node_attr_keys():
             self.graph_solution.remove_node_attr_key(key)
         if "edge" in feature_type and key in self.graph_solution.edge_attr_keys():
