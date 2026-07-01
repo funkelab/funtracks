@@ -118,7 +118,7 @@ class UserAddNode(ActionGroup):
         # downstream
         elif succ is not None:
             # check pred of succ
-            preds = self.tracks.graph_solution.predecessors(succ)
+            preds = self.tracks.predecessors(succ)
             pred_of_succ = preds[0] if preds else None
             if (
                 pred_of_succ is not None

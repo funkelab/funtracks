@@ -295,7 +295,7 @@ class Tracks:
         Creates annotators conditionally:
         - RegionpropsAnnotator: Only if segmentation is provided
         - EdgeAnnotator: Only if segmentation is provided
-        - TrackAnnotator: Only if this is a Tracks instance
+        - TrackAnnotator: Always (every Tracks has track ids)
 
         Each annotator is configured with appropriate keys from self.features.
 

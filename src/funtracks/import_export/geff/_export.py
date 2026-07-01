@@ -34,6 +34,11 @@ def write_to_geff(
     geff store directly to *path*.  Intended for internal save/load workflows
     where the user picks the ``.geff`` path.
 
+    Note: only ``graph_solution`` is written. Soft-deleted (``solution=False``)
+    candidates are dropped, and reimport marks everything ``solution=True`` — so
+    undo-ability of past deletes does not survive a save/load round-trip (Phase-1
+    design; candidate persistence is deferred to the candidate/solver phase).
+
     Args:
         tracks: Tracks object containing a graph to save.
         path: Destination path for the geff store.
@@ -64,6 +69,9 @@ def export_to_geff(
     seg_file_format: Literal["zarr", "tiff"] = "zarr",
 ):
     """Export the Tracks graph to geff.
+
+    Only the solution graph is exported; soft-deleted (``solution=False``)
+    candidates are not included.
 
     Args:
         tracks (Tracks): Tracks object containing a graph to save.
@@ -193,7 +201,7 @@ def _write_segmentation_shape(geff_path: Path, tracks: Tracks) -> None:
     This allows import_from_geff to reconstruct the segmentation (GraphArrayView)
     without requiring an external segmentation file.
     """
-    seg_shape = tracks.graph_solution.metadata.get("segmentation_shape")
+    seg_shape = tracks.graph_full.metadata.get("segmentation_shape")
     if seg_shape is not None:
         import zarr as _zarr
 
