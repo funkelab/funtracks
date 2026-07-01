@@ -22,6 +22,18 @@ def test_recompute_track_ids(graph_2d_with_track_id):
     assert tracks.get_next_track_id() == 6
 
 
+def test_recompute_track_ids_when_sentinel_present(graph_2d_with_track_id):
+    """A tracklet column that exists but still holds the -1 sentinel means "not
+    computed": Tracks must recompute track ids from topology, not trust the sentinels."""
+    graph = graph_2d_with_track_id
+    node_ids = list(graph.node_ids())
+    graph.update_node_attrs(attrs={"track_id": [-1] * len(node_ids)}, node_ids=node_ids)
+
+    tracks = Tracks(graph, ndim=3, **track_attrs)
+
+    assert -1 not in tracks.get_track_ids(tracks.nodes())
+
+
 def test_next_track_id(graph_2d_with_track_id):
     tracks = Tracks(graph_2d_with_track_id, ndim=3, **track_attrs)
     assert tracks.get_next_track_id() == 6

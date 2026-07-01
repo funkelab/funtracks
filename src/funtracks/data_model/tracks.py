@@ -406,7 +406,25 @@ class Tracks:
         annotator = self.track_annotator
         self.features.tracklet_key = annotator.tracklet_key
         self.features.lineage_key = annotator.lineage_key
-        self._register_core_features([annotator.tracklet_key, annotator.lineage_key])
+        # A tracklet column can exist yet still hold the -1 sentinel ("not computed",
+        # the column default). Trusting it would activate stale ids and seed a phantom
+        # tracklet -1 in the annotator bookkeeping, so force a recompute from topology.
+        if self._has_uncomputed_track_ids(annotator.tracklet_key):
+            self.enable_features([annotator.tracklet_key, annotator.lineage_key])
+        else:
+            self._register_core_features([annotator.tracklet_key, annotator.lineage_key])
+
+    def _has_uncomputed_track_ids(self, tracklet_key: str) -> bool:
+        """True if the tracklet column exists but any node still holds the -1 sentinel.
+
+        A missing column returns False: _register_core_features computes it from scratch.
+        """
+        if self.graph_solution.num_nodes() == 0:
+            return False
+        if tracklet_key not in self.graph_solution.node_attr_keys():
+            return False
+        values = self.graph_solution.node_attrs(attr_keys=[tracklet_key])[tracklet_key]
+        return bool((values == -1).any())
 
     def nodes(self):
         return np.array(self.graph_solution.node_ids())
