@@ -948,8 +948,9 @@ class Tracks:
             or len(self.track_annotator.tracklet_id_to_nodes[track_id]) == 0
         ):
             return None, None
-        candidates = self.track_annotator.tracklet_id_to_nodes[track_id]
-        candidates.sort(key=lambda n: self.get_time(n))
+        candidates = sorted(
+            self.track_annotator.tracklet_id_to_nodes[track_id], key=self.get_time
+        )
 
         pred = None
         succ = None
