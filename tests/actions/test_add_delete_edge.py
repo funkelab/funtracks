@@ -165,6 +165,38 @@ def test_custom_edge_attributes_preserved(get_tracks, ndim, with_seg):
         )
 
 
+def test_add_edge_revive_applies_new_attributes(get_tracks):
+    """Re-adding a soft-deleted edge with NEW attributes must apply them, not silently
+    keep the values preserved from before the delete.
+
+    Existing tests only re-add via inverse(), which reuses the SAME attrs that
+    soft-delete preserved, so the revive-vs-add-new asymmetry is invisible to them.
+    """
+    from funtracks.features import Feature
+
+    tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
+    tracks.add_feature(
+        "weight",
+        Feature(
+            feature_type="edge",
+            value_type="float",
+            num_values=1,
+            display_name="Weight",
+            default_value=None,
+        ),
+    )
+
+    edge = (1, 5)
+    AddEdge(tracks, edge, attributes={"weight": 1.5})
+    DeleteEdge(tracks, edge)  # soft-delete: weight=1.5 preserved in graph_full
+
+    # Fresh add of the (now soft-deleted) edge with a DIFFERENT weight.
+    AddEdge(tracks, edge, attributes={"weight": 9.9})
+
+    edge_id = tracks.graph_solution.edge_id(*edge)
+    assert tracks.graph_solution.edges[edge_id]["weight"] == 9.9
+
+
 def test_add_edge_with_unregistered_edge_attr(tmp_path):
     """AddEdge must not crash when the graph has edge attrs absent from tracks.features.
 

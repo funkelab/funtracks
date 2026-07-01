@@ -57,10 +57,13 @@ class AddEdge(BasicAction):
 
         if self.tracks.graph_full.has_edge(*self.edge):
             # Revive a soft-deleted edge (already present in the full graph as a
-            # candidate): flip solution=True and re-surface it in the solution view.
+            # candidate): flip solution=True, apply any caller-provided attributes (so
+            # revive matches the add-new branch), and re-surface it in the solution view.
             edge_id = self.tracks.graph_full.edge_id(self.edge[0], self.edge[1])
+            revive_attrs = {k: v for k, v in self.attributes.items() if k != "solution"}
+            revive_attrs["solution"] = True
             self.tracks.graph_full.update_edge_attrs(
-                attrs={"solution": True}, edge_ids=[edge_id]
+                attrs=revive_attrs, edge_ids=[edge_id]
             )
             self.tracks.graph_solution.add_edge_to_view(self.edge[0], self.edge[1])
         else:
