@@ -31,6 +31,29 @@ DEFAULT_CIRCULARITY_KEY = "circularity"
 DEFAULT_PERIMETER_KEY = "perimeter"
 
 
+def _centroid(mask: Mask, spacing: tuple[float, ...] | None) -> list[float]:
+    """Centroid in world units, read directly from the mask array.
+
+    Equivalent to ``ExtendedRegionProperties.centroid`` (``(local_centroid + bbox_min)
+    * spacing``) but skips the skimage regionprops machinery (find_objects, region
+    caching), which is wasted overhead when only the centroid is needed.
+
+    Args:
+        mask: A Mask object representing one detection.
+        spacing: Voxel spacing per spatial dimension, or None for unit spacing.
+
+    Returns:
+        The centroid coordinates, one float per spatial dimension.
+    """
+    arr = mask.mask
+    bbox_min = mask.bbox[: arr.ndim]
+    local = np.array([idx.mean() for idx in np.nonzero(arr)])
+    world = local + bbox_min
+    if spacing is not None:
+        world = world * np.asarray(spacing)
+    return [float(v) for v in world]
+
+
 class FeatureSpec(NamedTuple):
     """Specification for a regionprops feature.
 
@@ -170,13 +193,23 @@ class RegionpropsAnnotator(GraphAnnotator):
         all_node_ids = []
         all_values: dict[str, list] = {key: [] for key in keys_to_compute}
 
+        # Position (centroid) is the only feature computed at construction. Reading it
+        # via skimage regionprops pays for a find_objects + RegionProperties build per
+        # mask that is wasted when centroid is all we need, so take it straight from the
+        # mask array. Any other features still need the full regionprops pass.
+        want_pos = self.pos_key in keys_to_compute
+        regionprops_keys = [key for key in keys_to_compute if key != self.pos_key]
+
         for node_id in self.tracks.graph.node_ids():
             if not self.tracks.graph.has_node(node_id):
                 continue
             mask = self.tracks.graph.nodes[node_id]["mask"]
-            for region in regionprops_extended(mask, spacing=spacing):
-                all_node_ids.append(node_id)
-                for key in keys_to_compute:
+            all_node_ids.append(node_id)
+            if want_pos:
+                all_values[self.pos_key].append(_centroid(mask, spacing))
+            if regionprops_keys:
+                (region,) = regionprops_extended(mask, spacing=spacing)
+                for key in regionprops_keys:
                     value = getattr(region, self.regionprops_names[key])
                     if isinstance(value, tuple):
                         value = [float(v) for v in value]
