@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1782499495746,
+  "lastUpdate": 1783636838597,
   "repoUrl": "https://github.com/funkelab/funtracks",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -1254,6 +1254,44 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 9.086018136999996 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "malinmayorc@janelia.hhmi.org",
+            "name": "Caroline Malin-Mayor",
+            "username": "cmalinmayor"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fbc75472158d4472c95322c4cc5bdee511ead35f",
+          "message": "Fix tracksdata pin to be >=v0.1.0rc6 (#252)\n\n* Fix tracksdata pin to be >=\n\n* latest tracksdata (rc6) - needed for speedups in motile_tracker\n\n---------\n\nCo-authored-by: Teun Huijben <45037215+TeunHuijben@users.noreply.github.com>\nCo-authored-by: Teun Huijben <teun.huijben@czbiohub.org>",
+          "timestamp": "2026-07-09T15:39:56-07:00",
+          "tree_id": "f2b7197437847e54086b5ed0a0742594ca456a49",
+          "url": "https://github.com/funkelab/funtracks/commit/fbc75472158d4472c95322c4cc5bdee511ead35f"
+        },
+        "date": 1783636836386,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_compute_graph_from_seg",
+            "value": 0.359920022661255,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 2.7783950240000053 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_graph_to_solution",
+            "value": 0.1354324117863359,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 7.383756863000002 sec\nrounds: 1"
           }
         ]
       }
