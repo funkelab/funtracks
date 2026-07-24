@@ -8,6 +8,11 @@ from funtracks.data_model import SolutionTracks, Tracks
 from funtracks.import_export import export_to_geff, import_from_geff, write_to_geff
 
 
+def _seg_shape_from_attrs(attrs):
+    """Extract the segmentation shape from geff attrs (extra.tracksdata.shape)."""
+    return attrs.get("geff", {}).get("extra", {}).get("tracksdata", {}).get("shape")
+
+
 def _assert_valid_geff_export(export_dir, expected_num_nodes=None):
     """Assert basic export correctness and return the opened zarr Group."""
     z = zarr.open((export_dir / "tracks.geff").as_posix(), mode="r")
@@ -60,10 +65,13 @@ def test_export_segmentation_relabel(get_tracks, ndim, seg_relabel, tmp_path):
     else:
         assert unique_vals == set(tracks.graph.node_ids())
 
-    # segmentation_shape must be in metadata
+    # shape must be in geff metadata under extra.tracksdata.shape
     attrs = dict(z.attrs)
-    assert "segmentation_shape" in attrs
-    assert tuple(attrs["segmentation_shape"]) == tracks.segmentation.shape
+    seg_shape = _seg_shape_from_attrs(attrs)
+    assert seg_shape is not None
+    assert tuple(seg_shape) == tracks.segmentation.shape
+    # and must NOT be written as a top-level zarr attr anymore
+    assert "segmentation_shape" not in attrs
 
 
 def test_export_no_segmentation_saved(get_tracks, tmp_path):
@@ -78,9 +86,9 @@ def test_export_no_segmentation_saved(get_tracks, tmp_path):
 
     assert not (export_dir / "segmentation").exists()
 
-    # segmentation_shape is still written (from graph metadata, not from the file)
+    # shape is still written (from graph metadata, not from the file)
     attrs = dict(z.attrs)
-    assert "segmentation_shape" in attrs
+    assert _seg_shape_from_attrs(attrs) is not None
 
 
 def test_export_without_seg_on_tracks(get_tracks, tmp_path):
@@ -96,7 +104,7 @@ def test_export_without_seg_on_tracks(get_tracks, tmp_path):
     assert not (export_dir / "segmentation").exists()
 
     attrs = dict(z.attrs)
-    assert "segmentation_shape" not in attrs
+    assert _seg_shape_from_attrs(attrs) is None
 
 
 @pytest.mark.parametrize("seg_relabel", ["tracklet", "lineage"])
@@ -127,8 +135,9 @@ def test_export_segmentation_non_solution(get_tracks, tmp_path):
     assert set(seg_zarr[:].flatten()) - {0} == set(tracks.graph.node_ids())
 
     attrs = dict(z.attrs)
-    assert "segmentation_shape" in attrs
-    assert tuple(attrs["segmentation_shape"]) == tracks.segmentation.shape
+    seg_shape = _seg_shape_from_attrs(attrs)
+    assert seg_shape is not None
+    assert tuple(seg_shape) == tracks.segmentation.shape
 
 
 # --- Position attribute splitting ---
@@ -291,7 +300,7 @@ def test_export_non_directory_raises(get_tracks, tmp_path):
 @pytest.mark.parametrize("ndim", [3, 4])
 @pytest.mark.parametrize("with_seg", [True, False])
 def test_export_metadata(get_tracks, ndim, with_seg, tmp_path):
-    """Test axes structure, segmentation_shape, and FeatureDict in metadata."""
+    """Test axes structure, shape, and FeatureDict in metadata."""
     tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
 
     export_dir = tmp_path / "export"
@@ -309,12 +318,13 @@ def test_export_metadata(get_tracks, ndim, with_seg, tmp_path):
     )
     assert [ax["type"] for ax in axes] == expected_types
 
-    # segmentation_shape present iff with_seg
+    # shape present iff with_seg
+    seg_shape = _seg_shape_from_attrs(attrs)
     if with_seg:
-        assert "segmentation_shape" in attrs
-        assert tuple(attrs["segmentation_shape"]) == tracks.segmentation.shape
+        assert seg_shape is not None
+        assert tuple(seg_shape) == tracks.segmentation.shape
     else:
-        assert "segmentation_shape" not in attrs
+        assert seg_shape is None
 
     # FeatureDict stored in extra.funtracks
     assert "funtracks" in attrs["geff"].get("extra", {})
@@ -440,7 +450,7 @@ def test_write_to_geff_metadata(get_tracks, tmp_path):
 
 
 def test_write_to_geff_segmentation_shape(get_tracks, tmp_path):
-    """write_to_geff writes segmentation_shape when masks are present."""
+    """write_to_geff writes the shape into geff metadata when masks are present."""
     tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
 
     geff_path = tmp_path / "my_tracks.geff"
@@ -448,5 +458,7 @@ def test_write_to_geff_segmentation_shape(get_tracks, tmp_path):
 
     z = zarr.open(str(geff_path), mode="r")
     attrs = dict(z.attrs)
-    assert "segmentation_shape" in attrs
-    assert tuple(attrs["segmentation_shape"]) == tracks.segmentation.shape
+    seg_shape = _seg_shape_from_attrs(attrs)
+    assert seg_shape is not None
+    assert tuple(seg_shape) == tracks.segmentation.shape
+    assert "segmentation_shape" not in attrs

@@ -50,7 +50,6 @@ def write_to_geff(
         zarr_format=zarr_format,
         overwrite=overwrite,
     )
-    _write_segmentation_shape(path, tracks)
 
 
 def export_to_geff(
@@ -133,8 +132,6 @@ def export_to_geff(
     tracks_path = directory / "tracks.geff"
     graph.to_geff(geff_store=tracks_path, geff_metadata=metadata, zarr_format=zarr_format)
 
-    _write_segmentation_shape(tracks_path, tracks)
-
 
 def _build_geff_metadata(
     tracks: Tracks,
@@ -174,6 +171,13 @@ def _build_geff_metadata(
     if include_features:
         extra["funtracks"] = {"features": tracks.features.dump_json()}
 
+    # Store the segmentation shape inside the geff metadata under the tracksdata
+    # namespace (matching tracksdata's own convention), so it roundtrips as part
+    # of GeffMetadata and is readable by any tool that reads geff metadata.
+    seg_shape = tracks.graph.metadata.get("shape")
+    if seg_shape is not None:
+        extra["tracksdata"] = {"shape": list(seg_shape)}
+
     metadata = GeffMetadata(
         geff_version=geff_spec.__version__,
         directed=True,
@@ -184,23 +188,6 @@ def _build_geff_metadata(
     )
 
     return graph, metadata
-
-
-def _write_segmentation_shape(geff_path: Path, tracks: Tracks) -> None:
-    """Write segmentation_shape as an extra zarr attribute when masks are present.
-
-    GeffMetadata has no segmentation_shape field, so it must be stored separately.
-    This allows import_from_geff to reconstruct the segmentation (GraphArrayView)
-    without requiring an external segmentation file.
-    """
-    seg_shape = tracks.graph.metadata.get("segmentation_shape")
-    if seg_shape is not None:
-        import zarr as _zarr
-
-        z = _zarr.open(str(geff_path), mode="a")
-        attrs = dict(z.attrs)
-        attrs["segmentation_shape"] = list(seg_shape)
-        z.attrs.update(attrs)
 
 
 def split_position_attr(tracks: Tracks) -> tuple[td.graph.GraphView, list[str] | None]:

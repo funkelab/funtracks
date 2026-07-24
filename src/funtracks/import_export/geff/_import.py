@@ -182,28 +182,34 @@ class GeffTracksBuilder(TracksBuilder):
                     # If FeatureDict loading fails, features will remain None
                     pass
 
-        # Read segmentation_shape written by export_to_geff (stored as an extra
-        # zarr attribute alongside the geff metadata).
-        # source_path may be a filesystem Path or an in-memory zarr Store,
-        # so pass it directly without str() conversion.
-        try:
-            z = _zarr.open(source_path, mode="r")
-            raw = dict(z.attrs).get("segmentation_shape")
-        except (OSError, KeyError, ValueError):
-            raw = None
-        self._segmentation_shape = tuple(raw) if raw is not None else None
+        # Read the segmentation shape. Preferred location is inside the geff
+        # metadata at extra["tracksdata"]["shape"] (the convention shared with
+        # tracksdata). Fall back to the legacy top-level zarr attribute
+        # "segmentation_shape" written by older versions of funtracks.
+        raw = None
+        if metadata.extra and "tracksdata" in metadata.extra:
+            raw = metadata.extra["tracksdata"].get("shape")
+        if raw is None:
+            # source_path may be a filesystem Path or an in-memory zarr Store,
+            # so pass it directly without str() conversion.
+            try:
+                z = _zarr.open(source_path, mode="r")
+                raw = dict(z.attrs).get("segmentation_shape")
+            except (OSError, KeyError, ValueError):
+                raw = None
+        self._shape = tuple(raw) if raw is not None else None
 
-        # Warn when masks/bboxes are present but segmentation_shape is absent.
+        # Warn when masks/bboxes are present but the shape is absent.
         # This happens with GEFFs written by older funtracks or external tools.
         has_masks = (
             "mask" in self.importable_node_props and "bbox" in self.importable_node_props
         )
-        if has_masks and self._segmentation_shape is None:
+        if has_masks and self._shape is None:
             warnings.warn(
-                "GEFF contains 'mask' and 'bbox' node attributes but no "
-                "'segmentation_shape' metadata. The segmentation cannot be "
-                "reconstructed. Re-export with an updated version of funtracks "
-                "to preserve the segmentation.",
+                "GEFF contains 'mask' and 'bbox' node attributes but no shape "
+                "metadata. The segmentation cannot be reconstructed. Re-export "
+                "with an updated version of funtracks or tracksdata to preserve "
+                "the segmentation.",
                 UserWarning,
                 stacklevel=2,
             )
@@ -249,8 +255,8 @@ class GeffTracksBuilder(TracksBuilder):
         The GEFF format serialises mask data as plain numeric arrays (zarr
         cannot store arbitrary Python objects).  After the base graph is built,
         this override wraps each raw array back into a
-        :class:`tracksdata.nodes.Mask` instance and writes
-        ``segmentation_shape`` into the graph metadata so that
+        :class:`tracksdata.nodes.Mask` instance and writes the ``shape`` into
+        the graph metadata so that
         :class:`~funtracks.data_model.tracks.Tracks.__init__` can reconstruct
         the segmentation and create the
         :class:`~funtracks.annotators.RegionpropsAnnotator` naturally.
@@ -286,11 +292,11 @@ class GeffTracksBuilder(TracksBuilder):
                     node_ids=nodes_to_update,
                 )
 
-        # Write segmentation_shape into graph metadata so that
-        # Tracks.__init__ can reconstruct the segmentation and the
-        # RegionpropsAnnotator is created during _get_annotators().
-        if self._segmentation_shape is not None:
-            graph._update_metadata(segmentation_shape=self._segmentation_shape)
+        # Write the shape into graph metadata so that Tracks.__init__ can
+        # reconstruct the segmentation and the RegionpropsAnnotator is created
+        # during _get_annotators().
+        if self._shape is not None:
+            graph._update_metadata(shape=self._shape)
 
         return graph
 
