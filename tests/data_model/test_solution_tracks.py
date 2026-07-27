@@ -44,7 +44,10 @@ def test_from_tracks_cls(graph_2d_with_segmentation):
     )
     solution_tracks = SolutionTracks.from_tracks(tracks)
     assert solution_tracks.graph == tracks.graph
-    assert solution_tracks.segmentation == tracks.segmentation
+    # from_tracks reuses the same segmentation instance. Assert identity rather
+    # than `==`: on newer tracksdata GraphArrayView.__eq__ is element-wise and
+    # returns an array, which makes a truthiness assert ambiguous.
+    assert solution_tracks.segmentation is tracks.segmentation
     assert solution_tracks.features.time_key == tracks.features.time_key
     assert solution_tracks.features.position_key == tracks.features.position_key
     assert solution_tracks.scale == tracks.scale
