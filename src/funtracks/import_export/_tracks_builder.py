@@ -678,6 +678,24 @@ class TracksBuilder(ABC):
         if static_features:
             tracks.features.update(static_features)
 
+    def _resolve_import_scale(self, scale: list[float] | None) -> list[float] | None:
+        """Return the scale to use for this import.
+
+        By default the caller-provided scale is used as-is (e.g. the scale a user
+        entered in a scale widget for a CSV import). Format-specific builders can
+        override this to source the scale elsewhere.
+        """
+        return scale
+
+    def _scale_to_world_coords(self, scale: list[float] | None) -> None:
+        """Rescale the loaded position columns in ``self.in_memory_geff``.
+
+        No-op by default. Formats that store positions in a different coordinate
+        space than funtracks' world coordinates (e.g. GEFF stores pixels) override
+        this to convert using the resolved import ``scale``.
+        """
+        return
+
     def build(
         self,
         source: Path | pd.DataFrame,
@@ -740,10 +758,21 @@ class TracksBuilder(ABC):
         # Validate node_name_map is complete and valid
         self.validate_name_map(has_segmentation=segmentation is not None)
 
+        # Resolve the scale to use for this import. By default the caller-provided
+        # scale is used (e.g. from a scale widget for CSV imports); format-specific
+        # builders may override this (the GEFF builder reads the authoritative
+        # scale from the geff metadata).
+        scale = self._resolve_import_scale(scale)
+
         # 1. Load source data to InMemoryGeff
         self.load_source(source, self.node_name_map)
         if self.in_memory_geff is None:
             raise ValueError("load_source() must populate self.in_memory_geff")
+
+        # Rescale loaded positions into world coordinates if the format requires
+        # it (GEFF stores pixel coordinates). Uses the same resolved scale that is
+        # attached to the resulting Tracks, so the two stay consistent.
+        self._scale_to_world_coords(scale)
 
         # 2. Combine multi-value feature columns
         self._combine_multi_value_props(

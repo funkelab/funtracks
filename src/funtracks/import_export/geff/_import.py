@@ -3,6 +3,7 @@ from __future__ import annotations
 import warnings
 from typing import TYPE_CHECKING
 
+import numpy as np
 import tracksdata as td
 from geff._typing import InMemoryGeff
 from geff.core_io._base_read import read_to_memory
@@ -166,7 +167,7 @@ class GeffTracksBuilder(TracksBuilder):
         self.importable_node_props = list(metadata.node_props_metadata.keys())
         self.importable_edge_props = list(metadata.edge_props_metadata.keys())
 
-        # Store axes metadata for use in infer_node_name_map
+        # Store axes metadata for use in infer_node_name_map and scale resolution
         self._geff_axes = metadata.axes or []
 
         # Read funtracks FeatureDict from GEFF extra metadata if present
@@ -313,6 +314,61 @@ class GeffTracksBuilder(TracksBuilder):
         if self.ndim is None:
             self.ndim = ndim
 
+    def _scale_from_axes(self) -> list[float] | None:
+        """Return the per-axis scale stored in the geff metadata.
+
+        The scale is ordered as ``[time, *space]`` (mirroring
+        :meth:`infer_node_name_map`), matching the funtracks scale convention
+        ([time, z, y, x]) and the position column order. Returns None when the
+        metadata has no scaled axes (e.g. external geffs without axis scales).
+        """
+        axes = getattr(self, "_geff_axes", [])
+        time_axes = [ax for ax in axes if ax.type == "time"]
+        space_axes = [ax for ax in axes if ax.type == "space"]
+        ordered_axes = time_axes + space_axes
+        if ordered_axes and all(ax.scale is not None for ax in ordered_axes):
+            return [float(ax.scale) for ax in ordered_axes]
+        return None
+
+    def _resolve_import_scale(self, scale: list[float] | None) -> list[float] | None:
+        """For GEFF, the per-axis scale stored in the metadata is used when present, the
+        caller-provided scale is only used when the metadata has no scaled axes.
+        """
+        geff_scale = self._scale_from_axes()
+        return geff_scale if geff_scale is not None else scale
+
+    def _scale_to_world_coords(self, scale: list[float] | None) -> None:
+        """Convert stored pixel coordinates to world coordinates.
+
+        geff stores spatial coordinates in pixels together with a per-axis scale;
+        funtracks keeps positions in world coordinates, so each spatial position
+        column is multiplied by its scale (from `builder._resolve_import_scale`), so
+        the conversion stays consistent with the scale attached to the Tracks.
+        """
+        if scale is None or self.in_memory_geff is None:
+            return
+
+        spatial_scale = list(scale)[1:]  # drop the time axis
+        pos_cols = self.position_attr
+        node_props = self.in_memory_geff["node_props"]
+
+        # Composite position stored as separate columns (e.g. "z", "y", "x").
+        if (
+            pos_cols
+            and len(pos_cols) == len(spatial_scale)
+            and all(col in node_props for col in pos_cols)
+        ):
+            for col, s in zip(pos_cols, spatial_scale, strict=True):
+                if s != 1:
+                    node_props[col]["values"] = node_props[col]["values"] * s
+            return
+
+        # Position stored as a single vector column named "pos".
+        if "pos" in node_props:
+            values = node_props["pos"]["values"]
+            if values.ndim == 2 and values.shape[1] == len(spatial_scale):
+                node_props["pos"]["values"] = values * np.asarray(spatial_scale)
+
 
 def import_from_geff(
     directory: Path,
@@ -334,7 +390,10 @@ def import_from_geff(
             - For multi-value features like position, use a list: {"pos": ["y", "x"]}
             If None, property names are auto-inferred using fuzzy matching.
         segmentation_path: Optional path to segmentation data
-        scale: Optional spatial scale
+        scale: Optional scale ([time, z, y, x]). For a GEFF import the per-axis
+            scale stored in the metadata is authoritative and is always used when
+            present; this argument is only a fallback for geffs whose axes carry
+            no scale.
         edge_name_map: Optional mapping from standard funtracks keys to GEFF
             edge property names. Example: {"iou": "overlap"}
         database: Optional path to a SQLite database file for backing storage.

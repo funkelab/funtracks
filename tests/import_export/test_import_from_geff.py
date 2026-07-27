@@ -66,12 +66,15 @@ def valid_segmentation():
     times = [1, 2, 3, 4, 5]
     x = [1.0, 0.775, 0.55, 0.325, 0.1]
     y = [100, 200, 300, 400, 500]
-    scale = [1, 1, 100]
     seg_ids = np.array([10, 20, 30, 40, 50])
 
+    # The geff stores pixel coordinates. On import each spatial coordinate is
+    # multiplied by its scale to get world coordinates, and the validation
+    # converts back to pixels via ``pixel = world / scale``, recovering the
+    # original stored coordinate. So place each seg id at the pixel equal to the
+    # stored geff coordinate.
     for t, y_val, x_f, seg_id in zip(times, y, x, seg_ids, strict=False):
-        x = int(x_f * scale[2])
-        seg[t, y_val, x] = seg_id
+        seg[t, int(y_val), int(x_f)] = seg_id
     return seg
 
 

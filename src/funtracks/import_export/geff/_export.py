@@ -6,6 +6,7 @@ from typing import (
 )
 
 import geff_spec
+import numpy as np
 import polars as pl
 import tracksdata as td
 from geff_spec import GeffMetadata
@@ -170,6 +171,22 @@ def _build_geff_metadata(
             }
         )
 
+    # Convert world coordinates to pixel coordinates by dividing each spatial
+    # position attribute by its axis scale, to align with the geff format, which
+    # stores pixel coordinates together with a per-axis scale in the metadata.
+    # `graph` is a detached copy (see split_position_attr), so this does not
+    # mutate the caller's live graph.
+    pos_pixel_coords: dict[str, np.ndarray] = {}
+    node_df = graph.node_attrs()
+    for name, axis_type, axis_scale in zip(
+        axis_names, axis_types, tracks.scale, strict=True
+    ):
+        if axis_type != "space" or axis_scale == 1:
+            continue
+        pos_pixel_coords[name] = node_df[name].to_numpy() / axis_scale
+    if pos_pixel_coords:
+        graph.update_node_attrs(attrs=pos_pixel_coords, node_ids=graph.node_ids())
+
     extra: dict = {}
     if include_features:
         extra["funtracks"] = {"features": tracks.features.dump_json()}
@@ -253,7 +270,11 @@ def split_position_attr(tracks: Tracks) -> tuple[td.graph.GraphView, list[str] |
         new_graph.remove_node_attr_key(pos_key)
         return new_graph, new_keys
     elif pos_key is not None:
-        # Position is already split into separate attributes
-        return tracks.graph, list(pos_key)
+        # Position is already split into separate attributes. Detach so that
+        # downstream coordinate rescaling operates on an independent copy and
+        # does not mutate the live graph.
+        new_graph = tracks.graph.detach()
+        new_graph = new_graph.filter().subgraph()
+        return new_graph, list(pos_key)
     else:
         return tracks.graph, None
