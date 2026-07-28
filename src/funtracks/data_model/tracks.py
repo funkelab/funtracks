@@ -613,13 +613,17 @@ class Tracks:
             mask_key: The feature key for the mask column.
                 Defaults to the standard mask key.
         """
-        self.graph_full.nodes[node][mask_key] = mask
+        # Write via graph_solution, not graph_full: only a view write emits
+        # node_updated on the view, which the segmentation GraphArrayView needs to
+        # invalidate its cache. The view forwards to the root either way.
+        attrs: dict[str, Any] = {mask_key: [mask]}
         mask_feature = self.features.get(mask_key)
         if mask_feature is not None:
             # NOTE: all derived features of a mask are currently assumed to be
             # its bounding box. Revisit if non-bbox derived features are added.
             for derived_key in mask_feature.get("derived_features", []):
-                self.graph_full.nodes[node][derived_key] = mask.bbox
+                attrs[derived_key] = [mask.bbox]
+        self.graph_solution.update_node_attrs(attrs=attrs, node_ids=[int(node)])
 
     def undo(self) -> bool:
         """Undo the last performed action from the action history.
@@ -694,8 +698,10 @@ class Tracks:
     # graph_solution and their attr dicts are shared by reference, writing via graph_full
     # is identical to writing via the view for any in-solution node (the view sees it
     # automatically) and additionally works for soft-deleted (solution=False) candidates.
-    # Event signals are forwarded from graph_full → graph_solution via tracksdata's
-    # view registry, so listeners on graph_solution (e.g. GraphArrayView) are notified.
+    # Caveat: event signals are NOT forwarded from graph_full → graph_solution, so
+    # listeners on the view (e.g. GraphArrayView) do not see these writes. Writers
+    # whose attrs the view renders (t/bbox/mask) must go through graph_solution
+    # instead — see `update_mask`.
     def _set_node_attr(self, node: Node, attr: str, value: Any):
         if isinstance(value, np.ndarray):
             value = list(value)
