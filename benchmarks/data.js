@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1785165222266,
+  "lastUpdate": 1785248612323,
   "repoUrl": "https://github.com/funkelab/funtracks",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -1406,6 +1406,44 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 7.778435654000006 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "malinmayorc@janelia.hhmi.org",
+            "name": "Caroline Malin-Mayor",
+            "username": "cmalinmayor"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "38cfa7d38643a94cd932e9821e818864a0410188",
+          "message": "Merge pull request #264 from funkelab/fix-mask-isub\n\nFix mask isub + tracksdata update",
+          "timestamp": "2026-07-28T10:22:45-04:00",
+          "tree_id": "5893e52e506804a765b2af0ca671099357bd56ef",
+          "url": "https://github.com/funkelab/funtracks/commit/38cfa7d38643a94cd932e9821e818864a0410188"
+        },
+        "date": 1785248611184,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_compute_graph_from_seg",
+            "value": 0.35454666022649634,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 2.8205032290000034 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_graph_to_solution",
+            "value": 0.1332979247479794,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 7.501992262000002 sec\nrounds: 1"
           }
         ]
       }
