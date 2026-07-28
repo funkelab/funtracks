@@ -1,6 +1,7 @@
 import tempfile
 import uuid
 from typing import Any
+from warnings import warn
 
 import networkx as nx
 import numpy as np
@@ -190,6 +191,20 @@ def create_empty_graph(
 
     # Return the full base graph; Tracks builds the solution==True view internally.
     return graph_td
+
+
+def create_empty_graphview_graph(*args: Any, **kwargs: Any) -> td.graph.BaseGraph:
+    """Deprecated alias for :func:`create_empty_graph`.
+
+    .. deprecated::
+        Use :func:`create_empty_graph` instead.
+    """
+    warn(
+        "create_empty_graphview_graph is deprecated, use create_empty_graph instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return create_empty_graph(*args, **kwargs)
 
 
 def assert_node_attrs_equal_with_masks(

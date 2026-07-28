@@ -114,10 +114,14 @@ class Tracks:
         # ever known, including soft-deleted (solution=False) candidates. graph_solution
         # is derived from it as a solution==True view.
         if isinstance(graph, td.graph.GraphView):
-            raise ValueError(
-                "Tracks requires the full base graph (graph_full), not a GraphView. "
-                "graph_solution is built internally as a solution==True view of it."
+            warn(
+                "Passing a GraphView to Tracks is deprecated. "
+                "Pass the root BaseGraph instead; Tracks builds graph_solution "
+                "internally.",
+                DeprecationWarning,
+                stacklevel=2,
             )
+            graph = graph._root  # type: ignore[attr-defined]
         if "solution" not in graph.node_attr_keys():
             graph.add_node_attr_key("solution", default_value=True, dtype=pl.Boolean)
         if "solution" not in graph.edge_attr_keys():
@@ -690,6 +694,8 @@ class Tracks:
     # graph_solution and their attr dicts are shared by reference, writing via graph_full
     # is identical to writing via the view for any in-solution node (the view sees it
     # automatically) and additionally works for soft-deleted (solution=False) candidates.
+    # Event signals are forwarded from graph_full → graph_solution via tracksdata's
+    # view registry, so listeners on graph_solution (e.g. GraphArrayView) are notified.
     def _set_node_attr(self, node: Node, attr: str, value: Any):
         if isinstance(value, np.ndarray):
             value = list(value)
@@ -890,6 +896,21 @@ class Tracks:
     # has (track ids are a core feature). On an empty solution view they are no-ops.
 
     @property
+    def graph(self) -> td.graph.GraphView:
+        """The solution graph view (``graph_solution``).
+
+        .. deprecated::
+            Use ``graph_solution`` directly.  ``graph`` is kept only for
+            backward compatibility with code written against funtracks v2.
+        """
+        warn(
+            "Tracks.graph is deprecated, use Tracks.graph_solution instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.graph_solution
+
+    @property
     def track_annotator(self) -> TrackAnnotator:
         """The registered TrackAnnotator. Always present, since track ids are a core
         feature of every Tracks (_get_annotators registers one unconditionally)."""
@@ -905,6 +926,11 @@ class Tracks:
     def max_track_id(self) -> int:
         """The maximum tracklet id currently in use."""
         return self.track_annotator.max_tracklet_id
+
+    @property
+    def track_id_to_node(self) -> dict[int, list[int]]:
+        """Mapping from tracklet id to the list of node ids with that track id."""
+        return self.track_annotator.tracklet_id_to_nodes
 
     def get_next_track_id(self) -> int:
         """Return the next available track_id.
