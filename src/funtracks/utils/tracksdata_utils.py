@@ -193,8 +193,16 @@ def create_empty_graph(
     return graph_td
 
 
-def create_empty_graphview_graph(*args: Any, **kwargs: Any) -> td.graph.BaseGraph:
+def create_empty_graphview_graph(*args: Any, **kwargs: Any) -> td.graph.GraphView:
     """Deprecated alias for :func:`create_empty_graph`.
+
+    Returns a solution==True ``GraphView`` of a fresh empty base graph, matching the
+    pre-persistent-graph contract (callers expected a view). Funtracks itself uses
+    :func:`create_empty_graph` (the base graph) directly; this shim exists for
+    downstream code that still expects a view (e.g. motile_tracker, whose solver
+    returns ``result.filter().subgraph()`` and falls back to this for empty windows).
+    Passing the returned view to :class:`Tracks` still works: the deprecated
+    GraphView path unwraps it to its root base graph.
 
     .. deprecated::
         Use :func:`create_empty_graph` instead.
@@ -204,7 +212,11 @@ def create_empty_graphview_graph(*args: Any, **kwargs: Any) -> td.graph.BaseGrap
         DeprecationWarning,
         stacklevel=2,
     )
-    return create_empty_graph(*args, **kwargs)
+    graph = create_empty_graph(*args, **kwargs)
+    return graph.filter(
+        td.NodeAttr("solution") == True,  # noqa: E712
+        td.EdgeAttr("solution") == True,  # noqa: E712
+    ).subgraph()
 
 
 def assert_node_attrs_equal_with_masks(

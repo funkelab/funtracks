@@ -1173,9 +1173,7 @@ def test_import_from_geff_respects_external_solution_column(tmp_path):
     # solution=False row survives into the geff (mimicking a solver-produced
     # geff with rejected nodes).
     tracks_path = tmp_path / "tracks.geff"
-    # create_empty_graphview_graph now returns a base graph (deprecated alias),
-    # so export it directly instead of via the old .graph._root view attribute.
-    graph.to_geff(geff_store=tracks_path, zarr_format=2)
+    graph._root.to_geff(geff_store=tracks_path, zarr_format=2)
 
     tracks = import_from_geff(tracks_path)
 
