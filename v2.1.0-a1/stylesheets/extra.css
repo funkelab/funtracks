@@ -1,0 +1,133 @@
+/* ==========================================================================
+   Funtracks Color Palette
+   ========================================================================== */
+
+:root,
+[data-md-color-scheme="slate"] {
+  /* Override Material theme primary color - teal banner */
+  --md-primary-fg-color: var(--ft-teal-dark);
+  --md-primary-fg-color--light: var(--ft-teal);
+  --md-primary-fg-color--dark: var(--ft-teal-dark);
+  --md-accent-fg-color: var(--ft-purple-light);
+  --md-typeset-a-color: #8afbd9;
+
+  /* Purple - Primary */
+  --ft-purple-light: #d68afb;
+  --ft-purple: #be42f7;
+  --ft-purple-dark: #8a2fb5;
+
+  /* Gold - Secondary */
+  --ft-gold-light: #fad98a;
+  --ft-gold: #f7be42;
+  --ft-gold-dark: #b58a2f;
+
+  /* Teal - Tertiary */
+  --ft-teal-light: #8afbd9;
+  --ft-teal: #42f7be;
+  --ft-teal-dark: #238a68;
+
+  /* Neutral variations for text on colored backgrounds */
+  --ft-purple-text: #f0e0fc;
+  --ft-gold-text: #4a3d1a;
+  --ft-teal-text: #1a4a3d;
+}
+
+/* ==========================================================================
+   Link Styling
+   ========================================================================== */
+
+.md-typeset a {
+  color: var(--ft-teal-light) !important;
+}
+
+.md-typeset a:hover {
+  color: var(--ft-purple-light) !important;
+}
+
+/* ==========================================================================
+   Navigation Styling
+   ========================================================================== */
+
+/* Active/selected item in left nav */
+.md-nav__item--active > .md-nav__link {
+  color: var(--ft-teal-dark) !important;
+}
+
+/* Active item in table of contents (right side) */
+.md-nav__link--active {
+  color: var(--ft-teal-dark) !important;
+}
+
+
+/* ==========================================================================
+   Header Styling
+   ========================================================================== */
+
+h1 {
+  color: var(--ft-purple-light) !important;
+}
+
+h2 {
+  color: var(--ft-gold) !important;
+}
+
+h3 {
+  color: var(--ft-teal) !important;
+}
+
+h4 {
+  color: var(--ft-purple-light) !important;
+}
+
+/* ==========================================================================
+   Utility Classes for Docs
+   ========================================================================== */
+
+/* Background colors */
+.bg-purple { background-color: var(--ft-purple) !important; }
+.bg-purple-light { background-color: var(--ft-purple-light) !important; }
+.bg-purple-dark { background-color: var(--ft-purple-dark) !important; }
+
+.bg-gold { background-color: var(--ft-gold) !important; }
+.bg-gold-light { background-color: var(--ft-gold-light) !important; }
+.bg-gold-dark { background-color: var(--ft-gold-dark) !important; }
+
+.bg-teal { background-color: var(--ft-teal) !important; }
+.bg-teal-light { background-color: var(--ft-teal-light) !important; }
+.bg-teal-dark { background-color: var(--ft-teal-dark) !important; }
+
+/* Text colors */
+.text-purple { color: var(--ft-purple) !important; }
+.text-purple-light { color: var(--ft-purple-light) !important; }
+.text-purple-dark { color: var(--ft-purple-dark) !important; }
+
+.text-gold { color: var(--ft-gold) !important; }
+.text-gold-light { color: var(--ft-gold-light) !important; }
+.text-gold-dark { color: var(--ft-gold-dark) !important; }
+
+.text-teal { color: var(--ft-teal) !important; }
+.text-teal-light { color: var(--ft-teal-light) !important; }
+.text-teal-dark { color: var(--ft-teal-dark) !important; }
+
+/* Badge/chip styles (for inline labels) */
+.badge {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.8em;
+  font-weight: 500;
+}
+
+.badge-purple {
+  background-color: var(--ft-purple-dark);
+  color: #fff;
+}
+
+.badge-gold {
+  background-color: var(--ft-gold-dark);
+  color: #fff;
+}
+
+.badge-teal {
+  background-color: var(--ft-teal);
+  color: var(--ft-teal-text);
+}
