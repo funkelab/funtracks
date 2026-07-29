@@ -9,13 +9,13 @@ from skimage.draw import disk
 from tracksdata.nodes import Mask
 
 from funtracks.utils.tracksdata_utils import (
-    create_empty_graphview_graph,
+    create_empty_graph,
 )
 
 if TYPE_CHECKING:
     from typing import Any
 
-    from funtracks.data_model import SolutionTracks, Tracks
+    from funtracks.data_model import Tracks
 
 
 def make_2d_disk_mask(center=(50, 50), radius=20) -> Mask:
@@ -134,7 +134,7 @@ def _make_graph(
     with_iou: bool = False,
     with_masks: bool = False,
     database: str | None = None,
-) -> td.graph.GraphView:
+) -> td.graph.BaseGraph:
     """Generate a test graph with configurable features.
 
     Args:
@@ -172,7 +172,7 @@ def _make_graph(
         node_attributes.append(td.DEFAULT_ATTR_KEYS.BBOX)
         node_default_values.append(0.0)
 
-    graph = create_empty_graphview_graph(
+    graph = create_empty_graph(
         node_attributes=node_attributes,
         node_default_values=node_default_values,
         edge_attributes=edge_attributes,
@@ -288,28 +288,28 @@ def _make_graph(
 
 
 @pytest.fixture
-def graph_clean(tmp_path) -> td.graph.GraphView:
+def graph_clean(tmp_path) -> td.graph.BaseGraph:
     """Base graph with only time - no positions or computed features."""
     db_path = str(tmp_path / "graph_clean.db")
     return _make_graph(ndim=3, database=db_path)
 
 
 @pytest.fixture
-def graph_2d_with_position(tmp_path) -> td.graph.GraphView:
+def graph_2d_with_position(tmp_path) -> td.graph.BaseGraph:
     """Graph with 2D positions - for Tracks without segmentation."""
     db_path = str(tmp_path / "graph_2d_position.db")
     return _make_graph(ndim=3, with_pos=True, database=db_path)
 
 
 @pytest.fixture
-def graph_2d_with_track_id(tmp_path) -> td.graph.GraphView:
-    """Graph with 2D positions and track_id - for SolutionTracks without segmentation."""
+def graph_2d_with_track_id(tmp_path) -> td.graph.BaseGraph:
+    """Graph with 2D positions and track_id - for Tracks without segmentation."""
     db_path = str(tmp_path / "graph_2d_track_id.db")
     return _make_graph(ndim=3, with_pos=True, with_track_id=True, database=db_path)
 
 
 @pytest.fixture
-def graph_2d_with_segmentation(tmp_path) -> td.graph.GraphView:
+def graph_2d_with_segmentation(tmp_path) -> td.graph.BaseGraph:
     """Graph with segmentation (masks/bboxes) and all computed features."""
     db_path = str(tmp_path / "graph_2d_segmentation.db")
     return _make_graph(
@@ -324,21 +324,21 @@ def graph_2d_with_segmentation(tmp_path) -> td.graph.GraphView:
 
 
 @pytest.fixture
-def graph_3d_with_position(tmp_path) -> td.graph.GraphView:
+def graph_3d_with_position(tmp_path) -> td.graph.BaseGraph:
     """Graph with 3D positions - for Tracks without segmentation."""
     db_path = str(tmp_path / "graph_3d_position.db")
     return _make_graph(ndim=4, with_pos=True, database=db_path)
 
 
 @pytest.fixture
-def graph_3d_with_track_id(tmp_path) -> td.graph.GraphView:
-    """Graph with 3D positions and track_id - for SolutionTracks without segmentation."""
+def graph_3d_with_track_id(tmp_path) -> td.graph.BaseGraph:
+    """Graph with 3D positions and track_id - for Tracks without segmentation."""
     db_path = str(tmp_path / "graph_3d_track_id.db")
     return _make_graph(ndim=4, with_pos=True, with_track_id=True, database=db_path)
 
 
 @pytest.fixture
-def graph_3d_with_segmentation(tmp_path) -> td.graph.GraphView:
+def graph_3d_with_segmentation(tmp_path) -> td.graph.BaseGraph:
     """Graph with segmentation (masks/bboxes) and all computed features."""
     db_path = str(tmp_path / "graph_3d_segmentation.db")
     return _make_graph(
@@ -353,22 +353,24 @@ def graph_3d_with_segmentation(tmp_path) -> td.graph.GraphView:
 
 
 @pytest.fixture
-def get_tracks(get_graph) -> Callable[..., "Tracks | SolutionTracks"]:
-    """Factory fixture to create Tracks or SolutionTracks instances.
+def get_tracks(get_graph) -> Callable[..., "Tracks"]:
+    """Factory fixture to create Tracks or Tracks instances.
 
     Returns a factory function that can be called with:
         ndim: 3 for 2D spatial + time, 4 for 3D spatial + time
         with_seg: Whether to include segmentation (mask/bbox as node attributes)
-        is_solution: Whether to return SolutionTracks instead of Tracks
+        prefill_track_ids: If True, the fixture graph ships with track_id/lineage_id
+            values already set (activated as-is); if False, they are computed from the
+            graph topology. Either way the resulting Tracks has track ids.
 
     Example:
-        tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
+        tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
 
     Note:
         Uses a pre-built FeatureDict to avoid recomputing features that already
         exist in the test graph fixtures.
     """
-    from funtracks.data_model import SolutionTracks, Tracks
+    from funtracks.data_model import Tracks
     from funtracks.features import (
         Area,
         FeatureDict,
@@ -385,12 +387,14 @@ def get_tracks(get_graph) -> Callable[..., "Tracks | SolutionTracks"]:
     def _make_tracks(
         ndim: int,
         with_seg: bool = True,
-        is_solution: bool = False,
-    ) -> Tracks | SolutionTracks:
+        prefill_track_ids: bool = False,
+    ) -> Tracks:
         # Determine axis names based on ndim
         axis_names = ["z", "y", "x"] if ndim == 4 else ["y", "x"]
 
-        graph = get_graph(ndim=ndim, is_solution=is_solution, with_seg=with_seg)
+        graph = get_graph(
+            ndim=ndim, prefill_track_ids=prefill_track_ids, with_seg=with_seg
+        )
 
         # Build FeatureDict based on what exists in the graph
         features_dict: dict[str, Any] = {
@@ -404,7 +408,7 @@ def get_tracks(get_graph) -> Callable[..., "Tracks | SolutionTracks"]:
             features_dict["bbox"] = SegBbox(ndim)
             features_dict["area"] = Area(ndim=ndim)
             features_dict["iou"] = IoU()
-        if is_solution:
+        if prefill_track_ids:
             features_dict["track_id"] = TrackletID()
             features_dict["lineage_id"] = LineageID()
 
@@ -412,31 +416,24 @@ def get_tracks(get_graph) -> Callable[..., "Tracks | SolutionTracks"]:
             features=features_dict,
             time_key="t",
             position_key="pos",
-            tracklet_key="track_id" if is_solution else None,
-            lineage_key="lineage_id" if is_solution else None,
+            tracklet_key="track_id" if prefill_track_ids else None,
+            lineage_key="lineage_id" if prefill_track_ids else None,
         )
 
-        # Create the appropriate Tracks type with pre-built FeatureDict
-        if is_solution:
-            return SolutionTracks(
-                graph,
-                ndim=ndim,
-                features=feature_dict,
-            )
-        else:
-            return Tracks(
-                graph,
-                ndim=ndim,
-                features=feature_dict,
-            )
+        # Create the Tracks with the pre-built FeatureDict.
+        return Tracks(
+            graph,
+            ndim=ndim,
+            features=feature_dict,
+        )
 
     return _make_tracks
 
 
 @pytest.fixture
-def graph_2d_list(tmp_path) -> td.graph.GraphView:
+def graph_2d_list(tmp_path) -> td.graph.BaseGraph:
     db_path = str(tmp_path / "graph_2d_list.db")
-    graph = create_empty_graphview_graph(database=db_path)
+    graph = create_empty_graph(database=db_path)
 
     nodes = [
         {
@@ -475,13 +472,14 @@ def sphere(center, radius, shape):
 
 
 @pytest.fixture
-def get_graph(tmp_path) -> Callable[..., td.graph.GraphView]:
+def get_graph(tmp_path) -> Callable[..., td.graph.BaseGraph]:
     """Factory fixture to create a graph with configurable features.
 
     Args:
         ndim: 3 for 2D spatial + time, 4 for 3D spatial + time
         with_pos: Include position attribute (default True)
-        is_solution: Include track_id and lineage_id (default False)
+        prefill_track_ids: Include track_id and lineage_id columns on the graph
+            (default False)
         with_seg: Include mask, bbox, area, and iou (default False)
 
     Returns:
@@ -489,22 +487,22 @@ def get_graph(tmp_path) -> Callable[..., td.graph.GraphView]:
 
     Example:
         graph = get_graph(ndim=3, with_seg=True)
-        graph = get_graph(ndim=4, is_solution=True, with_seg=True)
+        graph = get_graph(ndim=4, prefill_track_ids=True, with_seg=True)
     """
     counter = [0]
 
     def _get_graph(
         ndim: int = 3,
         with_pos: bool = True,
-        is_solution: bool = False,
+        prefill_track_ids: bool = False,
         with_seg: bool = False,
-    ) -> td.graph.GraphView:
+    ) -> td.graph.BaseGraph:
         counter[0] += 1
         db_path = str(tmp_path / f"graph_{counter[0]}.db")
         return _make_graph(
             ndim=ndim,
             with_pos=with_pos,
-            with_track_id=is_solution,
+            with_track_id=prefill_track_ids,
             with_area=with_seg,
             with_iou=with_seg,
             with_masks=with_seg,

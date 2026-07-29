@@ -7,7 +7,7 @@ from funtracks.import_export._import_segmentation import (
     load_segmentation,
     relabel_segmentation,
 )
-from funtracks.utils.tracksdata_utils import create_empty_graphview_graph
+from funtracks.utils.tracksdata_utils import create_empty_graph
 
 
 class TestLoadSegmentation:
@@ -46,7 +46,7 @@ class TestRelabelSegmentation:
         seg[1, 2, 2] = 20  # seg_id 20 at t=1
 
         # Create graph with node_ids 1, 2
-        graph = create_empty_graphview_graph()
+        graph = create_empty_graph()
         graph.add_node(index=1, attrs={"t": 0, "solution": True})
         graph.add_node(index=2, attrs={"t": 1, "solution": True})
 
@@ -70,7 +70,7 @@ class TestRelabelSegmentation:
         seg[1, 2, 2] = 20  # seg_id 20 at t=1
 
         # Create graph with node_ids 0, 1 (includes 0!)
-        graph = create_empty_graphview_graph()
+        graph = create_empty_graph()
         graph.add_node(index=0, attrs={"t": 0, "solution": True})
         graph.add_node(index=1, attrs={"t": 1, "solution": True})
 
@@ -97,7 +97,7 @@ class TestRelabelSegmentation:
         seg[0, 1, 1] = 1
         seg[1, 2, 2] = 2
 
-        graph = create_empty_graphview_graph()
+        graph = create_empty_graph()
         graph.add_node(index=1, attrs={"t": 0, "solution": True})
         graph.add_node(index=2, attrs={"t": 1, "solution": True})
 
@@ -119,7 +119,7 @@ class TestRelabelSegmentation:
         seg[0, 2, 2] = 20
         seg[0, 3, 3] = 30
 
-        graph = create_empty_graphview_graph()
+        graph = create_empty_graph()
         graph.add_node(index=1, attrs={"t": 0, "solution": True})
         graph.add_node(index=2, attrs={"t": 0, "solution": True})
         graph.add_node(index=3, attrs={"t": 0, "solution": True})

@@ -8,7 +8,7 @@ from .user_update_node_attrs import UserUpdateNodeAttrs
 if TYPE_CHECKING:
     from typing import Any
 
-    from funtracks.data_model import SolutionTracks
+    from funtracks.data_model import Tracks
 
 
 class UserUpdateNodesAttrs(ActionGroup):
@@ -28,12 +28,12 @@ class UserUpdateNodesAttrs(ActionGroup):
 
     def __init__(
         self,
-        tracks: SolutionTracks,
+        tracks: Tracks,
         nodes: list[int],
         attrs: dict[str, list[Any]],
     ):
         super().__init__(tracks, actions=[])
-        self.tracks: SolutionTracks  # Narrow type from base class
+        self.tracks: Tracks  # Narrow type from base class
         for key, values in attrs.items():
             if not isinstance(values, list):
                 raise ValueError(

@@ -11,14 +11,14 @@ from ..actions.update_track_id import UpdateTrackIDs
 from .user_delete_edge import UserDeleteEdge
 
 if TYPE_CHECKING:
-    from funtracks.data_model import SolutionTracks
+    from funtracks.data_model import Tracks
 
 
 class UserAddEdge(ActionGroup):
     """Assumes that the endpoints already exist and have track ids.
 
     Args:
-        tracks (SolutionTracks): the tracks to add the edge to
+        tracks (Tracks): the tracks to add the edge to
         edge (tuple[int, int]): The edge to add
         force (bool, optional): Whether to force the action by removing any conflicting
             edges. Defaults to False.
@@ -29,26 +29,26 @@ class UserAddEdge(ActionGroup):
 
     def __init__(
         self,
-        tracks: SolutionTracks,
+        tracks: Tracks,
         edge: tuple[int, int],
         force: bool = False,
         _top_level: bool = True,
     ):
         super().__init__(tracks, actions=[])
-        self.tracks: SolutionTracks  # Narrow type from base class
+        self.tracks: Tracks  # Narrow type from base class
         source, target = edge
-        if not tracks.graph.has_node(source):
+        if not tracks.graph_solution.has_node(source):
             raise InvalidActionError(
                 f"Source node {source} not in solution yet - must be added before edge"
             )
-        if not tracks.graph.has_node(target):
+        if not tracks.graph_solution.has_node(target):
             raise InvalidActionError(
                 f"Target node {target} not in solution yet - must be added before edge"
             )
 
         # Check if making a merge. If yes and force, remove the other edge and update
         # track ids.
-        in_degree_target = self.tracks.graph.in_degree(target)
+        in_degree_target = len(self.tracks.predecessors(target))  # type: ignore
         if in_degree_target > 0:
             if not force:
                 raise InvalidActionError(
@@ -57,7 +57,7 @@ class UserAddEdge(ActionGroup):
                     forceable=True,
                 )
             else:
-                pred = next(iter(self.tracks.graph.predecessors(target)))
+                pred = next(iter(self.tracks.graph_solution.predecessors(target)))
                 merge_edge = (pred, target)
                 warnings.warn(
                     f"Removing edge {merge_edge} to add new edge without merging.",
@@ -68,7 +68,7 @@ class UserAddEdge(ActionGroup):
                 )
 
         # update track ids if needed
-        out_degree_source = self.tracks.graph.out_degree(source)
+        out_degree_source = len(self.tracks.successors(source))
         if out_degree_source == 0:  # joining two segments
             # assign the track id and lineage id of the source node to the target
             # and all downstream nodes
@@ -79,7 +79,7 @@ class UserAddEdge(ActionGroup):
             )
         elif out_degree_source == 1:  # creating a division
             # assign a new track id to existing child (lineage stays the same)
-            successor = next(iter(self.tracks.graph.successors(source)))
+            successor = next(iter(self.tracks.graph_solution.successors(source)))
             self.actions.append(
                 UpdateTrackIDs(self.tracks, successor, self.tracks.get_next_track_id())
             )

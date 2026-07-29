@@ -83,7 +83,7 @@ line-length = 90
 target-version = "py310"
 fix = true
 src = ["src"]
-extend-exclude = [".github"]
+extend-exclude = [".github", "tests_old"]  # frozen old-API suite: don't lint/format
 
 [tool.ruff.lint]
 select = [
@@ -111,8 +111,6 @@ unfixable = [
 ]
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["D"]  # no docstrings in tests
-"src/funtracks/data_model/tracks.py" = ["D"]  # Remove this when refactoring tracks
-"src/funtracks/data_model/solution_tracks.py" = ["D"]  # Remove this when refactoring tracks
 "__init__.py" = ["F401"]  # unused imports allowed in __init__.py
 
 # https://docs.astral.sh/ruff/formatter/
