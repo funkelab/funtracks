@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1785352193862,
+  "lastUpdate": 1785357288821,
   "repoUrl": "https://github.com/funkelab/funtracks",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -1520,6 +1520,44 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 6.423280684000005 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "malinmayorc@janelia.hhmi.org",
+            "name": "Caroline Malin-Mayor",
+            "username": "cmalinmayor"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "484044530f02d6b39979611c396b8542d6cc8667",
+          "message": "Merge pull request #241 from funkelab/persistent-graph\n\nPersistent graph",
+          "timestamp": "2026-07-29T16:34:06-04:00",
+          "tree_id": "33f6f7ae8fbbcb1a773d7848796d72bf79c0fbdc",
+          "url": "https://github.com/funkelab/funtracks/commit/484044530f02d6b39979611c396b8542d6cc8667"
+        },
+        "date": 1785357287386,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_compute_graph_from_seg",
+            "value": 0.36838350824467836,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 2.7145623449999974 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_graph_to_solution",
+            "value": 10.283981346708833,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 97.23860500000114 msec\nrounds: 1"
           }
         ]
       }
