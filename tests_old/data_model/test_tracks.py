@@ -1,0 +1,364 @@
+import numpy as np
+import polars as pl
+import pytest
+import tracksdata as td
+
+from funtracks.actions import UpdateNodeAttrs
+from funtracks.data_model import Tracks
+from funtracks.features import SegBbox, SegMask
+from funtracks.user_actions import UserUpdateSegmentation
+from funtracks.utils.tracksdata_utils import (
+    create_empty_graphview_graph,
+    to_polars_dtype,
+)
+
+track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
+
+
+def test_create_tracks(graph_3d_with_segmentation: td.graph.GraphView):
+    # create empty tracks
+    empty_graph = create_empty_graphview_graph()
+    tracks = Tracks(graph=empty_graph, ndim=3, **track_attrs)  # type: ignore[arg-type]
+    assert tracks.features.position_key == "pos"
+    assert isinstance(tracks.features["pos"], dict)
+    with pytest.raises(KeyError):
+        tracks.get_positions([1])
+
+    # create tracks with graph only
+    tracks = Tracks(
+        graph=graph_3d_with_segmentation,
+        ndim=4,
+        **track_attrs,  # type: ignore[arg-type]
+    )
+    pos_key = tracks.features.position_key
+    assert pos_key == "pos"
+    assert isinstance(pos_key, str)
+    assert isinstance(tracks.features[pos_key], dict)
+    assert tracks.get_positions([1]).tolist() == [[50, 50, 50]]
+    assert tracks.get_time(1) == 0
+    with pytest.raises(KeyError):
+        tracks.get_position(0)
+
+    # create track with graph and seg
+    tracks = Tracks(
+        graph=graph_3d_with_segmentation,
+        **track_attrs,  # type: ignore[arg-type]
+    )
+    pos_key = tracks.features.position_key
+    assert pos_key == "pos"
+    assert isinstance(pos_key, str)
+    assert isinstance(tracks.features[pos_key], dict)
+    assert tracks.get_positions([1]).tolist() == [[50, 50, 50]]
+    assert tracks.get_time(1) == 0
+    assert tracks.get_positions([1], incl_time=True).tolist() == [[0, 50, 50, 50]]
+    # TODO: Explicitly block doing setting the time
+    # tracks._set_node_attr(1, tracks.features.time_key, 1)
+    # assert tracks.get_positions([1], incl_time=True).tolist() == [[1, 50, 50, 50]]
+
+    tracks_wrong_attr = Tracks(
+        graph=graph_3d_with_segmentation,
+        time_attr="test",
+    )
+    with pytest.raises(KeyError):  # raises error at access if time is wrong
+        tracks_wrong_attr.get_time(1)
+
+    with pytest.raises(ValueError):
+        # Raise error is segmentation shape does not match provided ndim
+        tracks_wrong_attr = Tracks(
+            graph=graph_3d_with_segmentation, pos_attr="test", ndim=3
+        )
+
+    # test multiple position attrs
+    pos_attr = ("z", "y", "x")
+    graph_3d_with_segmentation.add_node_attr_key("z", default_value=0.0, dtype=pl.Float64)
+    graph_3d_with_segmentation.add_node_attr_key("y", default_value=0.0, dtype=pl.Float64)
+    graph_3d_with_segmentation.add_node_attr_key("x", default_value=0.0, dtype=pl.Float64)
+    for node in graph_3d_with_segmentation.node_ids():
+        pos = graph_3d_with_segmentation.nodes[node]["pos"]
+        z, y, x = pos
+        graph_3d_with_segmentation.nodes[node]["z"] = z
+        graph_3d_with_segmentation.nodes[node]["y"] = y
+        graph_3d_with_segmentation.nodes[node]["x"] = x
+
+    tracks = Tracks(
+        graph=graph_3d_with_segmentation,
+        pos_attr=pos_attr,
+        ndim=4,
+        **track_attrs,  # type: ignore[arg-type]
+    )
+    assert tracks.get_positions([1]).tolist() == [[50, 50, 50]]
+    tracks.set_position(1, [55, 56, 57])
+    assert tracks.get_position(1) == [55, 56, 57]
+
+
+def test_nodes_edges(graph_2d_with_segmentation):
+    tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
+    assert set(tracks.nodes()) == {1, 2, 3, 4, 5, 6}
+    assert len(tracks.edges()) == 4  # rx graph starts from 0, sql from 1,
+    # so direct comparison of edges depends on backend
+    assert set(map(tuple, tracks.graph.edge_list())) == {
+        (1, 2),
+        (1, 3),
+        (3, 4),
+        (4, 5),
+    }
+
+
+@pytest.mark.skip(
+    reason="old-API behavior removed in persistent-graph: Tracks.in_degree/out_degree "
+    "were removed (use len(predecessors)/len(successors))."
+)
+def test_degrees(graph_2d_with_segmentation):
+    tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
+    assert tracks.in_degree(np.array([1])) == 0
+    assert tracks.in_degree(np.array([4])) == 1
+    assert np.array_equal(tracks.in_degree(None), np.array([0, 1, 1, 1, 1, 0]))
+    assert np.array_equal(tracks.out_degree(np.array([1, 4])), np.array([2, 1]))
+    assert np.array_equal(
+        tracks.out_degree(None),
+        np.array([2, 0, 1, 1, 0, 0]),
+    )
+
+
+def test_predecessors_successors(graph_2d_with_segmentation):
+    tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
+    assert tracks.predecessors(2) == [1]
+    assert set(tracks.successors(1)) == {2, 3}
+    assert tracks.predecessors(1) == []
+    assert tracks.successors(2) == []
+
+
+def test_get_set_node_attr(graph_2d_with_segmentation):
+    tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
+
+    tracks._set_node_attr(1, "area", 42)
+
+    tracks._set_nodes_attr([1, 2], "track_id", [7, 8])
+    assert tracks.get_node_attr(1, "area") == 42
+    assert tracks.get_nodes_attr([1, 2], "track_id") == [7, 8]
+    assert tracks.get_nodes_attr([1, 2], "track_id") == [7, 8]
+    with pytest.raises(KeyError):
+        tracks.get_node_attr(1, "not_present")
+    with pytest.raises(KeyError):
+        tracks.get_nodes_attr([1, 2], "not_present")
+
+    # test array attributes
+    tracks._set_node_attr(1, "pos", np.array([1, 2]))
+    tracks._set_nodes_attr((1, 2), "pos", np.array(([1, 2], [4, 5])))
+
+
+def test_get_set_edge_attr(graph_2d_with_segmentation):
+    tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
+    tracks._set_edge_attr((1, 2), "iou", 99)
+    assert tracks.get_edge_attr((1, 2), "iou") == 99
+    assert tracks.get_edge_attr((1, 2), "iou") == 99
+    tracks._set_edges_attr([(1, 2), (1, 3)], "iou", [123, 5])
+    assert tracks.get_edges_attr([(1, 2), (1, 3)], "iou") == [123, 5]
+    assert tracks.get_edges_attr([(1, 2), (1, 3)], "iou") == [123, 5]
+    assert tracks.get_edge_attr((1, 2), "not_present") is None
+    assert tracks.get_edge_attr((1, 2), "not_present") is None
+    assert tracks.get_edges_attr([(1, 2), (1, 3)], "not_present") == [None, None]
+    assert all(x is None for x in tracks.get_edges_attr(((1, 2), (1, 3)), "not_present"))
+
+
+def test_set_positions_str(graph_2d_with_segmentation):
+    tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
+    tracks.set_positions((1, 2), [(1, 2), (3, 4)])
+    assert np.array_equal(
+        tracks.get_positions((1, 2), incl_time=False), np.array([[1, 2], [3, 4]])
+    )
+    assert np.array_equal(
+        tracks.get_positions((1, 2), incl_time=True), np.array([[0, 1, 2], [1, 3, 4]])
+    )
+
+    # test invalid node id
+    with pytest.raises(KeyError):
+        tracks.get_positions(["0"])
+
+
+def test_set_positions_list(graph_2d_list):
+    tracks = Tracks(graph_2d_list, pos_attr=["y", "x"], ndim=3, **track_attrs)
+    tracks.set_positions((1, 2), [(1, 2), (3, 4)])
+    assert np.array_equal(
+        tracks.get_positions((1, 2), incl_time=False), np.array([[1, 2], [3, 4]])
+    )
+    assert np.array_equal(
+        tracks.get_positions((1, 2), incl_time=True), np.array([[0, 1, 2], [1, 3, 4]])
+    )
+
+
+def test_get_mask_none(graph_2d_with_track_id):
+    tracks = Tracks(graph_2d_with_track_id, ndim=3, **track_attrs)
+    assert tracks.get_mask(1) is None
+
+
+def test_set_pixels_no_segmentation(graph_2d_with_track_id):
+    tracks = Tracks(graph_2d_with_track_id, ndim=3, **track_attrs)
+    pix = [(np.array([0]), np.array([10]), np.array([20]))]
+    # set_pixels no longer exist, so we use UserUpdateSegmentation
+    with pytest.raises(ValueError):
+        UserUpdateSegmentation(
+            tracks,
+            new_value=1,
+            updated_pixels=[(pix, 1)],
+            current_track_id=1,
+        )
+
+
+def test_compute_ndim_errors():
+    g = create_empty_graphview_graph()
+    g.add_node_attr_key("pos", default_value=[0, 0], dtype=pl.List(pl.Int64))
+    g.add_node(index=1, attrs={"t": 0, "pos": [0, 0, 0], "solution": True})
+
+    with pytest.raises(
+        ValueError, match="Cannot compute dimensions from segmentation or scale"
+    ):
+        Tracks(g)
+
+
+def test_get_new_node_ids(graph_2d_with_position):
+    """Test that _get_new_node_ids returns unique IDs not present in the graph,
+    and skips IDs that are already taken."""
+    g = graph_2d_with_position
+
+    tracks = Tracks(g, ndim=3)
+    ids = tracks._get_new_node_ids(3)
+
+    assert len(ids) == 3
+    assert len(set(ids)) == 3  # all unique
+    assert 1 not in ids  # existing nodes skipped
+    assert 2 not in ids
+    for node_id in ids:
+        assert not tracks.graph.has_node(node_id)
+
+    # second call must not overlap with first
+    ids2 = tracks._get_new_node_ids(2)
+    assert not set(ids) & set(ids2)
+
+
+def test_undo_redo(graph_2d_with_segmentation):
+    """Test undo/redo functionality on Tracks."""
+    tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
+
+    # Initially nothing to undo or redo
+    assert tracks.undo() is False
+    assert tracks.redo() is False
+
+    # Perform an action - add a custom attribute
+    tracks.graph.add_node_attr_key("custom_label", default_value=None, dtype=pl.Object)
+
+    action1 = UpdateNodeAttrs(tracks, node=1, attrs={"custom_label": "test_value"})
+    tracks.action_history.add_new_action(action1)
+    assert tracks.get_node_attr(1, "custom_label") == "test_value"
+
+    # Test undo - should revert the change and return True
+    assert tracks.undo() is True
+    assert tracks.get_node_attr(1, "custom_label") is None
+
+    # Can't undo further
+    assert tracks.undo() is False
+
+    # Test redo - should reapply the change and return True
+    assert tracks.redo() is True
+    assert tracks.get_node_attr(1, "custom_label") == "test_value"
+
+    # Can't redo further
+    assert tracks.redo() is False
+
+    # Perform another action
+    tracks.graph.add_node_attr_key("another_label", default_value=None, dtype=pl.Object)
+    action2 = UpdateNodeAttrs(tracks, node=2, attrs={"another_label": "second_value"})
+    tracks.action_history.add_new_action(action2)
+    assert tracks.get_node_attr(2, "another_label") == "second_value"
+
+    # Undo both actions
+    assert tracks.undo() is True  # Undo second action
+    assert tracks.get_node_attr(2, "another_label") is None
+    assert tracks.get_node_attr(1, "custom_label") == "test_value"
+
+    assert tracks.undo() is True  # Undo first action
+    assert tracks.get_node_attr(1, "custom_label") is None
+    # Redo both actions
+    assert tracks.redo() is True  # Redo first action
+    assert tracks.get_node_attr(1, "custom_label") == "test_value"
+
+    assert tracks.redo() is True  # Redo second action
+    assert tracks.get_node_attr(2, "another_label") == "second_value"
+
+
+def test_get_feature_set_registers_mask(
+    graph_2d_with_segmentation,
+):
+    """_get_feature_set registers mask and bbox as Features when segmentation exists."""
+    tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
+
+    assert "mask" in tracks.features
+    assert tracks.features["mask"]["value_type"] == "mask"
+    assert tracks.features["mask"]["derived_features"] == ["bbox"]
+    assert "bbox" in tracks.features
+    assert tracks.features["bbox"]["value_type"] == "int"
+
+
+def test_get_feature_set_no_mask_without_segmentation(
+    graph_2d_with_position,
+):
+    """_get_feature_set does NOT register mask when there is no segmentation."""
+    tracks = Tracks(graph_2d_with_position, ndim=3, **track_attrs)
+    assert "mask" not in tracks.features
+
+
+def test_to_polars_dtype_mask():
+    """to_polars_dtype maps 'mask' to pl.Object."""
+    assert to_polars_dtype("mask") == pl.Object
+
+
+def test_add_feature_mask_creates_both_columns():
+    """add_feature with mask and bbox Features creates both columns."""
+    graph = create_empty_graphview_graph(ndim=3)
+    tracks = Tracks(graph, ndim=3, **track_attrs)
+
+    assert "nuc_mask" not in tracks.graph.node_attr_keys()
+    assert "nuc_bbox" not in tracks.graph.node_attr_keys()
+
+    tracks.add_feature("nuc_mask", SegMask(ndim=3, bbox_key="nuc_bbox"))
+    tracks.add_feature("nuc_bbox", SegBbox(ndim=3))
+
+    assert "nuc_mask" in tracks.graph.node_attr_keys()
+    assert "nuc_bbox" in tracks.graph.node_attr_keys()
+    assert "nuc_mask" in tracks.features
+    assert "nuc_bbox" in tracks.features
+
+
+def test_delete_feature_mask_removes_both_columns(
+    graph_2d_with_segmentation,
+):
+    """delete_feature on a mask Feature removes both mask and bbox columns (cascade)."""
+    tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
+
+    assert "mask" in tracks.features
+    assert "bbox" in tracks.features
+    assert "mask" in tracks.graph.node_attr_keys()
+    assert "bbox" in tracks.graph.node_attr_keys()
+
+    tracks.delete_feature("mask")
+
+    assert "mask" not in tracks.features
+    assert "bbox" not in tracks.features
+    assert "mask" not in tracks.graph.node_attr_keys()
+    assert "bbox" not in tracks.graph.node_attr_keys()
+
+
+def test_update_mask_syncs_bbox(graph_2d_with_segmentation):
+    """update_mask writes both the mask and bbox to the graph node."""
+    from tests.conftest import make_2d_disk_mask
+
+    tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
+
+    new_mask = make_2d_disk_mask(center=(30, 30), radius=10)
+    tracks.update_mask(1, new_mask)
+
+    stored_mask = tracks.graph.nodes[1][td.DEFAULT_ATTR_KEYS.MASK]
+    stored_bbox = tracks.graph.nodes[1][td.DEFAULT_ATTR_KEYS.BBOX]
+
+    assert stored_mask is new_mask
+    assert np.array_equal(stored_bbox, new_mask.bbox)

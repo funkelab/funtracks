@@ -80,7 +80,7 @@ def _get_iou_dict(segmentation, multiseg=False) -> dict[int, dict[int, float]]:
 
 
 def add_iou(
-    cand_graph: td.graph.GraphView,
+    cand_graph: td.graph.BaseGraph,
     segmentation: np.ndarray,
     node_frame_dict: dict[int, list[int]] | None = None,
     multiseg=False,
@@ -92,7 +92,7 @@ def add_iou(
     add IOU to an existing graph after the fact.
 
     Args:
-        cand_graph (td.graph.GraphView): Candidate graph with nodes and edges already
+        cand_graph (td.graph.BaseGraph): Candidate graph with nodes and edges already
             populated.
         segmentation (np.ndarray): segmentation that was used to create cand_graph.
             Has shape ([h], t, [z], y, x), where h is the number of hypotheses if

@@ -8,7 +8,7 @@ from ..actions.update_node_attrs import UpdateNodeAttrs
 if TYPE_CHECKING:
     from typing import Any
 
-    from funtracks.data_model import SolutionTracks
+    from funtracks.data_model import Tracks
 
 
 class UserUpdateNodeAttrs(ActionGroup):
@@ -21,14 +21,14 @@ class UserUpdateNodeAttrs(ActionGroup):
 
     def __init__(
         self,
-        tracks: SolutionTracks,
+        tracks: Tracks,
         node: int,
         attrs: dict[str, Any],
         _top_level: bool = True,
     ):
         """
         Args:
-            tracks (SolutionTracks): The tracks to update the node attributes for
+            tracks (Tracks): The tracks to update the node attributes for
             node (int): The node to update the attributes for
             attrs (dict[str, Any]): A mapping from attribute name to new attribute
                 values for the given node.
@@ -40,7 +40,7 @@ class UserUpdateNodeAttrs(ActionGroup):
             ValueError: If a protected attribute is in the given attribute mapping.
         """
         super().__init__(tracks, actions=[])
-        self.tracks: SolutionTracks  # Narrow type from base class
+        self.tracks: Tracks  # Narrow type from base class
 
         # Call the basic UpdateNodeAttrs action
         self.actions.append(UpdateNodeAttrs(tracks, node, attrs))

@@ -9,7 +9,7 @@ from skimage.measure import regionprops
 from tqdm import tqdm
 from tracksdata.nodes import Mask
 
-from ..utils.tracksdata_utils import create_empty_graphview_graph
+from ..utils.tracksdata_utils import create_empty_graph
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,7 @@ def nodes_from_segmentation(
     scale: list[float] | None = None,
     mask: bool = True,
     t_start: int = 0,
-) -> tuple[td.graph.GraphView, dict[int, list[Any]]]:
+) -> tuple[td.graph.BaseGraph, dict[int, list[Any]]]:
     """Extract candidate nodes from a segmentation. Returns a tracksdata graph
     with only nodes, and also a dictionary from frames to node_ids for
     efficient edge adding.
@@ -50,7 +50,7 @@ def nodes_from_segmentation(
             time values. Defaults to 0.
 
     Returns:
-        tuple[td.graph.GraphView, dict[int, list[Any]]]: A candidate graph with only
+        tuple[td.graph.BaseGraph, dict[int, list[Any]]]: A candidate graph with only
             nodes, and a mapping from time frames to node ids.
     """
     logger.debug("Extracting nodes from segmentation")
@@ -66,7 +66,7 @@ def nodes_from_segmentation(
         )
 
     node_attributes = ["pos", "area", "mask", "bbox"] if mask else ["pos", "area"]
-    cand_graph = create_empty_graphview_graph(
+    cand_graph = create_empty_graph(
         node_attributes=node_attributes,
         position_attrs=["pos"],
         ndim=segmentation.ndim,
@@ -115,7 +115,7 @@ def nodes_from_segmentation(
 def nodes_from_points_list(
     points_list: np.ndarray,
     scale: list[float] | None = None,
-) -> tuple[td.graph.GraphView, dict[int, list[Any]]]:
+) -> tuple[td.graph.BaseGraph, dict[int, list[Any]]]:
     """Extract candidate nodes from a list of points. Uses the index of the
     point in the list as its unique id.
     Returns a tracksdata graph with only nodes, and also a dictionary from frames to
@@ -130,7 +130,7 @@ def nodes_from_points_list(
             implies the data is isotropic.
 
     Returns:
-        tuple[td.graph.GraphView, dict[int, list[Any]]]: A candidate graph with only
+        tuple[td.graph.BaseGraph, dict[int, list[Any]]]: A candidate graph with only
             nodes, and a mapping from time frames to node ids.
     """
     logger.info("Extracting nodes from points list")
@@ -143,7 +143,7 @@ def nodes_from_points_list(
         )
         points_list = points_list * np.array(scale)
 
-    cand_graph = create_empty_graphview_graph(
+    cand_graph = create_empty_graph(
         node_attributes=["pos"],
         position_attrs=["pos"],
         ndim=ndim,
@@ -168,11 +168,11 @@ def nodes_from_points_list(
     return cand_graph, node_frame_dict
 
 
-def _compute_node_frame_dict(cand_graph: td.graph.GraphView) -> dict[int, list[Any]]:
+def _compute_node_frame_dict(cand_graph: td.graph.BaseGraph) -> dict[int, list[Any]]:
     """Compute dictionary from time frames to node ids for candidate graph.
 
     Args:
-        cand_graph (td.graph.GraphView): A tracksdata graph
+        cand_graph (td.graph.BaseGraph): A tracksdata graph
 
     Returns:
         dict[int, list[Any]]: A mapping from time frames to lists of node ids.
@@ -187,12 +187,12 @@ def _compute_node_frame_dict(cand_graph: td.graph.GraphView) -> dict[int, list[A
     return node_frame_dict
 
 
-def create_kdtree(cand_graph: td.graph.GraphView, node_ids: list[Any]) -> KDTree:
+def create_kdtree(cand_graph: td.graph.BaseGraph, node_ids: list[Any]) -> KDTree:
     """Create a kdtree with the given nodes from the candidate graph.
     Will fail if provided node ids are not in the candidate graph.
 
     Args:
-        cand_graph (td.graph.GraphView): A candidate graph
+        cand_graph (td.graph.BaseGraph): A candidate graph
         node_ids (list[Any]): The nodes within the candidate graph to
             include in the KDTree. Useful for limiting to one time frame.
             Must be a list (not a generic iterable) to preserve order for
@@ -212,7 +212,7 @@ def create_kdtree(cand_graph: td.graph.GraphView, node_ids: list[Any]) -> KDTree
 
 
 def add_cand_edges(
-    cand_graph: td.graph.GraphView,
+    cand_graph: td.graph.BaseGraph,
     max_edge_distance: float,
     node_frame_dict: None | dict[int, list[Any]] = None,
     iou_dict: dict[int, dict[int, float]] | None = None,
@@ -221,7 +221,7 @@ def add_cand_edges(
     frames that are closer than max_edge_distance.
 
     Args:
-        cand_graph (td.graph.GraphView): Candidate graph with only nodes populated.
+        cand_graph (td.graph.BaseGraph): Candidate graph with only nodes populated.
             Will be modified in-place to add edges.
         max_edge_distance (float): Maximum distance that objects can travel between
             frames. All nodes within this distance in adjacent frames will by connected

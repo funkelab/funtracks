@@ -1,9 +1,12 @@
 import pytest
 
 from funtracks.annotators import EdgeAnnotator, RegionpropsAnnotator, TrackAnnotator
-from funtracks.data_model import SolutionTracks, Tracks
+from funtracks.data_model import Tracks
 
 track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
+# Even without an explicit tracklet_attr, every Tracks gets a TrackAnnotator and a
+# default tracklet key (no "plain" vs "solution" split).
+plain_attrs = {"time_attr": "t"}
 
 
 def test_annotator_registry_init_with_segmentation(
@@ -14,31 +17,32 @@ def test_annotator_registry_init_with_segmentation(
     tracks = Tracks(
         graph_2d_with_segmentation,
         ndim=3,
-        **track_attrs,
+        **plain_attrs,
     )
 
     annotator_types = [type(ann) for ann in tracks.annotators]
     assert RegionpropsAnnotator in annotator_types
     assert EdgeAnnotator in annotator_types
-    assert TrackAnnotator not in annotator_types  # Not a SolutionTracks
+    assert TrackAnnotator in annotator_types  # every Tracks has track ids
 
 
 def test_annotator_registry_init_without_segmentation(graph_2d_with_position):
-    """Test AnnotatorRegistry doesn't create annotators without segmentation."""
-    tracks = Tracks(graph_2d_with_position, ndim=3, **track_attrs)
+    """Without segmentation: no regionprops/edge annotators, but a TrackAnnotator is
+    still registered (track ids are a core feature of every Tracks)."""
+    tracks = Tracks(graph_2d_with_position, ndim=3, **plain_attrs)
 
     annotator_types = [type(ann) for ann in tracks.annotators]
     assert RegionpropsAnnotator not in annotator_types
     assert EdgeAnnotator not in annotator_types
-    assert TrackAnnotator not in annotator_types
+    assert TrackAnnotator in annotator_types
 
 
 def test_annotator_registry_init_solution_tracks(
     graph_2d_with_segmentation,
 ):
-    """Test AnnotatorRegistry creates all annotators for SolutionTracks with
+    """Test AnnotatorRegistry creates all annotators for Tracks with
     segmentation."""
-    tracks = SolutionTracks(
+    tracks = Tracks(
         graph_2d_with_segmentation,
         ndim=3,
         **track_attrs,
@@ -57,13 +61,13 @@ def test_enable_disable_features(graph_2d_with_segmentation):
         **track_attrs,
     )
 
-    nodes = list(tracks.graph.node_ids())
-    edges = list(tracks.graph.edge_ids())
+    nodes = list(tracks.graph_solution.node_ids())
+    edges = list(tracks.graph_solution.edge_ids())
 
     # Core features (time, pos) should be in tracks.features and computed
     assert "pos" in tracks.features
     assert "t" in tracks.features
-    assert tracks.graph.nodes[nodes[0]]["pos"] is not None
+    assert tracks.graph_solution.nodes[nodes[0]]["pos"] is not None
 
     # area and other features should NOT be in tracks.features initially
     assert "area" not in tracks.features
@@ -78,9 +82,9 @@ def test_enable_disable_features(graph_2d_with_segmentation):
     assert "circularity" in tracks.features
 
     # Verify values are actually computed on the graph
-    assert tracks.graph.nodes[nodes[0]]["circularity"] is not None
+    assert tracks.graph_solution.nodes[nodes[0]]["circularity"] is not None
     if edges:
-        assert None not in tracks.graph.edge_attrs()["iou"].to_list()
+        assert None not in tracks.graph_solution.edge_attrs()["iou"].to_list()
 
     # Disable one feature
     tracks.disable_features(["area"])
@@ -92,7 +96,7 @@ def test_enable_disable_features(graph_2d_with_segmentation):
     assert "circularity" in tracks.features
 
     # Values no longer exist in the graph for tracksdata
-    # assert tracks.graph.nodes[1]["area"] is not None
+    # assert tracks.graph_solution.nodes[1]["area"] is not None
 
     # Disable the remaining enabled features
     tracks.disable_features(["pos", "iou", "circularity"])
@@ -122,7 +126,7 @@ def test_area_on_graph_not_auto_activated(graph_2d_with_segmentation):
 
 def test_get_available_features(graph_2d_with_segmentation):
     """Test get_available_features returns all features from all annotators."""
-    tracks = SolutionTracks(
+    tracks = Tracks(
         graph_2d_with_segmentation,
         ndim=3,
         **track_attrs,
