@@ -512,3 +512,13 @@ def get_graph(tmp_path) -> Callable[..., td.graph.GraphView]:
         )
 
     return _get_graph
+
+
+def pytest_collection_modifyitems(items):
+    """Silence the (expected) deprecation warnings emitted by this frozen old-API
+    suite, scoped to tests_old only so the main tests/ suite's warnings stay visible.
+    A command-line ``-W error::DeprecationWarning`` still overrides this, which is how
+    we verify the deprecated paths are actually exercised."""
+    for item in items:
+        if "tests_old" in str(item.fspath):
+            item.add_marker(pytest.mark.filterwarnings("ignore::DeprecationWarning"))

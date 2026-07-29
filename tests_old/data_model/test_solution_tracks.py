@@ -1,5 +1,6 @@
 import numpy as np
 import polars as pl
+import pytest
 
 from funtracks.actions import AddNode
 from funtracks.data_model import SolutionTracks, Tracks
@@ -43,7 +44,9 @@ def test_from_tracks_cls(graph_2d_with_segmentation):
         scale=(2, 2, 2),
     )
     solution_tracks = SolutionTracks.from_tracks(tracks)
-    assert solution_tracks.graph == tracks.graph
+    # persistent-graph: from_tracks reconstructs a Tracks, so solution_tracks.graph is
+    # no longer the same object as tracks.graph (the rest of the shim still holds).
+    # assert solution_tracks.graph == tracks.graph
     # from_tracks reuses the same segmentation instance. Assert identity rather
     # than `==`: on newer tracksdata GraphArrayView.__eq__ is element-wise and
     # returns an array, which makes a truthiness assert ambiguous.
@@ -101,6 +104,10 @@ def test_next_track_id_empty():
     assert tracks.get_next_track_id() == 1
 
 
+@pytest.mark.skip(
+    reason="old-API behavior removed in persistent-graph: every Tracks always has a "
+    "lineage key, so get_lineage_id no longer has a None path."
+)
 def test_get_lineage_id_without_lineage_key(graph_2d_with_track_id):
     """Test that get_lineage_id returns None when lineage_key is not set."""
     graph = graph_2d_with_track_id

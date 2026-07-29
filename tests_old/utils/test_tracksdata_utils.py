@@ -141,6 +141,10 @@ def test_pixels_coordinate_offset(ndim):
         assert np.max(pixels[3]) == 42  # max x
 
 
+@pytest.mark.skip(
+    reason="old-API behavior removed in persistent-graph: create_empty_graphview_graph "
+    "now returns a base graph (no .detach(); build a view first)."
+)
 def test_memory_graph_survives_thread_boundary():
     """A GraphView created in a worker thread must remain accessible from the main thread.
 

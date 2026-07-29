@@ -18,6 +18,10 @@ from ..conftest import make_2d_disk_mask, make_3d_sphere_mask
 
 @pytest.mark.parametrize("ndim", [3, 4])
 @pytest.mark.parametrize("with_seg", [True, False])
+@pytest.mark.skip(
+    reason="old-API behavior removed in persistent-graph: Tracks.graph is now a "
+    "read-only deprecated property and can no longer be reassigned."
+)
 def test_add_delete_nodes(get_tracks, ndim, with_seg):
     # Get a tracks instance
     tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)

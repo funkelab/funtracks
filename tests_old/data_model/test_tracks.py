@@ -104,6 +104,10 @@ def test_nodes_edges(graph_2d_with_segmentation):
     }
 
 
+@pytest.mark.skip(
+    reason="old-API behavior removed in persistent-graph: Tracks.in_degree/out_degree "
+    "were removed (use len(predecessors)/len(successors))."
+)
 def test_degrees(graph_2d_with_segmentation):
     tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
     assert tracks.in_degree(np.array([1])) == 0

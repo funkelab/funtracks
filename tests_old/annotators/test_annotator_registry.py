@@ -6,6 +6,10 @@ from funtracks.data_model import SolutionTracks, Tracks
 track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
 
 
+@pytest.mark.skip(
+    reason="old-API behavior removed in persistent-graph: every Tracks now has a "
+    "TrackAnnotator (no SolutionTracks-only distinction)."
+)
 def test_annotator_registry_init_with_segmentation(
     graph_2d_with_segmentation,
 ):
@@ -23,6 +27,10 @@ def test_annotator_registry_init_with_segmentation(
     assert TrackAnnotator not in annotator_types  # Not a SolutionTracks
 
 
+@pytest.mark.skip(
+    reason="old-API behavior removed in persistent-graph: every Tracks now has a "
+    "TrackAnnotator (no SolutionTracks-only distinction)."
+)
 def test_annotator_registry_init_without_segmentation(graph_2d_with_position):
     """Test AnnotatorRegistry doesn't create annotators without segmentation."""
     tracks = Tracks(graph_2d_with_position, ndim=3, **track_attrs)

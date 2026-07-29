@@ -98,6 +98,10 @@ class TestTrackAnnotator:
         assert tracks.get_node_attr(node_id, ann.lineage_key) != orig_lin
         assert tracks.get_node_attr(node_id, ann.tracklet_key) != orig_tra
 
+    @pytest.mark.skip(
+        reason="old-API behavior removed in persistent-graph: TrackAnnotator is no "
+        "longer restricted to SolutionTracks; every Tracks has one."
+    )
     def test_invalid(self, get_tracks, ndim, with_seg) -> None:
         # Create regular Tracks (not SolutionTracks) to test error handling
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=False)

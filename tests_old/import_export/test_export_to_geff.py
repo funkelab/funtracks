@@ -100,6 +100,10 @@ def test_export_without_seg_on_tracks(get_tracks, tmp_path):
 
 
 @pytest.mark.parametrize("seg_relabel", ["tracklet", "lineage"])
+@pytest.mark.skip(
+    reason="old-API behavior removed in persistent-graph: there is no non-solution "
+    "Tracks, so relabel-on-non-solution no longer raises."
+)
 def test_export_seg_relabel_non_solution_raises(get_tracks, seg_relabel, tmp_path):
     """Relabeling by tracklet/lineage on non-solution tracks raises ValueError."""
     tracks = get_tracks(ndim=3, with_seg=True, is_solution=False)

@@ -109,6 +109,15 @@ def test_delete(
         next(tmp_path.iterdir())
 
 
+def test_load_v1_tracks_solution_arg_deprecated():
+    """The deprecated `solution=` argument (still passed by motile_tracker) is
+    accepted and ignored, emitting a DeprecationWarning."""
+    data_path = Path("tests/data/format_v1/test_save_load_True_3_True_0")
+    with pytest.warns(DeprecationWarning, match="solution.*deprecated"):
+        loaded = load_v1_tracks(data_path, solution=True)
+    assert loaded.features.tracklet_key is not None
+
+
 # for backward compatibility
 def test_load_without_features(tmp_path, graph_2d_with_segmentation):
     reference_path = Path(f"tests/data/format_v1/test_save_load_{True}_{3}_{True}_0")
