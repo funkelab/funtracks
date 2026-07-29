@@ -87,8 +87,7 @@ jobs:
           git checkout ${{ github.event.pull_request.base.sha }}
           # -o python_files: the base commit's pyproject.toml may predate the
           # bench_*.py collection config, so set it on the command line instead.
-          uv run pytest tests/benchmarks/ -o 'python_files=test_*.py bench_*.py' \
-            --benchmark-json baseline.json
+          uv run pytest tests/benchmarks/ -o "python_files=test_*.py bench_*.py" --benchmark-json baseline.json
 
       - name: Cache baseline results
         uses: actions/cache/save@v5
