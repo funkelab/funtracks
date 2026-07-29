@@ -99,8 +99,7 @@ jobs:
       - name: Run benchmark on PR head
         run: |
           git checkout ${{ github.event.pull_request.head.sha }}
-          uv run pytest tests/benchmarks/ -o 'python_files=test_*.py bench_*.py' \
-            --benchmark-json pr.json
+          uv run pytest tests/benchmarks/ -o "python_files=test_*.py bench_*.py" --benchmark-json pr.json
 
       - name: Generate report
         id: report
