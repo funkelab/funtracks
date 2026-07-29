@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1785333862447,
+  "lastUpdate": 1785352193862,
   "repoUrl": "https://github.com/funkelab/funtracks",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -1482,6 +1482,44 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0",
             "extra": "mean: 9.323559161999995 sec\nrounds: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "malinmayorc@janelia.hhmi.org",
+            "name": "Caroline Malin-Mayor",
+            "username": "cmalinmayor"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "26830981273463f2ce5f4a827075e3ad085c35bd",
+          "message": "Merge pull request #257 from funkelab/bypass-rp-for-only-position\n\nfaster regionprops annotator",
+          "timestamp": "2026-07-29T15:09:13-04:00",
+          "tree_id": "7a55953146509a858cbb3cdf2d17017886cb0ce5",
+          "url": "https://github.com/funkelab/funtracks/commit/26830981273463f2ce5f4a827075e3ad085c35bd"
+        },
+        "date": 1785352192277,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_compute_graph_from_seg",
+            "value": 0.6537278663899679,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 1.5296885010000025 sec\nrounds: 1"
+          },
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_graph_to_solution",
+            "value": 0.15568368396089838,
+            "unit": "iter/sec",
+            "range": "stddev: 0",
+            "extra": "mean: 6.423280684000005 sec\nrounds: 1"
           }
         ]
       }
