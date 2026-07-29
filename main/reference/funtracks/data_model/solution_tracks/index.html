@@ -1068,65 +1068,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#funtracks.data_model.solution_tracks.SolutionTracks.get_lineage_id" class="md-nav__link">
+  <a href="#funtracks.data_model.solution_tracks.SolutionTracks.from_tracks" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;get_lineage_id
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#funtracks.data_model.solution_tracks.SolutionTracks.get_next_lineage_id" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;get_next_lineage_id
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#funtracks.data_model.solution_tracks.SolutionTracks.get_next_track_id" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;get_next_track_id
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#funtracks.data_model.solution_tracks.SolutionTracks.get_track_ids" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;get_track_ids
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#funtracks.data_model.solution_tracks.SolutionTracks.get_track_neighbors" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;get_track_neighbors
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#funtracks.data_model.solution_tracks.SolutionTracks.has_track_id_at_time" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;has_track_id_at_time
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;from_tracks
       
     </span>
   </a>
@@ -1923,65 +1868,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#funtracks.data_model.solution_tracks.SolutionTracks.get_lineage_id" class="md-nav__link">
+  <a href="#funtracks.data_model.solution_tracks.SolutionTracks.from_tracks" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;get_lineage_id
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#funtracks.data_model.solution_tracks.SolutionTracks.get_next_lineage_id" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;get_next_lineage_id
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#funtracks.data_model.solution_tracks.SolutionTracks.get_next_track_id" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;get_next_track_id
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#funtracks.data_model.solution_tracks.SolutionTracks.get_track_ids" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;get_track_ids
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#funtracks.data_model.solution_tracks.SolutionTracks.get_track_neighbors" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;get_track_neighbors
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#funtracks.data_model.solution_tracks.SolutionTracks.has_track_id_at_time" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;has_track_id_at_time
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;from_tracks
       
     </span>
   </a>
@@ -2022,6 +1912,14 @@
 
     <div class="doc doc-contents first">
 
+        <p>Backward-compatible <code>SolutionTracks</code> shim.</p>
+<p>In funtracks v2, <code>SolutionTracks</code> was a subclass of <code>Tracks</code> that added
+track-id management (<code>TrackAnnotator</code>).  Since the persistent-graph rework,
+every <code>Tracks</code> instance has track IDs, so <code>SolutionTracks</code> is no longer
+needed.  This module keeps the class importable so that downstream code
+(e.g. <code>motile_tracker.MotileRun(SolutionTracks)</code>) continues to work.</p>
+<p>New code should use <code>Tracks</code> directly.</p>
+
 
 
 
@@ -2051,7 +1949,7 @@
 
 </h2>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">SolutionTracks</span><span class="p">(</span>
-    <span class="n">graph</span><span class="p">:</span> <span class="n">GraphView</span><span class="p">,</span>
+    <span class="n">graph</span><span class="p">:</span> <span class="n">GraphView</span> <span class="o">|</span> <span class="n">BaseGraph</span><span class="p">,</span>
     <span class="n">time_attr</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">pos_attr</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">tracklet_attr</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -2069,186 +1967,13 @@
 
 
 
-        <p>Difference from Tracks: every node must have a tracklet id</p>
-
-        <p>Initialize a SolutionTracks object.</p>
-<p>SolutionTracks extends Tracks to ensure every node has a tracklet id. A
-TrackAnnotator is automatically added to manage track IDs.</p>
-
-
-<p><span class="doc-section-title">Parameters:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-          <th>Default</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                <code>graph</code>
-            </td>
-            <td>
-                  <code><span title="tracksdata.graph.GraphView">GraphView</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Tracksdata graph with nodes as detections
-and edges as links.</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>time_attr</code>
-            </td>
-            <td>
-                  <code><span title="str">str</span> | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Graph attribute name for time. Defaults to "time"
-if None.</p>
-              </div>
-            </td>
-            <td>
-                  <code>None</code>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>pos_attr</code>
-            </td>
-            <td>
-                  <code><span title="str">str</span> | <span title="tuple">tuple</span>[<span title="str">str</span>, ...] | <span title="list">list</span>[<span title="str">str</span>] | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Graph attribute
-name(s) for position. Can be:
-- Single string for one attribute containing position array
-- List/tuple of strings for multi-axis (one attribute per axis)
-Defaults to "pos" if None.</p>
-              </div>
-            </td>
-            <td>
-                  <code>None</code>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>tracklet_attr</code>
-            </td>
-            <td>
-                  <code><span title="str">str</span> | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Graph attribute name for tracklet/track IDs.
-Defaults to "tracklet_id" if None.</p>
-              </div>
-            </td>
-            <td>
-                  <code>None</code>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>lineage_attr</code>
-            </td>
-            <td>
-                  <code><span title="str">str</span> | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Graph attribute name for lineage IDs.
-Defaults to "lineage_id" if None.</p>
-              </div>
-            </td>
-            <td>
-                  <code>None</code>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>scale</code>
-            </td>
-            <td>
-                  <code><span title="list">list</span>[<span title="float">float</span>] | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Scaling factors for each dimension (including
-time). If None, all dimensions scaled by 1.0.</p>
-              </div>
-            </td>
-            <td>
-                  <code>None</code>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>ndim</code>
-            </td>
-            <td>
-                  <code><span title="int">int</span> | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Number of dimensions (3 for 2D+time, 4 for 3D+time).
-If None, inferred from segmentation or scale.</p>
-              </div>
-            </td>
-            <td>
-                  <code>None</code>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>features</code>
-            </td>
-            <td>
-                  <code><a class="autorefs autorefs-internal" title="funtracks.features.FeatureDict" href="../../../../features/#funtracks.features.FeatureDict">FeatureDict</a> | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Pre-built FeatureDict with feature
-definitions. If provided, time_attr/pos_attr/tracklet_attr are ignored.
-Assumes that all features in the dict already exist on the graph (will
-be activated but not recomputed). If None, core computed features (pos,
-area, tracklet_id) are auto-detected by checking if they exist on the
-graph.</p>
-              </div>
-            </td>
-            <td>
-                  <code>None</code>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>_segmentation</code>
-            </td>
-            <td>
-                  <code><span title="GraphArrayView">GraphArrayView</span> | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>Internal parameter for reusing an
-existing GraphArrayView instance. Not intended for public use.</p>
-              </div>
-            </td>
-            <td>
-                  <code>None</code>
-            </td>
-          </tr>
-      </tbody>
-    </table>
+        <p>Backward-compatible alias for :class:<code>Tracks</code>.</p>
+<p>Accepts a :class:<code>~tracksdata.graph.GraphView</code> (the v2 constructor
+signature) or a :class:<code>~tracksdata.graph.BaseGraph</code> (the new signature).
+When a <code>GraphView</code> is passed the root <code>BaseGraph</code> is extracted
+automatically so that <code>Tracks.__init__</code> can build its own solution view.</p>
+<p>.. deprecated::
+    Use :class:<code>Tracks</code> directly for new code.</p>
 
 
 
@@ -2274,341 +1999,19 @@ existing GraphArrayView instance. Not intended for public use.</p>
 <div class="doc doc-object doc-function">
 
 
-<h3 id="funtracks.data_model.solution_tracks.SolutionTracks.get_lineage_id" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">get_lineage_id</span>
+<h3 id="funtracks.data_model.solution_tracks.SolutionTracks.from_tracks" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">from_tracks</span>
 
 
 </h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">get_lineage_id</span><span class="p">(</span><span class="n">node</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">from_tracks</span><span class="p">(</span><span class="n">tracks</span><span class="p">:</span> <span class="n">Tracks</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SolutionTracks</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Get the lineage ID for a node.</p>
-
-
-<p><span class="doc-section-title">Parameters:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-          <th>Default</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                <code>node</code>
-            </td>
-            <td>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The node to get lineage ID for</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-    <p><span class="doc-section-title">Returns:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                  <code><span title="int">int</span> | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The lineage ID, or None if lineage feature is not enabled</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h3 id="funtracks.data_model.solution_tracks.SolutionTracks.get_next_lineage_id" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">get_next_lineage_id</span>
-
-
-</h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">get_next_lineage_id</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span>
-</code></pre></div>
-
-    <div class="doc doc-contents ">
-
-        <p>Return the next available lineage_id.</p>
-<p>The max_lineage_id in TrackAnnotator is updated automatically when
-a node is added or lineage IDs are updated via UpdateTrackIDs.</p>
-
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h3 id="funtracks.data_model.solution_tracks.SolutionTracks.get_next_track_id" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">get_next_track_id</span>
-
-
-</h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">get_next_track_id</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span>
-</code></pre></div>
-
-    <div class="doc doc-contents ">
-
-        <p>Return the next available track_id.</p>
-<p>The max_tracklet_id in TrackAnnotator is updated automatically when
-a node is added or track IDs are updated via UpdateTrackIDs.</p>
-
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h3 id="funtracks.data_model.solution_tracks.SolutionTracks.get_track_ids" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">get_track_ids</span>
-
-
-</h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">get_track_ids</span><span class="p">(</span><span class="n">nodes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span>
-</code></pre></div>
-
-    <div class="doc doc-contents ">
-
-        <p>Batch version of get_track_id — one SQL query fetching all nodes in the graph.
-NOTE: always fetches the entire graph internally. Optimised for bulk (all-node)
-calls. For small subsets or single nodes use get_track_id() instead.</p>
-
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h3 id="funtracks.data_model.solution_tracks.SolutionTracks.get_track_neighbors" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">get_track_neighbors</span>
-
-
-</h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">get_track_neighbors</span><span class="p">(</span>
-    <span class="n">track_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">time</span><span class="p">:</span> <span class="nb">int</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Node</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">Node</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span>
-</code></pre></div>
-
-    <div class="doc doc-contents ">
-
-        <p>Get the last node with the given track id before time, and the first node
-with the track id after time, if any. Does not assume that a node with
-the given track_id and time is already in tracks, but it can be.</p>
-
-
-<p><span class="doc-section-title">Parameters:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-          <th>Default</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                <code>track_id</code>
-            </td>
-            <td>
-                  <code><span title="int">int</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The track id to search for</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>time</code>
-            </td>
-            <td>
-                  <code><span title="int">int</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The time point to find the immediate predecessor and successor
-for</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-    <p><span class="doc-section-title">Returns:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                  <code><span title="funtracks.data_model.tracks.Node">Node</span> | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>tuple[Node | None, Node | None]: The last node before time with the given</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                  <code><span title="funtracks.data_model.tracks.Node">Node</span> | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>track id, and the first node after time with the given track id,</p>
-              </div>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                  <code><span title="tuple">tuple</span>[<span title="funtracks.data_model.tracks.Node">Node</span> | None, <span title="funtracks.data_model.tracks.Node">Node</span> | None]</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>or Nones if there are no such nodes.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h3 id="funtracks.data_model.solution_tracks.SolutionTracks.has_track_id_at_time" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">has_track_id_at_time</span>
-
-
-</h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">has_track_id_at_time</span><span class="p">(</span><span class="n">track_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">time</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span>
-</code></pre></div>
-
-    <div class="doc doc-contents ">
-
-        <p>Function to check if a node with given track id exists at given time point.</p>
-
-
-<p><span class="doc-section-title">Parameters:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-          <th>Default</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                <code>track_id</code>
-            </td>
-            <td>
-                  <code><span title="int">int</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The track id to search for.</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>time</code>
-            </td>
-            <td>
-                  <code><span title="int">int</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The time point to check.</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-    <p><span class="doc-section-title">Returns:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                  <code><span title="bool">bool</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>True if a node with given track id exists at given time point.</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
+        <p>Create a <code>SolutionTracks</code> from an existing <code>Tracks</code>.</p>
+<p>.. deprecated::
+    No longer needed — every <code>Tracks</code> already has track IDs.</p>
 
 
     </div>

@@ -1011,6 +1011,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#funtracks.annotators.GraphAnnotator.graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;graph
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#funtracks.annotators.GraphAnnotator.activate_features" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1166,10 +1177,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#funtracks.annotators.TrackAnnotator.can_annotate" class="md-nav__link">
+  <a href="#funtracks.annotators.TrackAnnotator.graph" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;can_annotate
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;graph
       
     </span>
   </a>
@@ -2463,6 +2474,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#funtracks.annotators.GraphAnnotator.graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;graph
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#funtracks.annotators.GraphAnnotator.activate_features" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2618,10 +2640,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#funtracks.annotators.TrackAnnotator.can_annotate" class="md-nav__link">
+  <a href="#funtracks.annotators.TrackAnnotator.graph" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;can_annotate
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;graph
       
     </span>
   </a>
@@ -3820,6 +3842,41 @@ what is currently being computed. Defaults to computing nothing.</p>
 
 </div>
 
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="funtracks.annotators.GraphAnnotator.graph" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">graph</span>
+
+
+</h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">graph</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>The graph this annotator iterates over and reads topology/masks from.</p>
+<p>Defaults to the full graph. Detection features (<code>pos</code>, <code>area</code>, <code>iou</code>, ...) are
+intrinsic to a node/edge — independent of solution membership — so they are
+computed for <em>every</em> node/edge, including soft-deleted (<code>solution=False</code>)
+candidates, keeping them valid for revive and ready for re-solving.
+<code>TrackAnnotator</code> overrides this to <code>graph_solution</code>, since track ids
+(<code>tracklet_id</code>, <code>lineage_id</code>) are derived from the solution topology. Root and
+view share attribute storage, so writes made here are seen through the solution
+view automatically.</p>
+<p>KNOWN COST: computing over <code>graph_full</code> means <code>compute()</code>/<code>update()</code> run
+regionprops / mask.iou for every candidate (solution=False) node/edge too. On
+candidate graphs with many unselected detections (often 10-100x the solution
+size) this is O(candidates) work that is mostly never read, since revive is rare.
+This is a deliberate eagerness-for-readiness trade; if it becomes a bottleneck,
+the lever is lazy compute-on-revive (default to graph_solution and compute a
+candidate's intrinsic features only when it enters the solution).</p>
+
+    </div>
+
+</div>
+
 
 
 
@@ -3891,7 +3948,7 @@ activated.</p>
 
         <p>Check if this annotator can annotate the given tracks.</p>
 <p>Subclasses should override this method to specify their requirements
-(e.g., segmentation, SolutionTracks, etc.).</p>
+(e.g., segmentation, Tracks, etc.).</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -4058,7 +4115,7 @@ override this method to update any additional internal mappings they maintain.</
     <div class="doc doc-contents ">
 
         <p>Compute a set of features and add them to the tracks.</p>
-<p>This involves both updating the node/edge attributes on the tracks.graph
+<p>This involves both updating the node/edge attributes on <code>self.graph</code>
 and adding the features to the FeatureDict, if necessary. This is distinct
 from <code>update</code> to allow more efficient bulk computation of features.</p>
 
@@ -4190,8 +4247,9 @@ are deactivated.</p>
     <div class="doc doc-contents ">
 
         <p>Update a set of features based on the given action.</p>
-<p>This involves both updating the node or edge attributes on the tracks.graph
-and adding the features to the FeatureDict, if necessary. This is distinct
+<p>This involves both updating the node or edge attributes on <code>self.graph</code>
+and adding the features to the FeatureDict, if
+necessary. This is distinct
 from <code>compute</code> to allow more efficient computation of features for single
 elements.</p>
 <p>The action contains all necessary information about which elements to update
@@ -4679,7 +4737,7 @@ initialization time.</p>
 
 </h2>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">TrackAnnotator</span><span class="p">(</span>
-    <span class="n">tracks</span><span class="p">:</span> <span class="n">SolutionTracks</span><span class="p">,</span>
+    <span class="n">tracks</span><span class="p">:</span> <span class="n">Tracks</span><span class="p">,</span>
     <span class="n">tracklet_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">DEFAULT_TRACKLET_KEY</span><span class="p">,</span>
     <span class="n">lineage_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">DEFAULT_LINEAGE_KEY</span><span class="p">,</span>
 <span class="p">)</span>
@@ -4691,8 +4749,11 @@ initialization time.</p>
 
 
 
-        <p>A graph annotator to compute tracklet and lineage IDs for SolutionTracks only.</p>
-<p>Currently, updating the tracklet and lineage IDs is left to Actions.</p>
+        <p>A graph annotator that computes tracklet and lineage IDs on the solution view.</p>
+<p>Registered on every Tracks — track ids are a core feature, not a separate "type"
+of tracks. It reads/iterates <code>graph_solution</code>; on an empty solution view it simply
+computes nothing until nodes are added. Updating the ids after construction is left
+to Actions.</p>
 
 
 <p><span class="doc-section-title">Attributes:</span></p>
@@ -4771,11 +4832,11 @@ in that lineage</p>
                 <code>tracks</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="            SolutionTracks (funtracks.data_model.SolutionTracks)" href="../data_model/solution_tracks/#funtracks.data_model.solution_tracks.SolutionTracks">SolutionTracks</a></code>
+                  <code><a class="autorefs autorefs-internal" title="funtracks.data_model.Tracks" href="../../../features/#funtracks.data_model.Tracks">Tracks</a></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>The tracks to be annotated. Must be a solution.</p>
+                <p>The tracks to annotate.</p>
               </div>
             </td>
             <td>
@@ -4791,9 +4852,9 @@ in that lineage</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>A key that already holds the tracklet ids
-on the graph. If provided, must be there for every node and already hold
-valid tracklet ids. Defaults to None.</p>
+                <p>The node attribute holding tracklet ids.
+If the graph already holds valid ids under this key they are reused;
+otherwise they are computed. Defaults to DEFAULT_TRACKLET_KEY.</p>
               </div>
             </td>
             <td>
@@ -4809,37 +4870,12 @@ valid tracklet ids. Defaults to None.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>A key that already holds the lineage ids
-on the graph. If provided, must be there for every node and already hold
-valid lineage ids. Defaults to None.</p>
+                <p>The node attribute holding lineage ids.
+Same semantics as tracklet_key. Defaults to DEFAULT_LINEAGE_KEY.</p>
               </div>
             </td>
             <td>
                   <code><span title="funtracks.annotators._track_annotator.DEFAULT_LINEAGE_KEY">DEFAULT_LINEAGE_KEY</span></code>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-<p><span class="doc-section-title">Raises:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                  <code><span title="ValueError">ValueError</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>if the provided Tracks are not SolutionTracks (not a binary lineage
-tree)</p>
-              </div>
             </td>
           </tr>
       </tbody>
@@ -4863,82 +4899,30 @@ tree)</p>
 
 
 
+<div class="doc doc-object doc-attribute">
 
 
 
-<div class="doc doc-object doc-function">
-
-
-<h3 id="funtracks.annotators.TrackAnnotator.can_annotate" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">can_annotate</span>
+<h3 id="funtracks.annotators.TrackAnnotator.graph" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">graph</span>
 
 
 </h3>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">can_annotate</span><span class="p">(</span><span class="n">tracks</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">graph</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Check if this annotator can annotate the given tracks.</p>
-<p>Requires tracks to be a SolutionTracks instance.</p>
-
-
-<p><span class="doc-section-title">Parameters:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Description</th>
-          <th>Default</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                <code>tracks</code>
-            </td>
-            <td>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The tracks to check compatibility with</p>
-              </div>
-            </td>
-            <td>
-                <em>required</em>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
-
-    <p><span class="doc-section-title">Returns:</span></p>
-    <table>
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Description</th>
-        </tr>
-      </thead>
-      <tbody>
-          <tr class="doc-section-item">
-            <td>
-                  <code><span title="bool">bool</span></code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>True if tracks is a SolutionTracks instance, False otherwise</p>
-              </div>
-            </td>
-          </tr>
-      </tbody>
-    </table>
-
+        <p>Track ids (<code>tracklet_id</code>, <code>lineage_id</code>) are derived from the solution
+topology, so this annotator reads/iterates the solution view, not the full
+graph (overriding the base default of <code>graph_full</code>).</p>
 
     </div>
 
 </div>
+
+
+
 
 <div class="doc doc-object doc-function">
 

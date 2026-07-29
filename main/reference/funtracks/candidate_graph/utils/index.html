@@ -1973,7 +1973,7 @@
 
 </h2>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">add_cand_edges</span><span class="p">(</span>
-    <span class="n">cand_graph</span><span class="p">:</span> <span class="n">GraphView</span><span class="p">,</span>
+    <span class="n">cand_graph</span><span class="p">:</span> <span class="n">BaseGraph</span><span class="p">,</span>
     <span class="n">max_edge_distance</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">node_frame_dict</span><span class="p">:</span> <span class="kc">None</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">iou_dict</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -2002,7 +2002,7 @@ frames that are closer than max_edge_distance.</p>
                 <code>cand_graph</code>
             </td>
             <td>
-                  <code><span title="tracksdata.graph.GraphView">GraphView</span></code>
+                  <code><span title="tracksdata.graph.BaseGraph">BaseGraph</span></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -2087,7 +2087,7 @@ Defaults to None (no iou attribute added).</p>
 
 </h2>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">create_kdtree</span><span class="p">(</span>
-    <span class="n">cand_graph</span><span class="p">:</span> <span class="n">GraphView</span><span class="p">,</span> <span class="n">node_ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span>
+    <span class="n">cand_graph</span><span class="p">:</span> <span class="n">BaseGraph</span><span class="p">,</span> <span class="n">node_ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">KDTree</span>
 </code></pre></div>
 
@@ -2113,7 +2113,7 @@ Will fail if provided node ids are not in the candidate graph.</p>
                 <code>cand_graph</code>
             </td>
             <td>
-                  <code><span title="tracksdata.graph.GraphView">GraphView</span></code>
+                  <code><span title="tracksdata.graph.BaseGraph">BaseGraph</span></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -2185,7 +2185,7 @@ in the same order as node_ids.</p>
 </h2>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">nodes_from_points_list</span><span class="p">(</span>
     <span class="n">points_list</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span> <span class="n">scale</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">td</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">GraphView</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]]]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">td</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">BaseGraph</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]]]</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -2258,11 +2258,11 @@ implies the data is isotropic.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><span title="tuple">tuple</span>[<span title="tracksdata.graph.GraphView">GraphView</span>, <span title="dict">dict</span>[<span title="int">int</span>, <span title="list">list</span>[<span title="typing.Any">Any</span>]]]</code>
+                  <code><span title="tuple">tuple</span>[<span title="tracksdata.graph.BaseGraph">BaseGraph</span>, <span title="dict">dict</span>[<span title="int">int</span>, <span title="list">list</span>[<span title="typing.Any">Any</span>]]]</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>tuple[td.graph.GraphView, dict[int, list[Any]]]: A candidate graph with only
+                <p>tuple[td.graph.BaseGraph, dict[int, list[Any]]]: A candidate graph with only
 nodes, and a mapping from time frames to node ids.</p>
               </div>
             </td>
@@ -2288,7 +2288,7 @@ nodes, and a mapping from time frames to node ids.</p>
     <span class="n">scale</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">mask</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="n">t_start</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">td</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">GraphView</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]]]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">td</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">BaseGraph</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]]]</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -2411,11 +2411,11 @@ time values. Defaults to 0.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><span title="tuple">tuple</span>[<span title="tracksdata.graph.GraphView">GraphView</span>, <span title="dict">dict</span>[<span title="int">int</span>, <span title="list">list</span>[<span title="typing.Any">Any</span>]]]</code>
+                  <code><span title="tuple">tuple</span>[<span title="tracksdata.graph.BaseGraph">BaseGraph</span>, <span title="dict">dict</span>[<span title="int">int</span>, <span title="list">list</span>[<span title="typing.Any">Any</span>]]]</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>tuple[td.graph.GraphView, dict[int, list[Any]]]: A candidate graph with only
+                <p>tuple[td.graph.BaseGraph, dict[int, list[Any]]]: A candidate graph with only
 nodes, and a mapping from time frames to node ids.</p>
               </div>
             </td>

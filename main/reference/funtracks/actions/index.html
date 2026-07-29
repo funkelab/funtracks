@@ -2496,9 +2496,7 @@ Annotator. Defaults to None.</p>
 
 </h2>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">AddNode</span><span class="p">(</span>
-    <span class="n">tracks</span><span class="p">:</span> <span class="n">SolutionTracks</span><span class="p">,</span>
-    <span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">,</span>
-    <span class="n">attributes</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+    <span class="n">tracks</span><span class="p">:</span> <span class="n">Tracks</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">,</span> <span class="n">attributes</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
 <span class="p">)</span>
 </code></pre></div>
 
@@ -2531,7 +2529,7 @@ provided in the <code>attributes</code> dict.</p>
                 <code>tracks</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="            SolutionTracks (funtracks.data_model.solution_tracks.SolutionTracks)" href="../data_model/solution_tracks/#funtracks.data_model.solution_tracks.SolutionTracks">SolutionTracks</a></code>
+                  <code><a class="autorefs autorefs-internal" title="            Tracks (funtracks.data_model.tracks.Tracks)" href="../data_model/tracks/#funtracks.data_model.tracks.Tracks">Tracks</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -2850,7 +2848,7 @@ Examples: AddNode, DeleteEdge, UpdateNodeSeg, etc.</p>
 
 
 </h2>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">DeleteNode</span><span class="p">(</span><span class="n">tracks</span><span class="p">:</span> <span class="n">SolutionTracks</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">)</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">DeleteNode</span><span class="p">(</span><span class="n">tracks</span><span class="p">:</span> <span class="n">Tracks</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">)</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -2861,6 +2859,14 @@ Examples: AddNode, DeleteEdge, UpdateNodeSeg, etc.</p>
 
         <p>Action of deleting an existing node.</p>
 <p>Saves all node feature values so the action can be inverted.</p>
+<p>Low-level action — not meant to be used directly. It soft-deletes only the
+node itself (incident edges are dropped from the view by
+<code>remove_node_from_view</code> but keep <code>solution=True</code> in <code>graph_full</code>).
+Managing the incident edges' solution flags is the responsibility of the
+enclosing user action (<code>UserDeleteNode</code>), which soft-deletes each incident
+edge with its own <code>DeleteEdge</code> first. Applying a bare <code>DeleteNode</code> to a
+node that still has in-solution edges therefore leaves <code>graph_full</code>'s edge
+flags inconsistent with <code>graph_solution</code> — always go through the user action.</p>
 
 
 
@@ -3256,7 +3262,7 @@ Defaults to the standard mask key.</p>
 
 </h2>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">UpdateTrackIDs</span><span class="p">(</span>
-    <span class="n">tracks</span><span class="p">:</span> <span class="n">SolutionTracks</span><span class="p">,</span>
+    <span class="n">tracks</span><span class="p">:</span> <span class="n">Tracks</span><span class="p">,</span>
     <span class="n">start_node</span><span class="p">:</span> <span class="n">Node</span><span class="p">,</span>
     <span class="n">tracklet_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">lineage_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -3295,7 +3301,7 @@ The actual ID updates are performed by TrackAnnotator via notify_annotators().</
                 <code>tracks</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="            SolutionTracks (funtracks.data_model.SolutionTracks)" href="../data_model/solution_tracks/#funtracks.data_model.solution_tracks.SolutionTracks">SolutionTracks</a></code>
+                  <code><a class="autorefs autorefs-internal" title="funtracks.data_model.Tracks" href="../../../features/#funtracks.data_model.Tracks">Tracks</a></code>
             </td>
             <td>
               <div class="doc-md-description">

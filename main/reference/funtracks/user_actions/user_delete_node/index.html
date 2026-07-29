@@ -1907,7 +1907,7 @@
 
 </h2>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">UserDeleteNode</span><span class="p">(</span>
-    <span class="n">tracks</span><span class="p">:</span> <span class="n">SolutionTracks</span><span class="p">,</span>
+    <span class="n">tracks</span><span class="p">:</span> <span class="n">Tracks</span><span class="p">,</span>
     <span class="n">node</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">pixels</span><span class="p">:</span> <span class="kc">None</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">ndarray</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">_top_level</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
@@ -1938,7 +1938,7 @@
                 <code>tracks</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="            SolutionTracks (funtracks.data_model.SolutionTracks)" href="../../data_model/solution_tracks/#funtracks.data_model.solution_tracks.SolutionTracks">SolutionTracks</a></code>
+                  <code><a class="autorefs autorefs-internal" title="funtracks.data_model.Tracks" href="../../../../features/#funtracks.data_model.Tracks">Tracks</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -1999,6 +1999,29 @@ action. Defaults to True.</p>
             </td>
             <td>
                   <code>True</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="            InvalidActionError (funtracks.exceptions.InvalidActionError)" href="../../exceptions/#funtracks.exceptions.InvalidActionError">InvalidActionError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the node is not in the solution graph.</p>
+              </div>
             </td>
           </tr>
       </tbody>

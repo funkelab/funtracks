@@ -1829,19 +1829,19 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#funtracks.utils.tracksdata_utils.create_empty_graphview_graph" class="md-nav__link">
+  <a href="#funtracks.utils.tracksdata_utils.create_empty_graph" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;create_empty_graphview_graph
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;create_empty_graph
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label=" create_empty_graphview_graph">
+    <nav class="md-nav" aria-label=" create_empty_graph">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#funtracks.utils.tracksdata_utils.create_empty_graphview_graph--returns" class="md-nav__link">
+  <a href="#funtracks.utils.tracksdata_utils.create_empty_graph--returns" class="md-nav__link">
     <span class="md-ellipsis">
       
         Returns
@@ -1853,6 +1853,17 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#funtracks.utils.tracksdata_utils.create_empty_graphview_graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;create_empty_graphview_graph
+      
+    </span>
+  </a>
   
 </li>
       
@@ -2076,19 +2087,19 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#funtracks.utils.tracksdata_utils.create_empty_graphview_graph" class="md-nav__link">
+  <a href="#funtracks.utils.tracksdata_utils.create_empty_graph" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;create_empty_graphview_graph
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;create_empty_graph
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label=" create_empty_graphview_graph">
+    <nav class="md-nav" aria-label=" create_empty_graph">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#funtracks.utils.tracksdata_utils.create_empty_graphview_graph--returns" class="md-nav__link">
+  <a href="#funtracks.utils.tracksdata_utils.create_empty_graph--returns" class="md-nav__link">
     <span class="md-ellipsis">
       
         Returns
@@ -2100,6 +2111,17 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#funtracks.utils.tracksdata_utils.create_empty_graphview_graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;create_empty_graphview_graph
+      
+    </span>
+  </a>
   
 </li>
       
@@ -2261,20 +2283,20 @@
 
 </h2>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">add_masks_and_bboxes_to_graph</span><span class="p">(</span>
-    <span class="n">graph</span><span class="p">:</span> <span class="n">GraphView</span><span class="p">,</span> <span class="n">segmentation</span><span class="p">:</span> <span class="n">ndarray</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">td</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">GraphView</span>
+    <span class="n">graph</span><span class="p">:</span> <span class="n">BaseGraph</span><span class="p">,</span> <span class="n">segmentation</span><span class="p">:</span> <span class="n">ndarray</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">td</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">BaseGraph</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
         <p>Add mask and bbox attributes to graph nodes from segmentation.</p>
 <h4 id="funtracks.utils.tracksdata_utils.add_masks_and_bboxes_to_graph--parameters">Parameters</h4>
-<p>graph : td.graph.GraphView
+<p>graph : td.graph.BaseGraph
     Graph to add attributes to
 segmentation : np.ndarray
     Segmentation array of shape (T, Z, Y, X) or (T, Y, X)</p>
 <h4 id="funtracks.utils.tracksdata_utils.add_masks_and_bboxes_to_graph--returns">Returns</h4>
-<p>td.graph.GraphView
+<p>td.graph.BaseGraph
     Graph with 'mask' and 'bbox' attributes added to nodes</p>
 
 
@@ -2317,7 +2339,7 @@ segmentation : np.ndarray
 </h2>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">convert_graph_nx_to_td</span><span class="p">(</span>
     <span class="n">graph_nx</span><span class="p">:</span> <span class="n">DiGraph</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">td</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">GraphView</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">td</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">BaseGraph</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -2367,7 +2389,7 @@ segmentation : np.ndarray
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><span title="tracksdata.graph.GraphView">GraphView</span></code>
+                  <code><span title="tracksdata.graph.BaseGraph">BaseGraph</span></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -2386,12 +2408,12 @@ segmentation : np.ndarray
 <div class="doc doc-object doc-function">
 
 
-<h2 id="funtracks.utils.tracksdata_utils.create_empty_graphview_graph" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">create_empty_graphview_graph</span>
+<h2 id="funtracks.utils.tracksdata_utils.create_empty_graph" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">create_empty_graph</span>
 
 
 </h2>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">create_empty_graphview_graph</span><span class="p">(</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">create_empty_graph</span><span class="p">(</span>
     <span class="n">node_attributes</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">edge_attributes</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">node_default_values</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -2399,12 +2421,12 @@ segmentation : np.ndarray
     <span class="n">database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">position_attrs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">ndim</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">td</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">GraphView</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">td</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">BaseGraph</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Create an empty tracksdata GraphView with standard node and edge attributes.
+        <p>Create an empty tracksdata base graph with standard node and edge attributes.
 Parameters</p>
 <hr />
 <p>node_attributes : list[str] | None
@@ -2426,9 +2448,41 @@ position_attrs : list[str] | None
 ndim : int
     Number of dimensions including time, so 2D+T dataset has ndim = 3.
     Defaults to 3 (2D+time).</p>
-<h4 id="funtracks.utils.tracksdata_utils.create_empty_graphview_graph--returns">Returns</h4>
-<p>td.graph.GraphView
-    An empty tracksdata GraphView with standard node and edge attributes.</p>
+<h4 id="funtracks.utils.tracksdata_utils.create_empty_graph--returns">Returns</h4>
+<p>td.graph.BaseGraph
+    An empty tracksdata base graph with standard node and edge attributes
+    (including a <code>solution</code> flag). Tracks builds the solution==True view from it.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="funtracks.utils.tracksdata_utils.create_empty_graphview_graph" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">create_empty_graphview_graph</span>
+
+
+</h2>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">create_empty_graphview_graph</span><span class="p">(</span>
+    <span class="o">*</span><span class="n">args</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">td</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">GraphView</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Deprecated alias for :func:<code>create_empty_graph</code>.</p>
+<p>Returns a solution==True <code>GraphView</code> of a fresh empty base graph, matching the
+pre-persistent-graph contract (callers expected a view). Funtracks itself uses
+:func:<code>create_empty_graph</code> (the base graph) directly; this shim exists for
+downstream code that still expects a view (e.g. motile_tracker, whose solver
+returns <code>result.filter().subgraph()</code> and falls back to this for empty windows).
+Passing the returned view to :class:<code>Tracks</code> still works: the deprecated
+GraphView path unwraps it to its root base graph.</p>
+<p>.. deprecated::
+    Use :func:<code>create_empty_graph</code> instead.</p>
 
 
     </div>

@@ -2712,7 +2712,7 @@ graph LR
         Validate["validate&lt;br/&gt;&lt;small&gt;check graph structure&lt;/small&gt;"]
         ConstructGraph["construct_graph&lt;br/&gt;&lt;small&gt;build tracksdata graph&lt;/small&gt;"]
         HandleSeg["handle_segmentation&lt;br/&gt;&lt;small&gt;load &amp; relabel if needed&lt;/small&gt;"]
-        CreateTracks[Create SolutionTracks]
+        CreateTracks[Create Tracks]
         EnableFeatures["enable_features&lt;br/&gt;&lt;small&gt;register &amp; compute&lt;/small&gt;"]
 
         ValidateMap --&gt; LoadSource
@@ -3237,11 +3237,11 @@ If None (default), an in-memory/temp graph is used.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><span title="tracksdata.graph.GraphView">GraphView</span></code>
+                  <code><span title="tracksdata.graph.BaseGraph">BaseGraph</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Tracksdata GraphView with standard keys</p>
+                <p>Tracksdata base graph with standard keys</p>
               </div>
             </td>
           </tr>
@@ -3307,7 +3307,7 @@ If None (default), an in-memory/temp graph is used.</p>
                 <code>graph</code>
             </td>
             <td>
-                  <code><span title="tracksdata.graph.GraphView">GraphView</span></code>
+                  <code><span title="tracksdata.graph.BaseGraph">BaseGraph</span></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -3449,11 +3449,11 @@ seg_id) and not already registered in tracks.features:
                 <code>tracks</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="            SolutionTracks (funtracks.data_model.solution_tracks.SolutionTracks)" href="../reference/funtracks/data_model/solution_tracks/#funtracks.data_model.solution_tracks.SolutionTracks">SolutionTracks</a></code>
+                  <code><a class="autorefs autorefs-internal" title="            Tracks (funtracks.data_model.tracks.Tracks)" href="../reference/funtracks/data_model/tracks/#funtracks.data_model.tracks.Tracks">Tracks</a></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>SolutionTracks object to add features to</p>
+                <p>Tracks object to add features to</p>
               </div>
             </td>
             <td>
@@ -3622,11 +3622,11 @@ If None (default), an in-memory/temp graph is used.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="            SolutionTracks (funtracks.data_model.solution_tracks.SolutionTracks)" href="../reference/funtracks/data_model/solution_tracks/#funtracks.data_model.solution_tracks.SolutionTracks">SolutionTracks</a></code>
+                  <code><a class="autorefs autorefs-internal" title="            Tracks (funtracks.data_model.tracks.Tracks)" href="../reference/funtracks/data_model/tracks/#funtracks.data_model.tracks.Tracks">Tracks</a></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Fully constructed SolutionTracks object</p>
+                <p>Fully constructed Tracks object</p>
               </div>
             </td>
           </tr>

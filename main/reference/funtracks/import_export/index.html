@@ -2440,7 +2440,7 @@
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">construct_graph</span><span class="p">(</span>
     <span class="n">node_name_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">td</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">GraphView</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">td</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">BaseGraph</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -2717,7 +2717,7 @@ If ndim is None, returns ["z", "y", "x"] as default.</p>
     <span class="n">scale</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">node_name_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SolutionTracks</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tracks</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -2832,11 +2832,11 @@ If None (default), an in-memory/temp graph is used.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><a class="autorefs autorefs-internal" title="            SolutionTracks (funtracks.data_model.solution_tracks.SolutionTracks)" href="../data_model/solution_tracks/#funtracks.data_model.solution_tracks.SolutionTracks">SolutionTracks</a></code>
+                  <code><a class="autorefs autorefs-internal" title="            Tracks (funtracks.data_model.tracks.Tracks)" href="../data_model/tracks/#funtracks.data_model.tracks.Tracks">Tracks</a></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Fully constructed SolutionTracks object</p>
+                <p>Fully constructed Tracks object</p>
               </div>
             </td>
           </tr>
@@ -2901,7 +2901,7 @@ tracks = builder.build("data.csv")</p>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">construct_graph</span><span class="p">(</span>
     <span class="n">node_name_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">td</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">GraphView</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">td</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">BaseGraph</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -2970,11 +2970,11 @@ If None (default), an in-memory/temp graph is used.</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><span title="tracksdata.graph.GraphView">GraphView</span></code>
+                  <code><span title="tracksdata.graph.BaseGraph">BaseGraph</span></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Tracksdata GraphView with standard keys</p>
+                <p>Tracksdata base graph with standard keys</p>
               </div>
             </td>
           </tr>
@@ -3018,7 +3018,7 @@ If None (default), an in-memory/temp graph is used.</p>
 
 </h3>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">enable_features</span><span class="p">(</span>
-    <span class="n">tracks</span><span class="p">:</span> <span class="n">SolutionTracks</span><span class="p">,</span>
+    <span class="n">tracks</span><span class="p">:</span> <span class="n">Tracks</span><span class="p">,</span>
     <span class="n">name_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span>
     <span class="n">feature_type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;node&quot;</span><span class="p">,</span> <span class="s2">&quot;edge&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;node&quot;</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
@@ -3050,11 +3050,11 @@ seg_id) and not already registered in tracks.features:
                 <code>tracks</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="            SolutionTracks (funtracks.data_model.solution_tracks.SolutionTracks)" href="../data_model/solution_tracks/#funtracks.data_model.solution_tracks.SolutionTracks">SolutionTracks</a></code>
+                  <code><a class="autorefs autorefs-internal" title="            Tracks (funtracks.data_model.tracks.Tracks)" href="../data_model/tracks/#funtracks.data_model.tracks.Tracks">Tracks</a></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>SolutionTracks object to add features to</p>
+                <p>Tracks object to add features to</p>
               </div>
             </td>
             <td>
@@ -3111,13 +3111,13 @@ names (same format as node_name_map / edge_name_map).</p>
 
 </h3>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">handle_segmentation</span><span class="p">(</span>
-    <span class="n">graph</span><span class="p">:</span> <span class="n">GraphView</span><span class="p">,</span>
+    <span class="n">graph</span><span class="p">:</span> <span class="n">BaseGraph</span><span class="p">,</span>
     <span class="n">segmentation</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">scale</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span>
     <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
     <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">td</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">GraphView</span><span class="p">,</span>
+    <span class="n">td</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">BaseGraph</span><span class="p">,</span>
 <span class="p">]</span>
 </code></pre></div>
 
@@ -3143,7 +3143,7 @@ names (same format as node_name_map / edge_name_map).</p>
                 <code>graph</code>
             </td>
             <td>
-                  <code><span title="tracksdata.graph.GraphView">GraphView</span></code>
+                  <code><span title="tracksdata.graph.BaseGraph">BaseGraph</span></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -3756,10 +3756,11 @@ and is not required in name_map</p>
 
 </h2>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">export_to_csv</span><span class="p">(</span>
-    <span class="n">tracks</span><span class="p">:</span> <span class="n">SolutionTracks</span><span class="p">,</span>
+    <span class="n">tracks</span><span class="p">:</span> <span class="n">Tracks</span><span class="p">,</span>
     <span class="n">outfile</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">color_dict</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">ndarray</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">node_ids</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">export_full</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">use_display_names</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">export_seg</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">seg_path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -3797,11 +3798,11 @@ tiff. If a color dictionary is provided, it will also export the tracklet colors
                 <code>tracks</code>
             </td>
             <td>
-                  <code><a class="autorefs autorefs-internal" title="            SolutionTracks (funtracks.data_model.solution_tracks.SolutionTracks)" href="../data_model/solution_tracks/#funtracks.data_model.solution_tracks.SolutionTracks">SolutionTracks</a></code>
+                  <code><a class="autorefs autorefs-internal" title="            Tracks (funtracks.data_model.tracks.Tracks)" href="../data_model/tracks/#funtracks.data_model.tracks.Tracks">Tracks</a></code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>SolutionTracks object containing the tracking data to export</p>
+                <p>Tracks object containing the tracking data to export</p>
               </div>
             </td>
             <td>
@@ -3856,6 +3857,25 @@ nodes and their ancestors will be included in the output.</p>
             </td>
             <td>
                   <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>export_full</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If True, export the full graph (every node/edge, including
+soft-deleted/candidate ones with solution=False); the "solution" column is
+then included so the two can be distinguished. If False (default), export
+only the solution view.</p>
+              </div>
+            </td>
+            <td>
+                  <code>False</code>
             </td>
           </tr>
           <tr class="doc-section-item">
@@ -4000,8 +4020,8 @@ export_to_csv(tracks, "output.csv")</p>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">load_v1_tracks</span><span class="p">(</span>
     <span class="n">directory</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
     <span class="n">seg_required</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-    <span class="n">solution</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tracks</span> <span class="o">|</span> <span class="n">SolutionTracks</span>
+    <span class="n">solution</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tracks</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -4060,16 +4080,17 @@ segmentation file is not present in the directory. Defaults to False.</p>
                 <code>solution</code>
             </td>
             <td>
-                  <code><span title="bool">bool</span></code>
+                  <code><span title="bool">bool</span> | None</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>If true, returns a SolutionTracks object, otherwise
-returns a normal Tracks object. Defaults to False.</p>
+                <p>Deprecated and ignored. Previously selected
+between Tracks and SolutionTracks; every Tracks now has track ids and is
+treated as the solution. Kept for backward compatibility.</p>
               </div>
             </td>
             <td>
-                  <code>False</code>
+                  <code>None</code>
             </td>
           </tr>
       </tbody>
@@ -4087,7 +4108,7 @@ returns a normal Tracks object. Defaults to False.</p>
       <tbody>
           <tr class="doc-section-item">
 <td><code>Tracks</code></td>            <td>
-                  <code><a class="autorefs autorefs-internal" title="funtracks.data_model.Tracks" href="../../../features/#funtracks.data_model.Tracks">Tracks</a> | <a class="autorefs autorefs-internal" title="            SolutionTracks (funtracks.data_model.SolutionTracks)" href="../data_model/solution_tracks/#funtracks.data_model.solution_tracks.SolutionTracks">SolutionTracks</a></code>
+                  <code><a class="autorefs autorefs-internal" title="funtracks.data_model.Tracks" href="../../../features/#funtracks.data_model.Tracks">Tracks</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4116,7 +4137,7 @@ returns a normal Tracks object. Defaults to False.</p>
     <span class="n">segmentation</span><span class="p">:</span> <span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">scale</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">node_name_map</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SolutionTracks</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tracks</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -4127,7 +4148,7 @@ returns a normal Tracks object. Defaults to False.</p>
 <details class="turns-a-pandas-dataframe-with-columns" open>
   <summary>Turns a pandas DataFrame with columns</summary>
   <p>time, [z], y, x, id, parent_id, [seg_id], [optional custom attr 1], ...</p>
-</details>        <p>into a SolutionTracks object.</p>
+</details>        <p>into a Tracks object.</p>
 <p>Cells without a parent_id will have an empty string or a -1 for the parent_id.</p>
 
 
@@ -4230,8 +4251,8 @@ If None, column names are auto-inferred using fuzzy matching.</p>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-<td><code>SolutionTracks</code></td>            <td>
-                  <code><a class="autorefs autorefs-internal" title="            SolutionTracks (funtracks.data_model.solution_tracks.SolutionTracks)" href="../data_model/solution_tracks/#funtracks.data_model.solution_tracks.SolutionTracks">SolutionTracks</a></code>
+<td><code>Tracks</code></td>            <td>
+                  <code><a class="autorefs autorefs-internal" title="            Tracks (funtracks.data_model.tracks.Tracks)" href="../data_model/tracks/#funtracks.data_model.tracks.Tracks">Tracks</a></code>
             </td>
             <td>
               <div class="doc-md-description">
@@ -4305,6 +4326,10 @@ segmentation</p>
 a <code>tracks.geff</code> subfolder and optional segmentation), this writes the
 geff store directly to <em>path</em>.  Intended for internal save/load workflows
 where the user picks the <code>.geff</code> path.</p>
+<p>Note: only <code>graph_solution</code> is written. Soft-deleted (<code>solution=False</code>)
+candidates are dropped, and reimport marks everything <code>solution=True</code> — so
+undo-ability of past deletes does not survive a save/load round-trip (Phase-1
+design; candidate persistence is deferred to the candidate/solver phase).</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>

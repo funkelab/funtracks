@@ -1781,19 +1781,19 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#funtracks.utils.create_empty_graphview_graph" class="md-nav__link">
+  <a href="#funtracks.utils.create_empty_graph" class="md-nav__link">
     <span class="md-ellipsis">
       
-        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;create_empty_graphview_graph
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;create_empty_graph
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label=" create_empty_graphview_graph">
+    <nav class="md-nav" aria-label=" create_empty_graph">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#funtracks.utils.create_empty_graphview_graph--returns" class="md-nav__link">
+  <a href="#funtracks.utils.create_empty_graph--returns" class="md-nav__link">
     <span class="md-ellipsis">
       
         Returns
@@ -1961,12 +1961,12 @@
 <div class="doc doc-object doc-function">
 
 
-<h2 id="funtracks.utils.create_empty_graphview_graph" class="doc doc-heading">
-<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">create_empty_graphview_graph</span>
+<h2 id="funtracks.utils.create_empty_graph" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">create_empty_graph</span>
 
 
 </h2>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">create_empty_graphview_graph</span><span class="p">(</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">create_empty_graph</span><span class="p">(</span>
     <span class="n">node_attributes</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">edge_attributes</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">node_default_values</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -1974,12 +1974,12 @@
     <span class="n">database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">position_attrs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">ndim</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">td</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">GraphView</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">td</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">BaseGraph</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>Create an empty tracksdata GraphView with standard node and edge attributes.
+        <p>Create an empty tracksdata base graph with standard node and edge attributes.
 Parameters</p>
 <hr />
 <p>node_attributes : list[str] | None
@@ -2001,9 +2001,10 @@ position_attrs : list[str] | None
 ndim : int
     Number of dimensions including time, so 2D+T dataset has ndim = 3.
     Defaults to 3 (2D+time).</p>
-<h4 id="funtracks.utils.create_empty_graphview_graph--returns">Returns</h4>
-<p>td.graph.GraphView
-    An empty tracksdata GraphView with standard node and edge attributes.</p>
+<h4 id="funtracks.utils.create_empty_graph--returns">Returns</h4>
+<p>td.graph.BaseGraph
+    An empty tracksdata base graph with standard node and edge attributes
+    (including a <code>solution</code> flag). Tracks builds the solution==True view from it.</p>
 
 
     </div>
