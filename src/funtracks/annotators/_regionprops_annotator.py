@@ -193,29 +193,30 @@ class RegionpropsAnnotator(GraphAnnotator):
         all_node_ids = []
         all_values: dict[str, list] = {key: [] for key in keys_to_compute}
 
-        # Position (centroid) is the only feature computed at construction. Reading it
-        # via skimage regionprops pays for a find_objects + RegionProperties build per
-        # mask that is wasted when centroid is all we need, so take it straight from the
-        # mask array. Any other features still need the full regionprops pass.
-        want_pos = self.pos_key in keys_to_compute
-        regionprops_keys = [key for key in keys_to_compute if key != self.pos_key]
+        # Position (centroid) is the only feature computed at construction. When it is
+        # the sole requested feature, reading it via skimage regionprops pays for a
+        # find_objects + RegionProperties build per mask that is pure overhead, so take
+        # it straight from the mask array. If any other feature is requested we run the
+        # regionprops pass anyway and its centroid comes for free, so pos goes through
+        # the normal path with everything else.
+        fast_pos = keys_to_compute == [self.pos_key]
 
         for node_id in self.tracks.graph.node_ids():
             if not self.tracks.graph.has_node(node_id):
                 continue
             mask = self.tracks.graph.nodes[node_id]["mask"]
             all_node_ids.append(node_id)
-            if want_pos:
+            if fast_pos:
                 all_values[self.pos_key].append(_centroid(mask, spacing))
-            if regionprops_keys:
-                (region,) = regionprops_extended(mask, spacing=spacing)
-                for key in regionprops_keys:
-                    value = getattr(region, self.regionprops_names[key])
-                    if isinstance(value, tuple):
-                        value = [float(v) for v in value]
-                    elif isinstance(value, np.floating):
-                        value = float(value)
-                    all_values[key].append(value)
+                continue
+            (region,) = regionprops_extended(mask, spacing=spacing)
+            for key in keys_to_compute:
+                value = getattr(region, self.regionprops_names[key])
+                if isinstance(value, tuple):
+                    value = [float(v) for v in value]
+                elif isinstance(value, np.floating):
+                    value = float(value)
+                all_values[key].append(value)
 
         for key in keys_to_compute:
             self.tracks._set_nodes_attr(all_node_ids, key, all_values[key])
