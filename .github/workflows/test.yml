@@ -85,7 +85,10 @@ jobs:
         if: steps.cache_baseline.outputs.cache-hit != 'true'
         run: |
           git checkout ${{ github.event.pull_request.base.sha }}
-          uv run pytest tests/benchmarks/ --benchmark-json baseline.json
+          # -o python_files: the base commit's pyproject.toml may predate the
+          # bench_*.py collection config, so set it on the command line instead.
+          uv run pytest tests/benchmarks/ -o 'python_files=test_*.py bench_*.py' \
+            --benchmark-json baseline.json
 
       - name: Cache baseline results
         uses: actions/cache/save@v5
@@ -97,7 +100,8 @@ jobs:
       - name: Run benchmark on PR head
         run: |
           git checkout ${{ github.event.pull_request.head.sha }}
-          uv run pytest tests/benchmarks/ --benchmark-json pr.json
+          uv run pytest tests/benchmarks/ -o 'python_files=test_*.py bench_*.py' \
+            --benchmark-json pr.json
 
       - name: Generate report
         id: report
