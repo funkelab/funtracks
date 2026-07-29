@@ -43,22 +43,6 @@ def seg_data():
     return _generate_segmentation()
 
 
-@pytest.fixture(scope="module")
-def _warm_spatial_compile():
-    """Warm the spatial_graph rtree JIT compile before the timed benchmark.
-
-    Building a SolutionTracks with segmentation creates a GraphArrayView, which builds a
-    spatial_graph rtree whose Cython module is JIT-compiled by witty on first use and
-    cached process-wide. That compile is a one-time cost (seconds-to-tens-of-seconds on
-    a cold Windows runner) that would otherwise land inside the timed region of
-    test_graph_to_solution. Trigger it here (untimed) on a tiny graph with the same
-    dimensionality so the benchmark measures tracking work, not compilation.
-    """
-    tiny = _generate_segmentation(num_frames=2, frame_shape=(64, 64), cells_per_frame=2)
-    graph = compute_graph_from_seg(tiny, MAX_EDGE_DISTANCE, iou=True)
-    SolutionTracks(graph, time_attr="t", pos_attr="pos")
-
-
 def test_compute_graph_from_seg(benchmark, seg_data):
     benchmark.pedantic(
         compute_graph_from_seg,
@@ -69,14 +53,14 @@ def test_compute_graph_from_seg(benchmark, seg_data):
     )
 
 
-def test_graph_to_solution(benchmark, seg_data, _warm_spatial_compile):
+def test_graph_to_solution(benchmark, seg_data, _warm_jit):
     """Benchmark candidate graph -> SolutionTracks (tracklet/lineage assignment).
 
     Candidate-graph construction is benchmarked separately above and is built here in
     (untimed) setup, so only the SolutionTracks construction -- dominated by
     TrackAnnotator._assign_tracklet_ids and _assign_lineage_ids -- is measured.
-    The _warm_spatial_compile fixture ensures the one-time spatial_graph rtree JIT
-    compile is not measured here.
+    The _warm_jit fixture ensures the one-time spatial_graph rtree JIT compile is not
+    measured here.
     """
 
     def setup():
