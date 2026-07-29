@@ -33,6 +33,26 @@ class TestUserAddDeleteNode:
             attrs = {"t": 2, "track_id": 1}
             UserAddNode(tracks, node=7, attributes=attrs)
 
+    def test_user_delete_invalid_node(self, get_tracks, ndim, with_seg):
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
+
+        # a node id that never existed
+        with pytest.raises(InvalidActionError, match="Node 99 not in solution"):
+            UserDeleteNode(tracks, 99)
+
+        # an already soft-deleted node: still present in graph_full, so the guard must
+        # check graph_solution. Previously this escaped as a bare KeyError from the
+        # view's internal id mapping.
+        UserDeleteNode(tracks, 5)
+        assert tracks.graph_full.has_node(5)
+        assert not tracks.graph_solution.has_node(5)
+        with pytest.raises(InvalidActionError, match="Node 5 not in solution"):
+            UserDeleteNode(tracks, 5)
+
+        # the failed delete left the tracks usable and undo still restores node 5
+        assert tracks.undo()
+        assert tracks.graph_solution.has_node(5)
+
     def test_user_add_node(self, get_tracks, ndim, with_seg):
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
         # add a node to replace a skip edge between node 4 in time 2 and node 5 in time 4
