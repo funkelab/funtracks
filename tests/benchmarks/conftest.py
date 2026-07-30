@@ -5,7 +5,7 @@ import pytest
 from funtracks.user_actions import UserUpdateNodeAttrs, UserUpdateSegmentation
 from funtracks.utils.tracksdata_utils import td_mask_to_pixels
 
-from ._graph_builders import make_solution_tracks
+from ._graph_builders import make_tracks
 
 
 @pytest.fixture(scope="session")
@@ -15,7 +15,7 @@ def _warm_jit():
     Several lazy compiles would otherwise land inside whichever timed region hits them
     first, and they are large enough to skew or dwarf the measurement:
 
-    1. Building a SolutionTracks with segmentation creates a GraphArrayView, which builds
+    1. Building a Tracks with segmentation creates a GraphArrayView, which builds
        a spatial_graph rtree whose Cython module is JIT-compiled by witty on first use
        (seconds-to-tens-of-seconds on a cold Windows runner).
     2. UserUpdateSegmentation calls Mask.intersection to decide whether a paint stroke
@@ -28,14 +28,14 @@ def _warm_jit():
     signature and witty per generated source. That is what makes a tiny warm-up graph
     sufficient -- it installs the ``(int64[:], int64[:], bool[:,:], bool[:,:])`` signature
     that the full-size benchmarks then reuse. It also means the warm-up only works while
-    it shares the real graph's dtypes, so make_solution_tracks is the single source of
+    it shares the real graph's dtypes, so make_tracks is the single source of
     geometry for both; do not hand-roll a graph for this fixture.
     """
-    tracks = make_solution_tracks(n_frames=2, cells_per_frame=2, frame_shape=(64, 64))
+    tracks = make_tracks(n_frames=2, cells_per_frame=2, frame_shape=(64, 64))
 
     # Exercise the update-segmentation path too. Building the tracks is not enough: the
     # numba compile happens on the first Mask.intersection call, not during construction.
-    node = next(iter(sorted(int(n) for n in tracks.graph.node_ids())))
+    node = next(iter(sorted(int(n) for n in tracks.graph_solution.node_ids())))
     mask_pixels = td_mask_to_pixels(
         tracks.get_mask(node), tracks.get_time(node), ndim=tracks.ndim
     )

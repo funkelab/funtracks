@@ -10,7 +10,7 @@ from funtracks.user_actions import (
 )
 from funtracks.utils.tracksdata_utils import td_mask_to_pixels
 
-from ._graph_builders import make_solution_tracks
+from ._graph_builders import make_tracks
 
 NUM_FRAMES = 20
 FRAME_SHAPE = (500, 500)
@@ -29,8 +29,8 @@ PATCH_FRACTION = 3
 
 @pytest.fixture(scope="module")
 def tracks(_warm_jit):
-    """One SolutionTracks shared by every benchmark in this module."""
-    return make_solution_tracks(
+    """One Tracks object shared by every benchmark in this module."""
+    return make_tracks(
         n_frames=NUM_FRAMES,
         cells_per_frame=CELLS_PER_FRAME,
         frame_shape=FRAME_SHAPE,
@@ -46,7 +46,7 @@ def solution_edges(tracks):
     forward through the movie rather than repeatedly hitting one frame.
     """
     edges = []
-    for node in sorted(int(n) for n in tracks.graph.node_ids()):
+    for node in sorted(int(n) for n in tracks.graph_solution.node_ids()):
         successors = tracks.successors(node)
         if successors:
             edges.append((node, int(successors[0])))
@@ -62,7 +62,7 @@ def _node_batches(solution_edges, n_rounds=ROUNDS, per_round=N_OPS):
     same amount of work.
 
     Note this is no longer needed to avoid a measurement artifact: "score" is populated
-    on every node at build time (see _graph_builders.make_solution_tracks), so a node
+    on every node at build time (see _graph_builders.make_tracks), so a node
     that has never been written costs the same to update as one that has.
     """
     nodes = [source for source, _ in solution_edges]

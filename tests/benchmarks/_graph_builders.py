@@ -10,17 +10,17 @@ import tracksdata as td
 from skimage.draw import disk
 from tracksdata.nodes import Mask
 
-from funtracks.data_model import SolutionTracks
-from funtracks.utils.tracksdata_utils import create_empty_graphview_graph
+from funtracks.data_model import Tracks
+from funtracks.utils.tracksdata_utils import create_empty_graph
 
 
-def make_solution_tracks(
+def make_tracks(
     n_frames: int,
     cells_per_frame: int,
     frame_shape: tuple[int, int],
     seed: int = 42,
-) -> SolutionTracks:
-    """Build a synthetic SolutionTracks with segmentation masks.
+) -> Tracks:
+    """Build a synthetic Tracks with segmentation masks.
 
     Produces a *solution* graph, not a candidate graph: cells are linked 1-to-1 between
     adjacent frames so every node has out-degree <= 1. This matters because the user
@@ -36,12 +36,12 @@ def make_solution_tracks(
         seed: Seed for the random generator, for reproducible geometry.
 
     Returns:
-        A SolutionTracks with pos, area, mask and bbox node attrs, iou edge attrs, and a
+        A Tracks with pos, area, mask and bbox node attrs, iou edge attrs, and a
         writable unmanaged "score" node attr (populated on every node) for
         attribute-update benchmarks.
     """
     rng = np.random.default_rng(seed)
-    graph = create_empty_graphview_graph(
+    graph = create_empty_graph(
         node_attributes=[
             "pos",
             "area",
@@ -118,4 +118,10 @@ def make_solution_tracks(
     graph.bulk_add_edges(edges)
     graph._update_metadata(segmentation_shape=(n_frames, *frame_shape))
 
-    return SolutionTracks(graph, time_attr="t", pos_attr="pos")
+    return Tracks(
+        graph,
+        time_attr="t",
+        pos_attr="pos",
+        tracklet_attr="tracklet_id",
+        lineage_attr="lineage_id",
+    )
