@@ -72,6 +72,14 @@ dev = [
     {include-group = "docs"},
 ]
 
+# TEMPORARY: pin tracksdata to a LOCAL editable checkout on the
+# `combine-branches-for-funtracks-sql` branch, which merges the four SQL-backend fix
+# branches (live-update views #325, numpy-scalar BLOB, pl.Array read truncation, edge-revive
+# edge_id, and the missing-attr-key KeyError). Local-only branch, not pushed. Replace with a
+# released version pin once those land in royerlab/tracksdata. See .claude/plans/sql.md.
+[tool.uv.sources]
+tracksdata = { path = "../tracksdata", editable = true }
+
 [tool.setuptools_scm]
 
 [tool.ruff]

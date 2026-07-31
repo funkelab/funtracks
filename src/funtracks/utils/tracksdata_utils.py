@@ -76,6 +76,7 @@ def create_empty_graph(
     database: str | None = None,
     position_attrs: list[str] | None = None,
     ndim: int = 3,
+    backend: str = "sql",
 ) -> td.graph.BaseGraph:
     """
     Create an empty tracksdata base graph with standard node and edge attributes.
@@ -100,6 +101,10 @@ def create_empty_graph(
     ndim : int
         Number of dimensions including time, so 2D+T dataset has ndim = 3.
         Defaults to 3 (2D+time).
+    backend : str
+        Which tracksdata backend to build: "sql" for a database-backed ``SQLGraph``
+        (SQLite at ``database``) or "memory" for an in-memory ``IndexedRXGraph``.
+        Defaults to "sql".
 
     Returns
     -------
@@ -130,14 +135,17 @@ def create_empty_graph(
     else:
         edge_default_values = [0.0] * len(edge_attributes or [])
 
-    # Initialize an empty graph
-    # kwargs = {
-    #     "drivername": "sqlite",
-    #     "database": database,
-    #     "overwrite": True,
-    # }
-    # graph_td = td.graph.SQLGraph(**kwargs)
-    graph_td = td.graph.IndexedRXGraph()
+    # Initialize an empty graph on the requested backend.
+    if backend == "sql":
+        graph_td = td.graph.SQLGraph(
+            drivername="sqlite",
+            database=database,
+            overwrite=True,
+        )
+    elif backend == "memory":
+        graph_td = td.graph.IndexedRXGraph()
+    else:
+        raise ValueError(f"Unknown backend {backend!r}; expected 'sql' or 'memory'.")
 
     # Add standard node and edge attributes
     if "pos" in (node_attributes or []) or any(

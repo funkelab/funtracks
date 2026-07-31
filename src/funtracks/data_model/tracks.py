@@ -837,6 +837,12 @@ class Tracks:
         # a key directly to the root is not propagated down into an existing view — so
         # registering on graph_full would leave graph_solution without the column.
         # If tracksdata ever makes view attr-key additions local, revisit this.
+        #
+        # TODO(sql): by the accessor policy (attribute I/O → graph_full), this should
+        # register on graph_full, not the view. Blocked on tracksdata bug #5 — on SQL,
+        # add_node_attr_key + update_node_attrs fails once any live view exists, for BOTH
+        # root- and view-registration (see .claude/plans/tracksdata_numpy_scalar_bug.md).
+        # Once fixed: register on graph_full and delete this workaround. See sql.md TODO.
         ft = feature["feature_type"]
         if "node" in ft and key not in self.graph_solution.node_attr_keys():
             # "mask" value_type maps to pl.Object via to_polars_dtype
