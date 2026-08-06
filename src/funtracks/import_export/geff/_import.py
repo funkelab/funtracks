@@ -239,6 +239,54 @@ class GeffTracksBuilder(TracksBuilder):
         # Fall back to fuzzy matching when axes metadata is absent or incomplete
         return super().infer_node_name_map()
 
+    def infer_scale(self) -> list[float] | None:
+        """Derive the per-dimension scale from the geff axes metadata.
+
+        The result is ordered like ``Tracks.scale``: time first, then the spatial
+        axes in the same order as ``self.node_name_map["pos"]`` (falling back to
+        the order the axes appear in the file).
+
+        Per the geff spec ``scale`` is optional per axis, so any axis without one
+        falls back to 1.0. Returns None when there is no axes metadata, when no
+        axis declares a scale at all, or when the axes cannot be lined up with the
+        graph's dimensions — in those cases the scale is genuinely unknown, and
+        callers should be able to tell that apart from unity.
+
+        Returns:
+            Scale per dimension (time first), or None if unknown.
+        """
+        geff_axes = getattr(self, "_geff_axes", [])
+        if not geff_axes:
+            return None
+
+        scale_by_name = {ax.name: ax.scale for ax in geff_axes}
+
+        # Reconstruct the dimension order used for the graph, not the file order.
+        pos_names = self.node_name_map.get("pos")
+        ordered: list[str] = []
+        time_name = self.node_name_map.get("time")
+        if isinstance(time_name, str):
+            ordered.append(time_name)
+        if isinstance(pos_names, list):
+            ordered.extend(pos_names)
+        if not ordered or not all(name in scale_by_name for name in ordered):
+            # The name map does not line up with the axes metadata (e.g. position
+            # stored as a single ndarray property): fall back to the file order.
+            ordered = [ax.name for ax in geff_axes]
+
+        # Only trust the result if it covers exactly the graph's dimensions,
+        # otherwise Tracks would reject the mismatched length.
+        expected_ndim = self.ndim
+        if expected_ndim is None and isinstance(pos_names, list):
+            expected_ndim = len(pos_names) + 1
+        if expected_ndim is not None and len(ordered) != expected_ndim:
+            return None
+
+        scales = [scale_by_name.get(name) for name in ordered]
+        if all(s is None for s in scales):
+            return None
+        return [1.0 if s is None else float(s) for s in scales]
+
     def construct_graph(
         self,
         node_name_map: dict[str, str | list[str]] | None = None,
@@ -334,7 +382,10 @@ def import_from_geff(
             - For multi-value features like position, use a list: {"pos": ["y", "x"]}
             If None, property names are auto-inferred using fuzzy matching.
         segmentation_path: Optional path to segmentation data
-        scale: Optional spatial scale
+        scale: Optional spatial scale. If None, defaults to the scale stored in
+            the geff axes metadata (see
+            :meth:`GeffTracksBuilder.infer_scale`), and stays None when the file
+            does not declare one.
         edge_name_map: Optional mapping from standard funtracks keys to GEFF
             edge property names. Example: {"iou": "overlap"}
         database: Optional path to a SQLite database file for backing storage.
@@ -376,6 +427,11 @@ def import_from_geff(
         builder.node_name_map = node_name_map
     if edge_name_map is not None and not has_feature_dict:
         builder.edge_name_map = edge_name_map
+
+    # An explicit scale always wins; otherwise honour what the file's axes say.
+    if scale is None:
+        scale = builder.infer_scale()
+
     return builder.build(
         directory,
         segmentation_path,
