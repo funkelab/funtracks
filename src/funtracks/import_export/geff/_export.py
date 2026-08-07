@@ -34,6 +34,11 @@ def write_to_geff(
     geff store directly to *path*.  Intended for internal save/load workflows
     where the user picks the ``.geff`` path.
 
+    Note: only ``graph_solution`` is written. Soft-deleted (``solution=False``)
+    candidates are dropped, and reimport marks everything ``solution=True`` — so
+    undo-ability of past deletes does not survive a save/load round-trip (Phase-1
+    design; candidate persistence is deferred to the candidate/solver phase).
+
     Args:
         tracks: Tracks object containing a graph to save.
         path: Destination path for the geff store.
@@ -64,6 +69,9 @@ def export_to_geff(
 ):
     """Export the Tracks graph to geff.
 
+    Only the solution graph is exported; soft-deleted (``solution=False``)
+    candidates are not included.
+
     Args:
         tracks (Tracks): Tracks object containing a graph to save.
         directory (Path): Destination directory for saving the Zarr.
@@ -87,7 +95,7 @@ def export_to_geff(
 
     if node_ids is not None:
         nodes_to_keep = filter_graph_with_ancestors(
-            tracks.graph, node_ids
+            tracks.graph_solution, node_ids
         )  # include the ancestors to make sure the graph is valid and has no missing
         # parent nodes.
 
@@ -97,7 +105,7 @@ def export_to_geff(
 
     # Include the FeatureDict in metadata only for full exports.
     # Subgroup exports do not necessarily have valid tracklet/lineage IDs
-    # and thus are not valid SolutionTracks
+    # and thus are not valid Tracks
     graph, metadata = _build_geff_metadata(tracks, include_features=(node_ids is None))
 
     # Save segmentation if present and requested
@@ -205,7 +213,7 @@ def split_position_attr(tracks: Tracks) -> tuple[td.graph.GraphView, list[str] |
 
     if isinstance(pos_key, str):
         # Position is stored as a single attribute, need to split
-        new_graph = tracks.graph.detach()
+        new_graph = tracks.graph_solution.detach()
         new_graph = new_graph.filter().subgraph()
 
         # Register new attribute keys
@@ -237,6 +245,6 @@ def split_position_attr(tracks: Tracks) -> tuple[td.graph.GraphView, list[str] |
         return new_graph, new_keys
     elif pos_key is not None:
         # Position is already split into separate attributes
-        return tracks.graph, list(pos_key)
+        return tracks.graph_solution, list(pos_key)
     else:
-        return tracks.graph, None
+        return tracks.graph_solution, None

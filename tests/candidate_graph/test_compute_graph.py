@@ -18,13 +18,13 @@ def test_graph_from_segmentation_2d(get_tracks):
     )
 
     # Same node IDs as the segmentation labels
-    assert set(cand_graph.node_ids()) == set(tracks.graph.node_ids())
+    assert set(cand_graph.node_ids()) == set(tracks.graph_solution.node_ids())
 
     # t, pos, area must match the source graph for every node
     for node in cand_graph.node_ids():
         for key in ["t", "pos", "area"]:
             assert np.array(cand_graph.nodes[node][key]) == pytest.approx(
-                np.array(tracks.graph.nodes[node][key]), abs=0.01
+                np.array(tracks.graph_solution.nodes[node][key]), abs=0.01
             )
 
     # mask and bbox must be present on every node
@@ -39,12 +39,14 @@ def test_graph_from_segmentation_2d(get_tracks):
     # because t=3 has no nodes (add_cand_edges only links frame → frame+1)
     assert sorted(cand_graph.edge_list()) == [[1, 2], [1, 3], [2, 4], [3, 4]]
 
-    # For edges shared with tracks.graph, iou must agree
+    # For edges shared with tracks.graph_solution, iou must agree
     cand_edges = {tuple(e) for e in cand_graph.edge_list()}
-    ref_edges = {tuple(e) for e in tracks.graph.edge_list()}
+    ref_edges = {tuple(e) for e in tracks.graph_solution.edge_list()}
     for src, tgt in cand_edges & ref_edges:
         cand_iou = cand_graph.edges[cand_graph.edge_id(src, tgt)]["iou"]
-        ref_iou = tracks.graph.edges[tracks.graph.edge_id(src, tgt)]["iou"]
+        ref_iou = tracks.graph_solution.edges[tracks.graph_solution.edge_id(src, tgt)][
+            "iou"
+        ]
         assert cand_iou == pytest.approx(ref_iou, abs=0.01)
 
     # lower edge distance: only (1, 3) is within 15 pixels (~11.2), (1, 2) is ~42 away
@@ -52,7 +54,7 @@ def test_graph_from_segmentation_2d(get_tracks):
         segmentation=segmentation_2d,
         max_edge_distance=15,
     )
-    assert set(cand_graph.node_ids()) == set(tracks.graph.node_ids())
+    assert set(cand_graph.node_ids()) == set(tracks.graph_solution.node_ids())
     assert sorted(cand_graph.edge_list()) == [[1, 3]]
 
 
@@ -65,12 +67,12 @@ def test_graph_from_segmentation_3d(get_tracks):
         max_edge_distance=100,
     )
 
-    assert set(cand_graph.node_ids()) == set(tracks.graph.node_ids())
+    assert set(cand_graph.node_ids()) == set(tracks.graph_solution.node_ids())
 
     for node in cand_graph.node_ids():
         for key in ["t", "pos", "area"]:
             assert np.array(cand_graph.nodes[node][key]) == pytest.approx(
-                np.array(tracks.graph.nodes[node][key]), abs=0.01
+                np.array(tracks.graph_solution.nodes[node][key]), abs=0.01
             )
 
     # mask and bbox must be present on every node
@@ -115,8 +117,8 @@ def test_graph_from_segmentation_t_start(get_tracks):
 
     # t values should match the original tracks graph for shared nodes
     for node in cand_graph.node_ids():
-        if node in set(tracks.graph.node_ids()):
-            assert cand_graph.nodes[node]["t"] == tracks.graph.nodes[node]["t"]
+        if node in set(tracks.graph_solution.node_ids()):
+            assert cand_graph.nodes[node]["t"] == tracks.graph_solution.nodes[node]["t"]
 
     # Edges should still be formed between adjacent (shifted) frames
     assert cand_graph.num_edges() > 0

@@ -16,7 +16,7 @@ from funtracks.user_actions import (
 @pytest.mark.parametrize("with_seg", [True, False])
 class TestTrackAnnotator:
     def test_init(self, get_tracks, ndim, with_seg) -> None:
-        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
         ann = TrackAnnotator(tracks)
         # Features start disabled by default
         assert len(ann.all_features) == 2
@@ -32,7 +32,7 @@ class TestTrackAnnotator:
         assert ann.max_tracklet_id == 5
 
     def test_compute_all(self, get_tracks, ndim, with_seg) -> None:
-        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
 
         ann = TrackAnnotator(tracks, tracklet_key=tracks.features.tracklet_key)
         # Enable features
@@ -41,9 +41,9 @@ class TestTrackAnnotator:
 
         # Compute values
         ann.compute()
-        for node in tracks.graph.node_ids():
+        for node in tracks.graph_solution.node_ids():
             for key in all_features:
-                assert tracks.graph.nodes[node][key] is not None
+                assert tracks.graph_solution.nodes[node][key] is not None
 
         lineages = [
             [1, 2, 3, 4, 5],
@@ -69,7 +69,7 @@ class TestTrackAnnotator:
             assert len({id_set[0] for id_set in id_sets}) == len(id_sets)
 
     def test_add_remove_feature(self, get_tracks, ndim, with_seg):
-        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
         ann = TrackAnnotator(tracks, tracklet_key=tracks.features.tracklet_key)
         # Enable features
         ann.activate_features(list(ann.all_features.keys()))
@@ -79,7 +79,9 @@ class TestTrackAnnotator:
         node_id = 6
         edge_id = (4, 6)
         attrs = {"iou": 0, "solution": True} if with_seg else {"solution": True}
-        tracks.graph.add_edge(source_id=edge_id[0], target_id=edge_id[1], attrs=attrs)
+        tracks.graph_solution.add_edge(
+            source_id=edge_id[0], target_id=edge_id[1], attrs=attrs
+        )
         to_remove_key = ann.lineage_key
         orig_lin = tracks.get_node_attr(node_id, ann.lineage_key)
         orig_tra = tracks.get_node_attr(node_id, ann.tracklet_key)
@@ -98,20 +100,20 @@ class TestTrackAnnotator:
         assert tracks.get_node_attr(node_id, ann.lineage_key) != orig_lin
         assert tracks.get_node_attr(node_id, ann.tracklet_key) != orig_tra
 
-    def test_invalid(self, get_tracks, ndim, with_seg) -> None:
-        # Create regular Tracks (not SolutionTracks) to test error handling
-        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=False)
-        with pytest.raises(
-            ValueError, match="Currently the TrackAnnotator only works on SolutionTracks"
-        ):
-            TrackAnnotator(tracks)  # type: ignore
+    def test_always_has_track_annotator(self, get_tracks, ndim, with_seg) -> None:
+        # Every Tracks has a tracklet key and a registered TrackAnnotator, even when
+        # built without explicit track attributes (no "plain" vs "solution" split).
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=False)
+        assert tracks.features.tracklet_key is not None
+        assert tracks.features.lineage_key is not None
+        assert isinstance(tracks.track_annotator, TrackAnnotator)
 
     def test_ignores_irrelevant_actions(self, get_tracks, ndim, with_seg):
         """Test that TrackAnnotator ignores actions that don't affect track IDs."""
         if not with_seg:
             pytest.skip("Test requires segmentation")
 
-        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
         tracks.enable_features(["area", tracks.features.tracklet_key])
 
         node_id = 3
@@ -133,7 +135,7 @@ class TestTrackAnnotator:
     def test_lineage_id_updated_on_add_and_delete_edge(
         self, get_tracks, ndim, with_seg
     ) -> None:
-        tracks = get_tracks(ndim=3, with_seg=False, is_solution=True)
+        tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
         tracks.enable_features(["lineage_id"])
 
         # get the existing TrackAnnotator
@@ -155,7 +157,7 @@ class TestTrackAnnotator:
         source_node = 3
         target_node = 4
 
-        edge = next(e for e in tracks.graph.edge_list() if set(e) == {3, 4})
+        edge = next(e for e in tracks.graph_solution.edge_list() if set(e) == {3, 4})
 
         expected_lineage_id = ann.max_lineage_id + 1
         UserDeleteEdge(tracks, edge=edge)
@@ -206,7 +208,7 @@ class TestTrackAnnotator:
         - New child (6): keeps same track_id, gets source's lineage_id
         """
         # Graph structure: 1 → 2, 1 → 3 → 4 → 5, and 6 (separate)
-        tracks = get_tracks(ndim=3, with_seg=False, is_solution=True)
+        tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
         tracks.enable_features(["lineage_id"])
         ann = next(a for a in tracks.annotators if isinstance(a, TrackAnnotator))
 
@@ -255,7 +257,7 @@ class TestTrackAnnotator:
         - Orphaned child (2): keeps same track_id, gets new lineage_id
         """
         # Graph structure: 1 → 2, 1 → 3 → 4 → 5, and 6 (separate)
-        tracks = get_tracks(ndim=3, with_seg=False, is_solution=True)
+        tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
         tracks.enable_features(["lineage_id"])
         ann = next(a for a in tracks.annotators if isinstance(a, TrackAnnotator))
 
@@ -287,7 +289,7 @@ class TestTrackAnnotator:
 
     def test_disabled_tracklet_key_does_nothing(self, get_tracks, ndim, with_seg) -> None:
         """Test that TrackAnnotator does nothing when tracklet_key is disabled."""
-        tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
         ann = TrackAnnotator(tracks)
 
         # Don't activate any features - they should all be disabled
@@ -307,3 +309,27 @@ class TestTrackAnnotator:
         assert ann.lineage_id_to_nodes == original_lineage_map
         assert ann.max_tracklet_id == original_max_tracklet
         assert ann.max_lineage_id == original_max_lineage
+
+
+def test_recompute_replaces_stale_bookkeeping(get_tracks):
+    """A tracklet column still holding the -1 sentinel seeds a phantom tracklet -1 in
+    the bookkeeping at annotator init (_get_max_id_and_map only skips None). A full
+    compute() must replace tracklet_id_to_nodes wholesale (like _assign_lineage_ids
+    does), not merge into it — otherwise the phantom entry survives with its nodes
+    duplicated under their real tracklet ids.
+    """
+    tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
+    node_ids = list(tracks.graph_full.node_ids())
+    tracks.graph_full.update_node_attrs(
+        attrs={"track_id": [-1] * len(node_ids)}, node_ids=node_ids
+    )
+
+    ann = TrackAnnotator(tracks, tracklet_key="track_id")
+    ann.activate_features(["track_id", "lineage_id"])
+    ann.compute()
+
+    assert -1 not in ann.tracklet_id_to_nodes
+    # Every solution node appears exactly once across the bookkeeping.
+    all_nodes = sorted(n for ns in ann.tracklet_id_to_nodes.values() for n in ns)
+    assert all_nodes == sorted(tracks.graph_solution.node_ids())
+    assert ann.max_tracklet_id == max(ann.tracklet_id_to_nodes.keys())

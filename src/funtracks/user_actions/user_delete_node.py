@@ -4,26 +4,28 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
+from funtracks.exceptions import InvalidActionError
+
 from ..actions._base import ActionGroup
 from ..actions.add_delete_edge import AddEdge, DeleteEdge
 from ..actions.add_delete_node import DeleteNode
 from ..actions.update_track_id import UpdateTrackIDs
 
 if TYPE_CHECKING:
-    from funtracks.data_model import SolutionTracks
+    from funtracks.data_model import Tracks
 
 
 class UserDeleteNode(ActionGroup):
     def __init__(
         self,
-        tracks: SolutionTracks,
+        tracks: Tracks,
         node: int,
         pixels: None | tuple[np.ndarray, ...] = None,
         _top_level: bool = True,
     ):
         """
         Args:
-            tracks (SolutionTracks): The tracks to delete the node from.
+            tracks (Tracks): The tracks to delete the node from.
             node (int): The node id to delete.
             pixels (tuple[np.ndarray, ...] | None): The pixels of the node in the
                 segmentation, if known. Will be computed if not provided.
@@ -31,9 +33,19 @@ class UserDeleteNode(ActionGroup):
             _top_level (bool): If True, add this action to the history and emit
                 refresh. Set to False when used as a sub-action inside a compound
                 action. Defaults to True.
+
+        Raises:
+            InvalidActionError: If the node is not in the solution graph.
         """
         super().__init__(tracks, actions=[])
-        self.tracks: SolutionTracks  # Narrow type from base class
+        self.tracks: Tracks  # Narrow type from base class
+        # Only nodes in the solution can be deleted. A soft-deleted node still lives
+        # in graph_full, so guarding on graph_solution is what distinguishes "already
+        # deleted" from "never existed" — both are invalid here. Without this, the
+        # topology queries below raise a bare KeyError from the view's id mapping.
+        if not self.tracks.graph_solution.has_node(node):
+            raise InvalidActionError(f"Node {node} not in solution, can't remove")
+
         # delete adjacent edges
         for pred in self.tracks.predecessors(node):
             siblings = self.tracks.successors(pred)
