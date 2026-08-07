@@ -182,13 +182,10 @@ class GeffTracksBuilder(TracksBuilder):
                     # If FeatureDict loading fails, features will remain None
                     pass
 
-        # Read the segmentation shape. Preferred location is inside the geff
-        # metadata at extra["tracksdata"]["shape"] (the convention shared with
-        # tracksdata). Fall back to the legacy top-level zarr attribute
-        # "segmentation_shape" written by older versions of funtracks.
-        raw = None
-        if metadata.extra and "tracksdata" in metadata.extra:
-            raw = metadata.extra["tracksdata"].get("shape")
+        # Read the segmentation shape from the tracksdata graph metadata. This works
+        # before a graph exists, which is what we need here. Fall back to the legacy
+        # top-level zarr attribute "segmentation_shape" written by older funtracks.
+        raw = td.io.read_graph_metadata(metadata).get("shape")
         if raw is None:
             # source_path may be a filesystem Path or an in-memory zarr Store,
             # so pass it directly without str() conversion.
@@ -296,7 +293,7 @@ class GeffTracksBuilder(TracksBuilder):
         # reconstruct the segmentation and the RegionpropsAnnotator is created
         # during _get_annotators().
         if self._shape is not None:
-            graph._update_metadata(shape=self._shape)
+            graph.metadata["shape"] = self._shape
 
         return graph
 

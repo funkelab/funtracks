@@ -64,7 +64,7 @@ def compute_graph_from_seg(
     logger.info("Candidate edges: %d", cand_graph.num_edges())
 
     # store segmentation shape in graph metadata
-    cand_graph._update_metadata(shape=segmentation.shape)
+    cand_graph.metadata["shape"] = segmentation.shape
 
     return cand_graph
 

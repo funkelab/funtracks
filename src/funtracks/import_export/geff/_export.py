@@ -171,13 +171,9 @@ def _build_geff_metadata(
     if include_features:
         extra["funtracks"] = {"features": tracks.features.dump_json()}
 
-    # Store the segmentation shape inside the geff metadata under the tracksdata
-    # namespace (matching tracksdata's own convention), so it roundtrips as part
-    # of GeffMetadata and is readable by any tool that reads geff metadata.
-    seg_shape = tracks.graph.metadata.get("shape")
-    if seg_shape is not None:
-        extra["tracksdata"] = {"shape": list(seg_shape)}
-
+    # Note: the segmentation shape lives in the graph metadata under "shape" and is
+    # written by tracksdata's `to_geff`, which merges `graph.metadata` into the geff
+    # metadata extras even when we pass our own GeffMetadata. Nothing to do here.
     metadata = GeffMetadata(
         geff_version=geff_spec.__version__,
         directed=True,

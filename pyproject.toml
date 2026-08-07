@@ -72,6 +72,14 @@ dev = [
     {include-group = "docs"},
 ]
 
+[tool.uv.sources]
+# TEMPORARY pin: needs the tracksdata commit that stops `to_geff` from dropping
+# graph metadata when the caller supplies its own GeffMetadata, and adds
+# `tracksdata.io.read_graph_metadata` to read it back without building a graph.
+# See https://github.com/TeunHuijben/tracksdata/commit/8b7d44a
+# TODO: drop this section once that lands upstream in a tracksdata release.
+tracksdata = { git = "https://github.com/TeunHuijben/tracksdata.git", rev = "8b7d44ad5374ba32a800d4bc4ec972d5ec92a94e" }
+
 [tool.setuptools_scm]
 
 [tool.ruff]

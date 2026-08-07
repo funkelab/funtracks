@@ -502,7 +502,7 @@ def test_import_from_geff_roundtrip_auto_axes(tmp_path):
     )
     # The graph carries the shape in its metadata (set by motile-tracker),
     # but no dense segmentation array is attached to the SolutionTracks object.
-    graph._update_metadata(shape=(5, 100, 100))
+    graph.metadata["shape"] = (5, 100, 100)
 
     run_dir = tmp_path / "run"
     run_dir.mkdir()
@@ -627,7 +627,7 @@ def test_import_from_geff_warns_missing_shape(tmp_path):
         ],
         indices=[1],
     )
-    graph._update_metadata(shape=(5, 100, 100))
+    graph.metadata["shape"] = (5, 100, 100)
 
     run_dir = tmp_path / "run"
     run_dir.mkdir()
@@ -692,7 +692,7 @@ def test_import_from_geff_reads_legacy_segmentation_shape_attr(tmp_path):
         ],
         indices=[1],
     )
-    graph._update_metadata(shape=(5, 100, 100))
+    graph.metadata["shape"] = (5, 100, 100)
 
     run_dir = tmp_path / "run"
     run_dir.mkdir()
@@ -968,7 +968,7 @@ def test_embedded_seg_ellipse_axis_radii_feature_metadata(tmp_path):
         ],
         indices=[1],
     )
-    graph._update_metadata(shape=(3, 100, 100))
+    graph.metadata["shape"] = (3, 100, 100)
 
     run_dir = tmp_path / "run"
     run_dir.mkdir()
@@ -1081,7 +1081,7 @@ def test_featuredict_survives_geff_roundtrip(tmp_path):
         ],
         indices=[1],
     )
-    graph._update_metadata(shape=(3, 100, 100))
+    graph.metadata["shape"] = (3, 100, 100)
 
     run_dir = tmp_path / "run"
     run_dir.mkdir()
