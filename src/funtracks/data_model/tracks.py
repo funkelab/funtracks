@@ -140,6 +140,19 @@ class Tracks:
             # without a full dense segmentation array (e.g. after a geff
             # round-trip that was saved without segmentation).
             seg_shape = graph.metadata.get("shape")
+            if seg_shape is None:
+                # Backwards compatibility: funtracks used to store the shape under
+                # "segmentation_shape" before adopting tracksdata's "shape" key.
+                # Downstream code (e.g. motile-tracker) may still write the old key,
+                # and without this fallback the segmentation would silently be None.
+                seg_shape = graph.metadata.get("segmentation_shape")
+                if seg_shape is not None:
+                    warn(
+                        "Graph metadata key 'segmentation_shape' is deprecated, use "
+                        "'shape' instead (matching tracksdata's convention).",
+                        DeprecationWarning,
+                        stacklevel=2,
+                    )
             if seg_shape is not None:
                 try:
                     # Render the segmentation from the solution view so soft-deleted
