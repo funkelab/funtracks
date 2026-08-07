@@ -529,18 +529,16 @@ def test_import_from_geff_roundtrip_auto_axes(tmp_path):
     )
     assert pos_mapping == ["y", "x"], f"pos should map to ['y', 'x'], got {pos_mapping}"
 
-    # export_to_geff writes the shape into the geff metadata under
-    # extra.tracksdata.shape when the graph carries mask/bbox node attributes.
+    # export_to_geff writes the shape into the geff metadata when the graph carries
+    # mask/bbox node attributes. Read it back through tracksdata's public API rather
+    # than digging into the zarr attrs, so this does not depend on where it is stored.
     import zarr as _zarr
 
     z = _zarr.open(str(tracks_path), mode="r")
     zarr_attrs = dict(z.attrs)
-    seg_shape = (
-        zarr_attrs.get("geff", {}).get("extra", {}).get("tracksdata", {}).get("shape")
-    )
+    seg_shape = td.io.read_graph_metadata(tracks_path).get("shape")
     assert seg_shape is not None, (
-        "export_to_geff should write the shape to extra.tracksdata.shape "
-        "when masks present"
+        "export_to_geff should write the shape into the geff metadata when masks present"
     )
     assert tuple(seg_shape) == (5, 100, 100)
     # and it must NOT be written as a top-level zarr attr anymore
@@ -640,8 +638,9 @@ def test_import_from_geff_warns_missing_shape(tmp_path):
 
     tracks_path = run_dir / "tracks.geff"
 
-    # Simulate an external tool that stores masks without a shape: strip the
-    # shape from extra.tracksdata (and ensure no legacy top-level attr exists).
+    # Simulate an external tool that stores masks without a shape. This edits the
+    # zarr attrs directly because tracksdata exposes a reader (read_graph_metadata)
+    # but no way to strip graph metadata from an existing store.
     # Use put() (full replacement) rather than update() (merge) so it is truly gone.
     z = _zarr.open(str(tracks_path), mode="a")
     attrs = dict(z.attrs)
@@ -707,7 +706,9 @@ def test_import_from_geff_reads_legacy_segmentation_shape_attr(tmp_path):
 
     tracks_path = run_dir / "tracks.geff"
 
-    # Rewrite as a legacy GEFF: drop extra.tracksdata.shape, add the top-level attr.
+    # Rewrite as a legacy GEFF: drop the shape tracksdata wrote and add the old
+    # top-level attr. Edits the zarr attrs directly for the same reason as above:
+    # tracksdata can read graph metadata back, but not remove it from a store.
     z = _zarr.open(str(tracks_path), mode="a")
     attrs = dict(z.attrs)
     attrs.get("geff", {}).get("extra", {}).get("tracksdata", {}).pop("shape", None)
