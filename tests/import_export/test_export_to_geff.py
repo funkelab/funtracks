@@ -88,8 +88,8 @@ def test_export_segmentation_relabel(get_tracks, ndim, seg_relabel, tmp_path):
     seg_shape = _seg_shape(export_dir / "tracks.geff")
     assert seg_shape is not None
     assert tuple(seg_shape) == tracks.segmentation.shape
-    # and must NOT be written as a top-level zarr attr anymore
-    assert "segmentation_shape" not in attrs
+    # legacy top-level zarr attr is still dual-written for motile_tracker
+    assert tuple(attrs["segmentation_shape"]) == tracks.segmentation.shape
 
 
 def test_export_no_segmentation_saved(get_tracks, tmp_path):
@@ -470,4 +470,4 @@ def test_write_to_geff_segmentation_shape(get_tracks, tmp_path):
     seg_shape = _seg_shape(geff_path)
     assert seg_shape is not None
     assert tuple(seg_shape) == tracks.segmentation.shape
-    assert "segmentation_shape" not in attrs
+    assert tuple(attrs["segmentation_shape"]) == tracks.segmentation.shape

@@ -299,6 +299,8 @@ class GeffTracksBuilder(TracksBuilder):
         # during _get_annotators().
         if self._shape is not None:
             graph.metadata["shape"] = self._shape
+            # DEPRECATED: dual-write for motile_tracker, remove later
+            graph.metadata["segmentation_shape"] = self._shape
 
         return graph
 

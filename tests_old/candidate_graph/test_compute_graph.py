@@ -7,11 +7,6 @@ from funtracks.candidate_graph import (
 )
 
 
-@pytest.mark.skip(
-    reason="graph metadata key intentionally renamed: 'segmentation_shape' -> "
-    "'shape', matching tracksdata. Reading the old key is still supported "
-    "(Tracks.__init__); producing it is not. Covered by the equivalent test in tests/."
-)
 def test_graph_from_segmentation_2d(get_tracks):
     tracks = get_tracks(ndim=3, with_seg=True)
     segmentation_2d = np.asarray(tracks.segmentation)
@@ -61,11 +56,6 @@ def test_graph_from_segmentation_2d(get_tracks):
     assert sorted(cand_graph.edge_list()) == [[1, 3]]
 
 
-@pytest.mark.skip(
-    reason="graph metadata key intentionally renamed: 'segmentation_shape' -> "
-    "'shape', matching tracksdata. Reading the old key is still supported "
-    "(Tracks.__init__); producing it is not. Covered by the equivalent test in tests/."
-)
 def test_graph_from_segmentation_3d(get_tracks):
     tracks = get_tracks(ndim=4, with_seg=True)
     segmentation_3d = np.asarray(tracks.segmentation)
@@ -144,11 +134,6 @@ def test_graph_from_segmentation_negative_t_start(get_tracks):
         )
 
 
-@pytest.mark.skip(
-    reason="graph metadata key intentionally renamed: 'segmentation_shape' -> "
-    "'shape', matching tracksdata. Reading the old key is still supported "
-    "(Tracks.__init__); producing it is not. Covered by the equivalent test in tests/."
-)
 def test_graph_from_segmentation_t_start_zero_matches_default(get_tracks):
     """t_start=0 must produce identical output to omitting t_start."""
     tracks = get_tracks(ndim=3, with_seg=True)

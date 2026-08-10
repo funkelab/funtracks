@@ -55,6 +55,7 @@ def write_to_geff(
         zarr_format=zarr_format,
         overwrite=overwrite,
     )
+    _write_legacy_segmentation_shape(path, tracks)
 
 
 def export_to_geff(
@@ -139,6 +140,7 @@ def export_to_geff(
     # Save the graph in a 'tracks.geff' folder
     tracks_path = directory / "tracks.geff"
     graph.to_geff(geff_store=tracks_path, geff_metadata=metadata, zarr_format=zarr_format)
+    _write_legacy_segmentation_shape(tracks_path, tracks)
 
 
 def _build_geff_metadata(
@@ -192,6 +194,20 @@ def _build_geff_metadata(
     )
 
     return graph, metadata
+
+
+def _write_legacy_segmentation_shape(geff_path: Path, tracks: Tracks) -> None:
+    """Write the old top-level ``segmentation_shape`` zarr attr.
+
+    DEPRECATED: dual-write for motile_tracker, remove later.
+    """
+    meta = tracks.graph_full.metadata
+    seg_shape = meta.get("shape", meta.get("segmentation_shape"))
+    if seg_shape is not None:
+        import zarr as _zarr
+
+        z = _zarr.open(str(geff_path), mode="a")
+        z.attrs.update({"segmentation_shape": list(seg_shape)})
 
 
 def split_position_attr(tracks: Tracks) -> tuple[td.graph.GraphView, list[str] | None]:

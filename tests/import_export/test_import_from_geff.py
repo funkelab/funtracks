@@ -541,8 +541,8 @@ def test_import_from_geff_roundtrip_auto_axes(tmp_path):
         "export_to_geff should write the shape into the geff metadata when masks present"
     )
     assert tuple(seg_shape) == (5, 100, 100)
-    # and it must NOT be written as a top-level zarr attr anymore
-    assert "segmentation_shape" not in zarr_attrs
+    # legacy top-level zarr attr is still dual-written for motile_tracker
+    assert tuple(zarr_attrs["segmentation_shape"]) == (5, 100, 100)
 
     # import_from_geff must read the shape back from the geff metadata and
     # reconstruct a segmentation (GraphArrayView) — not return segmentation=None.
