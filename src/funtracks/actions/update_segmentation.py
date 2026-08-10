@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from typing import TYPE_CHECKING
 
 import tracksdata as td
@@ -60,8 +61,14 @@ class UpdateNodeSeg(BasicAction):
         mask_new = self.mask
 
         if value == 0:
-            # val=0 means deleting (part of) the mask
-            mask_old = self.tracks.graph.nodes[self.node][self.mask_key]
+            # val=0 means deleting (part of) the mask.
+            # Copy first: Mask.__isub__ mutates in place and returns self, which would
+            # store the same object identity back on the node. Downstream consumers
+            # (e.g. the GraphArrayView render cache) only invalidate when a *new* mask
+            # object is written, so subtracting in place would leave stale pixels in the
+            # rendered segmentation (visible when undoing a grow). Subtract on a copy so a
+            # distinct object is stored.
+            mask_old = copy.deepcopy(self.tracks.graph.nodes[self.node][self.mask_key])
             mask_subtracted = mask_old.__isub__(mask_new)
             self.tracks.update_mask(self.node, mask_subtracted, mask_key=self.mask_key)
 
