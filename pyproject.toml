@@ -77,7 +77,7 @@ dev = [
 # edge-revive edge_id, missing-attr-key KeyError). Replace with a released version pin once
 # those land in royerlab/tracksdata. See .claude/plans/sql.md.
 [tool.uv.sources]
-tracksdata = { git = "https://github.com/cmalinmayor/tracksdata.git", rev = "2d116bd6977105b8053f1aaacf63dffb7123340d" }
+tracksdata = { git = "https://github.com/cmalinmayor/tracksdata.git", rev = "10e710adb6030819dae878ded4f2b699ed13c262" }
 
 [tool.setuptools_scm]
 
