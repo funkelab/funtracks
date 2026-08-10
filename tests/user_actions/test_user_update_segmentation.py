@@ -297,7 +297,7 @@ def test_not_top_level_actions_group_into_one_undo(get_tracks, ndim):
     """With ``_top_level=False`` the action is applied but not recorded, so a caller can
     group several actions into a single, jointly undoable step."""
 
-    tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
+    tracks = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
     node_id = 3
     orig_pixels = td_mask_to_pixels(
         tracks.get_mask(node_id), tracks.get_time(node_id), ndim=tracks.ndim
@@ -337,7 +337,7 @@ def test_not_top_level_actions_group_into_one_undo(get_tracks, ndim):
 def test_delete_nodes_not_top_level(get_tracks, ndim):
     """UserDeleteNodes with ``_top_level=False`` deletes without recording history."""
 
-    tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
+    tracks = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
     n_actions = len(tracks.action_history.undo_stack)
 
     UserDeleteNodes(tracks, nodes=[3], _top_level=False)
