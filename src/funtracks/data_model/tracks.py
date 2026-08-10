@@ -886,9 +886,12 @@ class Tracks:
         else:
             return
 
-        # Perform custom graph operations when a feature is deleted. Schema ops go
-        # through graph_solution (the view) and propagate to the root — same tracksdata
-        # invariant as add_feature (see the note there).
+        # Schema removal goes through graph_solution (the view), NOT graph_full, and
+        # propagates UP to the root. This is asymmetric with add_feature (which
+        # registers on graph_full): tracksdata propagates attr-key ADDS root->view, but
+        # NOT removes root->view — only view->root. So a root remove_*_attr_key would
+        # leave the column dangling on the view. Revisit if tracksdata adds root->view
+        # remove propagation.
         if "node" in feature_type and key in self.graph_solution.node_attr_keys():
             self.graph_solution.remove_node_attr_key(key)
         if "edge" in feature_type and key in self.graph_solution.edge_attr_keys():
