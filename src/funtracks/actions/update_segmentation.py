@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import copy
 from typing import TYPE_CHECKING
 
 import tracksdata as td
@@ -62,19 +61,19 @@ class UpdateNodeSeg(BasicAction):
 
         if value == 0:
             # val=0 means deleting (part of) the mask.
-            # Copy first: Mask.__isub__ mutates in place and returns self, which would
-            # store the same object identity back on the node. Downstream consumers
-            # (e.g. the GraphArrayView render cache) only invalidate when a *new* mask
-            # object is written, so subtracting in place would leave stale pixels in the
-            # rendered segmentation (visible when undoing a grow). Subtract on a copy so a
-            # distinct object is stored.
-            mask_old = copy.deepcopy(self.tracks.graph.nodes[self.node][self.mask_key])
-            mask_subtracted = mask_old.__isub__(mask_new)
+            # Mask.__isub__ subtracts *in place* and returns the same object, which
+            # would mutate the mask still stored in the graph. Downstream consumers
+            # (e.g. GraphArrayView's cache invalidation) diff the graph's previous
+            # mask against the new one, so the previous mask must stay intact.
+            # Subtract on a fresh copy so the graph receives a distinct new object.
+            mask_old = self.tracks.graph_full.nodes[self.node][self.mask_key]
+            mask_subtracted = Mask(mask_old.mask.copy(), bbox=mask_old.bbox.copy())
+            mask_subtracted -= mask_new
             self.tracks.update_mask(self.node, mask_subtracted, mask_key=self.mask_key)
 
-        elif self.tracks.graph.has_node(value):
+        elif self.tracks.graph_full.has_node(value):
             # if node already exists:
-            mask_old = self.tracks.graph.nodes[value][self.mask_key]
+            mask_old = self.tracks.graph_full.nodes[value][self.mask_key]
             mask_combined = mask_old.__or__(mask_new)
             self.tracks.update_mask(value, mask_combined, mask_key=self.mask_key)
 

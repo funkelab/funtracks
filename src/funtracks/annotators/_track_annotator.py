@@ -8,7 +8,6 @@ import rustworkx as rx
 import tracksdata as td
 
 from funtracks.actions import AddNode, DeleteNode, UpdateTrackIDs
-from funtracks.data_model import SolutionTracks
 from funtracks.features import LineageID, TrackletID
 
 from ._graph_annotator import GraphAnnotator
@@ -17,6 +16,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
     from funtracks.actions import BasicAction
+    from funtracks.data_model import Tracks
     from funtracks.features import Feature
 
 
@@ -25,9 +25,12 @@ DEFAULT_LINEAGE_KEY = "lineage_id"
 
 
 class TrackAnnotator(GraphAnnotator):
-    """A graph annotator to compute tracklet and lineage IDs for SolutionTracks only.
+    """A graph annotator that computes tracklet and lineage IDs on the solution view.
 
-    Currently, updating the tracklet and lineage IDs is left to Actions.
+    Registered on every Tracks — track ids are a core feature, not a separate "type"
+    of tracks. It reads/iterates `graph_solution`; on an empty solution view it simply
+    computes nothing until nodes are added. Updating the ids after construction is left
+    to Actions.
 
     Attributes:
         tracklet_id_to_nodes (dict[int, list[int]]): A mapping from tracklet ids to
@@ -38,33 +41,20 @@ class TrackAnnotator(GraphAnnotator):
         max_lineage_id (int): the maximum lineage id used in the tracks
 
     Args:
-        tracks (SolutionTracks): The tracks to be annotated. Must be a solution.
-        tracklet_key (str | None, optional): A key that already holds the tracklet ids
-            on the graph. If provided, must be there for every node and already hold
-            valid tracklet ids. Defaults to None.
-        lineage_key (str | None, optional): A key that already holds the lineage ids
-            on the graph. If provided, must be there for every node and already hold
-            valid lineage ids. Defaults to None.
-
-
-    Raises:
-        ValueError: if the provided Tracks are not SolutionTracks (not a binary lineage
-            tree)
+        tracks (Tracks): The tracks to annotate.
+        tracklet_key (str | None, optional): The node attribute holding tracklet ids.
+            If the graph already holds valid ids under this key they are reused;
+            otherwise they are computed. Defaults to DEFAULT_TRACKLET_KEY.
+        lineage_key (str | None, optional): The node attribute holding lineage ids.
+            Same semantics as tracklet_key. Defaults to DEFAULT_LINEAGE_KEY.
     """
 
-    @classmethod
-    def can_annotate(cls, tracks) -> bool:
-        """Check if this annotator can annotate the given tracks.
-
-        Requires tracks to be a SolutionTracks instance.
-
-        Args:
-            tracks: The tracks to check compatibility with
-
-        Returns:
-            True if tracks is a SolutionTracks instance, False otherwise
-        """
-        return isinstance(tracks, SolutionTracks)
+    @property
+    def graph(self):
+        """Track ids (`tracklet_id`, `lineage_id`) are derived from the solution
+        topology, so this annotator reads/iterates the solution view, not the full
+        graph (overriding the base default of `graph_full`)."""
+        return self.tracks.graph_solution
 
     @classmethod
     def get_available_features(cls, ndim: int = 3) -> dict[str, Feature]:
@@ -87,14 +77,11 @@ class TrackAnnotator(GraphAnnotator):
 
     def __init__(
         self,
-        tracks: SolutionTracks,
+        tracks: Tracks,
         tracklet_key: str | None = DEFAULT_TRACKLET_KEY,
         lineage_key: str | None = DEFAULT_LINEAGE_KEY,
     ):
-        if not isinstance(tracks, SolutionTracks):
-            raise ValueError("Currently the TrackAnnotator only works on SolutionTracks")
-
-        self.tracks: SolutionTracks  # Narrow type from base class
+        self.tracks: Tracks  # Narrow type from base class
         self.tracklet_key = (
             tracklet_key if tracklet_key is not None else DEFAULT_TRACKLET_KEY
         )
@@ -112,13 +99,13 @@ class TrackAnnotator(GraphAnnotator):
         self.max_lineage_id = 0
 
         # Initialize tracklet bookkeeping if track IDs already exist in the graph
-        if tracks.graph.num_nodes() > 0:
+        if tracks.graph_solution.num_nodes() > 0:
             max_id, id_to_nodes = self._get_max_id_and_map(self.tracklet_key)
             self.max_tracklet_id = max_id
             self.tracklet_id_to_nodes = id_to_nodes
 
         # Initialize lineage bookkeeping if lineage IDs already exist
-        if lineage_key is not None and tracks.graph.num_nodes() > 0:
+        if lineage_key is not None and tracks.graph_solution.num_nodes() > 0:
             max_id, id_to_nodes = self._get_max_id_and_map(self.lineage_key)
             self.max_lineage_id = max_id
             self.lineage_id_to_nodes = id_to_nodes
@@ -133,9 +120,9 @@ class TrackAnnotator(GraphAnnotator):
             tuple[int, dict[int, list[int]]]: The maximum id value, and a mapping from
                 ids to a list of nodes with that id.
         """
-        if key not in self.tracks.graph.node_attr_keys():
+        if key not in self.graph.node_attr_keys():
             return 0, {}
-        df = self.tracks.graph.node_attrs(attr_keys=[td.DEFAULT_ATTR_KEYS.NODE_ID, key])
+        df = self.graph.node_attrs(attr_keys=[td.DEFAULT_ATTR_KEYS.NODE_ID, key])
         id_to_nodes = defaultdict(list)
         for node, _id in zip(df[td.DEFAULT_ATTR_KEYS.NODE_ID], df[key], strict=True):
             if _id is None:
@@ -199,12 +186,12 @@ class TrackAnnotator(GraphAnnotator):
         attributes will be updated.
         """
 
-        lineages_internal = rx.weakly_connected_components(self.tracks.graph.rx_graph)
+        lineages_internal = rx.weakly_connected_components(self.graph.rx_graph)
         # Map each component's internal node indices to external ids in one batched
         # call. node_ids() rebuilds the full external-id list on every call, so calling
         # it per node (as before) was O(N^2).
         lineages_external = [
-            self.tracks.graph._map_to_external(list(lin)) for lin in lineages_internal
+            self.graph._map_to_external(list(lin)) for lin in lineages_internal
         ]
 
         max_id, ids_to_nodes = self._assign_ids(lineages_external, self.lineage_key)
@@ -222,7 +209,7 @@ class TrackAnnotator(GraphAnnotator):
         # slow because each remove_edge syncs the view's bidirectional edge maps,
         # whereas rustworkx edge removal is in-memory. copy() preserves node indices,
         # so components map back through the original graph's id mapping.
-        rx_copy = self.tracks.graph.rx_graph.copy()
+        rx_copy = self.graph.rx_graph.copy()
         for node in rx_copy.node_indices():
             if rx_copy.out_degree(node) >= 2:
                 for _, daughter, _ in list(rx_copy.out_edges(node)):
@@ -231,18 +218,23 @@ class TrackAnnotator(GraphAnnotator):
         track_id = 1
         all_node_ids = []
         all_track_ids = []
+        id_to_nodes = {}
         for tracklet in rx.weakly_connected_components(rx_copy):
             # Batched internal -> external mapping (see _assign_lineage_ids).
-            node_ids_external = self.tracks.graph._map_to_external(list(tracklet))
+            node_ids_external = self.graph._map_to_external(list(tracklet))
             all_node_ids.extend(node_ids_external)
             all_track_ids.extend([track_id] * len(node_ids_external))
-            self.tracklet_id_to_nodes[track_id] = node_ids_external
+            id_to_nodes[track_id] = node_ids_external
             track_id += 1
         if all_node_ids:
-            self.tracks.graph.update_node_attrs(
+            self.graph.update_node_attrs(
                 attrs={self.tracks.features.tracklet_key: all_track_ids},
                 node_ids=all_node_ids,
             )
+        # Replace the bookkeeping wholesale (like _assign_lineage_ids) so stale
+        # entries — e.g. a phantom tracklet -1 seeded at init from a graph whose
+        # tracklet column still held the -1 sentinel — don't survive a recompute.
+        self.tracklet_id_to_nodes = id_to_nodes
         self.max_tracklet_id = track_id - 1
 
     def update(self, action: BasicAction) -> None:
@@ -309,18 +301,18 @@ class TrackAnnotator(GraphAnnotator):
                         still_in_tracklet = False
 
                 # Continue to all successors
-                next_nodes.extend(self.tracks.graph.successors(node))
+                next_nodes.extend(self.graph.successors(node))
 
             curr_nodes = next_nodes
 
         # Bulk-write all collected node attribute changes in one call each
         if update_tracklet and tracklet_nodes:
-            self.tracks.graph.update_node_attrs(
+            self.graph.update_node_attrs(
                 attrs={self.tracklet_key: [new_tracklet_id] * len(tracklet_nodes)},
                 node_ids=tracklet_nodes,
             )
         if update_lineage and lineage_nodes:
-            self.tracks.graph.update_node_attrs(
+            self.graph.update_node_attrs(
                 attrs={self.lineage_key: [new_lineage_id] * len(lineage_nodes)},
                 node_ids=lineage_nodes,
             )

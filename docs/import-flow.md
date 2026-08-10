@@ -25,7 +25,7 @@ graph LR
         Validate["validate<br/><small>check graph structure</small>"]
         ConstructGraph["construct_graph<br/><small>build tracksdata graph</small>"]
         HandleSeg["handle_segmentation<br/><small>load & relabel if needed</small>"]
-        CreateTracks[Create SolutionTracks]
+        CreateTracks[Create Tracks]
         EnableFeatures["enable_features<br/><small>register & compute</small>"]
 
         ValidateMap --> LoadSource

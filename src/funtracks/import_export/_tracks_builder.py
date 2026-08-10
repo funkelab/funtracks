@@ -1,6 +1,6 @@
 """Builder pattern for importing tracks from various formats.
 
-This module provides a unified interface for constructing SolutionTracks objects
+This module provides a unified interface for constructing Tracks objects
 from different data sources (GEFF, CSV, etc.) while sharing common validation
 and construction logic.
 """
@@ -15,7 +15,7 @@ import numpy as np
 import tracksdata as td
 from geff._typing import InMemoryGeff
 
-from funtracks.data_model.solution_tracks import SolutionTracks
+from funtracks.data_model.tracks import Tracks
 from funtracks.features import Feature
 from funtracks.import_export._import_segmentation import (
     load_segmentation,
@@ -39,7 +39,7 @@ from funtracks.import_export._validation import (
 )
 from funtracks.utils.tracksdata_utils import (
     add_masks_and_bboxes_to_graph,
-    create_empty_graphview_graph,
+    create_empty_graph,
 )
 
 if TYPE_CHECKING:
@@ -415,7 +415,7 @@ class TracksBuilder(ABC):
         self,
         node_name_map: dict[str, str | list[str]] | None = None,
         database: str | None = None,
-    ) -> td.graph.GraphView:
+    ) -> td.graph.BaseGraph:
         """Construct Tracksdata graph from validated InMemoryGeff data.
 
         Common logic shared across all formats.
@@ -427,7 +427,7 @@ class TracksBuilder(ABC):
                 If None (default), an in-memory/temp graph is used.
 
         Returns:
-            Tracksdata GraphView with standard keys
+            Tracksdata base graph with standard keys
 
         Raises:
             ValueError: If data not loaded or validated
@@ -481,7 +481,7 @@ class TracksBuilder(ABC):
                     default_value = 0
                 node_default_values.append(default_value)
 
-        graph = create_empty_graphview_graph(
+        graph = create_empty_graph(
             node_attributes=list(self.in_memory_geff["node_props"].keys()),
             edge_attributes=list(self.in_memory_geff["edge_props"].keys()),
             node_default_values=node_default_values,
@@ -536,23 +536,17 @@ class TracksBuilder(ABC):
         if self.TIME_ATTR != "t":
             graph.remove_node_attr_key(self.TIME_ATTR)
 
-        # create_empty_graphview_graph returns a filtered view, but that view is
-        # a snapshot at filter time; nodes/edges added afterwards (potentially with
-        # solution=False) bypass the filter. Re-filter the populated root so
-        # solution=False rows are actually excluded.
-        graph = graph._root.filter(
-            td.NodeAttr("solution") == True,  # noqa: E712
-            td.EdgeAttr("solution") == True,  # noqa: E712
-        ).subgraph()
-
+        # Return the full base graph. Tracks builds the solution==True view internally,
+        # so solution=False candidates added during population stay in graph_full and
+        # are excluded from graph_solution by Tracks, not here.
         return graph
 
     def handle_segmentation(
         self,
-        graph: td.graph.GraphView,
+        graph: td.graph.BaseGraph,
         segmentation: Path | np.ndarray | None,
         scale: list[float] | None,
-    ) -> tuple[np.ndarray | None, list[float] | None, td.graph.GraphView]:
+    ) -> tuple[np.ndarray | None, list[float] | None, td.graph.BaseGraph]:
         """Load, validate, and optionally relabel segmentation.
 
         Common logic shared across all formats.
@@ -619,13 +613,13 @@ class TracksBuilder(ABC):
 
         return new_segmentation, scale, graph
 
-    # Structural keys that are handled by graph construction / SolutionTracks.__init__
+    # Structural keys that are handled by graph construction / Tracks.__init__
     # and should not be registered as features by enable_features().
     STRUCTURAL_KEYS = frozenset({"time", "id", "parent_id", "seg_id"})
 
     def enable_features(
         self,
-        tracks: SolutionTracks,
+        tracks: Tracks,
         name_map: dict[str, str | list[str]],
         feature_type: Literal["node", "edge"] = "node",
     ) -> None:
@@ -638,7 +632,7 @@ class TracksBuilder(ABC):
         - Otherwise, if data was loaded for it, register it as a static feature.
 
         Args:
-            tracks: SolutionTracks object to add features to
+            tracks: Tracks object to add features to
             name_map: Mapping from standard funtracks keys to source property
                 names (same format as node_name_map / edge_name_map).
             feature_type: Type of features ("node" or "edge")
@@ -685,7 +679,7 @@ class TracksBuilder(ABC):
         scale: list[float] | None = None,
         node_name_map: dict[str, str | list[str]] | None = None,
         database: str | None = None,
-    ) -> SolutionTracks:
+    ) -> Tracks:
         """Orchestrate the full construction process.
 
         Args:
@@ -697,7 +691,7 @@ class TracksBuilder(ABC):
                 If None (default), an in-memory/temp graph is used.
 
         Returns:
-            Fully constructed SolutionTracks object
+            Fully constructed Tracks object
 
         Raises:
             ValueError: If self.node_name_map is not set or validation fails
@@ -769,22 +763,27 @@ class TracksBuilder(ABC):
         if segmentation_array is not None:
             graph = add_masks_and_bboxes_to_graph(graph, segmentation_array)
 
-        # 7. Create SolutionTracks
+        # 7. Create Tracks
         # construct_graph() always stores time as "t" (tracksdata convention),
         # regardless of TIME_ATTR, so we pass "t" here explicitly.
         # If a FeatureDict was loaded (e.g., from GEFF metadata), use it directly
         if hasattr(self, "features") and self.features is not None:
-            tracks = SolutionTracks(
+            tracks = Tracks(
                 graph=graph,
                 ndim=self.ndim,
                 scale=scale,
                 features=self.features,
             )
         else:
-            tracks = SolutionTracks(
+            # The builder always produces a solution, so declare tracklet/lineage
+            # intent to register a TrackAnnotator. Tracks.__init__ auto-detects whether
+            # these attrs already exist on the graph (activate) or need computing.
+            tracks = Tracks(
                 graph=graph,
                 pos_attr="pos",
                 time_attr="t",
+                tracklet_attr="tracklet_id",
+                lineage_attr="lineage_id",
                 ndim=self.ndim,
                 scale=scale,
             )

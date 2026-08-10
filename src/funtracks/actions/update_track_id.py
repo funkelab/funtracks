@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from ._base import BasicAction
 
 if TYPE_CHECKING:
-    from funtracks.data_model import SolutionTracks
+    from funtracks.data_model import Tracks
     from funtracks.data_model.tracks import Node
 
 
@@ -31,13 +31,13 @@ class UpdateTrackIDs(BasicAction):
 
     def __init__(
         self,
-        tracks: SolutionTracks,
+        tracks: Tracks,
         start_node: Node,
         tracklet_id: int | None = None,
         lineage_id: int | None = None,
     ):
         super().__init__(tracks)
-        self.tracks: SolutionTracks  # Narrow type from base class
+        self.tracks: Tracks  # Narrow type from base class
         self.start_node = start_node
 
         # Capture old tracklet ID
