@@ -21,9 +21,7 @@ def test_create_tracks(graph_3d_with_segmentation: td.graph.BaseGraph):
     tracks = Tracks(graph=empty_graph, ndim=3, **track_attrs)  # type: ignore[arg-type]
     assert tracks.features.position_key == "pos"
     assert isinstance(tracks.features["pos"], dict)
-    # Querying a non-existent node errors; the exact type is backend-dependent
-    # (KeyError on the in-memory backend, ValueError on SQL), so accept either.
-    with pytest.raises((KeyError, ValueError)):
+    with pytest.raises(KeyError):
         tracks.get_positions([1])
 
     # create tracks with graph only
@@ -38,6 +36,8 @@ def test_create_tracks(graph_3d_with_segmentation: td.graph.BaseGraph):
     assert isinstance(tracks.features[pos_key], dict)
     assert tracks.get_positions([1]).tolist() == [[50, 50, 50]]
     assert tracks.get_time(1) == 0
+    # Missing NODE id (not a missing attr key): tracksdata's single-node getitem path
+    # still diverges by backend (KeyError in-memory, ValueError on SQL)
     with pytest.raises((KeyError, ValueError)):
         tracks.get_position(0)
 

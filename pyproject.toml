@@ -72,13 +72,12 @@ dev = [
     {include-group = "docs"},
 ]
 
-# TEMPORARY: pin tracksdata to a LOCAL editable checkout on the
-# `combine-branches-for-funtracks-sql` branch, which merges the four SQL-backend fix
-# branches (live-update views #325, numpy-scalar BLOB, pl.Array read truncation, edge-revive
-# edge_id, and the missing-attr-key KeyError). Local-only branch, not pushed. Replace with a
-# released version pin once those land in royerlab/tracksdata. See .claude/plans/sql.md.
+# TEMPORARY: pin tracksdata to the `cmalinmayor/graph-views` branch, which merges the
+# SQL-backend fixes (live-update views #325, numpy-scalar BLOB, pl.Array read truncation,
+# edge-revive edge_id, missing-attr-key KeyError). Replace with a released version pin once
+# those land in royerlab/tracksdata. See .claude/plans/sql.md.
 [tool.uv.sources]
-tracksdata = { path = "../tracksdata", editable = true }
+tracksdata = { git = "https://github.com/cmalinmayor/tracksdata.git", rev = "2d116bd6977105b8053f1aaacf63dffb7123340d" }
 
 [tool.setuptools_scm]
 
