@@ -82,6 +82,10 @@ tracksdata = { path = "../tracksdata", editable = true }
 
 [tool.setuptools_scm]
 
+[tool.pytest.ini_options]
+python_files = ["test_*.py", "bench_*.py"]
+norecursedirs = ["tests/benchmarks"]
+
 [tool.ruff]
 line-length = 90
 target-version = "py310"
