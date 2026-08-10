@@ -36,7 +36,9 @@ def test_create_tracks(graph_3d_with_segmentation: td.graph.GraphView):
     assert isinstance(tracks.features[pos_key], dict)
     assert tracks.get_positions([1]).tolist() == [[50, 50, 50]]
     assert tracks.get_time(1) == 0
-    with pytest.raises(KeyError):
+    # Missing NODE id: tracksdata single-node getitem diverges by backend
+    # (KeyError in-memory, ValueError on SQL) — accept either.
+    with pytest.raises((KeyError, ValueError)):
         tracks.get_position(0)
 
     # create track with graph and seg
@@ -360,5 +362,6 @@ def test_update_mask_syncs_bbox(graph_2d_with_segmentation):
     stored_mask = tracks.graph.nodes[1][td.DEFAULT_ATTR_KEYS.MASK]
     stored_bbox = tracks.graph.nodes[1][td.DEFAULT_ATTR_KEYS.BBOX]
 
-    assert stored_mask is new_mask
+    # Value equality, not identity: SQL backend materializes a fresh Mask on read.
+    assert stored_mask == new_mask
     assert np.array_equal(stored_bbox, new_mask.bbox)
