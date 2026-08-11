@@ -3,7 +3,7 @@ from funtracks.import_export._utils import rename_feature
 
 def test_rename_feature_basic(get_tracks):
     """Test that rename_feature renames a feature in annotators and features dict."""
-    tracks = get_tracks(ndim=3, with_seg=True, is_solution=False)
+    tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=False)
 
     # Rename area feature to custom name
     rename_feature(tracks, "area", "my_area")
@@ -19,7 +19,7 @@ def test_rename_feature_basic(get_tracks):
 
 def test_rename_feature_updates_position_key(get_tracks):
     """Test that renaming position feature updates position_key in FeatureDict."""
-    tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
 
     original_pos_key = tracks.features.position_key
     new_key = "custom_position"
@@ -32,7 +32,7 @@ def test_rename_feature_updates_position_key(get_tracks):
 
 def test_rename_feature_updates_tracklet_key(get_tracks):
     """Test that renaming tracklet feature updates tracklet_key in FeatureDict."""
-    tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
 
     original_track_key = tracks.features.tracklet_key
     new_key = "custom_track"

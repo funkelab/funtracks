@@ -4,7 +4,7 @@ import pytest
 import tifffile
 import zarr
 
-from funtracks.data_model import SolutionTracks, Tracks
+from funtracks.data_model import Tracks
 from funtracks.import_export import export_to_geff, import_from_geff, write_to_geff
 
 
@@ -32,13 +32,13 @@ def _assert_valid_geff_export(export_dir, expected_num_nodes=None):
 @pytest.mark.parametrize("seg_relabel", ["tracklet", "lineage", None])
 def test_export_segmentation_relabel(get_tracks, ndim, seg_relabel, tmp_path):
     """Test segmentation export with each relabel strategy."""
-    tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
+    tracks = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
 
     export_dir = tmp_path / "export"
     export_dir.mkdir()
     export_to_geff(tracks, export_dir, seg_relabel=seg_relabel)
 
-    z = _assert_valid_geff_export(export_dir, tracks.graph.num_nodes())
+    z = _assert_valid_geff_export(export_dir, tracks.graph_solution.num_nodes())
 
     # Segmentation file must exist
     seg_path = export_dir / "segmentation"
@@ -54,11 +54,13 @@ def test_export_segmentation_relabel(get_tracks, ndim, seg_relabel, tmp_path):
         else:
             label_key = tracks.features.tracklet_key
         label_vals = set(
-            tracks.graph.node_attrs(attr_keys=[label_key])[label_key].to_list()
+            tracks.graph_solution.node_attrs(attr_keys=[label_key])[label_key].to_list()
         )
         assert unique_vals == label_vals
     else:
-        assert unique_vals == set(tracks.graph.node_ids())
+        # values should be original node_ids
+        node_ids_set = set(tracks.graph_solution.node_ids())
+        assert unique_vals == node_ids_set
 
     # segmentation_shape must be in metadata
     attrs = dict(z.attrs)
@@ -68,13 +70,13 @@ def test_export_segmentation_relabel(get_tracks, ndim, seg_relabel, tmp_path):
 
 def test_export_no_segmentation_saved(get_tracks, tmp_path):
     """Test that save_segmentation=False suppresses segmentation file."""
-    tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
 
     export_dir = tmp_path / "export"
     export_dir.mkdir()
     export_to_geff(tracks, export_dir, save_segmentation=False)
 
-    z = _assert_valid_geff_export(export_dir, tracks.graph.num_nodes())
+    z = _assert_valid_geff_export(export_dir, tracks.graph_solution.num_nodes())
 
     assert not (export_dir / "segmentation").exists()
 
@@ -85,13 +87,13 @@ def test_export_no_segmentation_saved(get_tracks, tmp_path):
 
 def test_export_without_seg_on_tracks(get_tracks, tmp_path):
     """Test export when tracks have no segmentation at all."""
-    tracks = get_tracks(ndim=3, with_seg=False, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
 
     export_dir = tmp_path / "export"
     export_dir.mkdir()
     export_to_geff(tracks, export_dir)
 
-    z = _assert_valid_geff_export(export_dir, tracks.graph.num_nodes())
+    z = _assert_valid_geff_export(export_dir, tracks.graph_solution.num_nodes())
 
     assert not (export_dir / "segmentation").exists()
 
@@ -99,32 +101,21 @@ def test_export_without_seg_on_tracks(get_tracks, tmp_path):
     assert "segmentation_shape" not in attrs
 
 
-@pytest.mark.parametrize("seg_relabel", ["tracklet", "lineage"])
-def test_export_seg_relabel_non_solution_raises(get_tracks, seg_relabel, tmp_path):
-    """Relabeling by tracklet/lineage on non-solution tracks raises ValueError."""
-    tracks = get_tracks(ndim=3, with_seg=True, is_solution=False)
-
-    export_dir = tmp_path / "export"
-    export_dir.mkdir()
-    with pytest.raises(ValueError):
-        export_to_geff(tracks, export_dir, seg_relabel=seg_relabel)
-
-
 def test_export_segmentation_non_solution(get_tracks, tmp_path):
     """Non-solution tracks export segmentation fine with seg_relabel=None."""
-    tracks = get_tracks(ndim=3, with_seg=True, is_solution=False)
+    tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=False)
 
     export_dir = tmp_path / "export"
     export_dir.mkdir()
     export_to_geff(tracks, export_dir, seg_relabel=None)
 
-    z = _assert_valid_geff_export(export_dir, tracks.graph.num_nodes())
+    z = _assert_valid_geff_export(export_dir, tracks.graph_solution.num_nodes())
 
     # No relabel: segmentation pixels keep original node_ids
     seg_zarr = zarr.open(str(export_dir / "segmentation"), mode="r")
     assert isinstance(seg_zarr, zarr.Array)
     assert seg_zarr.shape == tracks.segmentation.shape
-    assert set(seg_zarr[:].flatten()) - {0} == set(tracks.graph.node_ids())
+    assert set(seg_zarr[:].flatten()) - {0} == set(tracks.graph_solution.node_ids())
 
     attrs = dict(z.attrs)
     assert "segmentation_shape" in attrs
@@ -135,10 +126,10 @@ def test_export_segmentation_non_solution(get_tracks, tmp_path):
 
 
 @pytest.mark.parametrize("ndim", [3, 4])
-@pytest.mark.parametrize("is_solution", [True, False])
-def test_export_split_position_attrs(get_graph, ndim, is_solution, tmp_path):
+@pytest.mark.parametrize("prefill_track_ids", [True, False])
+def test_export_split_position_attrs(get_graph, ndim, prefill_track_ids, tmp_path):
     """Test export with split (list) position attributes."""
-    graph = get_graph(ndim, is_solution=is_solution, with_seg=False)
+    graph = get_graph(ndim, prefill_track_ids=prefill_track_ids, with_seg=False)
 
     pos_keys = ["y", "x"] if ndim == 3 else ["z", "y", "x"]
     for key in pos_keys:
@@ -149,12 +140,11 @@ def test_export_split_position_attrs(get_graph, ndim, is_solution, tmp_path):
             graph.nodes[node][key] = pos[i]
     graph.remove_node_attr_key("pos")
 
-    tracks_cls = SolutionTracks if is_solution else Tracks
-    tracks = tracks_cls(
+    tracks = Tracks(
         graph,
         time_attr="t",
         pos_attr=pos_keys,
-        tracklet_attr="track_id" if is_solution else None,
+        tracklet_attr="track_id" if prefill_track_ids else None,
         ndim=ndim,
     )
 
@@ -162,7 +152,7 @@ def test_export_split_position_attrs(get_graph, ndim, is_solution, tmp_path):
     export_dir.mkdir()
     export_to_geff(tracks, export_dir, save_segmentation=False)
 
-    z = _assert_valid_geff_export(export_dir, tracks.graph.num_nodes())
+    z = _assert_valid_geff_export(export_dir, tracks.graph_solution.num_nodes())
 
     # Verify axis names include the split position keys
     axes = dict(z.attrs)["geff"]["axes"]
@@ -177,7 +167,7 @@ def test_export_split_position_attrs(get_graph, ndim, is_solution, tmp_path):
 @pytest.mark.parametrize("ndim", [3, 4])
 def test_export_node_subset(get_tracks, ndim, tmp_path):
     """Test exporting a subset of nodes includes ancestors."""
-    tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
+    tracks = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
 
     export_dir = tmp_path / "export"
     export_dir.mkdir()
@@ -208,7 +198,7 @@ def test_export_node_subset(get_tracks, ndim, tmp_path):
 
 def test_export_node_subset_seg_relabel(get_tracks, tmp_path):
     """Test subset export with relabeled segmentation."""
-    tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
 
     export_dir = tmp_path / "export"
     export_dir.mkdir()
@@ -224,8 +214,10 @@ def test_export_node_subset_seg_relabel(get_tracks, tmp_path):
     original = np.asarray(tracks.segmentation[:])
 
     label_key = tracks.features.tracklet_key
-    labels = tracks.graph.node_attrs(attr_keys=[label_key])[label_key]
-    node_to_label = dict(zip(tracks.graph.node_ids(), labels.to_list(), strict=True))
+    labels = tracks.graph_solution.node_attrs(attr_keys=[label_key])[label_key]
+    node_to_label = dict(
+        zip(tracks.graph_solution.node_ids(), labels.to_list(), strict=True)
+    )
 
     graph_nodes = set(expected_graph_nodes)
     expected = np.zeros_like(original)
@@ -240,7 +232,7 @@ def test_export_node_subset_seg_relabel(get_tracks, tmp_path):
 
 def test_export_node_subset_without_seg(get_tracks, tmp_path):
     """Test subset export when tracks have no segmentation."""
-    tracks = get_tracks(ndim=3, with_seg=False, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
 
     export_dir = tmp_path / "export"
     export_dir.mkdir()
@@ -258,7 +250,7 @@ def test_export_node_subset_without_seg(get_tracks, tmp_path):
 
 def test_export_overwrite(get_tracks, tmp_path):
     """Test export with overwrite=True into non-empty directory."""
-    tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
 
     export_dir = tmp_path / "export"
     export_dir.mkdir()
@@ -266,7 +258,7 @@ def test_export_overwrite(get_tracks, tmp_path):
 
     export_to_geff(tracks, export_dir, overwrite=True)
 
-    _assert_valid_geff_export(export_dir, tracks.graph.num_nodes())
+    _assert_valid_geff_export(export_dir, tracks.graph_solution.num_nodes())
 
     # Segmentation is still written correctly alongside the overwritten dir
     seg_zarr = zarr.open(str(export_dir / "segmentation"), mode="r")
@@ -276,7 +268,7 @@ def test_export_overwrite(get_tracks, tmp_path):
 
 def test_export_non_directory_raises(get_tracks, tmp_path):
     """Test that exporting to a file path (not a directory) raises an error."""
-    tracks = get_tracks(ndim=3, with_seg=False, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
 
     file_path = tmp_path / "not_a_dir"
     file_path.write_text("test")
@@ -292,13 +284,13 @@ def test_export_non_directory_raises(get_tracks, tmp_path):
 @pytest.mark.parametrize("with_seg", [True, False])
 def test_export_metadata(get_tracks, ndim, with_seg, tmp_path):
     """Test axes structure, segmentation_shape, and FeatureDict in metadata."""
-    tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+    tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
 
     export_dir = tmp_path / "export"
     export_dir.mkdir()
     export_to_geff(tracks, export_dir, save_segmentation=with_seg)
 
-    z = _assert_valid_geff_export(export_dir, tracks.graph.num_nodes())
+    z = _assert_valid_geff_export(export_dir, tracks.graph_solution.num_nodes())
     attrs = dict(z.attrs)
 
     # Correct number of axes
@@ -327,7 +319,7 @@ def test_export_metadata(get_tracks, ndim, with_seg, tmp_path):
 @pytest.mark.parametrize("ndim", [3, 4], ids=["2d", "3d"])
 def test_export_to_geff_seg_tiff(get_tracks, ndim, tmp_path):
     """Test that segmentation can be exported as tiff alongside the geff graph."""
-    tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
+    tracks = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
     export_dir = tmp_path / "export"
     export_dir.mkdir()
 
@@ -344,7 +336,9 @@ def test_export_to_geff_seg_tiff(get_tracks, ndim, tmp_path):
     # values should be tracklet_ids (default seg_relabel="tracklet")
     unique_vals = set(seg_arr.flatten()) - {0}
     label_key = tracks.features.tracklet_key
-    track_ids = set(tracks.graph.node_attrs(attr_keys=[label_key])[label_key].to_list())
+    track_ids = set(
+        tracks.graph_solution.node_attrs(attr_keys=[label_key])[label_key].to_list()
+    )
     assert unique_vals == track_ids
 
     # Check metadata references the tiff path with ../../ prefix (sibling of geff dir)
@@ -360,16 +354,16 @@ def test_export_to_geff_seg_tiff(get_tracks, ndim, tmp_path):
 @pytest.mark.parametrize("with_seg", [False, True])
 def test_write_to_geff_roundtrip(get_tracks, ndim, with_seg, tmp_path):
     """write_to_geff then import_from_geff recovers the tracks."""
-    tracks = get_tracks(ndim=ndim, with_seg=with_seg, is_solution=True)
+    tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
 
     geff_path = tmp_path / "my_tracks.geff"
     write_to_geff(tracks, geff_path)
 
     loaded = import_from_geff(geff_path)
 
-    assert loaded.graph.num_nodes() == tracks.graph.num_nodes()
-    assert loaded.graph.num_edges() == tracks.graph.num_edges()
-    assert set(loaded.graph.node_ids()) == set(tracks.graph.node_ids())
+    assert loaded.graph_solution.num_nodes() == tracks.graph_solution.num_nodes()
+    assert loaded.graph_solution.num_edges() == tracks.graph_solution.num_edges()
+    assert set(loaded.graph_solution.node_ids()) == set(tracks.graph_solution.node_ids())
     assert loaded.features.dump_json() == tracks.features.dump_json()
 
     if with_seg:
@@ -383,7 +377,7 @@ def test_write_to_geff_roundtrip(get_tracks, ndim, with_seg, tmp_path):
 def test_write_to_geff_no_parent_container(get_tracks, tmp_path):
     """write_to_geff writes directly to the path — no parent .zgroup or
     tracks.geff subfolder."""
-    tracks = get_tracks(ndim=3, with_seg=False, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
 
     geff_path = tmp_path / "my_tracks.geff"
     write_to_geff(tracks, geff_path)
@@ -400,19 +394,19 @@ def test_write_to_geff_no_parent_container(get_tracks, tmp_path):
 
 def test_write_to_geff_overwrite(get_tracks, tmp_path):
     """write_to_geff with overwrite=True replaces existing store."""
-    tracks = get_tracks(ndim=3, with_seg=False, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
 
     geff_path = tmp_path / "my_tracks.geff"
     write_to_geff(tracks, geff_path)
     write_to_geff(tracks, geff_path, overwrite=True)
 
     loaded = import_from_geff(geff_path)
-    assert loaded.graph.num_nodes() == tracks.graph.num_nodes()
+    assert loaded.graph_solution.num_nodes() == tracks.graph_solution.num_nodes()
 
 
 def test_write_to_geff_no_overwrite_raises(get_tracks, tmp_path):
     """write_to_geff with overwrite=False raises on existing store."""
-    tracks = get_tracks(ndim=3, with_seg=False, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
 
     geff_path = tmp_path / "my_tracks.geff"
     write_to_geff(tracks, geff_path)
@@ -423,7 +417,7 @@ def test_write_to_geff_no_overwrite_raises(get_tracks, tmp_path):
 
 def test_write_to_geff_metadata(get_tracks, tmp_path):
     """write_to_geff stores axes and FeatureDict metadata."""
-    tracks = get_tracks(ndim=3, with_seg=False, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
 
     geff_path = tmp_path / "my_tracks.geff"
     write_to_geff(tracks, geff_path)
@@ -441,7 +435,7 @@ def test_write_to_geff_metadata(get_tracks, tmp_path):
 
 def test_write_to_geff_segmentation_shape(get_tracks, tmp_path):
     """write_to_geff writes segmentation_shape when masks are present."""
-    tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
 
     geff_path = tmp_path / "my_tracks.geff"
     write_to_geff(tracks, geff_path)

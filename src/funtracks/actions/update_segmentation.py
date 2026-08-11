@@ -60,14 +60,20 @@ class UpdateNodeSeg(BasicAction):
         mask_new = self.mask
 
         if value == 0:
-            # val=0 means deleting (part of) the mask
-            mask_old = self.tracks.graph.nodes[self.node][self.mask_key]
-            mask_subtracted = mask_old.__isub__(mask_new)
+            # val=0 means deleting (part of) the mask.
+            # Mask.__isub__ subtracts *in place* and returns the same object, which
+            # would mutate the mask still stored in the graph. Downstream consumers
+            # (e.g. GraphArrayView's cache invalidation) diff the graph's previous
+            # mask against the new one, so the previous mask must stay intact.
+            # Subtract on a fresh copy so the graph receives a distinct new object.
+            mask_old = self.tracks.graph_full.nodes[self.node][self.mask_key]
+            mask_subtracted = Mask(mask_old.mask.copy(), bbox=mask_old.bbox.copy())
+            mask_subtracted -= mask_new
             self.tracks.update_mask(self.node, mask_subtracted, mask_key=self.mask_key)
 
-        elif self.tracks.graph.has_node(value):
+        elif self.tracks.graph_full.has_node(value):
             # if node already exists:
-            mask_old = self.tracks.graph.nodes[value][self.mask_key]
+            mask_old = self.tracks.graph_full.nodes[value][self.mask_key]
             mask_combined = mask_old.__or__(mask_new)
             self.tracks.update_mask(value, mask_combined, mask_key=self.mask_key)
 

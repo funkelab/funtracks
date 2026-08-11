@@ -25,7 +25,7 @@ def relabel_segmentation_with_track_id(
     # Division nodes have out_degree > 1; their outgoing edges are cut so that
     # each daughter cell starts a new tracklet
     division_nodes = {
-        n for n in solution_graph.node_ids() if solution_graph.out_degree(n) > 1
+        n for n in solution_graph.node_ids() if len(solution_graph.successors(n)) > 1
     }
 
     visited: set = set()

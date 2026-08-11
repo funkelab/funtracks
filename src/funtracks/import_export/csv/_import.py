@@ -17,7 +17,7 @@ from geff_spec.utils import (
 from .._tracks_builder import TracksBuilder, flatten_name_map
 
 if TYPE_CHECKING:
-    from funtracks.data_model.solution_tracks import SolutionTracks
+    from funtracks.data_model.tracks import Tracks
 
 
 def _ensure_integer_ids(df: pd.DataFrame) -> pd.DataFrame:
@@ -169,12 +169,12 @@ def tracks_from_df(
     segmentation: np.ndarray | None = None,
     scale: list[float] | None = None,
     node_name_map: dict[str, str | list[str]] | None = None,
-) -> SolutionTracks:
+) -> Tracks:
     """Import tracks from pandas DataFrame.
 
     Turns a pandas DataFrame with columns:
         time, [z], y, x, id, parent_id, [seg_id], [optional custom attr 1], ...
-    into a SolutionTracks object.
+    into a Tracks object.
 
     Cells without a parent_id will have an empty string or a -1 for the parent_id.
 
@@ -195,7 +195,7 @@ def tracks_from_df(
             If None, column names are auto-inferred using fuzzy matching.
 
     Returns:
-        SolutionTracks: a solution tracks object
+        Tracks: a solution tracks object
 
     Raises:
         ValueError: if the segmentation IDs in the dataframe do not match the provided

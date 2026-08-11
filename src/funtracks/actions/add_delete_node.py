@@ -9,8 +9,7 @@ from ._base import BasicAction
 if TYPE_CHECKING:
     from typing import Any
 
-    from funtracks.data_model.solution_tracks import SolutionTracks
-    from funtracks.data_model.tracks import Node
+    from funtracks.data_model.tracks import Node, Tracks
 
 
 class AddNode(BasicAction):
@@ -22,7 +21,7 @@ class AddNode(BasicAction):
 
     def __init__(
         self,
-        tracks: SolutionTracks,
+        tracks: Tracks,
         node: Node,
         attributes: dict[str, Any],
     ):
@@ -40,7 +39,7 @@ class AddNode(BasicAction):
             ValueError: If neither position nor a mask feature is in attributes.
         """
         super().__init__(tracks)
-        self.tracks: SolutionTracks  # Narrow type from base class
+        self.tracks: Tracks  # Narrow type from base class
         self.node = int(node)
 
         # Get keys from tracks features
@@ -76,14 +75,34 @@ class AddNode(BasicAction):
         return DeleteNode(self.tracks, self.node)
 
     def _apply(self) -> None:
-        """Add the node with all attributes from self.attributes."""
-        attrs = dict(self.attributes)
-        # A node added to a Tracks graph is by definition part of the solution,
-        # so default `solution` to True rather than the column schema default,
-        # which can be wrong on graphs loaded from geff. An explicit
-        # caller-provided value still wins.
-        attrs.setdefault("solution", True)
-        self.tracks.graph.add_node(attrs=attrs, index=self.node, validate_keys=False)
+        """Add the node, or revive a soft-deleted one.
+
+        If the node still exists in the full graph (it was soft-deleted, so its
+        topology was preserved), revive it: flip solution=True and re-surface it in the
+        solution view. Otherwise add a genuinely new node.
+        """
+        if self.tracks.graph_full.has_node(self.node):
+            # Revive: same node id, topology preserved in graph_full. Flip it back into
+            # the solution, apply any caller-provided attributes (so revive matches the
+            # add-new branch), and re-surface it in the view in place (incident edges
+            # are revived separately by AddEdge).
+            # Values are wrapped in single-element lists because update_node_attrs
+            # reads a bare list value (pos, bbox, mask) as one-value-per-node.
+            revive_attrs = {k: [v] for k, v in self.attributes.items() if k != "solution"}
+            revive_attrs["solution"] = [True]
+            self.tracks.graph_full.update_node_attrs(
+                attrs=revive_attrs, node_ids=[self.node]
+            )
+            self.tracks.graph_solution.add_node_to_view(self.node)
+        else:
+            # Genuinely new node — default `solution` to True rather than the
+            # column schema default, which can be wrong (e.g. Float64/0.0) on
+            # graphs loaded from geff. An explicit caller-provided value still wins.
+            attrs = dict(self.attributes)
+            attrs.setdefault("solution", True)
+            self.tracks.graph_solution.add_node(
+                attrs=attrs, index=self.node, validate_keys=False
+            )
 
         # Always notify annotators - they will check their own preconditions
         self.tracks.notify_annotators(self)
@@ -93,15 +112,24 @@ class DeleteNode(BasicAction):
     """Action of deleting an existing node.
 
     Saves all node feature values so the action can be inverted.
+
+    Low-level action — not meant to be used directly. It soft-deletes only the
+    node itself (incident edges are dropped from the view by
+    ``remove_node_from_view`` but keep ``solution=True`` in ``graph_full``).
+    Managing the incident edges' solution flags is the responsibility of the
+    enclosing user action (``UserDeleteNode``), which soft-deletes each incident
+    edge with its own ``DeleteEdge`` first. Applying a bare ``DeleteNode`` to a
+    node that still has in-solution edges therefore leaves ``graph_full``'s edge
+    flags inconsistent with ``graph_solution`` — always go through the user action.
     """
 
     def __init__(
         self,
-        tracks: SolutionTracks,
+        tracks: Tracks,
         node: Node,
     ):
         super().__init__(tracks)
-        self.tracks: SolutionTracks  # Narrow type from base class
+        self.tracks: Tracks  # Narrow type from base class
         self.node = int(node)
 
         # Save all node feature values from the features dict
@@ -120,6 +148,12 @@ class DeleteNode(BasicAction):
         return AddNode(self.tracks, self.node, self.attributes)
 
     def _apply(self) -> None:
-        """Remove the node from the graph."""
-        self.tracks.graph.remove_node(self.node)
+        """Soft-delete the node: flag solution=False in the full graph and remove it
+        from the solution view only. The node (and its topology) is preserved in
+        graph_full so the delete is reversible and the node remains a candidate.
+        """
+        self.tracks.graph_full.update_node_attrs(
+            attrs={"solution": False}, node_ids=[self.node]
+        )
+        self.tracks.graph_solution.remove_node_from_view(self.node)
         self.tracks.notify_annotators(self)
