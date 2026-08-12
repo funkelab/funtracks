@@ -463,10 +463,12 @@ class TracksBuilder(ABC):
             "endpoints) are being offset by +1 to start at 1.",
             stacklevel=2,
         )
-        self.in_memory_geff["node_ids"] = node_ids + 1
+        # Cast before adding: geff permits unsigned node ids, where the largest
+        # representable id would wrap back to 0 instead of being offset away from it.
+        self.in_memory_geff["node_ids"] = node_ids.astype(np.int64) + 1
         edge_ids = np.asarray(self.in_memory_geff["edge_ids"])
         if edge_ids.size:
-            self.in_memory_geff["edge_ids"] = edge_ids + 1
+            self.in_memory_geff["edge_ids"] = edge_ids.astype(np.int64) + 1
         return True
 
     def construct_graph(
@@ -658,15 +660,19 @@ class TracksBuilder(ABC):
             # (node_id 0 + no seg_id already errored in relabel_zero_based_node_ids.)
             return seg_array.compute(), scale, graph
 
-        node_ids = self.in_memory_geff["node_ids"]
-        seg_ids = node_props["seg_id"]["values"]
+        node_ids = np.asarray(self.in_memory_geff["node_ids"])
+        seg_ids = np.asarray(node_props["seg_id"]["values"])
+        time_values = np.asarray(node_props[self.TIME_ATTR]["values"])
 
-        # Label 0 is reserved for background; a node mapped to seg_id 0 would paint
-        # the background with that node's value, so reject it.
-        if np.any(np.asarray(seg_ids) == 0):
+        # Label 0 is reserved for background; relabeling a node with seg_id 0 would
+        # map every background pixel to that node's ID. In practice this means a
+        # missing seg_id, which is stored as the placeholder 0.
+        if np.any(seg_ids == 0):
+            bad_nodes = node_ids[seg_ids == 0]
             raise ValueError(
-                "A node has seg_id 0, but label 0 is reserved for the segmentation "
-                "background. Each node's seg_id must be a foreground label (>= 1)."
+                f"Nodes {list(bad_nodes)} have seg_id 0 (or no seg_id at all), but "
+                "label 0 is reserved for the segmentation background. Each node's "
+                "seg_id must be a foreground label (>= 1)."
             )
 
         # Check if any seg_id differs from node_id
@@ -675,7 +681,6 @@ class TracksBuilder(ABC):
             return seg_array.compute(), scale, graph
 
         # Relabel segmentation: seg_id -> node_id
-        time_values = node_props[self.TIME_ATTR]["values"]
         new_segmentation, graph = relabel_segmentation(
             seg_array, graph, node_ids, seg_ids, time_values
         )

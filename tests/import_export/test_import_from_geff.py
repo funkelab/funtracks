@@ -844,11 +844,17 @@ def test_zero_node_id_is_offset(valid_geff):
     assert 0 not in node_ids
     assert min(node_ids) == 1
     assert len(node_ids) == len(memory_geff["node_ids"])
-    # Edges are remapped consistently: every endpoint is a valid (offset) node.
-    node_set = set(node_ids)
-    for node in node_ids:
-        for succ in tracks.graph.successors(node):
-            assert succ in node_set
+    # Every source edge survives with both endpoints shifted by the same offset.
+    expected_edges = {
+        (int(source) + 1, int(target) + 1) for source, target in memory_geff["edge_ids"]
+    }
+    assert expected_edges  # the mock geff must have edges for this to test anything
+    edge_df = tracks.graph_solution.edge_attrs(attr_keys=["source_id", "target_id"])
+    actual_edges = {
+        (int(source), int(target))
+        for source, target in zip(edge_df["source_id"], edge_df["target_id"], strict=True)
+    }
+    assert actual_edges == expected_edges
 
 
 def test_zero_node_id_offset_keeps_segmentation_background(
