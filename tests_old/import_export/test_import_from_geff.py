@@ -803,9 +803,11 @@ def test_geff_legacy_track_id_preserves_tracklet_ids():
         include_x=True,
         extra_node_props={"track_id": track_id_values},
     )
+    # create_mock_geff produces 0-based node IDs; import offsets them by +1
+    # because node_id 0 collides with the segmentation background label.
     node_ids = memory_geff["node_ids"]
     expected = {
-        int(nid): int(t) for nid, t in zip(node_ids, track_id_values, strict=True)
+        int(nid) + 1: int(t) for nid, t in zip(node_ids, track_id_values, strict=True)
     }
 
     name_map = {
