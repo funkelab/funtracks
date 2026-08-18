@@ -22,7 +22,7 @@ def load_stats(path):
 
     rows = []
     for d in data["benchmarks"]:
-        rows.append({"Benchmark": d["name"], "mean": d["stats"]["mean"]})
+        rows.append({"Benchmark": d["name"], "min": d["stats"]["min"]})
 
     return commit, pd.DataFrame(rows)
 
@@ -35,20 +35,20 @@ def make_report(old_path, new_path, out_file, header=None):
     # side (added or removed by the PR) still show up in the report.
     df = old[-1].merge(new[-1], on="Benchmark", suffixes=("_old", "_new"), how="outer")
 
-    pct_change = 100 * (df["mean_new"] - df["mean_old"]) / df["mean_old"]
+    pct_change = 100 * (df["min_new"] - df["min_old"]) / df["min_old"]
     df["Percent Change"] = pct_change.map("{:+.2f}".format).where(
         pct_change.notna(), "n/a"
     )
 
     # Format runtimes
-    for col in ("mean_old", "mean_new"):
+    for col in ("min_old", "min_new"):
         df[col] = df[col].map("{:.5f}".format).where(df[col].notna(), "-")
 
     # Change column names to commit ids
     df = df.rename(
         columns={
-            "mean_new": f"Mean (s) HEAD {new[0]}",
-            "mean_old": f"Mean (s) BASE {old[0]}",
+            "min_new": f"Min (s) HEAD {new[0]}",
+            "min_old": f"Min (s) BASE {old[0]}",
         }
     )
 
