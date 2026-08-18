@@ -7692,17 +7692,17 @@ rather than assuming hardcoded attribute names.</p>
 <p>Each core semantic feature has a default attribute name (e.g., <code>"tracklet_id"</code> for
 tracklet IDs, <code>"pos"</code> for position). These defaults are used when no explicit name is
 provided:</p>
-<div class="highlight"><pre><span></span><code><span class="c1"># Uses default: tracklet_key=&quot;tracklet_id&quot;</span>
-<span class="n">tracks</span> <span class="o">=</span> <span class="n">Tracks</span><span class="p">(</span><span class="n">graph</span><span class="o">=</span><span class="n">graph</span><span class="p">,</span> <span class="n">tracklet_attr</span><span class="o">=</span><span class="s2">&quot;tracklet_id&quot;</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><span class="c1"># Uses default: tracklet_key="tracklet_id"</span>
+<span class="n">tracks</span> <span class="o">=</span> <span class="n">Tracks</span><span class="p">(</span><span class="n">graph</span><span class="o">=</span><span class="n">graph</span><span class="p">,</span> <span class="n">tracklet_attr</span><span class="o">=</span><span class="s2">"tracklet_id"</span><span class="p">)</span>
 
 <span class="c1"># Uses custom attribute name</span>
-<span class="n">tracks</span> <span class="o">=</span> <span class="n">Tracks</span><span class="p">(</span><span class="n">graph</span><span class="o">=</span><span class="n">graph</span><span class="p">,</span> <span class="n">tracklet_attr</span><span class="o">=</span><span class="s2">&quot;my_track_col&quot;</span><span class="p">)</span>
+<span class="n">tracks</span> <span class="o">=</span> <span class="n">Tracks</span><span class="p">(</span><span class="n">graph</span><span class="o">=</span><span class="n">graph</span><span class="p">,</span> <span class="n">tracklet_attr</span><span class="o">=</span><span class="s2">"my_track_col"</span><span class="p">)</span>
 </code></pre></div>
 <p>Custom attribute names are also supported through <code>FeatureDict</code>:</p>
 <div class="highlight"><pre><span></span><code><span class="n">fd</span> <span class="o">=</span> <span class="n">FeatureDict</span><span class="p">(</span>
-    <span class="n">features</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;my_track_col&quot;</span><span class="p">:</span> <span class="n">TrackletID</span><span class="p">(),</span> <span class="s2">&quot;my_lineage&quot;</span><span class="p">:</span> <span class="n">LineageID</span><span class="p">()},</span>
-    <span class="n">tracklet_key</span><span class="o">=</span><span class="s2">&quot;my_track_col&quot;</span><span class="p">,</span>
-    <span class="n">lineage_key</span><span class="o">=</span><span class="s2">&quot;my_lineage&quot;</span><span class="p">,</span>
+    <span class="n">features</span><span class="o">=</span><span class="p">{</span><span class="s2">"my_track_col"</span><span class="p">:</span> <span class="n">TrackletID</span><span class="p">(),</span> <span class="s2">"my_lineage"</span><span class="p">:</span> <span class="n">LineageID</span><span class="p">()},</span>
+    <span class="n">tracklet_key</span><span class="o">=</span><span class="s2">"my_track_col"</span><span class="p">,</span>
+    <span class="n">lineage_key</span><span class="o">=</span><span class="s2">"my_lineage"</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="n">tracks</span> <span class="o">=</span> <span class="n">Tracks</span><span class="p">(</span><span class="n">graph</span><span class="o">=</span><span class="n">graph</span><span class="p">,</span> <span class="n">features</span><span class="o">=</span><span class="n">fd</span><span class="p">)</span>
 </code></pre></div>
@@ -7711,8 +7711,8 @@ are ignored — the <code>FeatureDict</code> is the sole authority.</p>
 <h3 id="computed-features-and-key-names">Computed Features and Key Names</h3>
 <p>Annotators (e.g., <code>TrackAnnotator</code>, <code>RegionpropsAnnotator</code>) accept custom key names
 in their constructors:</p>
-<div class="highlight"><pre><span></span><code><span class="n">TrackAnnotator</span><span class="p">(</span><span class="n">tracks</span><span class="p">,</span> <span class="n">tracklet_key</span><span class="o">=</span><span class="s2">&quot;my_track&quot;</span><span class="p">,</span> <span class="n">lineage_key</span><span class="o">=</span><span class="s2">&quot;my_lineage&quot;</span><span class="p">)</span>
-<span class="n">RegionpropsAnnotator</span><span class="p">(</span><span class="n">tracks</span><span class="p">,</span> <span class="n">pos_key</span><span class="o">=</span><span class="s2">&quot;coordinates&quot;</span><span class="p">)</span>
+<div class="highlight"><pre><span></span><code><span class="n">TrackAnnotator</span><span class="p">(</span><span class="n">tracks</span><span class="p">,</span> <span class="n">tracklet_key</span><span class="o">=</span><span class="s2">"my_track"</span><span class="p">,</span> <span class="n">lineage_key</span><span class="o">=</span><span class="s2">"my_lineage"</span><span class="p">)</span>
+<span class="n">RegionpropsAnnotator</span><span class="p">(</span><span class="n">tracks</span><span class="p">,</span> <span class="n">pos_key</span><span class="o">=</span><span class="s2">"coordinates"</span><span class="p">)</span>
 </code></pre></div>
 <p>When constructing <code>Tracks</code> directly, you have full control over
 which attribute names are used.</p>
@@ -7764,16 +7764,16 @@ features are already present, activate those, and compute any missing ones from 
 
 <span class="c1"># Create empty graph and add nodes</span>
 <span class="n">graph</span> <span class="o">=</span> <span class="n">create_empty_graph</span><span class="p">()</span>
-<span class="n">graph</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;t&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">})</span>
+<span class="n">graph</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s2">"t"</span><span class="p">:</span> <span class="mi">0</span><span class="p">})</span>
 <span class="n">tracks</span> <span class="o">=</span> <span class="n">Tracks</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">segmentation</span><span class="o">=</span><span class="n">seg</span><span class="p">)</span>
-<span class="c1"># Auto-detection: pos, area don&#39;t exist → compute them from segmentation</span>
+<span class="c1"># Auto-detection: pos, area don't exist → compute them from segmentation</span>
 </code></pre></div></p>
 <p><strong>Scenario 3: Explicit feature control with FeatureDict</strong>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">funtracks.features</span><span class="w"> </span><span class="kn">import</span> <span class="n">FeatureDict</span><span class="p">,</span> <span class="n">Time</span><span class="p">,</span> <span class="n">Position</span><span class="p">,</span> <span class="n">Area</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">funtracks.data_model</span><span class="w"> </span><span class="kn">import</span> <span class="n">Tracks</span>
 
 <span class="c1"># Bypass auto-detection entirely</span>
-<span class="n">feature_dict</span> <span class="o">=</span> <span class="n">FeatureDict</span><span class="p">({</span><span class="s2">&quot;t&quot;</span><span class="p">:</span> <span class="n">Time</span><span class="p">(),</span> <span class="s2">&quot;pos&quot;</span><span class="p">:</span> <span class="n">Position</span><span class="p">(),</span> <span class="s2">&quot;area&quot;</span><span class="p">:</span> <span class="n">Area</span><span class="p">()})</span>
+<span class="n">feature_dict</span> <span class="o">=</span> <span class="n">FeatureDict</span><span class="p">({</span><span class="s2">"t"</span><span class="p">:</span> <span class="n">Time</span><span class="p">(),</span> <span class="s2">"pos"</span><span class="p">:</span> <span class="n">Position</span><span class="p">(),</span> <span class="s2">"area"</span><span class="p">:</span> <span class="n">Area</span><span class="p">()})</span>
 <span class="n">tracks</span> <span class="o">=</span> <span class="n">Tracks</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">segmentation</span><span class="o">=</span><span class="n">seg</span><span class="p">,</span> <span class="n">features</span><span class="o">=</span><span class="n">feature_dict</span><span class="p">)</span>
 <span class="c1"># All features in feature_dict are activated, none are computed</span>
 </code></pre></div></p>
@@ -7783,7 +7783,7 @@ features are already present, activate those, and compute any missing ones from 
 <span class="n">tracks</span> <span class="o">=</span> <span class="n">Tracks</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">segmentation</span><span class="p">)</span>
 <span class="c1"># Initially has: time, pos, area (auto-detected or computed)</span>
 
-<span class="n">tracks</span><span class="o">.</span><span class="n">enable_features</span><span class="p">([</span><span class="s2">&quot;iou&quot;</span><span class="p">,</span> <span class="s2">&quot;circularity&quot;</span><span class="p">])</span>
+<span class="n">tracks</span><span class="o">.</span><span class="n">enable_features</span><span class="p">([</span><span class="s2">"iou"</span><span class="p">,</span> <span class="s2">"circularity"</span><span class="p">])</span>
 <span class="c1"># Now has: time, pos, area, iou, circularity</span>
 
 <span class="c1"># Check active features</span>
@@ -7791,9 +7791,9 @@ features are already present, activate those, and compute any missing ones from 
 <span class="nb">print</span><span class="p">(</span><span class="n">tracks</span><span class="o">.</span><span class="n">annotators</span><span class="o">.</span><span class="n">features</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>  <span class="c1"># Only active computed features</span>
 </code></pre></div></p>
 <p><strong>Scenario 5: Disable a feature</strong>
-<div class="highlight"><pre><span></span><code><span class="n">tracks</span><span class="o">.</span><span class="n">disable_features</span><span class="p">([</span><span class="s2">&quot;area&quot;</span><span class="p">])</span>
+<div class="highlight"><pre><span></span><code><span class="n">tracks</span><span class="o">.</span><span class="n">disable_features</span><span class="p">([</span><span class="s2">"area"</span><span class="p">])</span>
 <span class="c1"># Removes from FeatureDict, deactivates in annotators</span>
-<span class="c1"># Note: Doesn&#39;t delete values from graph, just stops computing/updating</span>
+<span class="c1"># Note: Doesn't delete values from graph, just stops computing/updating</span>
 </code></pre></div></p>
 <h2 id="extending-the-system">Extending the System</h2>
 <h3 id="creating-a-new-annotator">Creating a New Annotator</h3>
@@ -7808,7 +7808,7 @@ features are already present, activate those, and compute any missing ones from 
         <span class="c1"># Check if this annotator can handle these tracks</span>
         <span class="k">return</span> <span class="n">tracks</span><span class="o">.</span><span class="n">some_condition</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tracks</span><span class="p">,</span> <span class="n">custom_key</span><span class="o">=</span><span class="s2">&quot;custom&quot;</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tracks</span><span class="p">,</span> <span class="n">custom_key</span><span class="o">=</span><span class="s2">"custom"</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">tracks</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">custom_key</span> <span class="o">=</span> <span class="n">custom_key</span>
 
@@ -7817,14 +7817,14 @@ features are already present, activate those, and compute any missing ones from 
 
     <span class="k">def</span><span class="w"> </span><span class="nf">compute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">feature_keys</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="c1"># Compute feature values in bulk</span>
-        <span class="k">if</span> <span class="s2">&quot;custom&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">features</span><span class="p">:</span>
+        <span class="k">if</span> <span class="s2">"custom"</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">features</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">tracks</span><span class="o">.</span><span class="n">graph_solution</span><span class="o">.</span><span class="n">node_ids</span><span class="p">():</span>
                 <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_custom</span><span class="p">(</span><span class="n">node</span><span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">tracks</span><span class="p">[</span><span class="n">node</span><span class="p">][</span><span class="s2">&quot;custom&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">tracks</span><span class="p">[</span><span class="n">node</span><span class="p">][</span><span class="s2">"custom"</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">action</span><span class="p">):</span>
         <span class="c1"># Incremental update when graph changes</span>
-        <span class="k">if</span> <span class="s2">&quot;custom&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">features</span><span class="p">:</span>
+        <span class="k">if</span> <span class="s2">"custom"</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">features</span><span class="p">:</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">action</span><span class="p">,</span> <span class="n">SomeActionType</span><span class="p">):</span>
                 <span class="c1"># Recompute only for affected nodes</span>
                 <span class="k">pass</span>
