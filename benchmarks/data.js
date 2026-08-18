@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787061986042,
+  "lastUpdate": 1787062170761,
   "repoUrl": "https://github.com/funkelab/funtracks",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -1704,6 +1704,79 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.007166813543174683",
             "extra": "mean: 114.13566799999823 msec\nrounds: 3"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "malinmayorc@janelia.hhmi.org",
+            "name": "Caroline Malin-Mayor",
+            "username": "cmalinmayor"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d2d639ccbd7307cda76ab0e9f6c5ae40b5ca58c1",
+          "message": "Merge pull request #271 from funkelab/support_copy_labels_from_source\n\nadd _top_level to UserUpdateSegmentation and UserDeleteNodes to support copying of labels",
+          "timestamp": "2026-08-18T10:08:18-04:00",
+          "tree_id": "9569341ea1ee2e8675c2dc131a19b0afd9d98c4e",
+          "url": "https://github.com/funkelab/funtracks/commit/d2d639ccbd7307cda76ab0e9f6c5ae40b5ca58c1"
+        },
+        "date": 1787062167742,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmarks/bench_actions.py::test_update_node_attrs_single",
+            "value": 522.9947726662047,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0001841701731091486",
+            "extra": "mean: 1.9120650000038115 msec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_actions.py::test_update_node_attrs_bulk",
+            "value": 533.6624488955648,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00004692020641852956",
+            "extra": "mean: 1.8738436666652092 msec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_actions.py::test_add_delete_edges",
+            "value": 9.62106813804004,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0005618785057792801",
+            "extra": "mean: 103.93856333333436 msec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_actions.py::test_update_segmentation",
+            "value": 24.753730702828193,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0004721783474374893",
+            "extra": "mean: 40.397950999998024 msec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_actions.py::test_delete_nodes",
+            "value": 3.3461827083953932,
+            "unit": "iter/sec",
+            "range": "stddev: 0.003501378190127944",
+            "extra": "mean: 298.8479970000005 msec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_compute_graph_from_seg",
+            "value": 0.40300066444291294,
+            "unit": "iter/sec",
+            "range": "stddev: 0.01040486331903694",
+            "extra": "mean: 2.481385486999997 sec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_graph_to_solution",
+            "value": 9.638686417839223,
+            "unit": "iter/sec",
+            "range": "stddev: 0.002730071720777865",
+            "extra": "mean: 103.74857699999514 msec\nrounds: 3"
           }
         ]
       }
