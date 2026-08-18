@@ -3,8 +3,9 @@ from collections import Counter
 import numpy as np
 import pytest
 
+from funtracks.actions import ActionGroup
 from funtracks.exceptions import InvalidActionError
-from funtracks.user_actions import UserUpdateSegmentation
+from funtracks.user_actions import UserDeleteNodes, UserUpdateSegmentation
 from funtracks.utils.tracksdata_utils import td_mask_to_pixels
 
 iou_key = "iou"
@@ -289,3 +290,57 @@ def test_missing_seg(get_tracks):
     tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
     with pytest.raises(ValueError, match="Cannot update non-existing segmentation"):
         UserUpdateSegmentation(tracks, 0, [], 1)
+
+
+@pytest.mark.parametrize("ndim", [3])
+def test_not_top_level_actions_group_into_one_undo(get_tracks, ndim):
+    """With ``_top_level=False`` the action is applied but not recorded, so a caller can
+    group several actions into a single, jointly undoable step."""
+
+    tracks = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
+    node_id = 3
+    orig_pixels = td_mask_to_pixels(
+        tracks.get_mask(node_id), tracks.get_time(node_id), ndim=tracks.ndim
+    )
+    orig_area = tracks.get_node_attr(node_id, area_key)
+    n_actions = len(tracks.action_history.undo_stack)
+
+    # remove the pixels in two steps, neither of which lands in the history
+    first = tuple(orig_pixels[d][1:2] for d in range(len(orig_pixels)))
+    second = tuple(orig_pixels[d][2:] for d in range(len(orig_pixels)))
+    actions = [
+        UserUpdateSegmentation(
+            tracks,
+            new_value=0,
+            updated_pixels=[(pixels, node_id)],
+            current_track_id=1,
+            _top_level=False,
+        )
+        for pixels in (first, second)
+    ]
+
+    assert tracks.get_node_attr(node_id, area_key) == orig_area - (
+        len(first[0]) + len(second[0])
+    )
+    assert len(tracks.action_history.undo_stack) == n_actions
+
+    # grouped, the two updates are undone together
+    group = ActionGroup(tracks, actions=actions)
+    tracks.action_history.add_new_action(group)
+    assert len(tracks.action_history.undo_stack) == n_actions + 1
+
+    tracks.undo()
+    assert tracks.get_node_attr(node_id, area_key) == orig_area
+
+
+@pytest.mark.parametrize("ndim", [3])
+def test_delete_nodes_not_top_level(get_tracks, ndim):
+    """UserDeleteNodes with ``_top_level=False`` deletes without recording history."""
+
+    tracks = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
+    n_actions = len(tracks.action_history.undo_stack)
+
+    UserDeleteNodes(tracks, nodes=[3], _top_level=False)
+
+    assert not tracks.graph.has_node(3)
+    assert len(tracks.action_history.undo_stack) == n_actions

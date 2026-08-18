@@ -23,6 +23,7 @@ class UserUpdateSegmentation(ActionGroup):
         updated_pixels: list[tuple[tuple[np.ndarray, ...], int]],
         current_track_id: int,
         force: bool = False,
+        _top_level: bool = True,
     ):
         """Assumes that the pixels have already been updated in the project.segmentation
         NOTE: Re discussion with Kasia: we should have a basic action that updates the
@@ -40,6 +41,9 @@ class UserUpdateSegmentation(ActionGroup):
                 the currently selected track id in the viewer.
             force (bool): Whether to force the operation by removing conflicting edges.
                 Defaults to False.
+            _top_level (bool): If True, add this action to the history and emit the
+                refresh signal. Set to False when this action is part of a bigger action
+                group, so that the whole group is undone in one step. Defaults to True.
         """
         super().__init__(tracks, actions=[])
         self.tracks: Tracks  # Narrow type from base class
@@ -118,5 +122,7 @@ class UserUpdateSegmentation(ActionGroup):
                 self.actions.append(
                     UpdateNodeSeg(tracks, old_value, mask_pixels, added=False)
                 )
-        self.tracks.action_history.add_new_action(self)
-        self.tracks.refresh.emit(node_to_select)
+        self.node_to_select = node_to_select
+        if _top_level:
+            self.tracks.action_history.add_new_action(self)
+            self.tracks.refresh.emit(node_to_select)
