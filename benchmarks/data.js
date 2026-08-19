@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787065085929,
+  "lastUpdate": 1787155410013,
   "repoUrl": "https://github.com/funkelab/funtracks",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -1850,6 +1850,79 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.006107691591611192",
             "extra": "mean: 108.1616320000099 msec\nrounds: 3"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "malinmayorc@janelia.hhmi.org",
+            "name": "Caroline Malin-Mayor",
+            "username": "cmalinmayor"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d3664f4e9666ded5c393f00ae618a150ed596b42",
+          "message": "Merge pull request #260 from funkelab/fix-segmentation-shape\n\nsegmentation_shape metadata reformat",
+          "timestamp": "2026-08-19T12:02:33-04:00",
+          "tree_id": "59502639708d6f972cab7ad00138d0f1557a4dd5",
+          "url": "https://github.com/funkelab/funtracks/commit/d3664f4e9666ded5c393f00ae618a150ed596b42"
+        },
+        "date": 1787155406751,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmarks/bench_actions.py::test_update_node_attrs_single",
+            "value": 664.1180766514224,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00014619263652362917",
+            "extra": "mean: 1.5057563333347919 msec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_actions.py::test_update_node_attrs_bulk",
+            "value": 713.2335250202842,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0000956475516115765",
+            "extra": "mean: 1.4020653333304267 msec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_actions.py::test_add_delete_edges",
+            "value": 12.184484648469391,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0009746890439639969",
+            "extra": "mean: 82.07158766666585 msec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_actions.py::test_update_segmentation",
+            "value": 31.791957499494192,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0017296213433123809",
+            "extra": "mean: 31.454495999999686 msec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_actions.py::test_delete_nodes",
+            "value": 4.245240886854585,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0036146053880199043",
+            "extra": "mean: 235.55789333333385 msec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_compute_graph_from_seg",
+            "value": 0.5356205452323209,
+            "unit": "iter/sec",
+            "range": "stddev: 0.009352908246880676",
+            "extra": "mean: 1.8669933573333306 sec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_graph_to_solution",
+            "value": 12.220153445289201,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0029508819961932445",
+            "extra": "mean: 81.83203300000248 msec\nrounds: 3"
           }
         ]
       }
