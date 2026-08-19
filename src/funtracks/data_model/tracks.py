@@ -141,7 +141,7 @@ class Tracks:
             # round-trip that was saved without segmentation).
             seg_shape = graph.metadata.get("shape")
             if seg_shape is None:
-                # Backwards compatibility: funtracks used to store the shape under
+                # DEPRECATED(funtracks 3.0): funtracks used to store the shape under
                 # "segmentation_shape" before adopting tracksdata's "shape" key.
                 # Downstream code (e.g. motile-tracker) may still write the old key,
                 # and without this fallback the segmentation would silently be None.

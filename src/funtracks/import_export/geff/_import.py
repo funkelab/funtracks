@@ -183,14 +183,12 @@ class GeffTracksBuilder(TracksBuilder):
                     pass
 
         # Read the segmentation shape from the tracksdata graph metadata. This works
-        # before a graph exists, which is what we need here. Two legacy fallbacks for
-        # GEFFs written by older funtracks: the old "segmentation_shape" graph metadata
-        # key (still written by downstream callers, and carried into the extras by
-        # tracksdata), and the old top-level zarr attribute of the same name.
+        # before a graph exists, which is what we need here. Older funtracks wrote it
+        # as a top-level zarr attr instead, which tracksdata does not pick up.
         graph_metadata = td.io.read_graph_metadata(metadata)
         raw = graph_metadata.get("shape")
-        if raw is None:
-            raw = graph_metadata.get("segmentation_shape")
+        # Unlike the other deprecated paths, this reads GEFFs already on disk, which
+        # never migrate themselves: keep past funtracks 3.0
         if raw is None:
             # source_path may be a filesystem Path or an in-memory zarr Store,
             # so pass it directly without str() conversion.
@@ -299,8 +297,6 @@ class GeffTracksBuilder(TracksBuilder):
         # during _get_annotators().
         if self._shape is not None:
             graph.metadata["shape"] = self._shape
-            # DEPRECATED: dual-write for motile_tracker, remove later
-            graph.metadata["segmentation_shape"] = self._shape
 
         return graph
 
