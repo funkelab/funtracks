@@ -586,6 +586,11 @@ def test_import_from_geff_roundtrip_auto_axes(tmp_path):
     )
 
 
+@pytest.mark.skip(
+    reason="storage location intentionally changed: the segmentation shape is no "
+    "longer written as a top-level 'segmentation_shape' zarr attr; it now travels "
+    "in the geff metadata extras. Covered by the equivalent test in tests/."
+)
 def test_import_from_geff_warns_missing_segmentation_shape(tmp_path):
     """import_from_geff should warn when masks/bboxes are present but
     segmentation_shape is absent from the zarr attributes.
