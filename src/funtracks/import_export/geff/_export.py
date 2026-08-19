@@ -199,7 +199,7 @@ def _build_geff_metadata(
 def _write_legacy_segmentation_shape(geff_path: Path, tracks: Tracks) -> None:
     """Write the old top-level ``segmentation_shape`` zarr attr.
 
-    DEPRECATED(funtracks 3.0): dual-write for motile_tracker, remove later.
+    DEPRECATED: dual-write for motile_tracker, remove later.
     """
     meta = tracks.graph_full.metadata
     seg_shape = meta.get("shape", meta.get("segmentation_shape"))
