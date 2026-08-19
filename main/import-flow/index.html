@@ -3369,7 +3369,7 @@ If None (default), an in-memory/temp graph is used.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Tuple of (segmentation array, scale, graph). The graph may be relabeled</p>
+                <p>Tuple of (segmentation array, scale, graph). The segmentation labels are</p>
               </div>
             </td>
           </tr>
@@ -3379,7 +3379,17 @@ If None (default), an in-memory/temp graph is used.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>if node_id 0 exists in the original graph.</p>
+                <p>relabeled from seg_id to node_id when a seg_id property is present and</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="tracksdata.graph.BaseGraph">BaseGraph</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>differs from the node IDs.</p>
               </div>
             </td>
           </tr>
@@ -3402,7 +3412,8 @@ If None (default), an in-memory/temp graph is used.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>If segmentation validation fails</p>
+                <p>If segmentation validation fails, or if a node maps to
+seg_id 0 (reserved for the background label).</p>
               </div>
             </td>
           </tr>

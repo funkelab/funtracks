@@ -2048,6 +2048,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#funtracks.import_export.TracksBuilder.relabel_zero_based_node_ids" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;relabel_zero_based_node_ids
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#funtracks.import_export.TracksBuilder.validate" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3205,7 +3216,7 @@ names (same format as node_name_map / edge_name_map).</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Tuple of (segmentation array, scale, graph). The graph may be relabeled</p>
+                <p>Tuple of (segmentation array, scale, graph). The segmentation labels are</p>
               </div>
             </td>
           </tr>
@@ -3215,7 +3226,17 @@ names (same format as node_name_map / edge_name_map).</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>if node_id 0 exists in the original graph.</p>
+                <p>relabeled from seg_id to node_id when a seg_id property is present and</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="tracksdata.graph.BaseGraph">BaseGraph</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>differs from the node IDs.</p>
               </div>
             </td>
           </tr>
@@ -3238,7 +3259,8 @@ names (same format as node_name_map / edge_name_map).</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>If segmentation validation fails</p>
+                <p>If segmentation validation fails, or if a node maps to
+seg_id 0 (reserved for the background label).</p>
               </div>
             </td>
           </tr>
@@ -3595,6 +3617,97 @@ self.importable_edge_props with property/column names.</p>
             </td>
             <td>
                 <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="funtracks.import_export.TracksBuilder.relabel_zero_based_node_ids" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">relabel_zero_based_node_ids</span>
+
+
+</h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">relabel_zero_based_node_ids</span><span class="p">(</span><span class="n">has_segmentation</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Offset node IDs by +1 if any node has ID 0.</p>
+<p>Node IDs double as segmentation labels (e.g. when painted via
+<code>GraphArrayView</code>), and label 0 is reserved for background. A node with
+<code>node_id == 0</code> would be indistinguishable from background and, in
+downstream apps, color the whole background with that node's tracklet color.</p>
+<p>Behaviour depends on whether a dense segmentation accompanies the graph:</p>
+<ul>
+<li>No segmentation: shift all node IDs (and edge endpoints) by +1 so the
+  smallest ID is 1.</li>
+<li>Segmentation with a <code>seg_id</code> property: the segmentation is keyed on
+  <code>seg_id</code>, so node IDs can be safely offset; <code>seg_id</code> is left untouched
+  and <code>handle_segmentation</code> maps original labels to the offset node IDs.</li>
+<li>Segmentation without <code>seg_id</code>: labels are assumed to equal node IDs, so
+  node_id 0 collides with background and cannot be realigned. Raise rather
+  than silently desync the segmentation; the caller should supply <code>seg_id</code>.</li>
+</ul>
+<p>Operates in place on <code>self.in_memory_geff</code> and must run before the graph
+is constructed.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>has_segmentation</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Whether a dense segmentation accompanies the graph.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>True if an offset was applied, False otherwise.</p>
+              </div>
             </td>
           </tr>
       </tbody>
