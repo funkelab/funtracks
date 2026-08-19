@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787155410013,
+  "lastUpdate": 1787159686941,
   "repoUrl": "https://github.com/funkelab/funtracks",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -1923,6 +1923,79 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0029508819961932445",
             "extra": "mean: 81.83203300000248 msec\nrounds: 3"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "malinmayorc@janelia.hhmi.org",
+            "name": "Caroline Malin-Mayor",
+            "username": "cmalinmayor"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ec1d3257e24f7411804d50e8c5e7981d4b92cad1",
+          "message": "Merge pull request #272 from funkelab/node-id-start-0\n\nRelabel node/edge_ids when node_id start at 0 (crashes motile_tracker)",
+          "timestamp": "2026-08-19T13:13:55-04:00",
+          "tree_id": "ecdd2192c7f0cbe846dc6ddbd2c96ac985dc4914",
+          "url": "https://github.com/funkelab/funtracks/commit/ec1d3257e24f7411804d50e8c5e7981d4b92cad1"
+        },
+        "date": 1787159682801,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmarks/bench_actions.py::test_update_node_attrs_single",
+            "value": 644.6018036820665,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0001448990823297369",
+            "extra": "mean: 1.5513453333326765 msec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_actions.py::test_update_node_attrs_bulk",
+            "value": 695.903102451968,
+            "unit": "iter/sec",
+            "range": "stddev: 0.000023272650307371416",
+            "extra": "mean: 1.4369816666667627 msec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_actions.py::test_add_delete_edges",
+            "value": 11.67487549864144,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0006329415563017223",
+            "extra": "mean: 85.65401833333179 msec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_actions.py::test_update_segmentation",
+            "value": 32.34934567355868,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0005090308091529001",
+            "extra": "mean: 30.912526333333783 msec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_actions.py::test_delete_nodes",
+            "value": 4.014812065630122,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0036097791459437853",
+            "extra": "mean: 249.07766133333334 msec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_compute_graph_from_seg",
+            "value": 0.5355996005454619,
+            "unit": "iter/sec",
+            "range": "stddev: 0.013652513252015603",
+            "extra": "mean: 1.867066366333333 sec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_graph_to_solution",
+            "value": 11.738309875885943,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0025980943165703606",
+            "extra": "mean: 85.19114000000154 msec\nrounds: 3"
           }
         ]
       }
