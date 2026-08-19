@@ -2449,8 +2449,8 @@
 <p>The GEFF format serialises mask data as plain numeric arrays (zarr
 cannot store arbitrary Python objects).  After the base graph is built,
 this override wraps each raw array back into a
-:class:<code>tracksdata.nodes.Mask</code> instance and writes
-<code>segmentation_shape</code> into the graph metadata so that
+:class:<code>tracksdata.nodes.Mask</code> instance and writes the <code>shape</code> into
+the graph metadata so that
 :class:<code>~funtracks.data_model.tracks.Tracks.__init__</code> can reconstruct
 the segmentation and create the
 :class:<code>~funtracks.annotators.RegionpropsAnnotator</code> naturally.</p>
