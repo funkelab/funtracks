@@ -874,9 +874,11 @@ def test_geff_legacy_track_id_preserves_tracklet_ids():
         include_x=True,
         extra_node_props={"track_id": track_id_values},
     )
+    # create_mock_geff produces 0-based node IDs; import offsets them by +1
+    # because node_id 0 collides with the segmentation background label.
     node_ids = memory_geff["node_ids"]
     expected = {
-        int(nid): int(t) for nid, t in zip(node_ids, track_id_values, strict=True)
+        int(nid) + 1: int(t) for nid, t in zip(node_ids, track_id_values, strict=True)
     }
 
     name_map = {
@@ -891,6 +893,94 @@ def test_geff_legacy_track_id_preserves_tracklet_ids():
             f"node {nid}: expected tracklet {exp_id}, "
             f"got {tracks.get_track_id(nid)} (silent recompute?)"
         )
+
+
+def test_zero_node_id_is_offset(valid_geff):
+    """A graph containing node_id 0 must be offset by +1 on import so that no
+    node collides with the segmentation background label (0)."""
+    store, memory_geff = valid_geff
+    assert 0 in memory_geff["node_ids"]  # mock geff is 0-based
+
+    name_map = {"time": "t", "pos": ["y", "x"], "track_id": "track_id"}
+    with pytest.warns(UserWarning, match="node_id 0"):
+        tracks = import_from_geff(store, name_map)
+
+    node_ids = list(tracks.graph.node_ids())
+    assert 0 not in node_ids
+    assert min(node_ids) == 1
+    assert len(node_ids) == len(memory_geff["node_ids"])
+    # Every source edge survives with both endpoints shifted by the same offset.
+    expected_edges = {
+        (int(source) + 1, int(target) + 1) for source, target in memory_geff["edge_ids"]
+    }
+    assert expected_edges  # the mock geff must have edges for this to test anything
+    edge_df = tracks.graph_solution.edge_attrs(attr_keys=["source_id", "target_id"])
+    actual_edges = {
+        (int(source), int(target))
+        for source, target in zip(edge_df["source_id"], edge_df["target_id"], strict=True)
+    }
+    assert actual_edges == expected_edges
+
+
+def test_zero_node_id_offset_keeps_segmentation_background(
+    valid_geff, valid_segmentation, tmp_path
+):
+    """After offsetting node IDs, segmentation background (0) stays background and
+    nodes are painted with their offset (>=1) IDs."""
+    store, _ = valid_geff
+    name_map = {"time": "t", "pos": ["y", "x"], "seg_id": "seg_id"}
+    seg_path = tmp_path / "segmentation.tif"
+    tifffile.imwrite(seg_path, valid_segmentation)
+
+    scale = [1, 1, (1 / 100)]
+    with pytest.warns(UserWarning, match="node_id 0"):
+        tracks = import_from_geff(
+            store, name_map, segmentation_path=seg_path, scale=scale
+        )
+
+    seg = np.asarray(tracks.segmentation)
+    # Painted labels are exactly the (offset) node IDs plus background 0.
+    painted = set(np.unique(seg)) - {0}
+    assert painted == set(tracks.graph.node_ids())
+    assert 0 not in tracks.graph.node_ids()
+
+
+def test_zero_node_id_with_segmentation_no_seg_id_errors(
+    valid_geff, valid_segmentation, tmp_path
+):
+    """A segmentation accompanying a graph reserves label 0 for background, so a
+    node_id 0 cannot be silently realigned. Without a seg_id to map labels, this
+    must raise rather than offset (which would desync the segmentation)."""
+    store, _ = valid_geff
+    name_map = {"time": "t", "pos": ["y", "x"]}  # deliberately no seg_id
+    seg_path = tmp_path / "segmentation.tif"
+    tifffile.imwrite(seg_path, valid_segmentation)
+
+    with pytest.raises(ValueError, match="seg_id"):
+        import_from_geff(store, name_map, segmentation_path=seg_path)
+
+
+def test_segmentation_seg_id_zero_errors(tmp_path):
+    """A node mapped to seg_id 0 collides with the background label and must error."""
+    store, _ = create_mock_geff(
+        node_id_dtype="uint",
+        node_axis_dtypes={"position": "float64", "time": "int64"},
+        directed=True,
+        num_nodes=5,
+        num_edges=2,
+        include_t=True,
+        include_z=False,
+        include_y=True,
+        include_x=True,
+        extra_node_props={"seg_id": np.array([0, 10, 20, 30, 40])},
+    )
+    name_map = {"time": "t", "seg_id": "seg_id"}  # no pos -> skip seg/pos match
+    seg = np.zeros((5, 50, 50), dtype=np.uint16)
+    seg_path = tmp_path / "segmentation.tif"
+    tifffile.imwrite(seg_path, seg)
+
+    with pytest.raises(ValueError, match="seg_id 0"):
+        import_from_geff(store, name_map, segmentation_path=seg_path)
 
 
 def test_geff_roundtrip_preserves_tracklet_ids(get_tracks, tmp_path):
