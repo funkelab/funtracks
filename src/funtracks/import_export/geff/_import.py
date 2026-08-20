@@ -4,8 +4,10 @@ import warnings
 from typing import TYPE_CHECKING
 
 import tracksdata as td
+import zarr
 from geff._typing import InMemoryGeff
 from geff.core_io._base_read import read_to_memory
+from geff_spec import GeffMetadata
 from tracksdata.nodes import Mask
 
 from .._tracks_builder import TracksBuilder, flatten_name_map
@@ -13,11 +15,64 @@ from .._tracks_builder import TracksBuilder, flatten_name_map
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from tracksdata.io._geff import StoreLike
+
     from funtracks.data_model.tracks import Tracks
 
 
 # defining constants here because they are only used in the context of import
 SEG_KEY = "seg_id"
+
+
+def read_segmentation_shape(
+    source: StoreLike, metadata: GeffMetadata | None = None
+) -> tuple[int, ...] | None:
+    """Read the segmentation shape recorded in a GEFF store, if any.
+
+    The shape lives in the tracksdata graph metadata (``extra.tracksdata.shape``
+    in the GEFF metadata) written by ``export_to_geff``/tracksdata. A legacy fallback
+    is implemented for GEFFs written by old versions, checking for the top-level zarr
+    attribute "segmentation_shape".
+
+    Args:
+        source: Path to a GEFF store, or an open zarr store/group.
+        metadata: The GEFF store's already-parsed metadata, if available, to
+            avoid re-reading it from `source`.
+
+    Returns:
+        The segmentation shape as a tuple, or None if the store has no
+        recorded shape.
+    """
+    metadata = metadata if metadata is not None else GeffMetadata.read(source)
+    graph_metadata = td.io.read_graph_metadata(metadata)
+    raw = graph_metadata.get("shape")
+    if raw is None:
+        # source may be a filesystem Path or an in-memory zarr Store, so pass it
+        # directly without str() conversion.
+        try:
+            z = zarr.open(source, mode="r")
+            raw = dict(z.attrs).get("segmentation_shape")
+        except (OSError, KeyError, ValueError, TypeError):
+            raw = None
+    return tuple(raw) if raw is not None else None
+
+
+def has_embedded_segmentation(source: StoreLike) -> bool:
+    """Return True if a GEFF store has embedded segmentation that can be
+    reconstructed on import.
+
+    Requires both 'mask' and 'bbox' node properties, and a recorded
+    segmentation shape (see `read_segmentation_shape`). When both are present,
+    `import_from_geff` will reconstruct the segmentation automatically as a
+    GraphArrayView, without needing an external segmentation file.
+
+    Args:
+        source: Path to a GEFF store, or an open zarr store/group.
+    """
+    metadata = GeffMetadata.read(source)
+    node_props = metadata.node_props_metadata
+    has_masks = "mask" in node_props and "bbox" in node_props
+    return has_masks and read_segmentation_shape(source, metadata=metadata) is not None
 
 
 def import_graph_from_geff(
@@ -155,11 +210,6 @@ class GeffTracksBuilder(TracksBuilder):
         Args:
             source_path: Path to GEFF zarr store
         """
-        import warnings
-
-        import zarr as _zarr
-        from geff_spec import GeffMetadata
-
         metadata = GeffMetadata.read(source_path)
 
         # Extract property names from metadata
@@ -182,24 +232,7 @@ class GeffTracksBuilder(TracksBuilder):
                     # If FeatureDict loading fails, features will remain None
                     pass
 
-        # Read the segmentation shape from the tracksdata graph metadata. This works
-        # before a graph exists, which is what we need here. Two legacy fallbacks for
-        # GEFFs written by older funtracks: the old "segmentation_shape" graph metadata
-        # key (still written by downstream callers, and carried into the extras by
-        # tracksdata), and the old top-level zarr attribute of the same name.
-        graph_metadata = td.io.read_graph_metadata(metadata)
-        raw = graph_metadata.get("shape")
-        if raw is None:
-            raw = graph_metadata.get("segmentation_shape")
-        if raw is None:
-            # source_path may be a filesystem Path or an in-memory zarr Store,
-            # so pass it directly without str() conversion.
-            try:
-                z = _zarr.open(source_path, mode="r")
-                raw = dict(z.attrs).get("segmentation_shape")
-            except (OSError, KeyError, ValueError):
-                raw = None
-        self._shape = tuple(raw) if raw is not None else None
+        self._shape = read_segmentation_shape(source_path, metadata=metadata)
 
         # Warn when masks/bboxes are present but the shape is absent.
         # This happens with GEFFs written by older funtracks or external tools.
