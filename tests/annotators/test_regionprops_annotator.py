@@ -9,6 +9,48 @@ from funtracks.data_model import Tracks
 track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
 
 
+def _seg_shape(ndim: int) -> tuple[int, ...]:
+    """Segmentation shape used by the get_graph fixture."""
+    return (5, 100, 100) if ndim == 3 else (5, 100, 100, 100)
+
+
+def _frame_index_image(ndim: int) -> np.ndarray:
+    """Intensity image whose value is the time index everywhere in the frame.
+
+    The mean intensity of any mask at time t is then exactly t, whatever its shape.
+    Broadcast rather than allocated, to keep the 3D case cheap.
+    """
+    shape = _seg_shape(ndim)
+    frames = np.arange(shape[0], dtype=np.float32).reshape(
+        (-1,) + (1,) * (len(shape) - 1)
+    )
+    return np.broadcast_to(frames, shape)
+
+
+class _RecordingImage:
+    """Array-like that records the region requested on each read.
+
+    Stands in for a chunked backend (zarr, h5py), where reading more than the
+    bounding box would mean fetching and decompressing chunks for nothing.
+    """
+
+    def __init__(self, array: np.ndarray):
+        self._array = array
+        self.shape = array.shape
+        self.ndim = array.ndim
+        self.reads: list = []
+
+    def __getitem__(self, key):
+        self.reads.append(key)
+        return self._array[key]
+
+
+def _x_gradient_image(ndim: int) -> np.ndarray:
+    """Intensity image whose value is the x index, so intensity follows mask shape."""
+    shape = _seg_shape(ndim)
+    return np.broadcast_to(np.arange(shape[-1], dtype=np.float32), shape)
+
+
 @pytest.mark.parametrize("ndim", [3, 4])
 class TestRegionpropsAnnotator:
     def test_init(self, get_graph, ndim):
@@ -20,13 +62,12 @@ class TestRegionpropsAnnotator:
         )
         rp_ann = RegionpropsAnnotator(tracks)
         # Features start disabled by default
-        assert len(rp_ann.all_features) == 5
+        assert len(rp_ann.all_features) == 6
         assert len(rp_ann.features) == 0
         # Enable features
         rp_ann.activate_features(list(rp_ann.all_features.keys()))
-        assert (
-            len(rp_ann.features) == 5
-        )  # pos, area, ellipse_axis_radii, circularity, perimeter
+        # pos, area, intensity, ellipse_axis_radii, circularity, perimeter
+        assert len(rp_ann.features) == 6
 
     def test_compute_all(self, get_graph, ndim):
         graph = get_graph(ndim, with_seg=True)
@@ -98,8 +139,7 @@ class TestRegionpropsAnnotator:
         rp_ann = next(
             ann for ann in tracks.annotators if isinstance(ann, RegionpropsAnnotator)
         )
-        all_feature_keys = list(rp_ann.all_features.keys())
-        to_remove_key = all_feature_keys[1]  # area
+        to_remove_key = "area"
         # area is not auto-enabled, so enable it first before testing disable
         tracks.enable_features([to_remove_key])
         tracks.disable_features([to_remove_key])
@@ -110,7 +150,7 @@ class TestRegionpropsAnnotator:
         # add it back in
         tracks.enable_features([to_remove_key])
         # but remove a different one
-        second_remove_key = all_feature_keys[2]  # ellipse_axis_radii
+        second_remove_key = "ellipse_axis_radii"
         tracks.disable_features([second_remove_key])
 
         # remove all but one pixel
@@ -123,6 +163,198 @@ class TestRegionpropsAnnotator:
         UpdateNodeSeg(tracks, node_id, removal, added=False)
         # the one we added back in is now present
         assert tracks.get_node_attr(node_id, to_remove_key) is not None
+
+    def test_intensity_single_channel(self, get_graph, ndim):
+        """One intensity image yields one mean per node."""
+        graph = get_graph(ndim, with_seg=True)
+        tracks = Tracks(graph, ndim=ndim, **track_attrs)
+        tracks.set_intensity_images([_frame_index_image(ndim)], channel_names=["raw"])
+        tracks.enable_features(["intensity"])
+
+        assert tracks.features["intensity"]["num_values"] == 1
+        assert tracks.features["intensity"]["display_name"] == "Mean intensity (raw)"
+        for node_id in tracks.graph_solution.node_ids():
+            assert tracks.get_node_attr(node_id, "intensity") == pytest.approx(
+                tracks.get_time(node_id)
+            )
+
+    def test_intensity_from_constructor(self, get_graph, ndim):
+        """Intensity images can be passed straight to Tracks."""
+        graph = get_graph(ndim, with_seg=True)
+        tracks = Tracks(
+            graph, ndim=ndim, intensity_images=[_frame_index_image(ndim)], **track_attrs
+        )
+        tracks.enable_features(["intensity"])
+        for node_id in tracks.graph_solution.node_ids():
+            assert tracks.get_node_attr(node_id, "intensity") == pytest.approx(
+                tracks.get_time(node_id)
+            )
+
+    def test_intensity_multichannel(self, get_graph, ndim):
+        """Several intensity images yield one mean per channel."""
+        graph = get_graph(ndim, with_seg=True)
+        tracks = Tracks(graph, ndim=ndim, **track_attrs)
+        raw = _frame_index_image(ndim)
+        tracks.set_intensity_images([raw, raw * 10], channel_names=["gfp", "rfp"])
+        tracks.enable_features(["intensity"])
+
+        # The channels are held as given — no full-size stacked copy is made
+        assert tracks.regionprops_annotator.intensity_images[0] is raw
+
+        feature = tracks.features["intensity"]
+        assert feature["num_values"] == 2
+        # each column is named after the image it measures
+        assert list(feature["value_names"]) == [
+            "Mean intensity (gfp)",
+            "Mean intensity (rfp)",
+        ]
+        for node_id in tracks.graph_solution.node_ids():
+            time = tracks.get_time(node_id)
+            value = list(tracks.get_node_attr(node_id, "intensity"))
+            assert value == pytest.approx([time, 10 * time])
+
+    def test_intensity_without_image_warns_and_skips(self, get_graph, ndim):
+        """Intensity is advertised even with no image, but computing it warns."""
+        graph = get_graph(ndim, with_seg=True)
+        tracks = Tracks(graph, ndim=ndim, **track_attrs)
+        assert "intensity" in tracks.get_available_features()
+
+        with pytest.warns(UserWarning, match="no intensity image is set"):
+            tracks.enable_features(["intensity"])
+
+    def test_set_intensity_images_recomputes(self, get_graph, ndim):
+        """Replacing the images (and their channel count) refreshes stored values."""
+        graph = get_graph(ndim, with_seg=True)
+        tracks = Tracks(graph, ndim=ndim, **track_attrs)
+        raw = _frame_index_image(ndim)
+        tracks.set_intensity_images([raw])
+        tracks.enable_features(["intensity"])
+
+        # Same channel count: values follow the new image
+        tracks.set_intensity_images([raw + 100])
+        for node_id in tracks.graph_solution.node_ids():
+            assert tracks.get_node_attr(node_id, "intensity") == pytest.approx(
+                tracks.get_time(node_id) + 100
+            )
+
+        # Channel count changes: the feature is re-registered with two values
+        tracks.set_intensity_images([raw, raw * 10])
+        assert tracks.features["intensity"]["num_values"] == 2
+        for node_id in tracks.graph_solution.node_ids():
+            time = tracks.get_time(node_id)
+            value = list(tracks.get_node_attr(node_id, "intensity"))
+            assert value == pytest.approx([time, 10 * time])
+
+    def test_only_bounding_boxes_are_read(self, get_graph, ndim):
+        """Intensity is read one node bounding box at a time, never a whole frame."""
+        graph = get_graph(ndim, with_seg=True)
+        tracks = Tracks(graph, ndim=ndim, **track_attrs)
+        image = _RecordingImage(_x_gradient_image(ndim))
+        tracks.set_intensity_images([image])
+        tracks.enable_features(["intensity"])
+
+        node_ids = list(tracks.graph_solution.node_ids())
+        assert len(image.reads) == len(node_ids)
+
+        frame_shape = _seg_shape(ndim)[1:]
+        for read in image.reads:
+            # one indexing op: a time point followed by one slice per spatial axis
+            assert isinstance(read, tuple)
+            assert len(read) == 1 + len(frame_shape)
+            assert not isinstance(read[0], slice)
+            spans = [sl.stop - sl.start for sl in read[1:]]
+            assert all(
+                span < extent for span, extent in zip(spans, frame_shape, strict=True)
+            )
+
+        # and the values are still right
+        assert tracks.get_node_attr(4, "intensity") == pytest.approx(1.5)
+
+    def test_renaming_channels_does_not_recompute(self, get_graph, ndim):
+        """Same images under new names only refreshes the feature metadata."""
+        graph = get_graph(ndim, with_seg=True)
+        tracks = Tracks(graph, ndim=ndim, **track_attrs)
+        raw = _frame_index_image(ndim)
+        tracks.set_intensity_images([raw, raw], channel_names=["a", "b"])
+        tracks.enable_features(["intensity"])
+
+        # Poke a sentinel into the column: a recompute would overwrite it
+        node_id = next(iter(tracks.graph_solution.node_ids()))
+        tracks.graph_solution.update_node_attrs(
+            attrs={"intensity": [[-1.0, -1.0]]}, node_ids=[node_id]
+        )
+
+        tracks.set_intensity_images([raw, raw], channel_names=["gfp", "rfp"])
+
+        assert list(tracks.features["intensity"]["value_names"]) == [
+            "Mean intensity (gfp)",
+            "Mean intensity (rfp)",
+        ]
+        assert list(tracks.get_node_attr(node_id, "intensity")) == [-1.0, -1.0]
+
+        # A different image does recompute
+        tracks.set_intensity_images([raw, raw + 1], channel_names=["gfp", "rfp"])
+        time = tracks.get_time(node_id)
+        assert list(tracks.get_node_attr(node_id, "intensity")) == pytest.approx(
+            [time, time + 1]
+        )
+
+    def test_intensity_updated_on_seg_edit(self, get_graph, ndim):
+        """Editing a mask recomputes its intensity over the new pixels."""
+        graph = get_graph(ndim, with_seg=True)
+        tracks = Tracks(graph, ndim=ndim, **track_attrs)
+        tracks.set_intensity_images([_x_gradient_image(ndim)])
+        tracks.enable_features(["intensity"])
+
+        # Node 4 is a square/cube at the origin with width 4, so mean x is 1.5
+        node_id = 4
+        assert tracks.get_node_attr(node_id, "intensity") == pytest.approx(1.5)
+
+        # Subtract everything but the x == 3 slab, so only intensity 3.0 is left
+        node_mask = tracks.get_mask(node_id)
+        removal = Mask(node_mask.mask.copy(), node_mask.bbox)
+        removal.mask[..., 3] = False
+        UpdateNodeSeg(tracks, node_id, removal, added=False)
+
+        assert tracks.get_node_attr(node_id, "intensity") == pytest.approx(3.0)
+
+    def test_intensity_image_shape_mismatch(self, get_graph, ndim):
+        graph = get_graph(ndim, with_seg=True)
+        tracks = Tracks(graph, ndim=ndim, **track_attrs)
+        with pytest.raises(ValueError, match="does not match the segmentation shape"):
+            tracks.set_intensity_images([np.zeros((5, 10, 10), dtype=np.float32)])
+
+    def test_bare_array_is_rejected(self, get_graph, ndim):
+        """One image per channel: a bare array is a mistake worth naming."""
+        graph = get_graph(ndim, with_seg=True)
+        tracks = Tracks(graph, ndim=ndim, **track_attrs)
+        with pytest.raises(TypeError, match=r"pass \[image\], not a bare array"):
+            tracks.set_intensity_images(_frame_index_image(ndim))
+
+    def test_empty_intensity_images_clears(self, get_graph, ndim):
+        """An empty list means the same as None."""
+        graph = get_graph(ndim, with_seg=True)
+        tracks = Tracks(graph, ndim=ndim, **track_attrs)
+        tracks.set_intensity_images([_frame_index_image(ndim)])
+        tracks.enable_features(["intensity"])
+
+        tracks.disable_features(["intensity"])
+        tracks.set_intensity_images([])
+        assert tracks.regionprops_annotator.intensity_images is None
+
+    def test_intensity_channel_name_mismatch(self, get_graph, ndim):
+        graph = get_graph(ndim, with_seg=True)
+        tracks = Tracks(graph, ndim=ndim, **track_attrs)
+        raw = _frame_index_image(ndim)
+        with pytest.raises(ValueError, match="channel names"):
+            tracks.set_intensity_images([raw, raw], channel_names=["only_one"])
+
+    def test_set_intensity_images_without_seg(self, get_graph, ndim):
+        graph = get_graph(ndim, with_seg=False)
+        tracks = Tracks(graph, ndim=ndim, **track_attrs)
+        assert tracks.regionprops_annotator is None
+        with pytest.raises(ValueError, match="no segmentation"):
+            tracks.set_intensity_images([_frame_index_image(ndim)])
 
     def test_missing_seg(self, get_graph, ndim):
         """Test that RegionpropsAnnotator gracefully handles missing segmentation."""
