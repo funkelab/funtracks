@@ -586,6 +586,11 @@ def test_import_from_geff_roundtrip_auto_axes(tmp_path):
     )
 
 
+@pytest.mark.skip(
+    reason="storage location intentionally changed: the segmentation shape is no "
+    "longer written as a top-level 'segmentation_shape' zarr attr; it now travels "
+    "in the geff metadata extras. Covered by the equivalent test in tests/."
+)
 def test_import_from_geff_warns_missing_segmentation_shape(tmp_path):
     """import_from_geff should warn when masks/bboxes are present but
     segmentation_shape is absent from the zarr attributes.
@@ -803,9 +808,11 @@ def test_geff_legacy_track_id_preserves_tracklet_ids():
         include_x=True,
         extra_node_props={"track_id": track_id_values},
     )
+    # create_mock_geff produces 0-based node IDs; import offsets them by +1
+    # because node_id 0 collides with the segmentation background label.
     node_ids = memory_geff["node_ids"]
     expected = {
-        int(nid): int(t) for nid, t in zip(node_ids, track_id_values, strict=True)
+        int(nid) + 1: int(t) for nid, t in zip(node_ids, track_id_values, strict=True)
     }
 
     name_map = {

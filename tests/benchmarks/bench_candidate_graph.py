@@ -15,6 +15,7 @@ NUM_FRAMES = 50
 FRAME_SHAPE = (700, 1100)
 CELLS_PER_FRAME = 150
 MAX_EDGE_DISTANCE = 50.0
+ROUNDS = 3
 
 
 def _generate_segmentation(
@@ -48,7 +49,7 @@ def test_compute_graph_from_seg(benchmark, seg_data):
         compute_graph_from_seg,
         args=(seg_data, MAX_EDGE_DISTANCE),
         kwargs={"iou": True},
-        rounds=1,
+        rounds=ROUNDS,
         iterations=1,
     )
 
@@ -76,4 +77,4 @@ def test_graph_to_solution(benchmark, seg_data, _warm_jit):
             "lineage_attr": "lineage_id",
         }
 
-    benchmark.pedantic(Tracks, setup=setup, rounds=1, iterations=1)
+    benchmark.pedantic(Tracks, setup=setup, rounds=ROUNDS, iterations=1)
