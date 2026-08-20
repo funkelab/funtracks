@@ -2147,10 +2147,32 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#funtracks.import_export.has_embedded_segmentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;has_embedded_segmentation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#funtracks.import_export.load_v1_tracks" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;load_v1_tracks
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#funtracks.import_export.read_segmentation_shape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;read_segmentation_shape
       
     </span>
   </a>
@@ -4125,6 +4147,62 @@ export_to_csv(tracks, "output.csv")</p>
 <div class="doc doc-object doc-function">
 
 
+<h2 id="funtracks.import_export.has_embedded_segmentation" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">has_embedded_segmentation</span>
+
+
+</h2>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">has_embedded_segmentation</span><span class="p">(</span><span class="n">source</span><span class="p">:</span> <span class="n">StoreLike</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Return True if a GEFF store has embedded segmentation that can be
+reconstructed on import.</p>
+<p>Requires both 'mask' and 'bbox' node properties, and a recorded
+segmentation shape (see <code>read_segmentation_shape</code>). When both are present,
+<code>import_from_geff</code> will reconstruct the segmentation automatically as a
+GraphArrayView, without needing an external segmentation file.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>source</code>
+            </td>
+            <td>
+                  <code><span title="tracksdata.io._geff.StoreLike">StoreLike</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Path to a GEFF store, or an open zarr store/group.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
 <h2 id="funtracks.import_export.load_v1_tracks" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">load_v1_tracks</span>
 
@@ -4226,6 +4304,113 @@ treated as the solution. Kept for backward compatibility.</p>
             <td>
               <div class="doc-md-description">
                 <p>A tracks object loaded from the given directory</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="funtracks.import_export.read_segmentation_shape" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">read_segmentation_shape</span>
+
+
+</h2>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">read_segmentation_shape</span><span class="p">(</span>
+    <span class="n">source</span><span class="p">:</span> <span class="n">StoreLike</span><span class="p">,</span> <span class="n">metadata</span><span class="p">:</span> <span class="n">GeffMetadata</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Read the segmentation shape recorded in a GEFF store, if any.</p>
+<p>The shape lives in the tracksdata graph metadata (<code>extra.tracksdata.shape</code>
+in the GEFF metadata) written by <code>export_to_geff</code>/tracksdata. A legacy fallback
+is implemented for GEFFs written by old versions, checking for the top-level zarr
+attribute "segmentation_shape".</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>source</code>
+            </td>
+            <td>
+                  <code><span title="tracksdata.io._geff.StoreLike">StoreLike</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Path to a GEFF store, or an open zarr store/group.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>metadata</code>
+            </td>
+            <td>
+                  <code><span title="geff_spec.GeffMetadata">GeffMetadata</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The GEFF store's already-parsed metadata, if available, to
+avoid re-reading it from <code>source</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="tuple">tuple</span>[<span title="int">int</span>, ...] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The segmentation shape as a tuple, or None if the store has no</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="tuple">tuple</span>[<span title="int">int</span>, ...] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>recorded shape.</p>
               </div>
             </td>
           </tr>
