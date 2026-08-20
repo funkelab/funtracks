@@ -245,8 +245,12 @@ class TestRegionpropsAnnotator:
             value = list(tracks.get_node_attr(node_id, "intensity"))
             assert value == pytest.approx([time, 10 * time])
 
-    def test_only_bounding_boxes_are_read(self, get_graph, ndim):
-        """Intensity is read one node bounding box at a time, never a whole frame."""
+    def test_compute_reads_each_frame_once(self, get_graph, ndim):
+        """Bulk compute reads one frame per time point, not one per node.
+
+        A read on a lazily loaded image (e.g. a delayed imread per time point) costs a
+        whole frame however small the crop, so nodes sharing a frame must share a read.
+        """
         graph = get_graph(ndim, with_seg=True)
         tracks = Tracks(graph, ndim=ndim, **track_attrs)
         image = _RecordingImage(_x_gradient_image(ndim))
@@ -254,21 +258,41 @@ class TestRegionpropsAnnotator:
         tracks.enable_features(["intensity"])
 
         node_ids = list(tracks.graph_solution.node_ids())
-        assert len(image.reads) == len(node_ids)
-
-        frame_shape = _seg_shape(ndim)[1:]
-        for read in image.reads:
-            # one indexing op: a time point followed by one slice per spatial axis
-            assert isinstance(read, tuple)
-            assert len(read) == 1 + len(frame_shape)
-            assert not isinstance(read[0], slice)
-            spans = [sl.stop - sl.start for sl in read[1:]]
-            assert all(
-                span < extent for span, extent in zip(spans, frame_shape, strict=True)
-            )
+        times = set(tracks.get_times(node_ids))
+        assert len(times) < len(node_ids)  # otherwise the test proves nothing
+        assert len(image.reads) == len(times)
+        # each read is a whole frame: a bare time index, no per-axis slicing
+        assert sorted(image.reads) == sorted(times)
 
         # and the values are still right
         assert tracks.get_node_attr(4, "intensity") == pytest.approx(1.5)
+
+    def test_single_node_update_reads_only_its_bounding_box(self, get_graph, ndim):
+        """Editing one mask reads that box alone, not the frame around it."""
+        graph = get_graph(ndim, with_seg=True)
+        tracks = Tracks(graph, ndim=ndim, **track_attrs)
+        image = _RecordingImage(_x_gradient_image(ndim))
+        tracks.set_intensity_images([image])
+        tracks.enable_features(["intensity"])
+
+        node_id = 4
+        image.reads.clear()
+        node_mask = tracks.get_mask(node_id)
+        removal = Mask(node_mask.mask.copy(), node_mask.bbox)
+        removal.mask[..., 3] = False
+        UpdateNodeSeg(tracks, node_id, removal, added=False)
+
+        frame_shape = _seg_shape(ndim)[1:]
+        assert len(image.reads) == 1
+        read = image.reads[0]
+        # one indexing op: a time point followed by one slice per spatial axis
+        assert isinstance(read, tuple)
+        assert len(read) == 1 + len(frame_shape)
+        assert not isinstance(read[0], slice)
+        spans = [sl.stop - sl.start for sl in read[1:]]
+        assert all(span < extent for span, extent in zip(spans, frame_shape, strict=True))
+
+        assert tracks.get_node_attr(node_id, "intensity") == pytest.approx(3.0)
 
     def test_renaming_channels_does_not_recompute(self, get_graph, ndim):
         """Same images under new names only refreshes the feature metadata."""

@@ -57,6 +57,48 @@ def _centroid(mask: Mask, spacing: tuple[float, ...] | None) -> list[float]:
     return [float(v) for v in world]
 
 
+def _bbox_slicing(mask: Mask) -> tuple[slice, ...]:
+    """The spatial slices covering a mask's bounding box, one per spatial axis."""
+    ndim = mask.mask.ndim
+    bbox = mask.bbox
+    return tuple(slice(bbox[i], bbox[i + ndim]) for i in range(ndim))
+
+
+def _as_intensity_image(crops: list[np.ndarray]) -> np.ndarray:
+    """Combine one crop per channel into the intensity image skimage expects.
+
+    Several channels are stacked on a trailing axis, which skimage reads as a
+    multichannel intensity image and answers with one mean per channel.
+    """
+    return crops[0] if len(crops) == 1 else np.stack(crops, axis=-1)
+
+
+class _FrameCache:
+    """Serves bounding box crops for many nodes out of one materialized time point.
+
+    ``compute`` walks nodes in time order, so holding the current frame lets every node
+    in it be cropped from memory.
+
+    Only the current time point is held (one frame per channel), and the cache is local
+    to a single ``compute`` call, so nothing is retained afterwards.
+    """
+
+    def __init__(self, intensity_images: list | None):
+        self._images = intensity_images
+        self._time: int | None = None
+        self._frames: list[np.ndarray] = []
+
+    def crop(self, mask: Mask, time: int | None) -> np.ndarray | None:
+        """The intensity image for one mask, read from the cached time point."""
+        if self._images is None or time is None:
+            return None
+        if time != self._time:
+            self._frames = [np.asarray(image[time]) for image in self._images]
+            self._time = time
+        slicing = _bbox_slicing(mask)
+        return _as_intensity_image([frame[slicing] for frame in self._frames])
+
+
 def _to_attr_value(value: Any) -> Any:
     """Convert a regionprops value into something the graph backend can store.
 
@@ -338,8 +380,6 @@ class RegionpropsAnnotator(GraphAnnotator):
 
         skimage requires the intensity image to match the shape of the label image,
         which in this case is the bbox-sized mask array rather than the full frame.
-        Several channels are stacked on a trailing axis, which skimage reads as a
-        multichannel intensity image and answers with one mean per channel.
 
         Args:
             mask: The mask defining the bounding box to crop to.
@@ -352,13 +392,11 @@ class RegionpropsAnnotator(GraphAnnotator):
         if self.intensity_images is None or time is None:
             return None
         # Slice the time point and the bounding box in a single indexing operation, so
-        # a chunked backend (zarr, h5py) fetches only the box instead of the whole
-        # frame.
-        ndim = mask.mask.ndim
-        bbox = mask.bbox
-        slicing = (time, *(slice(bbox[i], bbox[i + ndim]) for i in range(ndim)))
-        crops = [np.asarray(image[slicing]) for image in self.intensity_images]
-        return crops[0] if len(crops) == 1 else np.stack(crops, axis=-1)
+        # a store that supports it fetches only the box instead of the whole frame.
+        slicing = (time, *_bbox_slicing(mask))
+        return _as_intensity_image(
+            [np.asarray(image[slicing]) for image in self.intensity_images]
+        )
 
     def compute(self, feature_keys: list[str] | None = None) -> None:
         """Compute the currently included features and add them to the tracks.
@@ -400,13 +438,20 @@ class RegionpropsAnnotator(GraphAnnotator):
         node_ids = [
             node_id for node_id in self.graph.node_ids() if self.graph.has_node(node_id)
         ]
-        # Intensity is read per time point, so the times are fetched in one bulk query
-        # rather than one graph lookup per node.
-        times: list[int | None] = (
-            list(self.tracks.get_times(node_ids))
-            if self.intensity_key in keys_to_compute
-            else [None] * len(node_ids)
-        )
+        # Times are only needed for intensity, and stay None otherwise so that the
+        # frame cache has nothing to read.
+        times: list[int | None] = [None] * len(node_ids)
+        if self.intensity_key in keys_to_compute:
+            # Fetch the times in one bulk query rather than one graph lookup per node,
+            # and walk the nodes in time order so that each frame is read once and
+            # serves every node in it.
+            in_time_order = sorted(
+                zip(node_ids, self.tracks.get_times(node_ids), strict=True),
+                key=lambda pair: pair[1],
+            )
+            node_ids = [node_id for node_id, _ in in_time_order]
+            times = [time for _, time in in_time_order]
+        frames = _FrameCache(self.intensity_images)
 
         for node_id, time in zip(node_ids, times, strict=True):
             mask = self.graph.nodes[node_id]["mask"]
@@ -417,7 +462,7 @@ class RegionpropsAnnotator(GraphAnnotator):
             (region,) = regionprops_extended(
                 mask,
                 spacing=spacing,
-                intensity_image=self._intensity_crop(mask, time),
+                intensity_image=frames.crop(mask, time),
             )
             for key in keys_to_compute:
                 value = _to_attr_value(getattr(region, self.regionprops_names[key]))
