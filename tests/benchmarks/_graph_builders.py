@@ -116,7 +116,7 @@ def make_tracks(
 
     graph.bulk_add_nodes(nodes=nodes, indices=node_ids)
     graph.bulk_add_edges(edges)
-    graph._update_metadata(segmentation_shape=(n_frames, *frame_shape))
+    graph.metadata["shape"] = (n_frames, *frame_shape)
 
     return Tracks(
         graph,
