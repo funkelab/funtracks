@@ -48,12 +48,10 @@ def read_segmentation_shape(
     raw = graph_metadata.get("shape")
     if raw is None:
         # source may be a filesystem Path or an in-memory zarr Store, so pass it
-        # directly without str() conversion.
-        try:
-            z = zarr.open(source, mode="r")
-            raw = dict(z.attrs).get("segmentation_shape")
-        except (OSError, KeyError, ValueError, TypeError):
-            raw = None
+        # directly without str() conversion. zarr.open cannot fail here: metadata
+        # was already read from source above, so it is a valid, openable store.
+        z = zarr.open(source, mode="r")
+        raw = dict(z.attrs).get("segmentation_shape")
     return tuple(raw) if raw is not None else None
 
 
