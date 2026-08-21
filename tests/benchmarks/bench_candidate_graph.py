@@ -9,12 +9,13 @@ import pytest
 from skimage.draw import disk
 
 from funtracks.candidate_graph.compute_graph import compute_graph_from_seg
-from funtracks.data_model import SolutionTracks
+from funtracks.data_model import Tracks
 
 NUM_FRAMES = 50
 FRAME_SHAPE = (700, 1100)
 CELLS_PER_FRAME = 150
 MAX_EDGE_DISTANCE = 50.0
+ROUNDS = 3
 
 
 def _generate_segmentation(
@@ -48,23 +49,32 @@ def test_compute_graph_from_seg(benchmark, seg_data):
         compute_graph_from_seg,
         args=(seg_data, MAX_EDGE_DISTANCE),
         kwargs={"iou": True},
-        rounds=1,
+        rounds=ROUNDS,
         iterations=1,
     )
 
 
-def test_graph_to_solution(benchmark, seg_data):
-    """Benchmark candidate graph -> SolutionTracks (tracklet/lineage assignment).
+def test_graph_to_solution(benchmark, seg_data, _warm_jit):
+    """Benchmark candidate graph -> Tracks with track ids (tracklet/lineage assignment).
 
     Candidate-graph construction is benchmarked separately above and is built here in
-    (untimed) setup, so only the SolutionTracks construction -- dominated by
+    (untimed) setup, so only the Tracks construction -- dominated by
     TrackAnnotator._assign_tracklet_ids and _assign_lineage_ids -- is measured.
+    Setting tracklet_attr/lineage_attr registers a TrackAnnotator and triggers the
+    track-id computation on construction. The session-scoped _warm_jit fixture (see
+    conftest.py) ensures the one-time spatial_graph rtree JIT compile is not measured
+    here.
     """
 
     def setup():
-        # Fresh graph per round: SolutionTracks construction mutates the graph
+        # Fresh graph per round: Tracks construction mutates the graph
         # (adds tracklet/lineage IDs), so each measured call must start unannotated.
         graph = compute_graph_from_seg(seg_data, MAX_EDGE_DISTANCE, iou=True)
-        return (graph,), {"time_attr": "t", "pos_attr": "pos"}
+        return (graph,), {
+            "time_attr": "t",
+            "pos_attr": "pos",
+            "tracklet_attr": "tracklet_id",
+            "lineage_attr": "lineage_id",
+        }
 
-    benchmark.pedantic(SolutionTracks, setup=setup, rounds=1, iterations=1)
+    benchmark.pedantic(Tracks, setup=setup, rounds=ROUNDS, iterations=1)

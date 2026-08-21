@@ -15,7 +15,7 @@ def compute_graph_from_seg(
     iou: bool = False,
     scale: list[float] | None = None,
     t_start: int = 0,
-) -> td.graph.GraphView:
+) -> td.graph.BaseGraph:
     """Construct a candidate graph from a segmentation array. Nodes are placed at the
     centroid of each segmentation and edges are added for all nodes in adjacent frames
     within max_edge_distance.
@@ -37,7 +37,7 @@ def compute_graph_from_seg(
             time values. Defaults to 0.
 
     Returns:
-        td.graph.GraphView: A candidate graph that can be passed to the motile solver
+        td.graph.BaseGraph: A candidate graph that can be passed to the motile solver
     """
     # add nodes (including mask and bbox in the same bulk_add_nodes call)
     cand_graph, node_frame_dict = nodes_from_segmentation(
@@ -64,7 +64,9 @@ def compute_graph_from_seg(
     logger.info("Candidate edges: %d", cand_graph.num_edges())
 
     # store segmentation shape in graph metadata
-    cand_graph._update_metadata(segmentation_shape=segmentation.shape)
+    cand_graph.metadata["shape"] = segmentation.shape
+    # DEPRECATED: dual-write for motile_tracker, remove later
+    cand_graph.metadata["segmentation_shape"] = segmentation.shape
 
     return cand_graph
 
@@ -73,7 +75,7 @@ def compute_graph_from_points_list(
     points_list: np.ndarray,
     max_edge_distance: float,
     scale: list[float] | None = None,
-) -> td.graph.GraphView:
+) -> td.graph.BaseGraph:
     """Construct a candidate graph from a points list.
 
     Args:
@@ -88,7 +90,7 @@ def compute_graph_from_points_list(
             isotropic.
 
     Returns:
-        td.graph.GraphView: A candidate graph that can be passed to the motile solver.
+        td.graph.BaseGraph: A candidate graph that can be passed to the motile solver.
     """
     # add nodes
     cand_graph, node_frame_dict = nodes_from_points_list(points_list, scale=scale)

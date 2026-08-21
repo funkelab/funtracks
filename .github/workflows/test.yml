@@ -41,7 +41,7 @@ jobs:
 
       - name: Test with pytest
         run: |
-          uv run pytest --color=yes --cov=funtracks --cov-report=xml --cov-report=term-missing tests
+          uv run pytest --color=yes --cov=funtracks --cov-report=xml --cov-report=term-missing tests tests_old
 
       - name: Coverage
         uses: codecov/codecov-action@v4
@@ -74,30 +74,24 @@ jobs:
       - name: Install dependencies
         run: uv sync --no-dev --group testing
 
-      - name: Retrieve cached baseline if available
-        uses: actions/cache/restore@v5
-        id: cache_baseline
-        with:
-          path: baseline.json
-          key: benchmark-${{ matrix.platform }}-${{ github.event.pull_request.base.sha }}
-
-      - name: Run baseline benchmark if not in cache
-        if: steps.cache_baseline.outputs.cache-hit != 'true'
+      # The baseline is measured here rather than restored from a cache, so that base
+      # and head are timed on the same runner minutes apart. A cached baseline is
+      # measured on a different machine at a different time (and potentially against
+      # different dependencies), which made this gate fail on runner speed rather than
+      # on code: the same commit compared against the same cached baseline came out at
+      # +7% in one run and +131% in the next. These jobs take ~1 minute, so measuring
+      # both sides every time is cheap.
+      - name: Run baseline benchmark
         run: |
           git checkout ${{ github.event.pull_request.base.sha }}
-          uv run pytest tests/benchmarks/bench_candidate_graph.py --benchmark-json baseline.json
-
-      - name: Cache baseline results
-        uses: actions/cache/save@v5
-        if: steps.cache_baseline.outputs.cache-hit != 'true'
-        with:
-          path: baseline.json
-          key: benchmark-${{ matrix.platform }}-${{ github.event.pull_request.base.sha }}
+          # -o python_files: the base commit's pyproject.toml may predate the
+          # bench_*.py collection config, so set it on the command line instead.
+          uv run pytest tests/benchmarks/ -o "python_files=test_*.py bench_*.py" --benchmark-json baseline.json
 
       - name: Run benchmark on PR head
         run: |
           git checkout ${{ github.event.pull_request.head.sha }}
-          uv run pytest tests/benchmarks/bench_candidate_graph.py --benchmark-json pr.json
+          uv run pytest tests/benchmarks/ -o "python_files=test_*.py bench_*.py" --benchmark-json pr.json
 
       - name: Generate report
         id: report

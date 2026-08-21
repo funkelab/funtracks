@@ -8,7 +8,7 @@ from ..actions._base import ActionGroup
 from .user_delete_node import UserDeleteNode
 
 if TYPE_CHECKING:
-    from funtracks.data_model import SolutionTracks
+    from funtracks.data_model import Tracks
 
 
 class UserDeleteNodes(ActionGroup):
@@ -22,16 +22,20 @@ class UserDeleteNodes(ActionGroup):
         nodes: The node ids to delete.
         pixels: Optional list of pixel masks for each node, matching the order
             of nodes. Defaults to None.
+        _top_level: If True, add this action to the history and emit the refresh
+            signal. Set to False when this action is part of a bigger action group,
+            so that the whole group is undone in one step. Defaults to True.
     """
 
     def __init__(
         self,
-        tracks: SolutionTracks,
+        tracks: Tracks,
         nodes: list[int],
         pixels: None | list[tuple[np.ndarray, ...]] = None,
+        _top_level: bool = True,
     ):
         super().__init__(tracks, actions=[])
-        self.tracks: SolutionTracks  # Narrow type from base class
+        self.tracks: Tracks  # Narrow type from base class
         for i, node in enumerate(nodes):
             self.actions.append(
                 UserDeleteNode(
@@ -42,5 +46,6 @@ class UserDeleteNodes(ActionGroup):
                 )
             )
 
-        self.tracks.action_history.add_new_action(self)
-        self.tracks.refresh.emit()
+        if _top_level:
+            self.tracks.action_history.add_new_action(self)
+            self.tracks.refresh.emit()

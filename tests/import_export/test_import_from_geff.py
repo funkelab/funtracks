@@ -5,10 +5,15 @@ import tifffile
 import zarr
 from geff.testing.data import create_mock_geff
 
-from funtracks.data_model import SolutionTracks
-from funtracks.import_export import export_to_geff, import_from_geff
+from funtracks.data_model import Tracks
+from funtracks.import_export import (
+    export_to_geff,
+    has_embedded_segmentation,
+    import_from_geff,
+    read_segmentation_shape,
+)
 from funtracks.import_export.geff._import import GeffTracksBuilder, import_graph_from_geff
-from funtracks.utils.tracksdata_utils import create_empty_graphview_graph
+from funtracks.utils.tracksdata_utils import create_empty_graph
 
 
 @pytest.fixture
@@ -265,7 +270,7 @@ def test_duplicate_values_in_name_map(valid_geff):
     tracks = import_from_geff(store, node_name_map)
 
     # Both time and seg_id should be present with same values
-    for node_id in tracks.graph.node_ids():
+    for node_id in tracks.graph_solution.node_ids():
         assert tracks.get_node_attr(node_id, "seg_id") == tracks.get_node_attr(
             node_id, "t"
         )
@@ -319,11 +324,11 @@ def test_tracks_with_segmentation(valid_geff, invalid_geff, valid_segmentation, 
     assert hasattr(tracks, "segmentation")
     assert tracks.segmentation.shape == valid_segmentation.shape
     # Get last node by ID (don't rely on iteration order)
-    last_node = max(tracks.graph.node_ids())
+    last_node = max(tracks.graph_solution.node_ids())
     # With composite pos, position is stored as an array
-    pos = tracks.graph.nodes[last_node]["pos"]
+    pos = tracks.graph_solution.nodes[last_node]["pos"]
     coords = [
-        tracks.graph.nodes[last_node]["t"],
+        tracks.graph_solution.nodes[last_node]["t"],
         pos[0],  # y
         pos[1],  # x
     ]
@@ -336,10 +341,10 @@ def test_tracks_with_segmentation(valid_geff, invalid_geff, valid_segmentation, 
     )  # test that the seg id has been relabeled
 
     # Check that only requested features are present and area is loaded from geff
-    data = tracks.graph.nodes[last_node]
-    assert "random_feature" in tracks.graph.node_attr_keys()
-    assert "random_feature2" not in tracks.graph.node_attr_keys()
-    assert "area" in tracks.graph.node_attr_keys()
+    data = tracks.graph_solution.nodes[last_node]
+    assert "random_feature" in tracks.graph_solution.node_attr_keys()
+    assert "random_feature2" not in tracks.graph_solution.node_attr_keys()
+    assert "area" in tracks.graph_solution.node_attr_keys()
     assert data["area"] == 21  # loaded directly from geff, not recomputed
 
     # Test that import fails with ValueError when invalid seg_ids are provided.
@@ -421,8 +426,8 @@ def test_features_loaded_from_name_map(valid_geff, valid_segmentation, tmp_path)
         assert key in tracks.features
 
     # Get last node by ID (don't rely on iteration order)
-    max_node_id = max(tracks.graph.node_ids())
-    data = tracks.graph.nodes[max_node_id]
+    max_node_id = max(tracks.graph_solution.node_ids())
+    data = tracks.graph_solution.nodes[max_node_id]
 
     # All requested features should be present and loaded from geff
     for key in feature_keys:
@@ -475,7 +480,7 @@ def test_import_from_geff_roundtrip_auto_axes(tmp_path):
     import tracksdata as td
     from tracksdata.nodes import Mask
 
-    graph = create_empty_graphview_graph(
+    graph = create_empty_graph(
         node_attributes=[
             "pos",
             "area",
@@ -503,14 +508,16 @@ def test_import_from_geff_roundtrip_auto_axes(tmp_path):
         ],
         indices=[1],
     )
-    # The graph carries segmentation_shape in its metadata (set by motile-tracker),
-    # but no dense segmentation array is attached to the SolutionTracks object.
-    graph._update_metadata(segmentation_shape=(5, 100, 100))
+    # The graph carries the shape in its metadata (set by motile-tracker),
+    # but no dense segmentation array is attached to the Tracks object.
+    graph.metadata["shape"] = (5, 100, 100)
 
     run_dir = tmp_path / "run"
     run_dir.mkdir()
 
-    st = SolutionTracks(graph, ndim=3, time_attr="t")
+    st = Tracks(
+        graph, ndim=3, time_attr="t", tracklet_attr="track_id", lineage_attr="lineage_id"
+    )
     export_to_geff(st, run_dir)
 
     tracks_path = run_dir / "tracks.geff"
@@ -530,27 +537,31 @@ def test_import_from_geff_roundtrip_auto_axes(tmp_path):
     )
     assert pos_mapping == ["y", "x"], f"pos should map to ['y', 'x'], got {pos_mapping}"
 
-    # export_to_geff writes segmentation_shape as an extra zarr attribute when the
-    # graph carries mask/bbox node attributes. Verify it is present in the zarr.
+    # export_to_geff writes the shape into the geff metadata when the graph carries
+    # mask/bbox node attributes. Read it back through tracksdata's public API rather
+    # than digging into the zarr attrs, so this does not depend on where it is stored.
     import zarr as _zarr
 
     z = _zarr.open(str(tracks_path), mode="r")
     zarr_attrs = dict(z.attrs)
-    assert "segmentation_shape" in zarr_attrs, (
-        "export_to_geff should write segmentation_shape to zarr attrs when masks present"
+    seg_shape = td.io.read_graph_metadata(tracks_path).get("shape")
+    assert seg_shape is not None, (
+        "export_to_geff should write the shape into the geff metadata when masks present"
     )
+    assert tuple(seg_shape) == (5, 100, 100)
+    # legacy top-level zarr attr is still dual-written for motile_tracker
     assert tuple(zarr_attrs["segmentation_shape"]) == (5, 100, 100)
 
-    # import_from_geff must read segmentation_shape back from zarr attrs and
+    # import_from_geff must read the shape back from the geff metadata and
     # reconstruct a segmentation (GraphArrayView) — not return segmentation=None.
     tracks = import_from_geff(tracks_path)
-    assert tracks.graph.num_nodes() == 1
+    assert tracks.graph_solution.num_nodes() == 1
     assert tracks.segmentation is not None, (
         "segmentation should be reconstructed from masks after round-trip"
     )
     assert tracks.segmentation.shape == (5, 100, 100)
 
-    node1 = tracks.graph.nodes[1]
+    node1 = tracks.graph_solution.nodes[1]
 
     assert node1["pos"] is not None
     np.testing.assert_array_almost_equal(node1["pos"], [50.0, 50.0])
@@ -564,7 +575,7 @@ def test_import_from_geff_roundtrip_auto_axes(tmp_path):
 
     assert any(isinstance(a, RegionpropsAnnotator) for a in tracks.annotators), (
         "RegionpropsAnnotator should be in the annotator registry after importing "
-        "a GEFF with embedded segmentation (mask + bbox + segmentation_shape)"
+        "a GEFF with embedded segmentation (mask + bbox + shape)"
     )
     regionprops = next(
         a for a in tracks.annotators if isinstance(a, RegionpropsAnnotator)
@@ -589,21 +600,21 @@ def test_import_from_geff_roundtrip_auto_axes(tmp_path):
     )
 
 
-def test_import_from_geff_warns_missing_segmentation_shape(tmp_path):
-    """import_from_geff should warn when masks/bboxes are present but
-    segmentation_shape is absent from the zarr attributes.
+def test_import_from_geff_warns_missing_shape(tmp_path):
+    """import_from_geff should warn when masks/bboxes are present but the shape
+    is absent from both the geff metadata and the legacy zarr attributes.
 
-    This simulates a GEFF written by an older version of funtracks (before the
-    export fix) or by an external tool that stores per-node masks without writing
-    segmentation_shape. The import must still succeed, return segmentation=None,
-    and emit a UserWarning so the user knows the segmentation cannot be shown.
+    This simulates a GEFF written by an external tool that stores per-node masks
+    without writing the shape. The import must still succeed, return
+    segmentation=None, and emit a UserWarning so the user knows the segmentation
+    cannot be shown.
     """
     import warnings
 
     import tracksdata as td
     import zarr as _zarr
 
-    graph = create_empty_graphview_graph(
+    graph = create_empty_graph(
         node_attributes=[
             "pos",
             td.DEFAULT_ATTR_KEYS.MASK,
@@ -624,19 +635,24 @@ def test_import_from_geff_warns_missing_segmentation_shape(tmp_path):
         ],
         indices=[1],
     )
-    graph._update_metadata(segmentation_shape=(5, 100, 100))
+    graph.metadata["shape"] = (5, 100, 100)
 
     run_dir = tmp_path / "run"
     run_dir.mkdir()
-    st = SolutionTracks(graph, ndim=3, time_attr="t")
+    st = Tracks(
+        graph, ndim=3, time_attr="t", tracklet_attr="track_id", lineage_attr="lineage_id"
+    )
     export_to_geff(st, run_dir)
 
     tracks_path = run_dir / "tracks.geff"
 
-    # Simulate old funtracks / external tool: remove segmentation_shape from zarr attrs.
-    # Use put() (full replacement) rather than update() (merge) so the key is truly gone.
+    # Simulate an external tool that stores masks without a shape. This edits the
+    # zarr attrs directly because tracksdata exposes a reader (read_graph_metadata)
+    # but no way to strip graph metadata from an existing store.
+    # Use put() (full replacement) rather than update() (merge) so it is truly gone.
     z = _zarr.open(str(tracks_path), mode="a")
     attrs = dict(z.attrs)
+    attrs.get("geff", {}).get("extra", {}).get("tracksdata", {}).pop("shape", None)
     attrs.pop("segmentation_shape", None)
     z.attrs.put(attrs)
 
@@ -648,18 +664,118 @@ def test_import_from_geff_warns_missing_segmentation_shape(tmp_path):
     warning_messages = [
         str(w.message) for w in caught if issubclass(w.category, UserWarning)
     ]
-    assert any("segmentation_shape" in msg for msg in warning_messages), (
-        f"Expected a UserWarning mentioning segmentation_shape, got: {warning_messages}"
+    assert any("shape" in msg for msg in warning_messages), (
+        f"Expected a UserWarning mentioning the missing shape, got: {warning_messages}"
     )
     assert tracks.segmentation is None
 
 
+def test_import_from_geff_reads_legacy_segmentation_shape_attr(tmp_path):
+    """import_from_geff should fall back to the legacy top-level
+    ``segmentation_shape`` zarr attribute for GEFFs written by older funtracks.
+
+    Older funtracks wrote the shape as a top-level zarr attribute instead of
+    inside the geff metadata. Simulate that by moving the shape from
+    extra.tracksdata.shape to a top-level attr and confirm the segmentation is
+    still reconstructed.
+    """
+    import tracksdata as td
+    import zarr as _zarr
+
+    graph = create_empty_graph(
+        node_attributes=[
+            "pos",
+            td.DEFAULT_ATTR_KEYS.MASK,
+            td.DEFAULT_ATTR_KEYS.BBOX,
+        ],
+        ndim=3,
+    )
+    bbox = [30, 30, 71, 71]
+    graph.bulk_add_nodes(
+        nodes=[
+            {
+                "t": 0,
+                "pos": np.array([50.0, 50.0]),
+                "solution": True,
+                td.DEFAULT_ATTR_KEYS.MASK: _make_mask(bbox),
+                td.DEFAULT_ATTR_KEYS.BBOX: np.array(bbox, dtype=np.int64),
+            }
+        ],
+        indices=[1],
+    )
+    graph.metadata["shape"] = (5, 100, 100)
+
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    st = Tracks(
+        graph, ndim=3, time_attr="t", tracklet_attr="track_id", lineage_attr="lineage_id"
+    )
+    export_to_geff(st, run_dir)
+
+    tracks_path = run_dir / "tracks.geff"
+
+    # Rewrite as a legacy GEFF: drop the shape tracksdata wrote and add the old
+    # top-level attr. Edits the zarr attrs directly for the same reason as above:
+    # tracksdata can read graph metadata back, but not remove it from a store.
+    z = _zarr.open(str(tracks_path), mode="a")
+    attrs = dict(z.attrs)
+    attrs.get("geff", {}).get("extra", {}).get("tracksdata", {}).pop("shape", None)
+    attrs["segmentation_shape"] = [5, 100, 100]
+    z.attrs.put(attrs)
+
+    tracks = import_from_geff(tracks_path)
+    assert tracks.segmentation is not None
+    assert tracks.segmentation.shape == (5, 100, 100)
+
+    # The public helpers should agree with import_from_geff's own reconstruction,
+    # reading straight from the legacy top-level zarr attr.
+    assert read_segmentation_shape(tracks_path) == (5, 100, 100)
+    assert has_embedded_segmentation(tracks_path)
+
+
+def test_read_segmentation_shape_and_has_embedded_segmentation(get_tracks, tmp_path):
+    """read_segmentation_shape/geff_has_embedded_segmentation should reflect the
+    current-format shape written by export_to_geff, and report no shape/no
+    embedded segmentation for a GEFF exported without one.
+    """
+    tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
+
+    with_seg_dir = tmp_path / "with_seg"
+    with_seg_dir.mkdir()
+    export_to_geff(tracks, with_seg_dir)
+    geff_path = with_seg_dir / "tracks.geff"
+
+    assert read_segmentation_shape(geff_path) == tracks.segmentation.shape
+    assert has_embedded_segmentation(geff_path)
+
+    # save_segmentation=False still writes the shape (from graph metadata) and
+    # the mask/bbox node props, so the segmentation stays reconstructable.
+    no_seg_file_dir = tmp_path / "no_seg_file"
+    no_seg_file_dir.mkdir()
+    export_to_geff(tracks, no_seg_file_dir, save_segmentation=False)
+    no_seg_file_geff_path = no_seg_file_dir / "tracks.geff"
+
+    assert read_segmentation_shape(no_seg_file_geff_path) == tracks.segmentation.shape
+    assert has_embedded_segmentation(no_seg_file_geff_path)
+
+    # A Tracks with no segmentation at all has no shape and no mask/bbox props,
+    # so there is nothing to reconstruct.
+    tracks_without_seg = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
+    no_seg_dir = tmp_path / "no_seg"
+    no_seg_dir.mkdir()
+    export_to_geff(tracks_without_seg, no_seg_dir)
+    no_seg_geff_path = no_seg_dir / "tracks.geff"
+
+    assert read_segmentation_shape(no_seg_geff_path) is None
+    assert not has_embedded_segmentation(no_seg_geff_path)
+
+
 def test_get_time_works_after_import(valid_geff):
-    """Regression test: tracks.get_time() must work on a SolutionTracks returned by
+    """Regression test: tracks.get_time() must work on a Tracks returned by
     import_from_geff().
 
     Previously, TracksBuilder.build() stored time as "t" in the graph (tracksdata
-    convention) but created SolutionTracks(time_attr=TIME_ATTR) where TIME_ATTR="time".
+    convention) but created Tracks(time_attr=TIME_ATTR) where TIME_ATTR="time".
     This caused features.time_key="time" while the graph only had attribute "t",
     making get_time() raise KeyError: 'time'.
     """
@@ -667,13 +783,13 @@ def test_get_time_works_after_import(valid_geff):
     name_map = {"time": "t", "pos": ["y", "x"]}
     tracks = import_from_geff(store, name_map)
 
-    for node_id in tracks.graph.node_ids():
+    for node_id in tracks.graph_solution.node_ids():
         # This must not raise KeyError: 'time'
         t = tracks.get_time(node_id)
         assert isinstance(t, int), f"get_time() should return int, got {type(t)}"
 
     # get_times() on all nodes must also work
-    all_node_ids = list(tracks.graph.node_ids())
+    all_node_ids = list(tracks.graph_solution.node_ids())
     times = tracks.get_times(all_node_ids)
     assert len(times) == len(all_node_ids)
 
@@ -713,7 +829,7 @@ def test_bool_node_property_schema(geff_with_bool_prop):
     name_map = {"time": "t", "pos": ["y", "x"], "is_dividing": "is_dividing"}
     tracks = import_from_geff(geff_with_bool_prop, name_map)
 
-    df = tracks.graph.node_attrs(attr_keys=["is_dividing"])
+    df = tracks.graph_solution.node_attrs(attr_keys=["is_dividing"])
     assert df["is_dividing"].dtype == pl.Boolean, (
         f"Expected pl.Boolean schema for 'is_dividing', got {df['is_dividing'].dtype}. "
         "Likely cause: np.bool_ default_value fell through to int in construct_graph()."
@@ -732,10 +848,10 @@ def test_bool_node_property_values(geff_with_bool_prop):
     name_map = {"time": "t", "pos": ["y", "x"], "is_dividing": "is_dividing"}
     tracks = import_from_geff(geff_with_bool_prop, name_map)
 
-    node_ids = sorted(tracks.graph.node_ids())
+    node_ids = sorted(tracks.graph_solution.node_ids())
     expected = [True, False, True, False, True]
     for node_id, exp in zip(node_ids, expected, strict=True):
-        val = tracks.graph.nodes[node_id]["is_dividing"]
+        val = tracks.graph_solution.nodes[node_id]["is_dividing"]
         assert type(val) is bool, (
             f"Expected Python bool for 'is_dividing', got {type(val)} for node {node_id}"
             "Likely cause: np.bool_ value not cast to bool in construct_graph()."
@@ -747,7 +863,7 @@ def test_3d_pos_survives_sql_roundtrip(tmp_path):
     """Regression test: 3D pos (z, y, x) must keep Array dtype through SQL roundtrip.
 
     The construct_graph() method must pass the correct ndim to
-    create_empty_graphview_graph() so the pos schema is Array(Float64, 3) not
+    create_empty_graph() so the pos schema is Array(Float64, 3) not
     Array(Float64, 2). A schema mismatch causes SQLGraph.from_other() to
     downgrade the column to List(Float64), which breaks downstream callers that
     rely on to_numpy() returning a 2D float64 array.
@@ -771,14 +887,16 @@ def test_3d_pos_survives_sql_roundtrip(tmp_path):
     tracks = import_from_geff(store, name_map)
 
     # Verify the RX graph has correct Array dtype for 3D pos
-    df_rx = tracks.graph.node_attrs(attr_keys=["pos"])
+    df_rx = tracks.graph_solution.node_attrs(attr_keys=["pos"])
     assert df_rx["pos"].dtype == pl.Array(pl.Float64, 3), (
         f"RX graph pos should be Array(Float64, 3), got {df_rx['pos'].dtype}"
     )
 
     # Convert to SQL and reload — this is where the schema mismatch used to surface
     db_path = str(tmp_path / "test.db")
-    td.graph.SQLGraph.from_other(tracks.graph, drivername="sqlite", database=db_path)
+    td.graph.SQLGraph.from_other(
+        tracks.graph_solution, drivername="sqlite", database=db_path
+    )
     sql_graph2 = td.graph.SQLGraph("sqlite", db_path)
 
     df_sql = sql_graph2.node_attrs(attr_keys=["pos"])
@@ -806,9 +924,11 @@ def test_geff_legacy_track_id_preserves_tracklet_ids():
         include_x=True,
         extra_node_props={"track_id": track_id_values},
     )
+    # create_mock_geff produces 0-based node IDs; import offsets them by +1
+    # because node_id 0 collides with the segmentation background label.
     node_ids = memory_geff["node_ids"]
     expected = {
-        int(nid): int(t) for nid, t in zip(node_ids, track_id_values, strict=True)
+        int(nid) + 1: int(t) for nid, t in zip(node_ids, track_id_values, strict=True)
     }
 
     name_map = {
@@ -825,11 +945,100 @@ def test_geff_legacy_track_id_preserves_tracklet_ids():
         )
 
 
+def test_zero_node_id_is_offset(valid_geff):
+    """A graph containing node_id 0 must be offset by +1 on import so that no
+    node collides with the segmentation background label (0)."""
+    store, memory_geff = valid_geff
+    assert 0 in memory_geff["node_ids"]  # mock geff is 0-based
+
+    name_map = {"time": "t", "pos": ["y", "x"], "track_id": "track_id"}
+    with pytest.warns(UserWarning, match="node_id 0"):
+        tracks = import_from_geff(store, name_map)
+
+    node_ids = list(tracks.graph.node_ids())
+    assert 0 not in node_ids
+    assert min(node_ids) == 1
+    assert len(node_ids) == len(memory_geff["node_ids"])
+    # Every source edge survives with both endpoints shifted by the same offset.
+    expected_edges = {
+        (int(source) + 1, int(target) + 1) for source, target in memory_geff["edge_ids"]
+    }
+    assert expected_edges  # the mock geff must have edges for this to test anything
+    edge_df = tracks.graph_solution.edge_attrs(attr_keys=["source_id", "target_id"])
+    actual_edges = {
+        (int(source), int(target))
+        for source, target in zip(edge_df["source_id"], edge_df["target_id"], strict=True)
+    }
+    assert actual_edges == expected_edges
+
+
+def test_zero_node_id_offset_keeps_segmentation_background(
+    valid_geff, valid_segmentation, tmp_path
+):
+    """After offsetting node IDs, segmentation background (0) stays background and
+    nodes are painted with their offset (>=1) IDs."""
+    store, _ = valid_geff
+    name_map = {"time": "t", "pos": ["y", "x"], "seg_id": "seg_id"}
+    seg_path = tmp_path / "segmentation.tif"
+    tifffile.imwrite(seg_path, valid_segmentation)
+
+    scale = [1, 1, (1 / 100)]
+    with pytest.warns(UserWarning, match="node_id 0"):
+        tracks = import_from_geff(
+            store, name_map, segmentation_path=seg_path, scale=scale
+        )
+
+    seg = np.asarray(tracks.segmentation)
+    # Painted labels are exactly the (offset) node IDs plus background 0.
+    painted = set(np.unique(seg)) - {0}
+    assert painted == set(tracks.graph.node_ids())
+    assert 0 not in tracks.graph.node_ids()
+
+
+def test_zero_node_id_with_segmentation_no_seg_id_errors(
+    valid_geff, valid_segmentation, tmp_path
+):
+    """A segmentation accompanying a graph reserves label 0 for background, so a
+    node_id 0 cannot be silently realigned. Without a seg_id to map labels, this
+    must raise rather than offset (which would desync the segmentation)."""
+    store, _ = valid_geff
+    name_map = {"time": "t", "pos": ["y", "x"]}  # deliberately no seg_id
+    seg_path = tmp_path / "segmentation.tif"
+    tifffile.imwrite(seg_path, valid_segmentation)
+
+    with pytest.raises(ValueError, match="seg_id"):
+        import_from_geff(store, name_map, segmentation_path=seg_path)
+
+
+def test_segmentation_seg_id_zero_errors(tmp_path):
+    """A node mapped to seg_id 0 collides with the background label and must error."""
+    store, _ = create_mock_geff(
+        node_id_dtype="uint",
+        node_axis_dtypes={"position": "float64", "time": "int64"},
+        directed=True,
+        num_nodes=5,
+        num_edges=2,
+        include_t=True,
+        include_z=False,
+        include_y=True,
+        include_x=True,
+        extra_node_props={"seg_id": np.array([0, 10, 20, 30, 40])},
+    )
+    name_map = {"time": "t", "seg_id": "seg_id"}  # no pos -> skip seg/pos match
+    seg = np.zeros((5, 50, 50), dtype=np.uint16)
+    seg_path = tmp_path / "segmentation.tif"
+    tifffile.imwrite(seg_path, seg)
+
+    with pytest.raises(ValueError, match="seg_id 0"):
+        import_from_geff(store, name_map, segmentation_path=seg_path)
+
+
 def test_geff_roundtrip_preserves_tracklet_ids(get_tracks, tmp_path):
     """End-to-end round-trip: export then import should preserve tracklet IDs."""
-    tracks_in = get_tracks(ndim=3, with_seg=False, is_solution=True)
+    tracks_in = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
     expected = {
-        int(nid): tracks_in.get_track_id(int(nid)) for nid in tracks_in.graph.node_ids()
+        int(nid): tracks_in.get_track_id(int(nid))
+        for nid in tracks_in.graph_solution.node_ids()
     }
 
     export_dir = tmp_path / "export"
@@ -874,7 +1083,7 @@ def test_embedded_seg_ellipse_axis_radii_feature_metadata(tmp_path):
         td.DEFAULT_ATTR_KEYS.BBOX,
     ]
     # node_default_values must align with node_attributes by index.
-    # pos/mask/bbox are handled by special cases in create_empty_graphview_graph
+    # pos/mask/bbox are handled by special cases in create_empty_graph
     # and their slot values here are never accessed; only area, ellipse_axis_radii,
     # track_id, and lineage_id go through the general loop.
     node_default_values = [
@@ -886,7 +1095,7 @@ def test_embedded_seg_ellipse_axis_radii_feature_metadata(tmp_path):
         None,  # mask — special-cased, slot unused
         None,  # bbox — special-cased, slot unused
     ]
-    graph = create_empty_graphview_graph(
+    graph = create_empty_graph(
         node_attributes=node_attributes,
         node_default_values=node_default_values,
         edge_attributes=[],
@@ -909,12 +1118,14 @@ def test_embedded_seg_ellipse_axis_radii_feature_metadata(tmp_path):
         ],
         indices=[1],
     )
-    graph._update_metadata(segmentation_shape=(3, 100, 100))
+    graph.metadata["shape"] = (3, 100, 100)
 
     run_dir = tmp_path / "run"
     run_dir.mkdir()
 
-    st = SolutionTracks(graph, ndim=3, time_attr="t")
+    st = Tracks(
+        graph, ndim=3, time_attr="t", tracklet_attr="track_id", lineage_attr="lineage_id"
+    )
     export_to_geff(st, run_dir)
 
     # Remove FeatureDict from GEFF metadata to simulate old/external GEFF
@@ -999,7 +1210,7 @@ def test_featuredict_survives_geff_roundtrip(tmp_path):
         None,  # mask — special-cased, slot unused
         None,  # bbox — special-cased, slot unused
     ]
-    graph = create_empty_graphview_graph(
+    graph = create_empty_graph(
         node_attributes=node_attributes,
         node_default_values=node_default_values,
         edge_attributes=[],
@@ -1022,12 +1233,14 @@ def test_featuredict_survives_geff_roundtrip(tmp_path):
         ],
         indices=[1],
     )
-    graph._update_metadata(segmentation_shape=(3, 100, 100))
+    graph.metadata["shape"] = (3, 100, 100)
 
     run_dir = tmp_path / "run"
     run_dir.mkdir()
 
-    st = SolutionTracks(graph, ndim=3, time_attr="t")
+    st = Tracks(
+        graph, ndim=3, time_attr="t", tracklet_attr="track_id", lineage_attr="lineage_id"
+    )
     # Customize metadata that auto-detection cannot reproduce.
     pos_key = st.features.position_key
     assert isinstance(pos_key, str)
@@ -1053,7 +1266,7 @@ def test_invalid_featuredict_in_geff_falls_back_to_autodetect(get_tracks, tmp_pa
     import_from_geff should silently fall back to auto-detection
     instead of raising an exception.
     """
-    tracks = get_tracks(ndim=3, with_seg=False, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
     run_dir = tmp_path / "run"
     run_dir.mkdir()
     export_to_geff(tracks, run_dir, save_segmentation=False)
@@ -1074,11 +1287,13 @@ def test_invalid_featuredict_in_geff_falls_back_to_autodetect(get_tracks, tmp_pa
     # Should not raise — falls back to auto-detection
     imported = import_from_geff(geff_path)
 
-    # Verify the import produced a working SolutionTracks with auto-detected features
+    # Verify the import produced a working Tracks with auto-detected features
     assert imported.features.time_key is not None
     assert imported.features.position_key is not None
     assert imported.features.tracklet_key is not None
-    assert set(tracks.graph.node_ids()) == set(imported.graph.node_ids())
+    assert set(tracks.graph_solution.node_ids()) == set(
+        imported.graph_solution.node_ids()
+    )
 
 
 def test_subgroup_export_omits_featuredict_and_recomputes_on_import(get_tracks, tmp_path):
@@ -1091,7 +1306,7 @@ def test_subgroup_export_omits_featuredict_and_recomputes_on_import(get_tracks, 
     On reimport, validation would strip the now-invalid tracklet_id but the
     FeatureDict still referenced it, causing KeyError: 'tracklet_id'.
     """
-    tracks = get_tracks(ndim=3, with_seg=False, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
 
     # Export only a subset: nodes 1, 3, 4, 5 (one branch of the division).
     # filter_graph_with_ancestors will include node 1 as ancestor of 3.
@@ -1129,16 +1344,18 @@ def test_subgroup_export_omits_featuredict_and_recomputes_on_import(get_tracks, 
         },
     )
 
-    assert isinstance(imported, SolutionTracks)
+    assert isinstance(imported, Tracks)
     assert imported.features.tracklet_key is not None
 
     # The subgraph is a linear chain (1→3→4→5, no divisions), so all nodes
     # should share a single tracklet_id and a single lineage_id.
-    track_ids = {imported.get_track_id(nid) for nid in imported.graph.node_ids()}
+    track_ids = {imported.get_track_id(nid) for nid in imported.graph_solution.node_ids()}
     assert len(track_ids) == 1, (
         f"Linear chain should have one tracklet_id, got {track_ids}"
     )
-    lineage_ids = {imported.get_lineage_id(nid) for nid in imported.graph.node_ids()}
+    lineage_ids = {
+        imported.get_lineage_id(nid) for nid in imported.graph_solution.node_ids()
+    }
     assert len(lineage_ids) == 1, (
         f"Linear chain should have one lineage_id, got {lineage_ids}"
     )
@@ -1158,7 +1375,7 @@ def test_import_from_geff_respects_external_solution_column(tmp_path):
     # Separate y/x columns (not a 2-D 'pos' array) so tracksdata's to_geff
     # registers them as space-typed axes — required to exercise the
     # axes-branch of GeffTracksBuilder.infer_node_name_map.
-    graph = create_empty_graphview_graph(
+    graph = create_empty_graph(
         node_attributes=["y", "x"], position_attrs=["y", "x"], ndim=3
     )
     graph.bulk_add_nodes(
@@ -1170,15 +1387,14 @@ def test_import_from_geff_respects_external_solution_column(tmp_path):
         indices=[1, 2, 3],
     )
 
-    # Export the root graph, not the filtered solution-only view, so the
-    # solution=False row survives into the geff (mimicking a solver-produced
-    # geff with rejected nodes).
+    # Export the full base graph so the solution=False row survives into the geff
+    # (mimicking a solver-produced geff with rejected nodes).
     tracks_path = tmp_path / "tracks.geff"
-    graph._root.to_geff(geff_store=tracks_path, zarr_format=2)
+    graph.to_geff(geff_store=tracks_path, zarr_format=2)
 
     tracks = import_from_geff(tracks_path)
 
-    node_ids = set(tracks.graph.node_ids())
+    node_ids = set(tracks.graph_solution.node_ids())
     assert node_ids == {1, 3}, (
         "Node 2 has solution=False in the geff file and should be filtered out "
         f"by import_from_geff. Got node_ids={node_ids}."

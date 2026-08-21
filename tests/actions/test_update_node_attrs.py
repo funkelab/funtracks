@@ -8,7 +8,7 @@ from funtracks.features import Feature
 
 @pytest.mark.parametrize("ndim", [3, 4])
 def test_update_node_attrs(get_tracks, ndim):
-    tracks = get_tracks(ndim=ndim, with_seg=True, is_solution=True)
+    tracks = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
     node = 1
 
     new_feature = Feature(
@@ -32,6 +32,6 @@ def test_update_node_attrs(get_tracks, ndim):
 
 @pytest.mark.parametrize("attr", ["t", "area", "track_id"])
 def test_update_protected_attr(get_tracks, attr):
-    tracks = get_tracks(ndim=3, with_seg=True, is_solution=True)
+    tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
     with pytest.raises(ValueError, match="Cannot update attribute .* manually"):
         UpdateNodeAttrs(tracks, 1, {attr: 2})

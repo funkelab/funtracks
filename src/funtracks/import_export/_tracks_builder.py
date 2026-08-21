@@ -1,6 +1,6 @@
 """Builder pattern for importing tracks from various formats.
 
-This module provides a unified interface for constructing SolutionTracks objects
+This module provides a unified interface for constructing Tracks objects
 from different data sources (GEFF, CSV, etc.) while sharing common validation
 and construction logic.
 """
@@ -10,12 +10,13 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
+from warnings import warn
 
 import numpy as np
 import tracksdata as td
 from geff._typing import InMemoryGeff
 
-from funtracks.data_model.solution_tracks import SolutionTracks
+from funtracks.data_model.tracks import Tracks
 from funtracks.features import Feature
 from funtracks.import_export._import_segmentation import (
     load_segmentation,
@@ -39,7 +40,7 @@ from funtracks.import_export._validation import (
 )
 from funtracks.utils.tracksdata_utils import (
     add_masks_and_bboxes_to_graph,
-    create_empty_graphview_graph,
+    create_empty_graph,
 )
 
 if TYPE_CHECKING:
@@ -411,11 +412,70 @@ class TracksBuilder(ABC):
         if not (hasattr(self, "features") and self.features is not None):
             validate_in_memory_geff(self.in_memory_geff)
 
+    def relabel_zero_based_node_ids(self, has_segmentation: bool) -> bool:
+        """Offset node IDs by +1 if any node has ID 0.
+
+        Node IDs double as segmentation labels (e.g. when painted via
+        ``GraphArrayView``), and label 0 is reserved for background. A node with
+        ``node_id == 0`` would be indistinguishable from background and, in
+        downstream apps, color the whole background with that node's tracklet color.
+
+        Behaviour depends on whether a dense segmentation accompanies the graph:
+
+        - No segmentation: shift all node IDs (and edge endpoints) by +1 so the
+          smallest ID is 1.
+        - Segmentation with a ``seg_id`` property: the segmentation is keyed on
+          ``seg_id``, so node IDs can be safely offset; ``seg_id`` is left untouched
+          and ``handle_segmentation`` maps original labels to the offset node IDs.
+        - Segmentation without ``seg_id``: labels are assumed to equal node IDs, so
+          node_id 0 collides with background and cannot be realigned. Raise rather
+          than silently desync the segmentation; the caller should supply ``seg_id``.
+
+        Operates in place on ``self.in_memory_geff`` and must run before the graph
+        is constructed.
+
+        Args:
+            has_segmentation: Whether a dense segmentation accompanies the graph.
+
+        Returns:
+            True if an offset was applied, False otherwise.
+        """
+        if self.in_memory_geff is None:
+            raise ValueError("No data loaded. Call load_source() first.")
+
+        node_ids = np.asarray(self.in_memory_geff["node_ids"])
+        if not np.any(node_ids == 0):
+            return False
+
+        if has_segmentation and "seg_id" not in self.in_memory_geff["node_props"]:
+            raise ValueError(
+                "Graph contains node_id 0 and an accompanying segmentation was "
+                "provided, but no 'seg_id' property is present. With a dense "
+                "segmentation, label 0 is reserved for background, so node_id 0 "
+                "cannot be realigned without desynchronizing the segmentation. "
+                "Provide a 'seg_id' property mapping each node to its segmentation "
+                "label."
+            )
+
+        warn(
+            "Found node_id 0 in the loaded graph. Node IDs are used as segmentation "
+            "labels, where 0 is reserved for background, so all node IDs (and edge "
+            "endpoints) are being offset by +1 to start at 1.",
+            stacklevel=2,
+        )
+        # Cast before adding: geff permits unsigned node ids, where the largest
+        # representable id would wrap back to 0 instead of being offset away from it.
+        self.in_memory_geff["node_ids"] = node_ids.astype(np.int64) + 1
+        edge_ids = np.asarray(self.in_memory_geff["edge_ids"])
+        if edge_ids.size:
+            self.in_memory_geff["edge_ids"] = edge_ids.astype(np.int64) + 1
+        return True
+
     def construct_graph(
         self,
         node_name_map: dict[str, str | list[str]] | None = None,
         database: str | None = None,
-    ) -> td.graph.GraphView:
+    ) -> td.graph.BaseGraph:
         """Construct Tracksdata graph from validated InMemoryGeff data.
 
         Common logic shared across all formats.
@@ -427,7 +487,7 @@ class TracksBuilder(ABC):
                 If None (default), an in-memory/temp graph is used.
 
         Returns:
-            Tracksdata GraphView with standard keys
+            Tracksdata base graph with standard keys
 
         Raises:
             ValueError: If data not loaded or validated
@@ -481,7 +541,7 @@ class TracksBuilder(ABC):
                     default_value = 0
                 node_default_values.append(default_value)
 
-        graph = create_empty_graphview_graph(
+        graph = create_empty_graph(
             node_attributes=list(self.in_memory_geff["node_props"].keys()),
             edge_attributes=list(self.in_memory_geff["edge_props"].keys()),
             node_default_values=node_default_values,
@@ -536,23 +596,17 @@ class TracksBuilder(ABC):
         if self.TIME_ATTR != "t":
             graph.remove_node_attr_key(self.TIME_ATTR)
 
-        # create_empty_graphview_graph returns a filtered view, but that view is
-        # a snapshot at filter time; nodes/edges added afterwards (potentially with
-        # solution=False) bypass the filter. Re-filter the populated root so
-        # solution=False rows are actually excluded.
-        graph = graph._root.filter(
-            td.NodeAttr("solution") == True,  # noqa: E712
-            td.EdgeAttr("solution") == True,  # noqa: E712
-        ).subgraph()
-
+        # Return the full base graph. Tracks builds the solution==True view internally,
+        # so solution=False candidates added during population stay in graph_full and
+        # are excluded from graph_solution by Tracks, not here.
         return graph
 
     def handle_segmentation(
         self,
-        graph: td.graph.GraphView,
+        graph: td.graph.BaseGraph,
         segmentation: Path | np.ndarray | None,
         scale: list[float] | None,
-    ) -> tuple[np.ndarray | None, list[float] | None, td.graph.GraphView]:
+    ) -> tuple[np.ndarray | None, list[float] | None, td.graph.BaseGraph]:
         """Load, validate, and optionally relabel segmentation.
 
         Common logic shared across all formats.
@@ -563,11 +617,13 @@ class TracksBuilder(ABC):
             scale: Spatial scale for coordinate transformation
 
         Returns:
-            Tuple of (segmentation array, scale, graph). The graph may be relabeled
-            if node_id 0 exists in the original graph.
+            Tuple of (segmentation array, scale, graph). The segmentation labels are
+            relabeled from seg_id to node_id when a seg_id property is present and
+            differs from the node IDs.
 
         Raises:
-            ValueError: If segmentation validation fails
+            ValueError: If segmentation validation fails, or if a node maps to
+                seg_id 0 (reserved for the background label).
         """
         if segmentation is None:
             return None, scale, graph
@@ -600,11 +656,24 @@ class TracksBuilder(ABC):
         # Check if relabeling is needed (seg_id != node_id)
         node_props = self.in_memory_geff["node_props"]
         if "seg_id" not in node_props:
-            # No seg_id property, assume segmentation labels match node IDs
+            # No seg_id property, assume segmentation labels match node IDs.
+            # (node_id 0 + no seg_id already errored in relabel_zero_based_node_ids.)
             return seg_array.compute(), scale, graph
 
-        node_ids = self.in_memory_geff["node_ids"]
-        seg_ids = node_props["seg_id"]["values"]
+        node_ids = np.asarray(self.in_memory_geff["node_ids"])
+        seg_ids = np.asarray(node_props["seg_id"]["values"])
+        time_values = np.asarray(node_props[self.TIME_ATTR]["values"])
+
+        # Label 0 is reserved for background; relabeling a node with seg_id 0 would
+        # map every background pixel to that node's ID. In practice this means a
+        # missing seg_id, which is stored as the placeholder 0.
+        if np.any(seg_ids == 0):
+            bad_nodes = node_ids[seg_ids == 0]
+            raise ValueError(
+                f"Nodes {list(bad_nodes)} have seg_id 0 (or no seg_id at all), but "
+                "label 0 is reserved for the segmentation background. Each node's "
+                "seg_id must be a foreground label (>= 1)."
+            )
 
         # Check if any seg_id differs from node_id
         if np.array_equal(seg_ids, node_ids):
@@ -612,20 +681,19 @@ class TracksBuilder(ABC):
             return seg_array.compute(), scale, graph
 
         # Relabel segmentation: seg_id -> node_id
-        time_values = node_props[self.TIME_ATTR]["values"]
         new_segmentation, graph = relabel_segmentation(
             seg_array, graph, node_ids, seg_ids, time_values
         )
 
         return new_segmentation, scale, graph
 
-    # Structural keys that are handled by graph construction / SolutionTracks.__init__
+    # Structural keys that are handled by graph construction / Tracks.__init__
     # and should not be registered as features by enable_features().
     STRUCTURAL_KEYS = frozenset({"time", "id", "parent_id", "seg_id"})
 
     def enable_features(
         self,
-        tracks: SolutionTracks,
+        tracks: Tracks,
         name_map: dict[str, str | list[str]],
         feature_type: Literal["node", "edge"] = "node",
     ) -> None:
@@ -638,7 +706,7 @@ class TracksBuilder(ABC):
         - Otherwise, if data was loaded for it, register it as a static feature.
 
         Args:
-            tracks: SolutionTracks object to add features to
+            tracks: Tracks object to add features to
             name_map: Mapping from standard funtracks keys to source property
                 names (same format as node_name_map / edge_name_map).
             feature_type: Type of features ("node" or "edge")
@@ -703,7 +771,7 @@ class TracksBuilder(ABC):
         scale: list[float] | None = None,
         node_name_map: dict[str, str | list[str]] | None = None,
         database: str | None = None,
-    ) -> SolutionTracks:
+    ) -> Tracks:
         """Orchestrate the full construction process.
 
         Args:
@@ -715,7 +783,7 @@ class TracksBuilder(ABC):
                 If None (default), an in-memory/temp graph is used.
 
         Returns:
-            Fully constructed SolutionTracks object
+            Fully constructed Tracks object
 
         Raises:
             ValueError: If self.node_name_map is not set or validation fails
@@ -786,6 +854,11 @@ class TracksBuilder(ABC):
         # 3. Validate InMemoryGeff (includes spatial_dims array shape validation)
         self.validate()
 
+        # 3b. Offset node IDs if any is 0 (reserved for segmentation background).
+        # Errors instead of offsetting when a segmentation is provided without a
+        # seg_id, since the labels can't be realigned without desyncing.
+        self.relabel_zero_based_node_ids(has_segmentation=segmentation is not None)
+
         # 4. Construct graph
         graph = self.construct_graph(node_name_map, database=database)
 
@@ -798,22 +871,27 @@ class TracksBuilder(ABC):
         if segmentation_array is not None:
             graph = add_masks_and_bboxes_to_graph(graph, segmentation_array)
 
-        # 7. Create SolutionTracks
+        # 7. Create Tracks
         # construct_graph() always stores time as "t" (tracksdata convention),
         # regardless of TIME_ATTR, so we pass "t" here explicitly.
         # If a FeatureDict was loaded (e.g., from GEFF metadata), use it directly
         if hasattr(self, "features") and self.features is not None:
-            tracks = SolutionTracks(
+            tracks = Tracks(
                 graph=graph,
                 ndim=self.ndim,
                 scale=scale,
                 features=self.features,
             )
         else:
-            tracks = SolutionTracks(
+            # The builder always produces a solution, so declare tracklet/lineage
+            # intent to register a TrackAnnotator. Tracks.__init__ auto-detects whether
+            # these attrs already exist on the graph (activate) or need computing.
+            tracks = Tracks(
                 graph=graph,
                 pos_attr="pos",
                 time_attr="t",
+                tracklet_attr="tracklet_id",
+                lineage_attr="lineage_id",
                 ndim=self.ndim,
                 scale=scale,
             )

@@ -35,6 +35,11 @@ def write_to_geff(
     geff store directly to *path*.  Intended for internal save/load workflows
     where the user picks the ``.geff`` path.
 
+    Note: only ``graph_solution`` is written. Soft-deleted (``solution=False``)
+    candidates are dropped, and reimport marks everything ``solution=True`` — so
+    undo-ability of past deletes does not survive a save/load round-trip (Phase-1
+    design; candidate persistence is deferred to the candidate/solver phase).
+
     Args:
         tracks: Tracks object containing a graph to save.
         path: Destination path for the geff store.
@@ -51,7 +56,7 @@ def write_to_geff(
         zarr_format=zarr_format,
         overwrite=overwrite,
     )
-    _write_segmentation_shape(path, tracks)
+    _write_legacy_segmentation_shape(path, tracks)
 
 
 def export_to_geff(
@@ -65,6 +70,9 @@ def export_to_geff(
     seg_file_format: Literal["zarr", "tiff"] = "zarr",
 ):
     """Export the Tracks graph to geff.
+
+    Only the solution graph is exported; soft-deleted (``solution=False``)
+    candidates are not included.
 
     Args:
         tracks (Tracks): Tracks object containing a graph to save.
@@ -89,7 +97,7 @@ def export_to_geff(
 
     if node_ids is not None:
         nodes_to_keep = filter_graph_with_ancestors(
-            tracks.graph, node_ids
+            tracks.graph_solution, node_ids
         )  # include the ancestors to make sure the graph is valid and has no missing
         # parent nodes.
 
@@ -99,7 +107,7 @@ def export_to_geff(
 
     # Include the FeatureDict in metadata only for full exports.
     # Subgroup exports do not necessarily have valid tracklet/lineage IDs
-    # and thus are not valid SolutionTracks
+    # and thus are not valid Tracks
     graph, metadata = _build_geff_metadata(tracks, include_features=(node_ids is None))
 
     # Save segmentation if present and requested
@@ -133,8 +141,7 @@ def export_to_geff(
     # Save the graph in a 'tracks.geff' folder
     tracks_path = directory / "tracks.geff"
     graph.to_geff(geff_store=tracks_path, geff_metadata=metadata, zarr_format=zarr_format)
-
-    _write_segmentation_shape(tracks_path, tracks)
+    _write_legacy_segmentation_shape(tracks_path, tracks)
 
 
 def _build_geff_metadata(
@@ -191,6 +198,9 @@ def _build_geff_metadata(
     if include_features:
         extra["funtracks"] = {"features": tracks.features.dump_json()}
 
+    # Note: the segmentation shape lives in the graph metadata under "shape" and is
+    # written by tracksdata's `to_geff`, which merges `graph.metadata` into the geff
+    # metadata extras even when we pass our own GeffMetadata. Nothing to do here.
     metadata = GeffMetadata(
         geff_version=geff_spec.__version__,
         directed=True,
@@ -203,21 +213,18 @@ def _build_geff_metadata(
     return graph, metadata
 
 
-def _write_segmentation_shape(geff_path: Path, tracks: Tracks) -> None:
-    """Write segmentation_shape as an extra zarr attribute when masks are present.
+def _write_legacy_segmentation_shape(geff_path: Path, tracks: Tracks) -> None:
+    """Write the old top-level ``segmentation_shape`` zarr attr.
 
-    GeffMetadata has no segmentation_shape field, so it must be stored separately.
-    This allows import_from_geff to reconstruct the segmentation (GraphArrayView)
-    without requiring an external segmentation file.
+    DEPRECATED: dual-write for motile_tracker, remove later.
     """
-    seg_shape = tracks.graph.metadata.get("segmentation_shape")
+    meta = tracks.graph_full.metadata
+    seg_shape = meta.get("shape", meta.get("segmentation_shape"))
     if seg_shape is not None:
         import zarr as _zarr
 
         z = _zarr.open(str(geff_path), mode="a")
-        attrs = dict(z.attrs)
-        attrs["segmentation_shape"] = list(seg_shape)
-        z.attrs.update(attrs)
+        z.attrs.update({"segmentation_shape": list(seg_shape)})
 
 
 def split_position_attr(tracks: Tracks) -> tuple[td.graph.GraphView, list[str] | None]:
@@ -239,7 +246,7 @@ def split_position_attr(tracks: Tracks) -> tuple[td.graph.GraphView, list[str] |
 
     if isinstance(pos_key, str):
         # Position is stored as a single attribute, need to split
-        new_graph = tracks.graph.detach()
+        new_graph = tracks.graph_solution.detach()
         new_graph = new_graph.filter().subgraph()
 
         # Register new attribute keys
@@ -277,4 +284,4 @@ def split_position_attr(tracks: Tracks) -> tuple[td.graph.GraphView, list[str] |
         new_graph = new_graph.filter().subgraph()
         return new_graph, list(pos_key)
     else:
-        return tracks.graph, None
+        return tracks.graph_solution, None
