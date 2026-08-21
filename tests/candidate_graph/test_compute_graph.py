@@ -20,10 +20,9 @@ def test_graph_from_segmentation_2d(get_tracks):
     # Same node IDs as the segmentation labels
     assert set(cand_graph.node_ids()) == set(tracks.graph_solution.node_ids())
 
-    # t and pos must match the source graph for every node; measurements are
-    # not computed on the candidate graph
+    # t, pos, area must match the source graph for every node
     for node in cand_graph.node_ids():
-        for key in ["t", "pos"]:
+        for key in ["t", "pos", "area"]:
             assert np.array(cand_graph.nodes[node][key]) == pytest.approx(
                 np.array(tracks.graph_solution.nodes[node][key]), abs=0.01
             )
@@ -71,7 +70,7 @@ def test_graph_from_segmentation_3d(get_tracks):
     assert set(cand_graph.node_ids()) == set(tracks.graph_solution.node_ids())
 
     for node in cand_graph.node_ids():
-        for key in ["t", "pos"]:
+        for key in ["t", "pos", "area"]:
             assert np.array(cand_graph.nodes[node][key]) == pytest.approx(
                 np.array(tracks.graph_solution.nodes[node][key]), abs=0.01
             )
@@ -157,7 +156,7 @@ def test_graph_from_segmentation_t_start_zero_matches_default(get_tracks):
     assert set(explicit_graph.node_ids()) == set(default_graph.node_ids())
 
     for node in default_graph.node_ids():
-        for key in ["t", "pos"]:
+        for key in ["t", "pos", "area"]:
             assert np.array(explicit_graph.nodes[node][key]) == pytest.approx(
                 np.array(default_graph.nodes[node][key]), abs=0.01
             )

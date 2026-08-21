@@ -389,13 +389,11 @@ class Tracks:
         return key in node_attrs
 
     def _setup_core_computed_features(self) -> None:
-        """Sets up core computed position and size features.
+        """Sets up core computed position features.
 
-        Registers the position and area features from the RegionpropsAnnotator into
-        the FeatureDict, activating each if it already exists on the graph or
-        computing it otherwise. Track-id features are handled separately by
-        _ensure_track_features.
-
+        Registers the position feature from the RegionpropsAnnotator into the
+        FeatureDict, activating it if it already exists on the graph or computing it
+        otherwise. Track-id features are handled separately by _ensure_track_features.
         """
         # Import here to avoid circular dependency
         from funtracks.annotators import RegionpropsAnnotator
@@ -407,7 +405,6 @@ class Tracks:
                 if self.features.position_key is None:
                     self.features.position_key = pos_key
                 core_features.append(pos_key)
-                core_features.append(annotator.area_key)
         self._register_core_features(core_features)
 
     def _register_core_features(self, keys: list[str]) -> None:

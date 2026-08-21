@@ -69,13 +69,13 @@ def test_enable_disable_features(graph_2d_with_segmentation):
     assert "t" in tracks.features
     assert tracks.graph_solution.nodes[nodes[0]]["pos"] is not None
 
-    # area is a core feature and is on from the start; the rest are opt-in
-    assert "area" in tracks.features
+    # area and other features should NOT be in tracks.features initially
+    assert "area" not in tracks.features
     assert "iou" not in tracks.features
     assert "circularity" not in tracks.features
 
     # Enable multiple features at once
-    tracks.enable_features(["iou", "circularity"])
+    tracks.enable_features(["area", "iou", "circularity"])
 
     # Features should now be in FeatureDict
     assert "iou" in tracks.features
@@ -105,38 +105,23 @@ def test_enable_disable_features(graph_2d_with_segmentation):
     assert "circularity" not in tracks.features
 
 
-def test_area_activated_by_default(graph_2d_with_segmentation):
-    """Area is a core computed feature: on by default wherever there is a mask.
+def test_area_on_graph_not_auto_activated(graph_2d_with_segmentation):
+    """Area pre-populated on a raw graph must not be auto-activated.
 
-    It comes out of the same regionprops pass as the centroid, so it is nearly
-    free, and it is the measurement users reach for first. Values already on the
-    graph are reused rather than recomputed.
+    Lock in the behavior introduced when area was removed from the core
+    auto-detected features: even though the graph already carries area values,
+    Tracks(graph) without an explicit FeatureDict must leave area out of
+    tracks.features. Callers opt in via enable_features(["area"]).
     """
     assert "area" in graph_2d_with_segmentation.node_attr_keys()
-    node = next(iter(graph_2d_with_segmentation.node_ids()))
-    existing = graph_2d_with_segmentation.nodes[node]["area"]
 
     tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
 
-    assert "area" in tracks.features
-    assert tracks.graph_solution.nodes[node]["area"] == existing
-
-    # and it can still be turned off
-    tracks.disable_features(["area"])
     assert "area" not in tracks.features
+    assert "area" in tracks.annotators.all_features
 
-
-def test_area_computed_when_absent_from_graph(get_graph):
-    """With no area column on the graph, the default activation computes it."""
-    graph = get_graph(3, with_seg=True)
-    if "area" in graph.node_attr_keys():
-        graph.remove_node_attr_key("area")
-
-    tracks = Tracks(graph, ndim=3, **track_attrs)
-
+    tracks.enable_features(["area"])
     assert "area" in tracks.features
-    node = next(iter(tracks.graph_solution.node_ids()))
-    assert tracks.graph_solution.nodes[node]["area"] > 0
 
 
 def test_get_available_features(graph_2d_with_segmentation):

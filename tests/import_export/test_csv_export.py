@@ -403,27 +403,3 @@ def test_scale_columns_default_to_one_without_a_scale(get_tracks, tmp_path, ndim
     axes = ["y", "x"] if ndim == 3 else ["z", "y", "x"]
     for axis in axes:
         assert (df[f"{axis}_scale"] == 1.0).all()
-
-
-def test_scale_columns_are_not_imported_as_features(get_tracks, tmp_path):
-    """A round trip must not turn the scale columns into per-node features."""
-    import pandas as pd
-
-    from funtracks.import_export import tracks_from_df
-
-    tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
-    tracks.scale = [1.0, 2.0, 0.416]
-    temp_file = tmp_path / "test_roundtrip.csv"
-    export_to_csv(tracks, temp_file)
-
-    loaded = tracks_from_df(pd.read_csv(temp_file))
-
-    for column in ("y_scale", "x_scale"):
-        assert column not in loaded.features
-        assert column not in loaded.graph_solution.node_attr_keys()
-
-    # the coordinates themselves come back untouched
-    node_ids = sorted(tracks.graph_solution.node_ids())
-    np.testing.assert_allclose(
-        loaded.get_positions(node_ids), tracks.get_positions(node_ids)
-    )

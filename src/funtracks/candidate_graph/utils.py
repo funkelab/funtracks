@@ -27,6 +27,7 @@ def nodes_from_segmentation(
     Each node will have the following attributes:
         - t
         - pos (in pixel coordinates)
+        - area (in world units, i.e. scaled by the voxel size)
         - mask (if mask=True): cropped boolean mask (tracksdata Mask object)
         - bbox (if mask=True): bounding box as [min_0, ..., max_0, ...] int array
 
@@ -37,9 +38,9 @@ def nodes_from_segmentation(
             with funtracks.utils.ensure_unique_labels before calling this function.
         scale (list[float] | None, optional): The scale of the segmentation data in all
             dimensions (including time, which should have a dummy 1 value).
-            Positions and masks stay in pixel coordinates, so this is currently only
-            validated for length; measurements in world units are computed later, by
-            the annotators. Defaults to None, which implies the data is isotropic.
+            Positions and masks stay in pixel coordinates; the scale is only applied
+            to measurements that are expressed in world units (here: area).
+            Defaults to None, which implies the data is isotropic.
         mask (bool, optional): Whether to include mask and bbox attributes for each
             node. Uses regionprop.image (already computed by regionprops at no extra
             cost) and regionprop.bbox. Including them here avoids a separate write
@@ -65,10 +66,10 @@ def nodes_from_segmentation(
             f"Scale {scale} should have {segmentation.ndim} dims"
         )
 
-    # No "area" column: it is a regionprops feature now, computed from the mask when
-    # the Tracks is built. Declaring it here would leave a zero-filled column behind,
-    # which Tracks would then activate as-is instead of computing.
-    node_attributes = ["pos", "mask", "bbox"] if mask else ["pos"]
+    # Voxel volume, used to express the pixel-count area in world units.
+    voxel_volume = float(np.prod(scale[1:]))
+
+    node_attributes = ["pos", "area", "mask", "bbox"] if mask else ["pos", "area"]
     cand_graph = create_empty_graph(
         node_attributes=node_attributes,
         position_attrs=["pos"],
@@ -83,6 +84,8 @@ def nodes_from_segmentation(
     for t in tqdm(range(len(segmentation)), desc="Extracting nodes from segmentation"):
         segs = segmentation[t]
         nodes_in_frame: list[int] = []
+        # No spacing: the centroid must stay in pixel coordinates. The area is converted
+        # to world coordinates
         props = regionprops(segs)
         for regionprop in props:
             node_id = regionprop.label
@@ -92,6 +95,7 @@ def nodes_from_segmentation(
             attrs: dict[str, Any] = {
                 "t": t + t_start,
                 "pos": list(regionprop.centroid),
+                "area": float(regionprop.area) * voxel_volume,
             }
             if mask:
                 # regionprop.image is the cropped boolean mask within the bbox,

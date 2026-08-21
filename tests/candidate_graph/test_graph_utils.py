@@ -29,19 +29,19 @@ def test_nodes_from_segmentation_2d(get_tracks):
     )
     assert sorted(node_graph.node_ids()) == [1, 2, 3, 4, 5, 6]
     assert node_graph.nodes[2]["t"] == 1
+    assert node_graph.nodes[2]["area"] == 305
     assert np.array_equal(node_graph.nodes[2]["pos"], np.array([20, 80]))
-    # measurements are not computed here; they are regionprops features on Tracks
-    assert "area" not in node_graph.node_attr_keys()
 
     assert node_frame_dict[0] == [1]
     assert Counter(node_frame_dict[1]) == Counter([2, 3])
 
-    # a scale does not move the positions: they stay in pixel coordinates
+    # with a scale the area is in world units, while the position stays in pixels
     node_graph, node_frame_dict = nodes_from_segmentation(
         segmentation=segmentation_2d, scale=[1, 1, 2]
     )
     assert sorted(node_graph.node_ids()) == [1, 2, 3, 4, 5, 6]
     assert node_graph.nodes[2]["t"] == 1
+    assert node_graph.nodes[2]["area"] == 610
     assert np.array_equal(node_graph.nodes[2]["pos"], np.array([20, 80]))
 
     assert node_frame_dict[0] == [1]
@@ -58,19 +58,19 @@ def test_nodes_from_segmentation_3d(get_tracks):
     )
     assert sorted(node_graph.node_ids()) == [1, 2, 3, 4, 5, 6]
     assert node_graph.nodes[2]["t"] == 1
+    assert node_graph.nodes[2]["area"] == 4169
     assert np.array_equal(node_graph.nodes[2]["pos"], np.array([20, 50, 80]))
-    # measurements are not computed here; they are regionprops features on Tracks
-    assert "area" not in node_graph.node_attr_keys()
 
     assert node_frame_dict[0] == [1]
     assert Counter(node_frame_dict[1]) == Counter([2, 3])
 
-    # a scale does not move the positions: they stay in pixel coordinates
+    # with a scale the area is in world units, while the position stays in pixels
     node_graph, node_frame_dict = nodes_from_segmentation(
         segmentation=segmentation_3d, scale=[1, 1, 4.5, 1]
     )
     assert sorted(node_graph.node_ids()) == [1, 2, 3, 4, 5, 6]
     assert node_graph.nodes[2]["t"] == 1
+    assert node_graph.nodes[2]["area"] == 4169 * 4.5
     assert np.array_equal(node_graph.nodes[2]["pos"], np.array([20.0, 50.0, 80.0]))
 
     assert node_frame_dict[0] == [1]
