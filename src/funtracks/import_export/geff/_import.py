@@ -3,7 +3,6 @@ from __future__ import annotations
 import warnings
 from typing import TYPE_CHECKING
 
-import numpy as np
 import tracksdata as td
 import zarr
 from geff._typing import InMemoryGeff
@@ -373,42 +372,11 @@ class GeffTracksBuilder(TracksBuilder):
 
     def _resolve_import_scale(self, scale: list[float] | None) -> list[float] | None:
         """For GEFF, the per-axis scale stored in the metadata is used when present, the
-        caller-provided scale is only used when the metadata has no scaled axes.
+        caller-provided scale is only used when the metadata has no scaled axes. The
+        coordinates are imported as is, since they are expected to be pixel coordinates.
         """
         geff_scale = self._scale_from_axes()
         return geff_scale if geff_scale is not None else scale
-
-    def _scale_to_world_coords(self, scale: list[float] | None) -> None:
-        """Convert stored pixel coordinates to world coordinates.
-
-        geff stores spatial coordinates in pixels together with a per-axis scale;
-        funtracks keeps positions in world coordinates, so each spatial position
-        column is multiplied by its scale (from `builder._resolve_import_scale`), so
-        the conversion stays consistent with the scale attached to the Tracks.
-        """
-        if scale is None or self.in_memory_geff is None:
-            return
-
-        spatial_scale = list(scale)[1:]  # drop the time axis
-        pos_cols = self.position_attr
-        node_props = self.in_memory_geff["node_props"]
-
-        # Composite position stored as separate columns (e.g. "z", "y", "x").
-        if (
-            pos_cols
-            and len(pos_cols) == len(spatial_scale)
-            and all(col in node_props for col in pos_cols)
-        ):
-            for col, s in zip(pos_cols, spatial_scale, strict=True):
-                if s != 1:
-                    node_props[col]["values"] = node_props[col]["values"] * s
-            return
-
-        # Position stored as a single vector column named "pos".
-        if "pos" in node_props:
-            values = node_props["pos"]["values"]
-            if values.ndim == 2 and values.shape[1] == len(spatial_scale):
-                node_props["pos"]["values"] = values * np.asarray(spatial_scale)
 
 
 def import_from_geff(

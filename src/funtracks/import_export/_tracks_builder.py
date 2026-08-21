@@ -651,7 +651,7 @@ class TracksBuilder(ABC):
         # sample_node = next(iter(graph.node_ids()))
         has_position = "pos" in graph.node_attr_keys()
         if has_position:
-            validate_graph_seg_match(graph, seg_array, scale, self.axis_names)
+            validate_graph_seg_match(graph, seg_array, self.axis_names)
 
         # Check if relabeling is needed (seg_id != node_id)
         node_props = self.in_memory_geff["node_props"]
@@ -755,15 +755,6 @@ class TracksBuilder(ABC):
         """
         return scale
 
-    def _scale_to_world_coords(self, scale: list[float] | None) -> None:
-        """Rescale the loaded position columns in ``self.in_memory_geff``.
-
-        No-op by default. Formats that store positions in a different coordinate
-        space than funtracks' world coordinates (e.g. GEFF stores pixels) override
-        this to convert using the resolved import ``scale``.
-        """
-        return
-
     def build(
         self,
         source: Path | pd.DataFrame,
@@ -826,21 +817,17 @@ class TracksBuilder(ABC):
         # Validate node_name_map is complete and valid
         self.validate_name_map(has_segmentation=segmentation is not None)
 
-        # Resolve the scale to use for this import. By default the caller-provided
-        # scale is used (e.g. from a scale widget for CSV imports); format-specific
-        # builders may override this (the GEFF builder reads the authoritative
-        # scale from the geff metadata).
-        scale = self._resolve_import_scale(scale)
-
         # 1. Load source data to InMemoryGeff
         self.load_source(source, self.node_name_map)
         if self.in_memory_geff is None:
             raise ValueError("load_source() must populate self.in_memory_geff")
 
-        # Rescale loaded positions into world coordinates if the format requires
-        # it (GEFF stores pixel coordinates). Uses the same resolved scale that is
-        # attached to the resulting Tracks, so the two stay consistent.
-        self._scale_to_world_coords(scale)
+        # Resolve the scale to use for this import. By default the caller-provided
+        # scale is used (e.g. from a scale widget); format-specific builders may
+        # override this to read a scale out of the source (the GEFF builder from the
+        # axes metadata). Runs after load_source so those builders can use anything the
+        # load turned up.
+        scale = self._resolve_import_scale(scale)
 
         # 2. Combine multi-value feature columns
         self._combine_multi_value_props(

@@ -24,18 +24,17 @@ SEG_KEY = "seg_id"
 def validate_graph_seg_match(
     graph: td.graph.BaseGraph,
     segmentation: da.Array,
-    scale: list[float],
     position_attr: list[str],
 ) -> None:
     """Validate if the graph matches the provided segmentation data.
 
     Checks if the seg_id value of the last node matches the pixel value at the
-    (scaled) node coordinates.
+    node coordinates. Node coordinates and the segmentation are both in pixel
+    space, so no scaling is applied.
 
     Args:
         graph: tracksdata graph with standard keys
         segmentation: Segmentation data (dask array)
-        scale: Scaling information (pixel to world coordinates)
         position_attr: Position keys (e.g., ["y", "x"] or ["z", "y", "x"])
 
     Raises:
@@ -72,17 +71,13 @@ def validate_graph_seg_match(
 
     # Check bounds
     for i, (c, s) in enumerate(zip(coord, segmentation.shape, strict=False)):
-        pixel_coord = int(c / scale[i])
-        if not (0 <= pixel_coord < s):
+        if not (0 <= int(c) < s):
             raise ValueError(
-                f"Coordinate {i} ({c}) is out of bounds for segmentation shape {s} "
-                f"(pixel coord: {pixel_coord})"
+                f"Coordinate {i} ({c}) is out of bounds for segmentation shape {s}"
             )
 
     # Check if the segmentation pixel value at the coordinates matches the seg id
-    seg_id_at_coord, errors = has_seg_ids_at_coords(
-        segmentation, [coord], [seg_id], tuple(1 / s for s in scale)
-    )
+    seg_id_at_coord, errors = has_seg_ids_at_coords(segmentation, [coord], [seg_id])
     if not seg_id_at_coord:
         error_msg = "Error testing seg id:\n" + "\n".join(f"- {e}" for e in errors)
         raise ValueError(error_msg)

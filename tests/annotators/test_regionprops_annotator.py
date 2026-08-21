@@ -133,15 +133,17 @@ class TestRegionpropsAnnotator:
         # Should not raise an error, just return silently
         rp_ann.compute()  # No error expected
 
-    def test_centroid_world_coords_with_scale(self, get_graph, ndim):
-        """Centroid in 'pos' must be pixel_centroid * scale (world units).
-
-        Without the fix, skimage returns local_centroid * spacing + bbox_min_pixel
-        (mixed units). The correct formula is (local_centroid + bbox_min_pixel) *
-        spacing = pixel_centroid * spacing.
+    @pytest.mark.parametrize("only_pos", [True, False])
+    def test_centroid_pixel_coords_with_scale(self, get_graph, ndim, only_pos):
+        """Centroid in 'pos' must stay in pixel coordinates, whatever the scale.
 
         Node 6 has a cube/square at corner (96, 96, ...) with width 4,
-        so pixel centroid = 97.5 in each spatial axis.
+        so the pixel centroid is 97.5 in each spatial axis.
+
+        Both computation paths are covered: the fast mask-only path taken when
+        'pos' is the sole requested feature, and the skimage regionprops path
+        (which runs with the scale as spacing) taken when other features are
+        requested alongside it.
         """
         graph = get_graph(ndim, with_seg=True)
         if ndim == 3:
@@ -153,22 +155,19 @@ class TestRegionpropsAnnotator:
 
         tracks = Tracks(graph, ndim=ndim, scale=scale, **track_attrs)
         # Force recomputation so regionprops runs with the given scale as spacing
-        tracks.enable_features(["pos"])
+        tracks.enable_features(["pos"] if only_pos else ["pos", "area"])
 
         pos = np.array(tracks.graph_solution.nodes[6]["pos"])
-        expected = pixel_centroid * np.array(scale[1:])
 
-        bug_value = np.array([1.5] * len(pixel_centroid)) * np.array(
-            scale[1:]
-        ) + np.array([96.0] * len(pixel_centroid))
+        world_value = pixel_centroid * np.array(scale[1:])
         np.testing.assert_allclose(
             pos,
-            expected,
+            pixel_centroid,
             atol=0.1,
             err_msg=(
-                f"World centroid must be pixel_centroid * scale. "
-                f"Got {pos}, expected {expected}. "
-                f"Bug value would be local_centroid * scale + bbox_min = {bug_value}"
+                f"Centroid must be stored in pixel coordinates. "
+                f"Got {pos}, expected {pixel_centroid}. "
+                f"World coordinates would be {world_value}"
             ),
         )
 

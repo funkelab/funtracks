@@ -73,11 +73,8 @@ def valid_segmentation():
     y = [100, 200, 300, 400, 500]
     seg_ids = np.array([10, 20, 30, 40, 50])
 
-    # The geff stores pixel coordinates. On import each spatial coordinate is
-    # multiplied by its scale to get world coordinates, and the validation
-    # converts back to pixels via ``pixel = world / scale``, recovering the
-    # original stored coordinate. So place each seg id at the pixel equal to the
-    # stored geff coordinate.
+    # The geff stores pixel coordinates and funtracks imports them unchanged, so
+    # each seg id sits at the pixel equal to the stored geff coordinate.
     for t, y_val, x_f, seg_id in zip(times, y, x, seg_ids, strict=False):
         seg[t, int(y_val), int(x_f)] = seg_id
     return seg
@@ -332,7 +329,9 @@ def test_tracks_with_segmentation(valid_geff, invalid_geff, valid_segmentation, 
         pos[0],  # y
         pos[1],  # x
     ]
-    coords = tuple(int(c * 1 / s) for c, s in zip(coords, scale, strict=True))
+    # Positions are stored in pixel coordinates, so they index the segmentation
+    # directly - no conversion by the scale needed.
+    coords = tuple(int(c) for c in coords)
     assert (
         valid_segmentation[tuple(coords)] == 50
     )  # in original segmentation, the pixel value is equal to seg_id

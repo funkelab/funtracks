@@ -52,6 +52,13 @@ class Tracks:
     The graph nodes represent detections and must have a time attribute and
     position attribute. Edges in the graph represent links across time.
 
+    Coordinate convention: node positions (and segmentation masks/bounding boxes)
+    are stored in pixel coordinates. ``scale`` holds the size of one pixel per
+    dimension, and is what converts those coordinates to world units. Derived
+    measurements that are physically meaningful (area/volume, perimeter, ellipsoid
+    axes) are computed with the scale applied and are therefore already in world
+    units.
+
     Attributes:
         graph_full (td.graph.BaseGraph): The full graph (first-class): every node/edge
             ever known, including soft-deleted (solution=False) candidates. Nodes
@@ -60,7 +67,8 @@ class Tracks:
             graph_full; the user-visible tracking solution.
         features (FeatureDict): Dictionary of features tracked on graph nodes/edges.
         annotators (AnnotatorRegistry): List of annotators that compute features.
-        scale (list[float] | None): How much to scale each dimension by, including time.
+        scale (list[float] | None): The size of one pixel in each dimension,
+            including time. Converts the stored pixel coordinates to world units.
         ndim (int): Number of dimensions (3 for 2D+time, 4 for 3D+time).
     """
 
@@ -381,11 +389,13 @@ class Tracks:
         return key in node_attrs
 
     def _setup_core_computed_features(self) -> None:
-        """Sets up core computed position features.
+        """Sets up core computed position and size features.
 
-        Registers the position feature from the RegionpropsAnnotator into the
-        FeatureDict, activating it if it already exists on the graph or computing it
-        otherwise. Track-id features are handled separately by _ensure_track_features.
+        Registers the position and area features from the RegionpropsAnnotator into
+        the FeatureDict, activating each if it already exists on the graph or
+        computing it otherwise. Track-id features are handled separately by
+        _ensure_track_features.
+
         """
         # Import here to avoid circular dependency
         from funtracks.annotators import RegionpropsAnnotator
@@ -397,6 +407,7 @@ class Tracks:
                 if self.features.position_key is None:
                     self.features.position_key = pos_key
                 core_features.append(pos_key)
+                core_features.append(annotator.area_key)
         self._register_core_features(core_features)
 
     def _register_core_features(self, keys: list[str]) -> None:

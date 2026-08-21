@@ -31,16 +31,15 @@ DEFAULT_CIRCULARITY_KEY = "circularity"
 DEFAULT_PERIMETER_KEY = "perimeter"
 
 
-def _centroid(mask: Mask, spacing: tuple[float, ...] | None) -> list[float]:
-    """Centroid in world units, read directly from the mask array.
+def _centroid(mask: Mask) -> list[float]:
+    """Centroid in pixel coordinates, read directly from the mask array.
 
-    Equivalent to ``ExtendedRegionProperties.centroid`` (``(local_centroid + bbox_min)
-    * spacing``) but skips the skimage regionprops machinery (find_objects, region
+    Equivalent to ``ExtendedRegionProperties.centroid_pixel`` (``local_centroid +
+    bbox_min``) but skips the skimage regionprops machinery (find_objects, region
     caching), which is wasted overhead when only the centroid is needed.
 
     Args:
         mask: A Mask object representing one detection.
-        spacing: Voxel spacing per spatial dimension, or None for unit spacing.
 
     Returns:
         The centroid coordinates, one float per spatial dimension.
@@ -48,10 +47,7 @@ def _centroid(mask: Mask, spacing: tuple[float, ...] | None) -> list[float]:
     arr = mask.mask
     bbox_min = mask.bbox[: arr.ndim]
     local = np.array([idx.mean() for idx in np.nonzero(arr)])
-    world = local + bbox_min
-    if spacing is not None:
-        world = world * np.asarray(spacing)
-    return [float(v) for v in world]
+    return [float(v) for v in local + bbox_min]
 
 
 class FeatureSpec(NamedTuple):
@@ -77,6 +73,10 @@ class RegionpropsAnnotator(GraphAnnotator):
     - ellipsoid major/minor/semi-minor axes
     - circularity/sphericity
     - perimeter/surface area
+
+    The centroid is stored in pixel coordinates, matching how the segmentation
+    itself is indexed. All size/shape measurements are computed with
+    ``tracks.scale`` as the voxel spacing and are therefore in world units.
 
     Defaults to computing all features, but individual ones can be turned off by changing
     the self.include value at the corresponding index to the feature in self.features.
@@ -148,7 +148,7 @@ class RegionpropsAnnotator(GraphAnnotator):
         axis_names = ["z", "y", "x"] if ndim is None or ndim == 4 else ["y", "x"]
 
         return [
-            FeatureSpec(DEFAULT_POS_KEY, Position(axes=axis_names), "centroid"),
+            FeatureSpec(DEFAULT_POS_KEY, Position(axes=axis_names), "centroid_pixel"),
             FeatureSpec(DEFAULT_AREA_KEY, Area(ndim=ndim), "area"),
             # TODO: Add in intensity when image is passed
             # FeatureSpec("intensity", Intensity(ndim=ndim), "intensity"),
@@ -207,7 +207,7 @@ class RegionpropsAnnotator(GraphAnnotator):
             mask = self.graph.nodes[node_id]["mask"]
             all_node_ids.append(node_id)
             if fast_pos:
-                all_values[self.pos_key].append(_centroid(mask, spacing))
+                all_values[self.pos_key].append(_centroid(mask))
                 continue
             (region,) = regionprops_extended(mask, spacing=spacing)
             for key in keys_to_compute:

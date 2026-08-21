@@ -26,8 +26,7 @@ def nodes_from_segmentation(
 
     Each node will have the following attributes:
         - t
-        - pos
-        - area
+        - pos (in pixel coordinates)
         - mask (if mask=True): cropped boolean mask (tracksdata Mask object)
         - bbox (if mask=True): bounding box as [min_0, ..., max_0, ...] int array
 
@@ -38,8 +37,9 @@ def nodes_from_segmentation(
             with funtracks.utils.ensure_unique_labels before calling this function.
         scale (list[float] | None, optional): The scale of the segmentation data in all
             dimensions (including time, which should have a dummy 1 value).
-            Will be used to rescale the point locations and attribute computations.
-            Defaults to None, which implies the data is isotropic.
+            Positions and masks stay in pixel coordinates, so this is currently only
+            validated for length; measurements in world units are computed later, by
+            the annotators. Defaults to None, which implies the data is isotropic.
         mask (bool, optional): Whether to include mask and bbox attributes for each
             node. Uses regionprop.image (already computed by regionprops at no extra
             cost) and regionprop.bbox. Including them here avoids a separate write
@@ -65,7 +65,10 @@ def nodes_from_segmentation(
             f"Scale {scale} should have {segmentation.ndim} dims"
         )
 
-    node_attributes = ["pos", "area", "mask", "bbox"] if mask else ["pos", "area"]
+    # No "area" column: it is a regionprops feature now, computed from the mask when
+    # the Tracks is built. Declaring it here would leave a zero-filled column behind,
+    # which Tracks would then activate as-is instead of computing.
+    node_attributes = ["pos", "mask", "bbox"] if mask else ["pos"]
     cand_graph = create_empty_graph(
         node_attributes=node_attributes,
         position_attrs=["pos"],
@@ -80,7 +83,7 @@ def nodes_from_segmentation(
     for t in tqdm(range(len(segmentation)), desc="Extracting nodes from segmentation"):
         segs = segmentation[t]
         nodes_in_frame: list[int] = []
-        props = regionprops(segs, spacing=tuple(scale[1:]))
+        props = regionprops(segs)
         for regionprop in props:
             node_id = regionprop.label
             if node_id in seen_ids:
@@ -89,7 +92,6 @@ def nodes_from_segmentation(
             attrs: dict[str, Any] = {
                 "t": t + t_start,
                 "pos": list(regionprop.centroid),
-                "area": float(regionprop.area),
             }
             if mask:
                 # regionprop.image is the cropped boolean mask within the bbox,
@@ -114,20 +116,19 @@ def nodes_from_segmentation(
 
 def nodes_from_points_list(
     points_list: np.ndarray,
-    scale: list[float] | None = None,
 ) -> tuple[td.graph.BaseGraph, dict[int, list[Any]]]:
     """Extract candidate nodes from a list of points. Uses the index of the
     point in the list as its unique id.
     Returns a tracksdata graph with only nodes, and also a dictionary from frames to
     node_ids for efficient edge adding.
 
+    The points are stored as provided: funtracks keeps positions in pixel
+    coordinates, so the caller should pass pixel coordinates here.
+
     Args:
         points_list (np.ndarray): An NxD numpy array with N points and D
-            (3 or 4) dimensions. Dimensions should be in order (t, [z], y, x).
-        scale (list[float] | None, optional): Amount to scale the points in each
-            dimension (including time). Only needed if the provided points are in
-            "voxel" coordinates instead of world coordinates. Defaults to None, which
-            implies the data is isotropic.
+            (3 or 4) dimensions, in pixel coordinates. Dimensions should be in
+            order (t, [z], y, x).
 
     Returns:
         tuple[td.graph.BaseGraph, dict[int, list[Any]]]: A candidate graph with only
@@ -136,12 +137,6 @@ def nodes_from_points_list(
     logger.info("Extracting nodes from points list")
 
     ndim = points_list.shape[1]
-
-    if scale is not None:
-        assert len(scale) == ndim, (
-            f"Cannot scale points with {ndim} dims by factor {scale}"
-        )
-        points_list = points_list * np.array(scale)
 
     cand_graph = create_empty_graph(
         node_attributes=["pos"],
@@ -187,7 +182,11 @@ def _compute_node_frame_dict(cand_graph: td.graph.BaseGraph) -> dict[int, list[A
     return node_frame_dict
 
 
-def create_kdtree(cand_graph: td.graph.BaseGraph, node_ids: list[Any]) -> KDTree:
+def create_kdtree(
+    cand_graph: td.graph.BaseGraph,
+    node_ids: list[Any],
+    spatial_scale: np.ndarray | None = None,
+) -> KDTree:
     """Create a kdtree with the given nodes from the candidate graph.
     Will fail if provided node ids are not in the candidate graph.
 
@@ -197,6 +196,10 @@ def create_kdtree(cand_graph: td.graph.BaseGraph, node_ids: list[Any]) -> KDTree
             include in the KDTree. Useful for limiting to one time frame.
             Must be a list (not a generic iterable) to preserve order for
             correct mapping of query_ball_tree results back to node ids.
+        spatial_scale (np.ndarray | None, optional): Per-spatial-dimension voxel
+            size. Positions are stored in pixel coordinates; multiplying by this
+            puts the tree in world units so distance queries are in world units
+            too. Defaults to None (positions used as-is).
 
     Returns:
         KDTree: A KDTree containing the positions of the given nodes,
@@ -207,7 +210,9 @@ def create_kdtree(cand_graph: td.graph.BaseGraph, node_ids: list[Any]) -> KDTree
     # graph attribute schema on every call, which dominates runtime at scale.
     df = cand_graph.filter(node_ids=node_ids).node_attrs(attr_keys=["node_id", "pos"])
     pos_by_id = dict(zip(df["node_id"].to_list(), df["pos"].to_list(), strict=True))
-    positions = [pos_by_id[nid] for nid in node_ids]
+    positions = np.asarray([pos_by_id[nid] for nid in node_ids], dtype=float)
+    if spatial_scale is not None:
+        positions = positions * spatial_scale
     return KDTree(positions)
 
 
@@ -216,6 +221,7 @@ def add_cand_edges(
     max_edge_distance: float,
     node_frame_dict: None | dict[int, list[Any]] = None,
     iou_dict: dict[int, dict[int, float]] | None = None,
+    scale: list[float] | None = None,
 ) -> None:
     """Add candidate edges to a candidate graph by connecting all nodes in adjacent
     frames that are closer than max_edge_distance.
@@ -224,8 +230,8 @@ def add_cand_edges(
         cand_graph (td.graph.BaseGraph): Candidate graph with only nodes populated.
             Will be modified in-place to add edges.
         max_edge_distance (float): Maximum distance that objects can travel between
-            frames. All nodes within this distance in adjacent frames will by connected
-            with a candidate edge.
+            frames, in world units. All nodes within this distance in adjacent frames
+            will by connected with a candidate edge.
         node_frame_dict (dict[int, list[Any]] | None, optional): A mapping from frames
             to node ids. If not provided, it will be computed from cand_graph. Defaults
             to None.
@@ -234,6 +240,10 @@ def add_cand_edges(
             provided, the iou value is included directly in each edge dict passed to
             bulk_add_edges, avoiding a separate per-edge update pass after insertion.
             Defaults to None (no iou attribute added).
+        scale (list[float] | None, optional): The scale of the data in all dimensions
+            (including time). Node positions are in pixel coordinates, so they are
+            multiplied by the spatial part of the scale before measuring distances,
+            keeping max_edge_distance in world units. Defaults to None (isotropic).
     """
     logger.info("Extracting candidate edges")
     if not node_frame_dict:
@@ -242,14 +252,16 @@ def add_cand_edges(
     if iou_dict is not None:
         cand_graph.add_edge_attr_key("iou", default_value=0.0, dtype=pl.Float64)
 
+    spatial_scale = None if scale is None else np.asarray(scale[1:], dtype=float)
+
     frames = sorted(node_frame_dict.keys())
     prev_node_ids = node_frame_dict[frames[0]]
-    prev_kdtree = create_kdtree(cand_graph, prev_node_ids)
+    prev_kdtree = create_kdtree(cand_graph, prev_node_ids, spatial_scale)
     for frame in tqdm(frames, desc="Adding candidate edges"):
         if frame + 1 not in node_frame_dict:
             continue
         next_node_ids = node_frame_dict[frame + 1]
-        next_kdtree = create_kdtree(cand_graph, next_node_ids)
+        next_kdtree = create_kdtree(cand_graph, next_node_ids, spatial_scale)
 
         matched_indices = prev_kdtree.query_ball_tree(next_kdtree, max_edge_distance)
 

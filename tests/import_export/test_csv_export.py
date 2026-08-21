@@ -9,8 +9,25 @@ from funtracks.import_export import export_to_csv
 @pytest.mark.parametrize(
     ("ndim", "expected_header"),
     [
-        (3, ["t", "y", "x", "id", "parent_id", "track_id"]),
-        (4, ["t", "z", "y", "x", "id", "parent_id", "track_id"]),
+        (
+            3,
+            ["t", "y", "x", "id", "parent_id", "track_id", "y_scale", "x_scale"],
+        ),
+        (
+            4,
+            [
+                "t",
+                "z",
+                "y",
+                "x",
+                "id",
+                "parent_id",
+                "track_id",
+                "z_scale",
+                "y_scale",
+                "x_scale",
+            ],
+        ),
     ],
     ids=["2d", "3d"],
 )
@@ -27,18 +44,36 @@ def test_export_solution_to_csv(get_tracks, tmp_path, ndim, expected_header):
     assert lines[0].strip().split(",") == expected_header
 
     # Check first data line (node 1: t=0, pos=[50, 50] or [50, 50, 50], track_id=1)
+    # trailing values are the per-axis scale columns, 1.0 when tracks has no scale
     if ndim == 3:
-        expected_line1 = ["0", "50.0", "50.0", "1", "", "1"]
+        expected_line1 = ["0", "50.0", "50.0", "1", "", "1", "1.0", "1.0"]
     else:
-        expected_line1 = ["0", "50.0", "50.0", "50.0", "1", "", "1"]
+        expected_line1 = ["0", "50.0", "50.0", "50.0", "1", "", "1", "1.0", "1.0", "1.0"]
     assert lines[1].strip().split(",") == expected_line1
 
 
 @pytest.mark.parametrize(
     ("ndim", "expected_header"),
     [
-        (3, ["t", "y", "x", "id", "parent_id", "track_id"]),
-        (4, ["t", "z", "y", "x", "id", "parent_id", "track_id"]),
+        (
+            3,
+            ["t", "y", "x", "id", "parent_id", "track_id", "y_scale", "x_scale"],
+        ),
+        (
+            4,
+            [
+                "t",
+                "z",
+                "y",
+                "x",
+                "id",
+                "parent_id",
+                "track_id",
+                "z_scale",
+                "y_scale",
+                "x_scale",
+            ],
+        ),
     ],
     ids=["2d", "3d"],
 )
@@ -322,3 +357,73 @@ def test_export_full_vs_solution(get_tracks, tmp_path):
     assert "Solution" in disp.columns
     assert not bool(disp.loc[disp["ID"] == 5, "Solution"].iloc[0])
     assert bool(disp.loc[disp["ID"] == 1, "Solution"].iloc[0])
+
+
+@pytest.mark.parametrize("ndim", [3, 4])
+def test_scale_columns_carry_the_voxel_size(get_tracks, tmp_path, ndim):
+    """Coordinates are exported in pixels, with the voxel size in its own columns.
+
+    A CSV has no metadata block, so the scale rides along as one constant column
+    per spatial axis. A reader (or the user, via the import dialog) can then
+    convert the pixel coordinates to world units.
+    """
+    import pandas as pd
+
+    scale = [1.0, 2.0, 0.416] if ndim == 3 else [1.0, 2.0, 0.416, 0.416]
+    tracks = get_tracks(ndim=ndim, with_seg=False, prefill_track_ids=True)
+    tracks.scale = scale
+
+    temp_file = tmp_path / "test_scale.csv"
+    export_to_csv(tracks, temp_file)
+
+    df = pd.read_csv(temp_file)
+    axes = ["y", "x"] if ndim == 3 else ["z", "y", "x"]
+    for axis, value in zip(axes, scale[1:], strict=True):
+        assert (df[f"{axis}_scale"] == value).all()
+
+    # Positions are pixel coordinates, written straight from the graph.
+    node_ids = sorted(tracks.graph_solution.node_ids())
+    positions = tracks.get_positions(node_ids)
+    exported = df.set_index("id").loc[node_ids, axes].to_numpy()
+    np.testing.assert_allclose(exported, positions)
+
+
+@pytest.mark.parametrize("ndim", [3, 4])
+def test_scale_columns_default_to_one_without_a_scale(get_tracks, tmp_path, ndim):
+    """tracks.scale is optional; an absent scale means one world unit per pixel."""
+    import pandas as pd
+
+    tracks = get_tracks(ndim=ndim, with_seg=False, prefill_track_ids=True)
+    assert tracks.scale is None
+
+    temp_file = tmp_path / "test_no_scale.csv"
+    export_to_csv(tracks, temp_file)
+
+    df = pd.read_csv(temp_file)
+    axes = ["y", "x"] if ndim == 3 else ["z", "y", "x"]
+    for axis in axes:
+        assert (df[f"{axis}_scale"] == 1.0).all()
+
+
+def test_scale_columns_are_not_imported_as_features(get_tracks, tmp_path):
+    """A round trip must not turn the scale columns into per-node features."""
+    import pandas as pd
+
+    from funtracks.import_export import tracks_from_df
+
+    tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
+    tracks.scale = [1.0, 2.0, 0.416]
+    temp_file = tmp_path / "test_roundtrip.csv"
+    export_to_csv(tracks, temp_file)
+
+    loaded = tracks_from_df(pd.read_csv(temp_file))
+
+    for column in ("y_scale", "x_scale"):
+        assert column not in loaded.features
+        assert column not in loaded.graph_solution.node_attr_keys()
+
+    # the coordinates themselves come back untouched
+    node_ids = sorted(tracks.graph_solution.node_ids())
+    np.testing.assert_allclose(
+        loaded.get_positions(node_ids), tracks.get_positions(node_ids)
+    )

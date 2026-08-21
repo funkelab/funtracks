@@ -88,6 +88,10 @@ def SegBbox(ndim: int) -> Feature:
 def Position(axes: Sequence[str]) -> Feature:
     """A feature to hold the position of a node (time not included).
 
+    Positions are always expressed in pixel coordinates, matching how the
+    segmentation is indexed and how coordinates are stored in geff. Multiply by
+    the spatial part of ``Tracks.scale`` to get world units.
+
     Args:
         axes (Sequence[str]): A sequence of the axis names. Used to infer the number
             of dimensions of the position values.
