@@ -228,6 +228,48 @@ class Tracks:
         # and computed. A provided FeatureDict that omitted them is completed here.
         self._ensure_track_features()
 
+    def update_scale(self, scale: list[float] | None) -> None:
+        """Set a new voxel size, recompute the features derived from it, and refresh.
+
+        Recompute regionprops features that use the scale information.
+
+        Args:
+            scale (list[float] | None): The size of one pixel in each dimension,
+                including time. None means all dimensions are unscaled.
+
+        Raises:
+            ValueError: If the scale does not hold exactly one value per dimension.
+        """
+        if scale is not None:
+            if len(scale) != self.ndim:
+                raise ValueError(
+                    f"Scale {scale} must have one value per dimension ({self.ndim})"
+                )
+            scale = [float(s) for s in scale]
+
+        if scale == self.scale:
+            return
+
+        # Update scale dependent features.
+        keys = [
+            key
+            for key, (feature, active) in self.annotators.all_features.items()
+            if active and feature.get("scale_dependent", False)
+        ]
+
+        previous = self.scale
+        self.scale = scale
+        try:
+            if keys:
+                self.annotators.compute(keys)
+        except Exception:
+            # Put the old scale back in case of an error (e.g. anisotropic xy scale while
+            # features like perimeter require isotropic xy scaling).
+            self.scale = previous
+            raise
+
+        self.refresh.emit()
+
     def _get_feature_set(
         self,
         time_attr: str | None,

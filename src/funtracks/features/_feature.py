@@ -40,6 +40,11 @@ class Feature(TypedDict):
             from this feature and should be cascade-deleted when this feature
             is removed. For example, SegMask lists the bbox key here so that
             deleting the mask also deletes the bounding box.
+        scale_dependent (bool): Optional. True if the value is computed with
+            ``Tracks.scale`` and therefore has to be recomputed when the scale
+            changes (see `Tracks.update_scale`). Features measured in pixel space
+            (`Position`) or derived from graph structure (`TrackletID`, `IoU`)
+            leave this unset.
     """
 
     feature_type: FeatureType
@@ -50,3 +55,4 @@ class Feature(TypedDict):
     default_value: Any
     spatial_dims: NotRequired[bool]
     derived_features: NotRequired[list[str]]
+    scale_dependent: NotRequired[bool]

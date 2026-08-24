@@ -24,6 +24,7 @@ def Area(ndim: int = 3) -> Feature:
         "num_values": 1,
         "display_name": "Area" if ndim == 3 else "Volume",
         "default_value": None,
+        "scale_dependent": True,
     }
 
 
@@ -71,6 +72,7 @@ def EllipsoidAxes(ndim: int | None = 4) -> Feature:
         "value_names": value_names,
         "default_value": None,
         "spatial_dims": True,
+        "scale_dependent": True,
     }
 
 
@@ -90,6 +92,8 @@ def Circularity(ndim: int = 3) -> Feature:
         "num_values": 1,
         "display_name": "Circularity" if ndim == 3 else "Sphericity",
         "default_value": None,
+        "scale_dependent": True,  # because area and perimeter scale differently with
+        # anisotropy
     }
 
 
@@ -109,4 +113,5 @@ def Perimeter(ndim: int = 3) -> Feature:
         "num_values": 1,
         "display_name": "Perimeter" if ndim == 3 else "Surface Area",
         "default_value": None,
+        "scale_dependent": True,
     }
