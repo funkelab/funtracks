@@ -4,8 +4,10 @@ import warnings
 from typing import TYPE_CHECKING
 
 import tracksdata as td
+import zarr
 from geff._typing import InMemoryGeff
 from geff.core_io._base_read import read_to_memory
+from geff_spec import GeffMetadata
 from tracksdata.nodes import Mask
 
 from .._tracks_builder import TracksBuilder, flatten_name_map
@@ -13,11 +15,62 @@ from .._tracks_builder import TracksBuilder, flatten_name_map
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from tracksdata.io._geff import StoreLike
+
     from funtracks.data_model.tracks import Tracks
 
 
 # defining constants here because they are only used in the context of import
 SEG_KEY = "seg_id"
+
+
+def read_segmentation_shape(
+    source: StoreLike, metadata: GeffMetadata | None = None
+) -> tuple[int, ...] | None:
+    """Read the segmentation shape recorded in a GEFF store, if any.
+
+    The shape lives in the tracksdata graph metadata (``extra.tracksdata.shape``
+    in the GEFF metadata) written by ``export_to_geff``/tracksdata. A legacy fallback
+    is implemented for GEFFs written by old versions, checking for the top-level zarr
+    attribute "segmentation_shape".
+
+    Args:
+        source: Path to a GEFF store, or an open zarr store/group.
+        metadata: The GEFF store's already-parsed metadata, if available, to
+            avoid re-reading it from `source`.
+
+    Returns:
+        The segmentation shape as a tuple, or None if the store has no
+        recorded shape.
+    """
+    metadata = metadata if metadata is not None else GeffMetadata.read(source)
+    graph_metadata = td.io.read_graph_metadata(metadata)
+    raw = graph_metadata.get("shape")
+    if raw is None:
+        # source may be a filesystem Path or an in-memory zarr Store, so pass it
+        # directly without str() conversion. zarr.open cannot fail here: metadata
+        # was already read from source above, so it is a valid, openable store.
+        z = zarr.open(source, mode="r")
+        raw = dict(z.attrs).get("segmentation_shape")
+    return tuple(raw) if raw is not None else None
+
+
+def has_embedded_segmentation(source: StoreLike) -> bool:
+    """Return True if a GEFF store has embedded segmentation that can be
+    reconstructed on import.
+
+    Requires both 'mask' and 'bbox' node properties, and a recorded
+    segmentation shape (see `read_segmentation_shape`). When both are present,
+    `import_from_geff` will reconstruct the segmentation automatically as a
+    GraphArrayView, without needing an external segmentation file.
+
+    Args:
+        source: Path to a GEFF store, or an open zarr store/group.
+    """
+    metadata = GeffMetadata.read(source)
+    node_props = metadata.node_props_metadata
+    has_masks = "mask" in node_props and "bbox" in node_props
+    return has_masks and read_segmentation_shape(source, metadata=metadata) is not None
 
 
 def import_graph_from_geff(
@@ -155,11 +208,6 @@ class GeffTracksBuilder(TracksBuilder):
         Args:
             source_path: Path to GEFF zarr store
         """
-        import warnings
-
-        import zarr as _zarr
-        from geff_spec import GeffMetadata
-
         metadata = GeffMetadata.read(source_path)
 
         # Extract property names from metadata
@@ -182,28 +230,19 @@ class GeffTracksBuilder(TracksBuilder):
                     # If FeatureDict loading fails, features will remain None
                     pass
 
-        # Read segmentation_shape written by export_to_geff (stored as an extra
-        # zarr attribute alongside the geff metadata).
-        # source_path may be a filesystem Path or an in-memory zarr Store,
-        # so pass it directly without str() conversion.
-        try:
-            z = _zarr.open(source_path, mode="r")
-            raw = dict(z.attrs).get("segmentation_shape")
-        except (OSError, KeyError, ValueError):
-            raw = None
-        self._segmentation_shape = tuple(raw) if raw is not None else None
+        self._shape = read_segmentation_shape(source_path, metadata=metadata)
 
-        # Warn when masks/bboxes are present but segmentation_shape is absent.
+        # Warn when masks/bboxes are present but the shape is absent.
         # This happens with GEFFs written by older funtracks or external tools.
         has_masks = (
             "mask" in self.importable_node_props and "bbox" in self.importable_node_props
         )
-        if has_masks and self._segmentation_shape is None:
+        if has_masks and self._shape is None:
             warnings.warn(
-                "GEFF contains 'mask' and 'bbox' node attributes but no "
-                "'segmentation_shape' metadata. The segmentation cannot be "
-                "reconstructed. Re-export with an updated version of funtracks "
-                "to preserve the segmentation.",
+                "GEFF contains 'mask' and 'bbox' node attributes but no shape "
+                "metadata. The segmentation cannot be reconstructed. Re-export "
+                "with an updated version of funtracks or tracksdata to preserve "
+                "the segmentation.",
                 UserWarning,
                 stacklevel=2,
             )
@@ -249,8 +288,8 @@ class GeffTracksBuilder(TracksBuilder):
         The GEFF format serialises mask data as plain numeric arrays (zarr
         cannot store arbitrary Python objects).  After the base graph is built,
         this override wraps each raw array back into a
-        :class:`tracksdata.nodes.Mask` instance and writes
-        ``segmentation_shape`` into the graph metadata so that
+        :class:`tracksdata.nodes.Mask` instance and writes the ``shape`` into
+        the graph metadata so that
         :class:`~funtracks.data_model.tracks.Tracks.__init__` can reconstruct
         the segmentation and create the
         :class:`~funtracks.annotators.RegionpropsAnnotator` naturally.
@@ -286,11 +325,13 @@ class GeffTracksBuilder(TracksBuilder):
                     node_ids=nodes_to_update,
                 )
 
-        # Write segmentation_shape into graph metadata so that
-        # Tracks.__init__ can reconstruct the segmentation and the
-        # RegionpropsAnnotator is created during _get_annotators().
-        if self._segmentation_shape is not None:
-            graph._update_metadata(segmentation_shape=self._segmentation_shape)
+        # Write the shape into graph metadata so that Tracks.__init__ can
+        # reconstruct the segmentation and the RegionpropsAnnotator is created
+        # during _get_annotators().
+        if self._shape is not None:
+            graph.metadata["shape"] = self._shape
+            # DEPRECATED: dual-write for motile_tracker, remove later
+            graph.metadata["segmentation_shape"] = self._shape
 
         return graph
 

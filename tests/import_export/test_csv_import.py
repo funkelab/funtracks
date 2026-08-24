@@ -127,6 +127,23 @@ class TestSegmentationHandling:
         assert tracks.segmentation.shape == (3, 100, 100)
         assert np.asarray(tracks.segmentation)[0, 10, 15] == 1
 
+    def test_missing_seg_id_errors_instead_of_painting_background(self, simple_df_2d):
+        """A node without a seg_id must be rejected, not read as label 0.
+
+        Missing values are stored as the placeholder 0, so treating them as real
+        labels relabels every background pixel to that node's ID.
+        """
+        df = simple_df_2d.copy()
+        df["seg_id"] = [10, 20, None, 40]
+
+        seg = np.zeros((3, 100, 100), dtype=np.uint16)
+        seg[0, 10, 15] = 10
+        seg[1, 20, 25] = 20
+        seg[2, 40, 45] = 40
+
+        with pytest.raises(ValueError, match="seg_id 0"):
+            tracks_from_df(df, seg)
+
     def test_seg_id_matches_id(self, simple_df_2d):
         """Test when seg_id matches id (no relabeling needed)."""
         # Add seg_id column matching id

@@ -55,7 +55,7 @@ def write_to_geff(
         zarr_format=zarr_format,
         overwrite=overwrite,
     )
-    _write_segmentation_shape(path, tracks)
+    _write_legacy_segmentation_shape(path, tracks)
 
 
 def export_to_geff(
@@ -140,8 +140,7 @@ def export_to_geff(
     # Save the graph in a 'tracks.geff' folder
     tracks_path = directory / "tracks.geff"
     graph.to_geff(geff_store=tracks_path, geff_metadata=metadata, zarr_format=zarr_format)
-
-    _write_segmentation_shape(tracks_path, tracks)
+    _write_legacy_segmentation_shape(tracks_path, tracks)
 
 
 def _build_geff_metadata(
@@ -182,6 +181,9 @@ def _build_geff_metadata(
     if include_features:
         extra["funtracks"] = {"features": tracks.features.dump_json()}
 
+    # Note: the segmentation shape lives in the graph metadata under "shape" and is
+    # written by tracksdata's `to_geff`, which merges `graph.metadata` into the geff
+    # metadata extras even when we pass our own GeffMetadata. Nothing to do here.
     metadata = GeffMetadata(
         geff_version=geff_spec.__version__,
         directed=True,
@@ -194,21 +196,18 @@ def _build_geff_metadata(
     return graph, metadata
 
 
-def _write_segmentation_shape(geff_path: Path, tracks: Tracks) -> None:
-    """Write segmentation_shape as an extra zarr attribute when masks are present.
+def _write_legacy_segmentation_shape(geff_path: Path, tracks: Tracks) -> None:
+    """Write the old top-level ``segmentation_shape`` zarr attr.
 
-    GeffMetadata has no segmentation_shape field, so it must be stored separately.
-    This allows import_from_geff to reconstruct the segmentation (GraphArrayView)
-    without requiring an external segmentation file.
+    DEPRECATED: dual-write for motile_tracker, remove later.
     """
-    seg_shape = tracks.graph_full.metadata.get("segmentation_shape")
+    meta = tracks.graph_full.metadata
+    seg_shape = meta.get("shape", meta.get("segmentation_shape"))
     if seg_shape is not None:
         import zarr as _zarr
 
         z = _zarr.open(str(geff_path), mode="a")
-        attrs = dict(z.attrs)
-        attrs["segmentation_shape"] = list(seg_shape)
-        z.attrs.update(attrs)
+        z.attrs.update({"segmentation_shape": list(seg_shape)})
 
 
 def split_position_attr(tracks: Tracks) -> tuple[td.graph.GraphView, list[str] | None]:

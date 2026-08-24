@@ -439,7 +439,9 @@ def add_masks_and_bboxes_to_graph(
             graph.nodes[label]["mask"] = mask
             graph.nodes[label]["bbox"] = mask.bbox
 
-    graph._update_metadata(segmentation_shape=segmentation.shape)
+    graph.metadata["shape"] = segmentation.shape
+    # DEPRECATED: dual-write for motile_tracker, remove later
+    graph.metadata["segmentation_shape"] = segmentation.shape
 
     return graph
 
