@@ -16,7 +16,7 @@ class TestUserSetDivision:
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
 
         action = UserSetDivision(tracks, order)
-        assert action.mother == 1
+        assert action.parent == 1
         assert action.breaking
 
         assert not tracks.graph_solution.has_edge(1, 2)
@@ -24,7 +24,7 @@ class TestUserSetDivision:
         assert tracks.successors(1) == []
         assert tracks.predecessors(2) == []
         assert tracks.predecessors(3) == []
-        # the daughters became separate lineages
+        # the children became separate lineages
         assert tracks.get_lineage_id(2) != tracks.get_lineage_id(1)
         assert tracks.get_lineage_id(3) != tracks.get_lineage_id(1)
 
@@ -41,7 +41,7 @@ class TestUserSetDivision:
         old_track_id_2 = tracks.get_track_id(2)
         with pytest.warns(UserWarning, match="Removing conflicting edge"):
             action = UserSetDivision(tracks, (5, 2, 6))
-        assert action.mother == 2
+        assert action.parent == 2
         assert not action.breaking
 
         assert tracks.graph_solution.has_edge(2, 5)
@@ -50,7 +50,7 @@ class TestUserSetDivision:
         assert not tracks.graph_solution.has_edge(4, 5)
         assert tracks.get_lineage_id(5) == tracks.get_lineage_id(2)
         assert tracks.get_lineage_id(6) == tracks.get_lineage_id(2)
-        # both daughters get their own tracklet
+        # both children get their own tracklet
         assert tracks.get_track_id(5) != old_track_id_2
         assert tracks.get_track_id(6) != old_track_id_2
         assert tracks.get_track_id(5) != tracks.get_track_id(6)
@@ -67,14 +67,14 @@ class TestUserSetDivision:
 
         old_track_id_4 = tracks.get_track_id(4)
         action = UserSetDivision(tracks, (4, 5, 6))
-        assert action.mother == 4
+        assert action.parent == 4
         assert not action.breaking
 
         assert tracks.graph_solution.has_edge(4, 5)
         assert tracks.graph_solution.has_edge(4, 6)
         assert tracks.get_lineage_id(5) == tracks.get_lineage_id(4)
         assert tracks.get_lineage_id(6) == tracks.get_lineage_id(4)
-        # node 5 shared the mother's tracklet before, now both daughters get new ones
+        # node 5 shared the parent's tracklet before, now both children get new ones
         assert tracks.get_track_id(5) != old_track_id_4
         assert tracks.get_track_id(6) != old_track_id_4
         assert tracks.get_track_id(5) != tracks.get_track_id(6)
@@ -97,7 +97,7 @@ class TestUserSetDivision:
         assert not tracks.graph_solution.has_edge(4, 6)
 
     def test_make_division_removes_third_child(self, get_tracks, ndim, with_seg):
-        """A mother that already has two children loses the non-selected one."""
+        """A parent that already has two children loses the non-selected one."""
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
 
         # Node 1 (t=0) has children 2 and 3 (t=1); make it divide into 3 and 6 (t=4)
@@ -134,14 +134,14 @@ class TestUserSetDivision:
         with pytest.raises(InvalidActionError, match="exactly 3 distinct nodes"):
             UserSetDivision(tracks, (1, 2, 2))
 
-    def test_no_unique_mother(self, get_tracks, ndim, with_seg):
+    def test_no_unique_parent(self, get_tracks, ndim, with_seg):
         """Nodes 2 and 3 are both at t=1, so there is no single earliest node."""
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
 
         with pytest.raises(InvalidActionError, match="exactly one node to be earlier"):
             UserSetDivision(tracks, (2, 3, 5))
 
-    def test_daughter_between_mother_and_other_daughter(self, get_tracks, ndim, with_seg):
+    def test_daughter_between_parent_and_other_daughter(self, get_tracks, ndim, with_seg):
         """A chain 3 -> 4 -> 5 becomes a division of 3 into 4 and 5."""
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
 
@@ -155,7 +155,7 @@ class TestUserSetDivision:
         assert tracks.get_lineage_id(5) == tracks.get_lineage_id(3)
 
     def test_break_only_when_both_edges_exist(self, get_tracks, ndim, with_seg):
-        """A mother connected to only one daughter completes the division."""
+        """A parent connected to only one child completes the division."""
         tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
 
         # 1 -> 2 exists, 1 -> 6 does not
