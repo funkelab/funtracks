@@ -14,7 +14,7 @@ repos:
       - id: check-yaml # checks for correct yaml syntax for github actions ex.
         args: [--unsafe]
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.4
+    rev: v0.16.5
     hooks:
       - id: ruff
         args: [--fix]
@@ -25,6 +25,6 @@ repos:
       - id: mypy
 
   - repo: https://github.com/adhtruong/mirrors-typos
-    rev: v1.49.0
+    rev: v1.50.0
     hooks:
       - id: typos
