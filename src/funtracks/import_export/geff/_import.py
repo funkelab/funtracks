@@ -282,6 +282,7 @@ class GeffTracksBuilder(TracksBuilder):
         self,
         node_name_map: dict[str, str | list[str]] | None = None,
         database: str | None = None,
+        backend: str = "memory",
     ) -> td.graph.BaseGraph:
         """Construct graph and prepare embedded segmentation data.
 
@@ -294,7 +295,7 @@ class GeffTracksBuilder(TracksBuilder):
         the segmentation and create the
         :class:`~funtracks.annotators.RegionpropsAnnotator` naturally.
         """
-        graph = super().construct_graph(node_name_map, database=database)
+        graph = super().construct_graph(node_name_map, database=database, backend=backend)
 
         mask_key = td.DEFAULT_ATTR_KEYS.MASK
         bbox_key = td.DEFAULT_ATTR_KEYS.BBOX
@@ -362,6 +363,7 @@ def import_from_geff(
     scale: list[float] | None = None,
     edge_name_map: dict[str, str | list[str]] | None = None,
     database: str | None = None,
+    backend: str = "memory",
 ) -> Tracks:
     """Import tracks from GEFF format.
 
@@ -380,6 +382,7 @@ def import_from_geff(
             edge property names. Example: {"iou": "overlap"}
         database: Optional path to a SQLite database file for backing storage.
             If None (default), an in-memory/temp graph is used.
+        backend: Graph backend, "memory" or "sql". Defaults to "memory".
 
     Returns:
         Tracks object
@@ -423,4 +426,5 @@ def import_from_geff(
         scale=scale,
         node_name_map=builder.node_name_map,
         database=database,
+        backend=backend,
     )

@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+import tracksdata as td
 
 from funtracks.candidate_graph import (
     compute_graph_from_points_list,
@@ -7,7 +8,7 @@ from funtracks.candidate_graph import (
 )
 
 
-def test_graph_from_segmentation_2d(get_tracks):
+def test_graph_from_segmentation_2d(get_tracks, backend):
     tracks = get_tracks(ndim=3, with_seg=True)
     segmentation_2d = np.asarray(tracks.segmentation)
 
@@ -15,7 +16,12 @@ def test_graph_from_segmentation_2d(get_tracks):
         segmentation=segmentation_2d,
         max_edge_distance=100,
         iou=True,
+        backend=backend,
     )
+
+    # graph is built on the requested backend
+    expected_cls = td.graph.SQLGraph if backend == "sql" else td.graph.IndexedRXGraph
+    assert isinstance(cand_graph, expected_cls)
 
     # Same node IDs as the segmentation labels
     assert set(cand_graph.node_ids()) == set(tracks.graph_solution.node_ids())
@@ -53,6 +59,7 @@ def test_graph_from_segmentation_2d(get_tracks):
     cand_graph = compute_graph_from_seg(
         segmentation=segmentation_2d,
         max_edge_distance=15,
+        backend=backend,
     )
     assert set(cand_graph.node_ids()) == set(tracks.graph_solution.node_ids())
     assert sorted(cand_graph.edge_list()) == [[1, 3]]
@@ -173,7 +180,7 @@ def test_graph_from_segmentation_t_start_zero_matches_default(get_tracks):
     )
 
 
-def test_graph_from_points_list():
+def test_graph_from_points_list(backend):
     points_list = np.array(
         [
             # t, z, y, x
@@ -184,7 +191,11 @@ def test_graph_from_points_list():
             [2, 1, 1, 1],
         ]
     )
-    cand_graph = compute_graph_from_points_list(points_list, max_edge_distance=3)
+    cand_graph = compute_graph_from_points_list(
+        points_list, max_edge_distance=3, backend=backend
+    )
+    expected_cls = td.graph.SQLGraph if backend == "sql" else td.graph.IndexedRXGraph
+    assert isinstance(cand_graph, expected_cls)
     assert cand_graph.num_edges() == 3
     assert len(list(cand_graph.predecessors(3))) == 0
 
