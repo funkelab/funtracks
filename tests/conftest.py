@@ -185,6 +185,11 @@ def _make_graph(
         node_attributes.append(td.DEFAULT_ATTR_KEYS.BBOX)
         node_default_values.append(0.0)
 
+    # Use an in-memory SQLite DB for tests: a per-test .db file is very slow on
+    # Windows CI (file create/fsync/delete), and tests don't need on-disk persistence.
+    if backend == "sql":
+        database = ":memory:"
+
     graph = create_empty_graph(
         node_attributes=node_attributes,
         node_default_values=node_default_values,
@@ -452,7 +457,7 @@ def get_tracks(get_graph) -> Callable[..., "Tracks"]:
 
 @pytest.fixture
 def graph_2d_list(tmp_path, backend) -> td.graph.BaseGraph:
-    db_path = str(tmp_path / "graph_2d_list.db")
+    db_path = ":memory:" if backend == "sql" else str(tmp_path / "graph_2d_list.db")
     graph = create_empty_graph(database=db_path, backend=backend)
 
     nodes = [
