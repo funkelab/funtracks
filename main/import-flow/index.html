@@ -3726,7 +3726,7 @@ tracks = builder.build("data.csv")</p>
     <span class="n">name_map</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>  <span class="c1"># Auto-infer column mappings</span>
     <span class="n">segmentation_path</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">"seg.tif"</span><span class="p">),</span>
     <span class="n">scale</span><span class="o">=</span><span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span>
-    <span class="n">node_features</span><span class="o">=</span><span class="p">{</span><span class="s2">"area"</span><span class="p">:</span> <span class="kc">True</span><span class="p">}</span>
+    <span class="n">node_features</span><span class="o">=</span><span class="p">{</span><span class="s2">"area"</span><span class="p">:</span> <span class="kc">True</span><span class="p">},</span>
 <span class="p">)</span>
 </code></pre></div></p>
 <p><strong>CSV/DataFrame Import</strong>:
@@ -3737,14 +3737,14 @@ tracks = builder.build("data.csv")</p>
 <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s2">"tracks.csv"</span><span class="p">)</span>
 
 <span class="c1"># Load segmentation array</span>
-<span class="n">seg</span> <span class="o">=</span> <span class="o">...</span> <span class="c1"># Load your segmentation array (e.g., from tiff, zarr)</span>
+<span class="n">seg</span> <span class="o">=</span> <span class="o">...</span>  <span class="c1"># Load your segmentation array (e.g., from tiff, zarr)</span>
 
 <span class="c1"># Import tracks</span>
 <span class="n">tracks</span> <span class="o">=</span> <span class="n">tracks_from_df</span><span class="p">(</span>
     <span class="n">df</span><span class="o">=</span><span class="n">df</span><span class="p">,</span>
     <span class="n">segmentation</span><span class="o">=</span><span class="n">seg</span><span class="p">,</span>  <span class="c1"># Pre-loaded segmentation array</span>
     <span class="n">scale</span><span class="o">=</span><span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span>
-    <span class="n">features</span><span class="o">=</span><span class="p">{</span><span class="s2">"Area"</span><span class="p">:</span> <span class="s2">"area"</span><span class="p">}</span>  <span class="c1"># Load area from 'area' column</span>
+    <span class="n">features</span><span class="o">=</span><span class="p">{</span><span class="s2">"Area"</span><span class="p">:</span> <span class="s2">"area"</span><span class="p">},</span>  <span class="c1"># Load area from 'area' column</span>
 <span class="p">)</span>
 </code></pre></div></p>
 <h3 id="advanced-using-builder-pattern-directly">Advanced: Using Builder Pattern Directly</h3>
@@ -3763,7 +3763,7 @@ tracks = builder.build("data.csv")</p>
     <span class="n">source_path</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">"data.zarr"</span><span class="p">),</span>
     <span class="n">segmentation_path</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">"seg.tif"</span><span class="p">),</span>
     <span class="n">scale</span><span class="o">=</span><span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span>
-    <span class="n">node_features</span><span class="o">=</span><span class="p">{</span><span class="s2">"area"</span><span class="p">:</span> <span class="kc">True</span><span class="p">}</span>
+    <span class="n">node_features</span><span class="o">=</span><span class="p">{</span><span class="s2">"area"</span><span class="p">:</span> <span class="kc">True</span><span class="p">},</span>
 <span class="p">)</span>
 </code></pre></div></p>
 <p><strong>CSV Builder</strong>:
@@ -3776,10 +3776,7 @@ tracks = builder.build("data.csv")</p>
 <span class="nb">print</span><span class="p">(</span><span class="n">builder</span><span class="o">.</span><span class="n">name_map</span><span class="p">)</span>
 <span class="n">builder</span><span class="o">.</span><span class="n">name_map</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"frame_number"</span>
 
-<span class="n">tracks</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">build</span><span class="p">(</span>
-    <span class="n">source_path</span><span class="o">=</span><span class="s2">"data.csv"</span><span class="p">,</span>
-    <span class="n">segmentation_path</span><span class="o">=</span><span class="s2">"seg.tif"</span>
-<span class="p">)</span>
+<span class="n">tracks</span> <span class="o">=</span> <span class="n">builder</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">source_path</span><span class="o">=</span><span class="s2">"data.csv"</span><span class="p">,</span> <span class="n">segmentation_path</span><span class="o">=</span><span class="s2">"seg.tif"</span><span class="p">)</span>
 </code></pre></div></p>
 
 
