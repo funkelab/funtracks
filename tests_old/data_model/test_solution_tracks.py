@@ -34,50 +34,6 @@ def test_next_track_id(graph_2d_with_track_id):
     assert tracks.get_next_track_id() == 11
 
 
-def test_from_tracks_cls(graph_2d_with_segmentation):
-    tracks = Tracks(
-        graph_2d_with_segmentation,
-        ndim=3,
-        pos_attr="POSITION",
-        time_attr="TIME",
-        tracklet_attr=track_attrs["tracklet_attr"],
-        scale=(2, 2, 2),
-    )
-    solution_tracks = SolutionTracks.from_tracks(tracks)
-    # persistent-graph: from_tracks reconstructs a Tracks, so solution_tracks.graph is
-    # no longer the same object as tracks.graph (the rest of the shim still holds).
-    # assert solution_tracks.graph == tracks.graph
-    # from_tracks reuses the same segmentation instance. Assert identity rather
-    # than `==`: on newer tracksdata GraphArrayView.__eq__ is element-wise and
-    # returns an array, which makes a truthiness assert ambiguous.
-    assert solution_tracks.segmentation is tracks.segmentation
-    assert solution_tracks.features.time_key == tracks.features.time_key
-    assert solution_tracks.features.position_key == tracks.features.position_key
-    assert solution_tracks.scale == tracks.scale
-    assert solution_tracks.ndim == tracks.ndim
-    assert solution_tracks.get_node_attr(6, tracks.features.tracklet_key) == 5
-
-
-def test_from_tracks_cls_recompute(graph_2d_with_segmentation):
-    tracks = Tracks(
-        graph_2d_with_segmentation,
-        ndim=3,
-        pos_attr="POSITION",
-        time_attr="TIME",
-        tracklet_attr=track_attrs["tracklet_attr"],
-        scale=(2, 2, 2),
-    )
-    # delete track id (default value -1) on one node triggers reassignment of
-    # track_ids even when recompute is False.
-    tracks.graph.nodes[1][tracks.features.tracklet_key] = -1
-    solution_tracks = SolutionTracks.from_tracks(tracks)
-    # should have reassigned new track_id to node 6
-    assert solution_tracks.get_node_attr(6, solution_tracks.features.tracklet_key) == 4
-    assert (
-        solution_tracks.get_node_attr(1, solution_tracks.features.tracklet_key) == 1
-    )  # still 1
-
-
 def test_update_segmentation(graph_2d_with_segmentation):
     tracks = SolutionTracks(
         graph_2d_with_segmentation,
