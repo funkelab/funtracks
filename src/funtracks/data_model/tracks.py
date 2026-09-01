@@ -52,6 +52,13 @@ class Tracks:
     The graph nodes represent detections and must have a time attribute and
     position attribute. Edges in the graph represent links across time.
 
+    Coordinate convention: node positions (and segmentation masks/bounding boxes)
+    are stored in pixel coordinates. ``scale`` holds the size of one pixel per
+    dimension, and is what converts those coordinates to world units. Derived
+    measurements that are physically meaningful (area/volume, perimeter, ellipsoid
+    axes) are computed with the scale applied and are therefore already in world
+    units.
+
     Attributes:
         graph_full (td.graph.BaseGraph): The full graph (first-class): every node/edge
             ever known, including soft-deleted (solution=False) candidates. Nodes
@@ -60,7 +67,8 @@ class Tracks:
             graph_full; the user-visible tracking solution.
         features (FeatureDict): Dictionary of features tracked on graph nodes/edges.
         annotators (AnnotatorRegistry): List of annotators that compute features.
-        scale (list[float] | None): How much to scale each dimension by, including time.
+        scale (list[float] | None): The size of one pixel in each dimension,
+            including time. Converts the stored pixel coordinates to world units.
         ndim (int): Number of dimensions (3 for 2D+time, 4 for 3D+time).
     """
 
@@ -219,6 +227,48 @@ class Tracks:
         # key and a registered TrackAnnotator, with tracklet_id/lineage_id registered
         # and computed. A provided FeatureDict that omitted them is completed here.
         self._ensure_track_features()
+
+    def update_scale(self, scale: list[float] | None) -> None:
+        """Set a new voxel size, recompute the features derived from it, and refresh.
+
+        Recompute regionprops features that use the scale information.
+
+        Args:
+            scale (list[float] | None): The size of one pixel in each dimension,
+                including time. None means all dimensions are unscaled.
+
+        Raises:
+            ValueError: If the scale does not hold exactly one value per dimension.
+        """
+        if scale is not None:
+            if len(scale) != self.ndim:
+                raise ValueError(
+                    f"Scale {scale} must have one value per dimension ({self.ndim})"
+                )
+            scale = [float(s) for s in scale]
+
+        if scale == self.scale:
+            return
+
+        # Update scale dependent features.
+        keys = [
+            key
+            for key, (feature, active) in self.annotators.all_features.items()
+            if active and feature.get("scale_dependent", False)
+        ]
+
+        previous = self.scale
+        self.scale = scale
+        try:
+            if keys:
+                self.annotators.compute(keys)
+        except Exception:
+            # Put the old scale back in case of an error (e.g. anisotropic xy scale while
+            # features like perimeter require isotropic xy scaling).
+            self.scale = previous
+            raise
+
+        self.refresh.emit()
 
     def _get_feature_set(
         self,

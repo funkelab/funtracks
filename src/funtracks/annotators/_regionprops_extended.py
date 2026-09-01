@@ -40,6 +40,16 @@ class ExtendedRegionProperties(RegionProperties):
         return raw
 
     @property
+    def centroid_pixel(self):
+        """Global centroid in pixel coordinates, ignoring the spacing."""
+        local = np.array(
+            [idx.mean() for idx in np.nonzero(self._label_image == self.label)]
+        )
+        if self._bbox_min is not None:
+            local = local + self._bbox_min
+        return tuple(float(v) for v in local)
+
+    @property
     def axes(self):
         """
         Calculate the three axes radii of the fitted ellipsoid.
@@ -228,7 +238,7 @@ def regionprops_extended(
 
     region = mask.regionprops(spacing=spacing)
 
-    bbox_min = np.array(mask.bbox[: mask._mask.ndim]) if spacing is not None else None
+    bbox_min = np.array(mask.bbox[: mask._mask.ndim])
 
     extended_region = ExtendedRegionProperties(
         slice=region.slice,

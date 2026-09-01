@@ -651,7 +651,7 @@ class TracksBuilder(ABC):
         # sample_node = next(iter(graph.node_ids()))
         has_position = "pos" in graph.node_attr_keys()
         if has_position:
-            validate_graph_seg_match(graph, seg_array, scale, self.axis_names)
+            validate_graph_seg_match(graph, seg_array, self.axis_names)
 
         # Check if relabeling is needed (seg_id != node_id)
         node_props = self.in_memory_geff["node_props"]
@@ -746,6 +746,15 @@ class TracksBuilder(ABC):
         if static_features:
             tracks.features.update(static_features)
 
+    def _resolve_import_scale(self, scale: list[float] | None) -> list[float] | None:
+        """Return the scale to use for this import.
+
+        By default the caller-provided scale is used as-is (e.g. the scale a user
+        entered in a scale widget for a CSV import). Format-specific builders can
+        override this to source the scale elsewhere.
+        """
+        return scale
+
     def build(
         self,
         source: Path | pd.DataFrame,
@@ -812,6 +821,13 @@ class TracksBuilder(ABC):
         self.load_source(source, self.node_name_map)
         if self.in_memory_geff is None:
             raise ValueError("load_source() must populate self.in_memory_geff")
+
+        # Resolve the scale to use for this import. By default the caller-provided
+        # scale is used (e.g. from a scale widget); format-specific builders may
+        # override this to read a scale out of the source (the GEFF builder from the
+        # axes metadata). Runs after load_source so those builders can use anything the
+        # load turned up.
+        scale = self._resolve_import_scale(scale)
 
         # 2. Combine multi-value feature columns
         self._combine_multi_value_props(

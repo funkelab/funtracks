@@ -17,19 +17,20 @@ def compute_graph_from_seg(
     t_start: int = 0,
 ) -> td.graph.BaseGraph:
     """Construct a candidate graph from a segmentation array. Nodes are placed at the
-    centroid of each segmentation and edges are added for all nodes in adjacent frames
-    within max_edge_distance.
+    centroid of each segmentation (in pixel coordinates) and edges are added for all
+    nodes in adjacent frames within max_edge_distance.
 
     Args:
         segmentation (np.ndarray): A numpy array with integer labels and dimensions
             (t, [z], y, x).
-        max_edge_distance (float): Maximum distance that objects can travel between
-            frames. All nodes with centroids within this distance in adjacent frames
-            will by connected with a candidate edge.
+        max_edge_distance (float): Maximum distance in world units that objects can
+            travel between frames. All nodes with centroids within this distance in
+            adjacent frames will by connected with a candidate edge.
         iou (bool, optional): Whether to include IOU on the candidate graph.
             Defaults to False.
         scale (list[float] | None, optional): The scale of the segmentation data.
-            Will be used to rescale the point locations and attribute computations.
+            Node positions stay in pixel coordinates; the scale is used for
+            measurements in world units (area) and for the distance computations.
             Defaults to None, which implies the data is isotropic.
         t_start (int, optional): The time value to assign to the first frame of the
             segmentation. Frame i will get t = t_start + i. Useful when the
@@ -59,6 +60,7 @@ def compute_graph_from_seg(
         max_edge_distance=max_edge_distance,
         node_frame_dict=node_frame_dict,
         iou_dict=iou_dict,
+        scale=scale,
     )
 
     logger.info("Candidate edges: %d", cand_graph.num_edges())
@@ -80,25 +82,27 @@ def compute_graph_from_points_list(
 
     Args:
         points_list (np.ndarray): An NxD numpy array with N points and D
-            (3 or 4) dimensions. Dimensions should be in order  (t, [z], y, x).
-        max_edge_distance (float): Maximum distance that objects can travel between
-            frames. All nodes with centroids within this distance in adjacent frames
-            will by connected with a candidate edge.
-        scale (list[float] | None, optional): Amount to scale the points in each
-            dimension. Only needed if the provided points are in "voxel" coordinates
-            instead of world coordinates. Defaults to None, which implies the data is
-            isotropic.
+            (3 or 4) dimensions, in pixel coordinates. Dimensions should be in
+            order (t, [z], y, x).
+        max_edge_distance (float): Maximum distance in world units that objects can
+            travel between frames. All nodes with centroids within this distance in
+            adjacent frames will by connected with a candidate edge.
+        scale (list[float] | None, optional): The scale of the data in each dimension
+            (including time). The points are stored unchanged (in pixel coordinates);
+            the scale is only used to measure distances in world units. Defaults to
+            None, which implies the data is isotropic.
 
     Returns:
         td.graph.BaseGraph: A candidate graph that can be passed to the motile solver.
     """
     # add nodes
-    cand_graph, node_frame_dict = nodes_from_points_list(points_list, scale=scale)
+    cand_graph, node_frame_dict = nodes_from_points_list(points_list)
     logger.info("Candidate nodes: %d", cand_graph.num_nodes())
     # add edges
     add_cand_edges(
         cand_graph,
         max_edge_distance=max_edge_distance,
         node_frame_dict=node_frame_dict,
+        scale=scale,
     )
     return cand_graph

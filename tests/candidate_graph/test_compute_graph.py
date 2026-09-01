@@ -192,11 +192,13 @@ def test_graph_from_points_list():
     assert cand_graph.num_edges() == 3
     assert len(list(cand_graph.predecessors(3))) == 0
 
-    # test scale
+    # test scale: distances are measured in world units, so stretching x by 5
+    # pushes every candidate beyond max_edge_distance. The stored positions stay
+    # in pixel coordinates.
     cand_graph = compute_graph_from_points_list(
         points_list, max_edge_distance=3, scale=[1, 1, 1, 5]
     )
     assert cand_graph.num_edges() == 0
     assert len(list(cand_graph.predecessors(3))) == 0
-    assert np.array(cand_graph.nodes[0]["pos"]) == pytest.approx([1, 1, 5])
+    assert np.array(cand_graph.nodes[0]["pos"]) == pytest.approx([1, 1, 1])
     assert cand_graph.nodes[0]["t"] == 0
