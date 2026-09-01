@@ -4,9 +4,11 @@ import threading
 
 import numpy as np
 import pytest
+import tracksdata as td
 
 from funtracks.utils.tracksdata_utils import (
     create_empty_graph,
+    create_empty_graphview_graph,
     pixels_to_td_mask,
     td_mask_to_pixels,
 )
@@ -189,3 +191,12 @@ def test_create_empty_graph_with_solution_attr():
     )
 
     assert graph is not None
+
+
+def test_create_empty_graphview_graph_warns():
+    """create_empty_graphview_graph is a deprecated alias for create_empty_graph,
+    kept for downstream code (e.g. motile_tracker) that still expects a view back."""
+    with pytest.warns(DeprecationWarning, match="create_empty_graphview_graph"):
+        view = create_empty_graphview_graph(node_attributes=["pos"], ndim=3)
+
+    assert isinstance(view, td.graph.GraphView)
