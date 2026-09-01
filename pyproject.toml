@@ -83,7 +83,7 @@ line-length = 90
 target-version = "py310"
 fix = true
 src = ["src"]
-extend-exclude = [".github", "tests_old"]  # frozen old-API suite: don't lint/format
+extend-exclude = [".github"]
 
 [tool.ruff.lint]
 select = [
