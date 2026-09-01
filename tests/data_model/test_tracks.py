@@ -106,6 +106,15 @@ def test_nodes_edges(graph_2d_with_segmentation):
     }
 
 
+def test_deprecated_graph_property_warns(graph_2d_with_segmentation):
+    """Tracks.graph is a deprecated alias for graph_solution, kept for downstream
+    code (e.g. motile_tracker) written against funtracks v2."""
+    tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
+    with pytest.warns(DeprecationWarning, match="Tracks.graph is deprecated"):
+        graph = tracks.graph
+    assert graph is tracks.graph_solution
+
+
 def test_predecessors_successors(graph_2d_with_segmentation):
     tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
     assert tracks.predecessors(2) == [1]

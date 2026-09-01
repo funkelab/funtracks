@@ -14,6 +14,24 @@ from funtracks.utils.tracksdata_utils import (
 track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
 
 
+def test_solution_tracks_construction_warns(graph_2d_with_track_id):
+    """SolutionTracks is a deprecated alias for Tracks, kept for downstream code
+    (e.g. motile_tracker) that still constructs one directly."""
+    with pytest.warns(DeprecationWarning, match="SolutionTracks is deprecated"):
+        SolutionTracks(graph_2d_with_track_id, ndim=3, **track_attrs)
+
+
+def test_tracks_accepts_graphview(graph_2d_with_track_id):
+    """v2 callers pass a GraphView; Tracks unwraps it to the root BaseGraph and
+    warns, rather than rejecting the old calling convention. (SolutionTracks
+    unwraps GraphView itself before delegating to Tracks, so this behavior is
+    only observable by calling Tracks directly.)"""
+    view = graph_2d_with_track_id.filter().subgraph()
+    with pytest.warns(DeprecationWarning, match="Passing a GraphView"):
+        tracks = Tracks(view, ndim=3, **track_attrs)
+    assert tracks.graph_full is graph_2d_with_track_id
+
+
 def test_recompute_track_ids(graph_2d_with_track_id):
     tracks = Tracks(
         graph_2d_with_track_id,
