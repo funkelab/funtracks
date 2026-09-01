@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788275082933,
+  "lastUpdate": 1788286947667,
   "repoUrl": "https://github.com/funkelab/funtracks",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -2288,6 +2288,79 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0018876223589168112",
             "extra": "mean: 94.64973333334115 msec\nrounds: 3"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "66853113+pre-commit-ci[bot]@users.noreply.github.com",
+            "name": "pre-commit-ci[bot]",
+            "username": "pre-commit-ci[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2e4ebcc179b08d56acd27ca9c071d8bce4f71605",
+          "message": "[pre-commit.ci] pre-commit autoupdate (#279)\n\n* [pre-commit.ci] pre-commit autoupdate\n\nupdates:\n- [github.com/astral-sh/ruff-pre-commit: v0.16.4 → v0.16.5](https://github.com/astral-sh/ruff-pre-commit/compare/v0.16.4...v0.16.5)\n- [github.com/adhtruong/mirrors-typos: v1.49.0 → v1.50.0](https://github.com/adhtruong/mirrors-typos/compare/v1.49.0...v1.50.0)\n\n* [pre-commit.ci] auto fixes from pre-commit.com hooks\n\nfor more information, see https://pre-commit.ci\n\n---------\n\nCo-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>\nCo-authored-by: Teun Huijben <45037215+TeunHuijben@users.noreply.github.com>",
+          "timestamp": "2026-09-01T11:21:37-07:00",
+          "tree_id": "ccab4a18827723f2990a0383812cd3c4366b0d40",
+          "url": "https://github.com/funkelab/funtracks/commit/2e4ebcc179b08d56acd27ca9c071d8bce4f71605"
+        },
+        "date": 1788286945439,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmarks/bench_actions.py::test_update_node_attrs_single",
+            "value": 291.0212099166163,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00023594288273128604",
+            "extra": "mean: 3.4361756666688357 msec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_actions.py::test_update_node_attrs_bulk",
+            "value": 305.0281759610649,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00007152216663415416",
+            "extra": "mean: 3.2783856666659026 msec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_actions.py::test_add_delete_edges",
+            "value": 8.374056953831378,
+            "unit": "iter/sec",
+            "range": "stddev: 0.001283385080763546",
+            "extra": "mean: 119.41643166666911 msec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_actions.py::test_update_segmentation",
+            "value": 20.721265248192314,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0009474078123255772",
+            "extra": "mean: 48.25960133333259 msec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_actions.py::test_delete_nodes",
+            "value": 3.058885516107282,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0033691497496740603",
+            "extra": "mean: 326.9164520000061 msec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_compute_graph_from_seg",
+            "value": 0.3663367422417082,
+            "unit": "iter/sec",
+            "range": "stddev: 0.027964655349612105",
+            "extra": "mean: 2.729728920666664 sec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_graph_to_solution",
+            "value": 9.656325672097818,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0026249465759127432",
+            "extra": "mean: 103.55905900000077 msec\nrounds: 3"
           }
         ]
       }
