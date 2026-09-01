@@ -1,8 +1,5 @@
 ci:
   autofix_prs: false
-# tests_old/ is a frozen verbatim copy of the pre-persistent-graph suite (old
-# SolutionTracks API). Exclude it from all hooks so it is never linted/reformatted.
-exclude: ^tests_old/
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
