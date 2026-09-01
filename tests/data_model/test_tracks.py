@@ -350,3 +350,35 @@ def test_update_mask_syncs_bbox(graph_2d_with_segmentation):
 
     assert stored_mask is new_mask
     assert np.array_equal(stored_bbox, new_mask.bbox)
+
+
+def test_get_track_nodes_at_times(get_tracks):
+    """Look up the node a track has at each of the given time points.
+
+    In the fixture graph, track 3 runs over nodes 3 (t=1), 4 (t=2) and 5 (t=4), so it
+    skips t=3. Track 1 holds only node 1, at t=0.
+    """
+
+    tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
+
+    assert tracks.get_track_nodes_at_times(3, [1, 2, 4]) == {1: 3, 2: 4, 4: 5}
+
+    # time points the track does not span are simply absent
+    assert tracks.get_track_nodes_at_times(3, [1, 3]) == {1: 3}
+    assert tracks.get_track_nodes_at_times(1, [1]) == {}
+
+    # so are tracks that do not exist, and asking for nothing returns nothing
+    assert tracks.get_track_nodes_at_times(99, [0, 1]) == {}
+    assert tracks.get_track_nodes_at_times(3, []) == {}
+
+
+def test_has_track_id_at_time(get_tracks):
+    """Track 3 spans t=1, 2 and 4, but not t=0 or t=3."""
+
+    tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
+
+    assert tracks.has_track_id_at_time(3, 1)
+    assert tracks.has_track_id_at_time(3, 4)
+    assert not tracks.has_track_id_at_time(3, 0)
+    assert not tracks.has_track_id_at_time(3, 3)
+    assert not tracks.has_track_id_at_time(99, 0)

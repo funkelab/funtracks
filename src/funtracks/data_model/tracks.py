@@ -1040,6 +1040,39 @@ class Tracks:
             int(succ) if succ is not None else None,
         )
 
+    def get_track_nodes_at_times(
+        self, track_id: int, times: Iterable[int]
+    ) -> dict[int, Node]:
+        """Get the node of the given tracklet at each of the given time points.
+        This is resolved with a single query restricted to the nodes of the tracklet.
+
+        Args:
+            track_id (int): The track id to search for.
+            times (Iterable[int]): The time points to look up.
+
+        Returns:
+            dict[int, Node]: The node of the track at each requested time point that it
+            spans.
+        """
+        nodes = self.track_annotator.tracklet_id_to_nodes.get(track_id)
+        times = [int(time) for time in times]
+        if not nodes or not times:
+            return {}
+
+        time_key = self.features.time_key
+        df = self.graph_full.filter(
+            td.NodeAttr(time_key).is_in(times), node_ids=list(nodes)
+        ).node_attrs(attr_keys=[td.DEFAULT_ATTR_KEYS.NODE_ID, time_key])
+
+        return {
+            int(time): int(node)
+            for node, time in zip(
+                df[td.DEFAULT_ATTR_KEYS.NODE_ID].to_list(),
+                df[time_key].to_list(),
+                strict=True,
+            )
+        }
+
     def has_track_id_at_time(self, track_id: int, time: int) -> bool:
         """Function to check if a node with given track id exists at given time point.
 
@@ -1050,8 +1083,4 @@ class Tracks:
         Returns:
             True if a node with given track id exists at given time point.
         """
-        nodes = self.track_annotator.tracklet_id_to_nodes.get(track_id)
-        if not nodes:
-            return False
-
-        return time in [self.get_time(node) for node in nodes]
+        return int(time) in self.get_track_nodes_at_times(track_id, [time])
