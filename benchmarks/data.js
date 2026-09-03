@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788394399212,
+  "lastUpdate": 1788394437777,
   "repoUrl": "https://github.com/funkelab/funtracks",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -2434,6 +2434,79 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0007859098441497664",
             "extra": "mean: 75.32521833333305 msec\nrounds: 3"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "malinmayorc@janelia.hhmi.org",
+            "name": "Caroline Malin-Mayor",
+            "username": "cmalinmayor"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fc5fc957e734d32be1ddd5dd573f2e07bf6f1484",
+          "message": "Merge pull request #281 from funkelab/get_track_nodes_at_times\n\nadd get_track_nodes_at_times helper function to Tracks",
+          "timestamp": "2026-09-02T20:13:11-04:00",
+          "tree_id": "becf55deefe3b733d7decdea5ebd017d86e4379b",
+          "url": "https://github.com/funkelab/funtracks/commit/fc5fc957e734d32be1ddd5dd573f2e07bf6f1484"
+        },
+        "date": 1788394435689,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmarks/bench_actions.py::test_update_node_attrs_single",
+            "value": 464.5920463680172,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0002296918433946893",
+            "extra": "mean: 2.1524260000092 msec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_actions.py::test_update_node_attrs_bulk",
+            "value": 500.91960490904086,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00010891689697499074",
+            "extra": "mean: 1.996328333329226 msec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_actions.py::test_add_delete_edges",
+            "value": 9.24768774745887,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00041250797628211515",
+            "extra": "mean: 108.13513899999332 msec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_actions.py::test_update_segmentation",
+            "value": 23.767790587393947,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0009242920324665893",
+            "extra": "mean: 42.073746666649946 msec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_actions.py::test_delete_nodes",
+            "value": 3.6683892077311353,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0031375383050967817",
+            "extra": "mean: 272.59920999999093 msec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_compute_graph_from_seg",
+            "value": 0.4055222171212472,
+            "unit": "iter/sec",
+            "range": "stddev: 0.09701498072907326",
+            "extra": "mean: 2.4659561370000347 sec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_graph_to_solution",
+            "value": 8.89153187368508,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0034251079338515613",
+            "extra": "mean: 112.4665596666811 msec\nrounds: 3"
           }
         ]
       }
