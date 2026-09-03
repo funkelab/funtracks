@@ -1358,6 +1358,8 @@
       
         
       
+        
+      
     
     
     
@@ -1534,6 +1536,34 @@
     
   
     <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>user_delete_nodes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="user_set_division/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>user_set_division
   
 
     
@@ -1829,6 +1859,17 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;UserDeleteNodes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#funtracks.user_actions.UserSetDivision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;UserSetDivision
       
     </span>
   </a>
@@ -2688,6 +2729,159 @@ so that the whole group is undone in one step. Defaults to True.</p>
             </td>
             <td>
                   <code>True</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="funtracks.user_actions.UserSetDivision" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">UserSetDivision</span>
+
+
+</h2>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">UserSetDivision</span><span class="p">(</span>
+    <span class="n">tracks</span><span class="p">:</span> <span class="n">Tracks</span><span class="p">,</span>
+    <span class="n">nodes</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span>
+    <span class="n">_top_level</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="            ActionGroup (funtracks.actions._base.ActionGroup)" href="../actions/#funtracks.actions.ActionGroup">ActionGroup</a></code></p>
+
+
+
+        <p>Toggle a division between a parent node and two child nodes.</p>
+<p>Exactly three nodes must be provided, and exactly one of them must be earlier
+in time than the other two. That node is the parent, the other two are the
+children.</p>
+<p>If both division edges already exist, they are broken: the parent is left as a
+track endpoint and both children become the start of a new track. Otherwise the
+division is made: any conflicting edges (other out edges of the parent, other in
+edges of the children) are deleted first, and the missing parent -&gt; child
+edges are added.</p>
+<p>Since making and breaking a division are each other's inverse, undoing this
+action restores the previous state either way.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>tracks</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="funtracks.data_model.Tracks" href="../../../features/#funtracks.data_model.Tracks">Tracks</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The tracks to set the division on.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>nodes</code>
+            </td>
+            <td>
+                  <code><span title="tuple">tuple</span>[<span title="int">int</span>, <span title="int">int</span>, <span title="int">int</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The three nodes of the division trio, in any
+order.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>_top_level</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If True, add this action to the history and emit refresh.
+Set to False when used as a sub-action inside a compound action.
+Defaults to True.</p>
+              </div>
+            </td>
+            <td>
+                  <code>True</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="            InvalidActionError (funtracks.exceptions.InvalidActionError)" href="../exceptions/#funtracks.exceptions.InvalidActionError">InvalidActionError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If not exactly three distinct nodes are provided, or if
+there is no unique earliest node among them.</p>
+              </div>
             </td>
           </tr>
       </tbody>
