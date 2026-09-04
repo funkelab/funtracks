@@ -94,10 +94,13 @@ def test_from_tracks_cls(graph_2d_with_segmentation):
     )
     with pytest.warns(DeprecationWarning, match="SolutionTracks.from_tracks"):
         solution_tracks = SolutionTracks.from_tracks(tracks)
-    # from_tracks reuses the same segmentation instance. Assert identity rather
-    # than `==`: GraphArrayView.__eq__ is element-wise and returns an array,
-    # which makes a truthiness assert ambiguous.
-    assert solution_tracks.segmentation is tracks.segmentation
+    # from_tracks rebuilds a fresh GraphArrayView bound to its own graph_solution
+    # rather than reusing the source Tracks' instance, so the two segmentations
+    # are distinct objects with equivalent content.
+    assert solution_tracks.segmentation is not tracks.segmentation
+    np.testing.assert_array_equal(
+        np.asarray(solution_tracks.segmentation), np.asarray(tracks.segmentation)
+    )
     assert solution_tracks.features.time_key == tracks.features.time_key
     assert solution_tracks.features.position_key == tracks.features.position_key
     assert solution_tracks.scale == tracks.scale
