@@ -25,6 +25,10 @@ ROUNDS = 3
 if platform.system() == "Darwin":
     N_OPS = N_OPS * 2
     ROUNDS = ROUNDS * 2
+    # test_update_node_attrs_single/_bulk and test_delete_nodes each draw a disjoint
+    # ROUNDS*N_OPS-node batch from solution_edges (3 * ROUNDS * N_OPS total); more
+    # frames keeps that supply ahead of the doubled ROUNDS/N_OPS above.
+    NUM_FRAMES = NUM_FRAMES * 4
 
 # Fraction of a node's mask painted in the segmentation benchmark. Must stay < 1: a
 # patch that fully covers the mask makes UserUpdateSegmentation delete the node instead

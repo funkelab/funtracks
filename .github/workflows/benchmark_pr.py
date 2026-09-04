@@ -8,7 +8,6 @@ Exits with code 1 if any benchmark regresses by more than REGRESSION_THRESHOLD.
 
 import json
 import sys
-import platform
 import pandas as pd
 
 REGRESSION_THRESHOLD = 50  # percent
