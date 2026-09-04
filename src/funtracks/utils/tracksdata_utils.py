@@ -68,6 +68,25 @@ def to_polars_dtype(dtype_or_value: str | Any) -> pl.DataType:
         raise ValueError(f"Unsupported type: {type(dtype_or_value)}")
 
 
+def _new_empty_backend(
+    backend: str = "memory", database: str | None = None
+) -> td.graph.BaseGraph:
+    """Construct an empty tracksdata base graph on the requested backend.
+
+    Args:
+        backend: "memory" for an in-memory ``IndexedRXGraph``, or "sql" for a
+            SQLite-backed ``SQLGraph`` at ``database``.
+        database: SQLite path (sql backend only). A unique temp file if None.
+    """
+    if backend == "memory":
+        return td.graph.IndexedRXGraph()
+    if backend == "sql":
+        if database is None:
+            database = f"{tempfile.gettempdir()}/funtracks_{uuid.uuid4().hex[:8]}.db"
+        return td.graph.SQLGraph(drivername="sqlite", database=database, overwrite=True)
+    raise ValueError(f"Unknown backend {backend!r}; expected 'sql' or 'memory'.")
+
+
 def create_empty_graph(
     node_attributes: list[str] | None = None,
     edge_attributes: list[str] | None = None,
@@ -76,6 +95,7 @@ def create_empty_graph(
     database: str | None = None,
     position_attrs: list[str] | None = None,
     ndim: int = 3,
+    backend: str = "memory",
 ) -> td.graph.BaseGraph:
     """
     Create an empty tracksdata base graph with standard node and edge attributes.
@@ -100,6 +120,10 @@ def create_empty_graph(
     ndim : int
         Number of dimensions including time, so 2D+T dataset has ndim = 3.
         Defaults to 3 (2D+time).
+    backend : str
+        Which tracksdata backend to build: "sql" for a database-backed ``SQLGraph``
+        (SQLite at ``database``) or "memory" for an in-memory ``IndexedRXGraph``.
+        Defaults to "memory".
 
     Returns
     -------
@@ -109,12 +133,6 @@ def create_empty_graph(
     """
     if position_attrs is None:
         position_attrs = ["pos"]
-
-    # Generate unique database path if not specified
-    if database is None:
-        temp_dir = tempfile.gettempdir()
-        unique_id = uuid.uuid4().hex[:8]
-        database = f"{temp_dir}/funtracks_test_{unique_id}.db"
 
     if node_default_values is not None:
         assert len(node_default_values) == len(node_attributes or []), (
@@ -130,14 +148,8 @@ def create_empty_graph(
     else:
         edge_default_values = [0.0] * len(edge_attributes or [])
 
-    # Initialize an empty graph
-    # kwargs = {
-    #     "drivername": "sqlite",
-    #     "database": database,
-    #     "overwrite": True,
-    # }
-    # graph_td = td.graph.SQLGraph(**kwargs)
-    graph_td = td.graph.IndexedRXGraph()
+    # Initialize an empty graph on the requested backend.
+    graph_td = _new_empty_backend(backend, database)
 
     # Add standard node and edge attributes
     if "pos" in (node_attributes or []) or any(
@@ -446,28 +458,25 @@ def add_masks_and_bboxes_to_graph(
     return graph
 
 
-def td_relabel_nodes(graph, mapping: dict[int, int]) -> td.graph.IndexedRXGraph:
+def td_relabel_nodes(
+    graph, mapping: dict[int, int], backend: str | None = None
+) -> td.graph.BaseGraph:
     """Relabel nodes in a tracksdata graph according to a mapping.
 
     Args:
         graph: A tracksdata graph
         mapping: Dictionary mapping old node IDs to new node IDs
+        backend: Backend for the new graph ("memory" or "sql"). If None, matches the
+            input graph's backend so relabeling never silently changes it.
 
     Returns:
         A new tracksdata graph with relabeled nodes
     """
 
-    # For IndexedRXGraph or SQLGraph
     old_graph = graph
-
-    # database = f"{tempfile.gettempdir()}/funtracks_{uuid.uuid4().hex[:8]}.db"
-    # kwargs = {
-    #     "drivername": "sqlite",
-    #     "database": database,
-    #     "overwrite": True,
-    # }
-    # new_graph = td.graph.SQLGraph(**kwargs)
-    new_graph = td.graph.IndexedRXGraph()
+    if backend is None:
+        backend = "sql" if isinstance(graph, td.graph.SQLGraph) else "memory"
+    new_graph = _new_empty_backend(backend)
 
     # Copy attribute key registrations with defaults and dtypes
     node_schemas = graph._node_attr_schemas()
@@ -510,25 +519,21 @@ def td_relabel_nodes(graph, mapping: dict[int, int]) -> td.graph.IndexedRXGraph:
     return new_graph
 
 
-def convert_graph_nx_to_td(graph_nx: nx.DiGraph) -> td.graph.BaseGraph:
+def convert_graph_nx_to_td(
+    graph_nx: nx.DiGraph, backend: str = "memory"
+) -> td.graph.BaseGraph:
     """Convert a NetworkX DiGraph to a tracksdata graph.
 
     Args:
         graph_nx: The NetworkX DiGraph to convert.
+        backend: Backend for the new graph ("memory" or "sql").
 
     Returns:
         A tracksdata graph representing the same graph.
     """
 
-    # Initialize an empty tracksdata graph
-    # database = f"{tempfile.gettempdir()}/funtracks_{uuid.uuid4().hex[:8]}.db"
-    # kwargs = {
-    #     "drivername": "sqlite",
-    #     "database": database,
-    #     "overwrite": True,
-    # }
-    # graph_td = td.graph.SQLGraph(**kwargs)
-    graph_td = td.graph.IndexedRXGraph()
+    # Initialize an empty tracksdata graph on the requested backend
+    graph_td = _new_empty_backend(backend)
 
     # Get all nodes and edges with attributes
     all_nodes = list(graph_nx.nodes(data=True))

@@ -15,6 +15,7 @@ def compute_graph_from_seg(
     iou: bool = False,
     scale: list[float] | None = None,
     t_start: int = 0,
+    backend: str = "memory",
 ) -> td.graph.BaseGraph:
     """Construct a candidate graph from a segmentation array. Nodes are placed at the
     centroid of each segmentation and edges are added for all nodes in adjacent frames
@@ -35,13 +36,14 @@ def compute_graph_from_seg(
             segmentation. Frame i will get t = t_start + i. Useful when the
             segmentation is a slice of a larger array and nodes need absolute
             time values. Defaults to 0.
+        backend (str, optional): Graph backend, "memory" or "sql". Defaults to "memory".
 
     Returns:
         td.graph.BaseGraph: A candidate graph that can be passed to the motile solver
     """
     # add nodes (including mask and bbox in the same bulk_add_nodes call)
     cand_graph, node_frame_dict = nodes_from_segmentation(
-        segmentation, scale=scale, t_start=t_start
+        segmentation, scale=scale, t_start=t_start, backend=backend
     )
     logger.info("Candidate nodes: %d", cand_graph.num_nodes())
 
@@ -75,6 +77,7 @@ def compute_graph_from_points_list(
     points_list: np.ndarray,
     max_edge_distance: float,
     scale: list[float] | None = None,
+    backend: str = "memory",
 ) -> td.graph.BaseGraph:
     """Construct a candidate graph from a points list.
 
@@ -88,12 +91,15 @@ def compute_graph_from_points_list(
             dimension. Only needed if the provided points are in "voxel" coordinates
             instead of world coordinates. Defaults to None, which implies the data is
             isotropic.
+        backend (str, optional): Graph backend, "memory" or "sql". Defaults to "memory".
 
     Returns:
         td.graph.BaseGraph: A candidate graph that can be passed to the motile solver.
     """
     # add nodes
-    cand_graph, node_frame_dict = nodes_from_points_list(points_list, scale=scale)
+    cand_graph, node_frame_dict = nodes_from_points_list(
+        points_list, scale=scale, backend=backend
+    )
     logger.info("Candidate nodes: %d", cand_graph.num_nodes())
     # add edges
     add_cand_edges(

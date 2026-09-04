@@ -88,7 +88,15 @@ class AddNode(BasicAction):
             # are revived separately by AddEdge).
             # Values are wrapped in single-element lists because update_node_attrs
             # reads a bare list value (pos, bbox, mask) as one-value-per-node.
-            revive_attrs = {k: [v] for k, v in self.attributes.items() if k != "solution"}
+            # The time key is excluded: a soft-deleted node keeps its time in
+            # graph_full (revive never moves it in time), and the SQL backend makes
+            # time immutable (node ids are time-derived), so updating it errors.
+            time_key = self.tracks.features.time_key
+            revive_attrs = {
+                k: [v]
+                for k, v in self.attributes.items()
+                if k not in ("solution", time_key)
+            }
             revive_attrs["solution"] = [True]
             self.tracks.graph_full.update_node_attrs(
                 attrs=revive_attrs, node_ids=[self.node]

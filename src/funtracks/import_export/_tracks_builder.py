@@ -475,6 +475,7 @@ class TracksBuilder(ABC):
         self,
         node_name_map: dict[str, str | list[str]] | None = None,
         database: str | None = None,
+        backend: str = "memory",
     ) -> td.graph.BaseGraph:
         """Construct Tracksdata graph from validated InMemoryGeff data.
 
@@ -485,6 +486,7 @@ class TracksBuilder(ABC):
                 attribute dtype.
             database: Optional path to a SQLite database file for backing storage.
                 If None (default), an in-memory/temp graph is used.
+            backend: Graph backend, "memory" or "sql". Defaults to "memory".
 
         Returns:
             Tracksdata base graph with standard keys
@@ -547,6 +549,7 @@ class TracksBuilder(ABC):
             node_default_values=node_default_values,
             database=database,
             ndim=self.ndim,
+            backend=backend,
         )
 
         node_ids = [int(i) for i in self.in_memory_geff["node_ids"]]
@@ -753,6 +756,7 @@ class TracksBuilder(ABC):
         scale: list[float] | None = None,
         node_name_map: dict[str, str | list[str]] | None = None,
         database: str | None = None,
+        backend: str = "memory",
     ) -> Tracks:
         """Orchestrate the full construction process.
 
@@ -763,6 +767,7 @@ class TracksBuilder(ABC):
             node_name_map: Optional node_name_map to override self.node_name_map
             database: Optional path to a SQLite database file for backing storage.
                 If None (default), an in-memory/temp graph is used.
+            backend: Graph backend, "memory" or "sql". Defaults to "memory".
 
         Returns:
             Fully constructed Tracks object
@@ -831,7 +836,7 @@ class TracksBuilder(ABC):
         self.relabel_zero_based_node_ids(has_segmentation=segmentation is not None)
 
         # 4. Construct graph
-        graph = self.construct_graph(node_name_map, database=database)
+        graph = self.construct_graph(node_name_map, database=database, backend=backend)
 
         # 5. Handle segmentation
         segmentation_array, scale, graph = self.handle_segmentation(

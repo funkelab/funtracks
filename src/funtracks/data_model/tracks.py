@@ -843,31 +843,28 @@ class Tracks:
 
         # Perform custom graph operations when a feature is added.
         #
-        # Schema (attr-key) registration is done on graph_solution (the view), NOT on
-        # graph_full, even though annotators write the VALUES to graph_full. This relies
-        # on a tracksdata invariant: adding an attr key to a view propagates up to its
-        # root, so the column ends up on both. The reverse does NOT hold today — adding
-        # a key directly to the root is not propagated down into an existing view — so
-        # registering on graph_full would leave graph_solution without the column.
-        # If tracksdata ever makes view attr-key additions local, revisit this.
+        # Schema (attr-key) registration is done on graph_full (the root), per the
+        # accessor policy (attribute I/O → graph_full). tracksdata propagates a root
+        # attr-key addition down into its live views, so graph_solution gets the column
+        # too. Annotators write the VALUES to graph_full as well.
         ft = feature["feature_type"]
-        if "node" in ft and key not in self.graph_solution.node_attr_keys():
+        if "node" in ft and key not in self.graph_full.node_attr_keys():
             # "mask" value_type maps to pl.Object via to_polars_dtype
             dtype = to_polars_dtype(feature["value_type"])
             num_values = feature.get("num_values")
             if num_values is not None and num_values > 1:
                 dtype = pl.Array(dtype, num_values)
-            self.graph_solution.add_node_attr_key(
+            self.graph_full.add_node_attr_key(
                 key,
                 default_value=feature["default_value"],
                 dtype=dtype,
             )
-        if "edge" in ft and key not in self.graph_solution.edge_attr_keys():
+        if "edge" in ft and key not in self.graph_full.edge_attr_keys():
             dtype = to_polars_dtype(feature["value_type"])
             num_values = feature.get("num_values")
             if num_values is not None and num_values > 1:
                 dtype = pl.Array(dtype, num_values)
-            self.graph_solution.add_edge_attr_key(
+            self.graph_full.add_edge_attr_key(
                 key,
                 default_value=feature["default_value"],
                 dtype=dtype,
@@ -902,13 +899,12 @@ class Tracks:
         else:
             return
 
-        # Perform custom graph operations when a feature is deleted. Schema ops go
-        # through graph_solution (the view) and propagate to the root — same tracksdata
-        # invariant as add_feature (see the note there).
-        if "node" in feature_type and key in self.graph_solution.node_attr_keys():
-            self.graph_solution.remove_node_attr_key(key)
-        if "edge" in feature_type and key in self.graph_solution.edge_attr_keys():
-            self.graph_solution.remove_edge_attr_key(key)
+        # Schema removal goes through graph_full (the root), mirroring add_feature;
+        # tracksdata propagates the removal down into live views.
+        if "node" in feature_type and key in self.graph_full.node_attr_keys():
+            self.graph_full.remove_node_attr_key(key)
+        if "edge" in feature_type and key in self.graph_full.edge_attr_keys():
+            self.graph_full.remove_edge_attr_key(key)
 
     # ========== Track ID management (solution view) ==========
     # These operate on the solution view via the TrackAnnotator, which every Tracks
