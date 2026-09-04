@@ -568,17 +568,11 @@ class Tracks:
         For a single node use get_time() instead.
         """
         nodes = list(nodes)
-        df = self.graph_full.node_attrs(
+
+        df = self.graph_full.filter(node_ids=list(nodes)).node_attrs(
             attr_keys=[td.DEFAULT_ATTR_KEYS.NODE_ID, self.features.time_key]
         )
-        id_to_val = dict(
-            zip(
-                df[td.DEFAULT_ATTR_KEYS.NODE_ID].to_list(),
-                df[self.features.time_key].to_list(),
-                strict=True,
-            )
-        )
-        return [id_to_val[node] for node in nodes]
+        return df[self.features.time_key].to_list()
 
     def get_time(self, node: Node) -> int:
         """Get the time frame of a given node. Raises an error if the node
