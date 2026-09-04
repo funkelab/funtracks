@@ -359,3 +359,15 @@ def test_update_mask_syncs_bbox(graph_2d_with_segmentation):
 
     assert stored_mask is new_mask
     assert np.array_equal(stored_bbox, new_mask.bbox)
+
+
+def test_has_track_id_at_time(get_tracks):
+    """Track 3 spans t=1, 2 and 4, but not t=0 or t=3."""
+
+    tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
+
+    assert tracks.has_track_id_at_time(3, 1)
+    assert tracks.has_track_id_at_time(3, 4)
+    assert not tracks.has_track_id_at_time(3, 0)
+    assert not tracks.has_track_id_at_time(3, 3)
+    assert not tracks.has_track_id_at_time(99, 0)

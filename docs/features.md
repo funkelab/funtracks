@@ -338,6 +338,7 @@ tracks.disable_features(["area"])
     ```python
     from funtracks.annotators import GraphAnnotator
 
+
     class MyCustomAnnotator(GraphAnnotator):
         @classmethod
         def can_annotate(cls, tracks):
