@@ -8,11 +8,9 @@ Exits with code 1 if any benchmark regresses by more than REGRESSION_THRESHOLD.
 
 import json
 import sys
-
 import pandas as pd
 
 REGRESSION_THRESHOLD = 50  # percent
-
 
 def load_stats(path):
     with open(path) as f:
@@ -22,7 +20,7 @@ def load_stats(path):
 
     rows = []
     for d in data["benchmarks"]:
-        rows.append({"Benchmark": d["name"], "min": d["stats"]["min"]})
+        rows.append({"Benchmark": d["name"], "median": d["stats"]["median"]})
 
     return commit, pd.DataFrame(rows)
 
@@ -35,20 +33,20 @@ def make_report(old_path, new_path, out_file, header=None):
     # side (added or removed by the PR) still show up in the report.
     df = old[-1].merge(new[-1], on="Benchmark", suffixes=("_old", "_new"), how="outer")
 
-    pct_change = 100 * (df["min_new"] - df["min_old"]) / df["min_old"]
+    pct_change = 100 * (df["median_new"] - df["median_old"]) / df["median_old"]
     df["Percent Change"] = pct_change.map("{:+.2f}".format).where(
         pct_change.notna(), "n/a"
     )
 
     # Format runtimes
-    for col in ("min_old", "min_new"):
+    for col in ("median_old", "median_new"):
         df[col] = df[col].map("{:.5f}".format).where(df[col].notna(), "-")
 
     # Change column names to commit ids
     df = df.rename(
         columns={
-            "min_new": f"Min (s) HEAD {new[0]}",
-            "min_old": f"Min (s) BASE {old[0]}",
+            "median_new": f"Median (s) HEAD {new[0]}",
+            "median_old": f"Median (s) BASE {old[0]}",
         }
     )
 

@@ -6,7 +6,12 @@ import zarr
 from geff.testing.data import create_mock_geff
 
 from funtracks.data_model import Tracks
-from funtracks.import_export import export_to_geff, import_from_geff
+from funtracks.import_export import (
+    export_to_geff,
+    has_embedded_segmentation,
+    import_from_geff,
+    read_segmentation_shape,
+)
 from funtracks.import_export.geff._import import GeffTracksBuilder, import_graph_from_geff
 from funtracks.utils.tracksdata_utils import create_empty_graph
 
@@ -718,6 +723,48 @@ def test_import_from_geff_reads_legacy_segmentation_shape_attr(tmp_path):
     tracks = import_from_geff(tracks_path)
     assert tracks.segmentation is not None
     assert tracks.segmentation.shape == (5, 100, 100)
+
+    # The public helpers should agree with import_from_geff's own reconstruction,
+    # reading straight from the legacy top-level zarr attr.
+    assert read_segmentation_shape(tracks_path) == (5, 100, 100)
+    assert has_embedded_segmentation(tracks_path)
+
+
+def test_read_segmentation_shape_and_has_embedded_segmentation(get_tracks, tmp_path):
+    """read_segmentation_shape/geff_has_embedded_segmentation should reflect the
+    current-format shape written by export_to_geff, and report no shape/no
+    embedded segmentation for a GEFF exported without one.
+    """
+    tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
+
+    with_seg_dir = tmp_path / "with_seg"
+    with_seg_dir.mkdir()
+    export_to_geff(tracks, with_seg_dir)
+    geff_path = with_seg_dir / "tracks.geff"
+
+    assert read_segmentation_shape(geff_path) == tracks.segmentation.shape
+    assert has_embedded_segmentation(geff_path)
+
+    # save_segmentation=False still writes the shape (from graph metadata) and
+    # the mask/bbox node props, so the segmentation stays reconstructable.
+    no_seg_file_dir = tmp_path / "no_seg_file"
+    no_seg_file_dir.mkdir()
+    export_to_geff(tracks, no_seg_file_dir, save_segmentation=False)
+    no_seg_file_geff_path = no_seg_file_dir / "tracks.geff"
+
+    assert read_segmentation_shape(no_seg_file_geff_path) == tracks.segmentation.shape
+    assert has_embedded_segmentation(no_seg_file_geff_path)
+
+    # A Tracks with no segmentation at all has no shape and no mask/bbox props,
+    # so there is nothing to reconstruct.
+    tracks_without_seg = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
+    no_seg_dir = tmp_path / "no_seg"
+    no_seg_dir.mkdir()
+    export_to_geff(tracks_without_seg, no_seg_dir)
+    no_seg_geff_path = no_seg_dir / "tracks.geff"
+
+    assert read_segmentation_shape(no_seg_geff_path) is None
+    assert not has_embedded_segmentation(no_seg_geff_path)
 
 
 def test_get_time_works_after_import(valid_geff):

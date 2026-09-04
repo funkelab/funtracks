@@ -104,6 +104,15 @@ def test_nodes_edges(graph_2d_with_segmentation):
     }
 
 
+def test_deprecated_graph_property_warns(graph_2d_with_segmentation):
+    """Tracks.graph is a deprecated alias for graph_solution, kept for downstream
+    code (e.g. motile_tracker) written against funtracks v2."""
+    tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
+    with pytest.warns(DeprecationWarning, match="Tracks.graph is deprecated"):
+        graph = tracks.graph
+    assert graph is tracks.graph_solution
+
+
 def test_predecessors_successors(graph_2d_with_segmentation):
     tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
     assert tracks.predecessors(2) == [1]
@@ -350,3 +359,15 @@ def test_update_mask_syncs_bbox(graph_2d_with_segmentation):
 
     assert stored_mask is new_mask
     assert np.array_equal(stored_bbox, new_mask.bbox)
+
+
+def test_has_track_id_at_time(get_tracks):
+    """Track 3 spans t=1, 2 and 4, but not t=0 or t=3."""
+
+    tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
+
+    assert tracks.has_track_id_at_time(3, 1)
+    assert tracks.has_track_id_at_time(3, 4)
+    assert not tracks.has_track_id_at_time(3, 0)
+    assert not tracks.has_track_id_at_time(3, 3)
+    assert not tracks.has_track_id_at_time(99, 0)
