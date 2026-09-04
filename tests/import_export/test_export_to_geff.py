@@ -29,6 +29,16 @@ def _seg_shape(geff_path):
     return td.io.read_graph_metadata(geff_path).get("shape")
 
 
+def _seg_scale(geff_path):
+    """Read Tracks.scale (segmentation voxel spacing) from a geff store.
+
+    Lives in the tracksdata graph metadata, mirroring _seg_shape -- never in
+    axes.scale, which per the geff spec means something else (how to convert
+    stored positions to world units).
+    """
+    return td.io.read_graph_metadata(geff_path).get("scale")
+
+
 def _assert_valid_geff_export(export_dir, expected_num_nodes=None):
     """Assert basic export correctness and return the opened zarr Group."""
     z = zarr.open((export_dir / "tracks.geff").as_posix(), mode="r")
@@ -37,8 +47,11 @@ def _assert_valid_geff_export(export_dir, expected_num_nodes=None):
     attrs = dict(z.attrs)
     assert "geff" in attrs
     assert "axes" in attrs["geff"]
+    # Tracks.scale (segmentation spacing) must never be written to axes.scale:
+    # per the geff spec that field means "multiply pos by this to get world
+    # units", which pos already is. It belongs in graph metadata (_seg_scale).
     for ax in attrs["geff"]["axes"]:
-        assert ax["scale"] is not None
+        assert ax["scale"] is None
 
     if expected_num_nodes is not None:
         assert len(z["nodes/ids"][:]) == expected_num_nodes
@@ -307,6 +320,7 @@ def test_export_non_directory_raises(get_tracks, tmp_path):
 def test_export_metadata(get_tracks, ndim, with_seg, tmp_path):
     """Test axes structure, shape, and FeatureDict in metadata."""
     tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
+    tracks.scale = [1.0, 0.5, 0.5] if ndim == 3 else [1.0, 2.0, 0.5, 0.5]
 
     export_dir = tmp_path / "export"
     export_dir.mkdir()
@@ -331,10 +345,16 @@ def test_export_metadata(get_tracks, ndim, with_seg, tmp_path):
     else:
         assert seg_shape is None
 
-    # FeatureDict stored under funtracks' own key in the geff metadata extras
+    # Tracks.scale (segmentation spacing) is written to graph metadata, mirroring
+    # shape, never to axes.scale
+    seg_scale = td.io.read_graph_metadata(export_dir / "tracks.geff").get("scale")
+    assert seg_scale is not None
+    assert list(seg_scale) == list(tracks.scale)
+
     funtracks_extra = _funtracks_extra(export_dir / "tracks.geff")
     assert funtracks_extra is not None
     assert "features" in funtracks_extra
+    assert funtracks_extra.get("version")
 
 
 # --- Tiff segmentation export (unchanged) ---
