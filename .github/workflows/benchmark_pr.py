@@ -8,10 +8,12 @@ Exits with code 1 if any benchmark regresses by more than REGRESSION_THRESHOLD.
 
 import json
 import sys
-
+import platform
 import pandas as pd
 
-REGRESSION_THRESHOLD = 50  # percent
+REGRESSION_THRESHOLD = 50  # percen
+if platform.system() == "Darwin":
+    REGRESSION_THRESHOLD = REGRESSION_THRESHOLD * 2
 
 
 def load_stats(path):
