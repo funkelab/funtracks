@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788541064349,
+  "lastUpdate": 1788551320859,
   "repoUrl": "https://github.com/funkelab/funtracks",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -2580,6 +2580,79 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0011761461254785942",
             "extra": "mean: 112.23655366666918 msec\nrounds: 3"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "malinmayorc@janelia.hhmi.org",
+            "name": "Caroline Malin-Mayor",
+            "username": "cmalinmayor"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1939f5f8ab5965f6c388fbb5554cb0e18dbb7585",
+          "message": "Merge pull request #274 from funkelab/intensity_feature\n\nadd intensity to the regionprops features",
+          "timestamp": "2026-09-04T15:47:51-04:00",
+          "tree_id": "8352e7ebd8a0fd2c4e61c32bb3b86733801b442b",
+          "url": "https://github.com/funkelab/funtracks/commit/1939f5f8ab5965f6c388fbb5554cb0e18dbb7585"
+        },
+        "date": 1788551318552,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmarks/bench_actions.py::test_update_node_attrs_single",
+            "value": 298.23768370442684,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00020193888678781183",
+            "extra": "mean: 3.3530303333198694 msec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_actions.py::test_update_node_attrs_bulk",
+            "value": 310.2371432032802,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0000883547318242853",
+            "extra": "mean: 3.223340666674327 msec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_actions.py::test_add_delete_edges",
+            "value": 8.21883291372511,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0042399788237553705",
+            "extra": "mean: 121.67177633335768 msec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_actions.py::test_update_segmentation",
+            "value": 19.713484349886794,
+            "unit": "iter/sec",
+            "range": "stddev: 0.006641775694140247",
+            "extra": "mean: 50.72669966665444 msec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_actions.py::test_delete_nodes",
+            "value": 3.548597327127101,
+            "unit": "iter/sec",
+            "range": "stddev: 0.003601924254239299",
+            "extra": "mean: 281.8014859999873 msec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_compute_graph_from_seg",
+            "value": 0.3718097434759447,
+            "unit": "iter/sec",
+            "range": "stddev: 0.07461783493227557",
+            "extra": "mean: 2.689547591333356 sec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_graph_to_solution",
+            "value": 9.977552701484203,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0007227882034974724",
+            "extra": "mean: 100.22497799999049 msec\nrounds: 3"
           }
         ]
       }
