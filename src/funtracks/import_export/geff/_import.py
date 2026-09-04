@@ -244,7 +244,7 @@ class GeffTracksBuilder(TracksBuilder):
         self._is_legacy_funtracks_geff = has_funtracks_features and "version" not in (
             funtracks_extra or {}
         )
-        self._graph_metadata_scale = graph_metadata.get("scale")
+        self._graph_metadata_scale = td.io.read_graph_metadata(metadata).get("scale")
 
         # Warn when masks/bboxes are present but the shape is absent.
         # This happens with GEFFs written by older funtracks or external tools.
