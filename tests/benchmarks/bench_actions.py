@@ -1,3 +1,5 @@
+import platform
+
 import pytest
 
 from funtracks.user_actions import (
@@ -20,6 +22,9 @@ CELLS_PER_FRAME = 50
 # its starting state. Raise this (rather than ROUNDS) if a benchmark reads as noisy.
 N_OPS = 50
 ROUNDS = 3
+if platform.system() == "Darwin":
+    N_OPS = N_OPS * 2
+    ROUNDS = ROUNDS * 2
 
 # Fraction of a node's mask painted in the segmentation benchmark. Must stay < 1: a
 # patch that fully covers the mask makes UserUpdateSegmentation delete the node instead

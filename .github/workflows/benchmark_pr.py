@@ -11,10 +11,7 @@ import sys
 import platform
 import pandas as pd
 
-REGRESSION_THRESHOLD = 50  # percen
-if platform.system() == "Darwin":
-    REGRESSION_THRESHOLD = REGRESSION_THRESHOLD * 2
-
+REGRESSION_THRESHOLD = 50  # percent
 
 def load_stats(path):
     with open(path) as f:
