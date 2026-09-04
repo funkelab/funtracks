@@ -32,6 +32,7 @@ from funtracks.utils.tracksdata_utils import (
 )
 
 if TYPE_CHECKING:
+    import dask.array as da
     import tracksdata as td
 
     from funtracks.actions import BasicAction
@@ -40,6 +41,8 @@ if TYPE_CHECKING:
         GraphAnnotator,
         RegionpropsAnnotator,
     )
+
+    IntensityImage: TypeAlias = np.ndarray | da.Array
 
 AttrValue: TypeAlias = Any
 Node: TypeAlias = int
@@ -81,7 +84,7 @@ class Tracks:
         scale: list[float] | None = None,
         ndim: int | None = None,
         features: FeatureDict | None = None,
-        intensity_images: Sequence[np.ndarray] | None = None,
+        intensity_images: Sequence[IntensityImage] | None = None,
         channel_names: Sequence[str] | None = None,
         _segmentation: GraphArrayView | None = None,
     ):
@@ -113,10 +116,12 @@ class Tracks:
                 Assumes that all features in the dict already exist on the graph (will
                 be activated but not recomputed). If None, core computed features (pos,
                 tracklet_id) are auto-detected by checking if they exist on the graph.
-            intensity_images (Sequence[np.ndarray] | None): Raw images to measure
+            intensity_images (Sequence[IntensityImage] | None): Raw images to measure
                 intensity in, one per channel, each shaped like the segmentation
-                (t, [z], y, x). Required for the "intensity" feature; can also be set
-                later with set_intensity_images.
+                (t, [z], y, x). May be lazy (e.g. dask arrays); each node's bounding
+                box is read on demand rather than the image being loaded up front.
+                Required for the "intensity" feature; can also be set later with
+                set_intensity_images.
             channel_names (Sequence[str] | None): Display names, one per intensity
                 image. Defaults to channel_0, channel_1, ... for multichannel input.
             _segmentation (GraphArrayView | None): Internal parameter for reusing an
@@ -817,7 +822,7 @@ class Tracks:
 
     def set_intensity_images(
         self,
-        intensity_images: Sequence[np.ndarray] | None,
+        intensity_images: Sequence[IntensityImage] | None,
         channel_names: Sequence[str] | None = None,
     ) -> None:
         """Attach (or clear) the raw images used to compute the "intensity" feature.

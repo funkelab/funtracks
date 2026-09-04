@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, NamedTuple
+from typing import TYPE_CHECKING, Any, NamedTuple, TypeAlias
 
 import numpy as np
 from tracksdata.nodes import Mask
@@ -23,8 +23,12 @@ from ._graph_annotator import GraphAnnotator
 from ._regionprops_extended import regionprops_extended
 
 if TYPE_CHECKING:
+    import dask.array as da
+
     from funtracks.actions import BasicAction
     from funtracks.data_model import Tracks
+
+    IntensityImage: TypeAlias = np.ndarray | da.Array
 
 DEFAULT_POS_KEY = "pos"
 DEFAULT_AREA_KEY = "area"
@@ -83,7 +87,7 @@ class _FrameCache:
     to a single ``compute`` call, so nothing is retained afterwards.
     """
 
-    def __init__(self, intensity_images: list | None):
+    def __init__(self, intensity_images: list[IntensityImage] | None):
         self._images = intensity_images
         self._time: int | None = None
         self._frames: list[np.ndarray] = []
@@ -163,7 +167,7 @@ class RegionpropsAnnotator(GraphAnnotator):
         self,
         tracks: Tracks,
         pos_key: str | None = DEFAULT_POS_KEY,
-        intensity_images: Sequence[np.ndarray] | None = None,
+        intensity_images: Sequence[IntensityImage] | None = None,
         channel_names: Sequence[str] | None = None,
     ):
         """
@@ -187,7 +191,7 @@ class RegionpropsAnnotator(GraphAnnotator):
         self.intensity_key = DEFAULT_INTENSITY_KEY
 
         # One image per intensity channel; stacked per node, not up front
-        self.intensity_images: list | None = None
+        self.intensity_images: list[IntensityImage] | None = None
         self.channel_names: list[str] | None = None
         self._validate_intensity_images(tracks, intensity_images, channel_names)
 
@@ -214,7 +218,7 @@ class RegionpropsAnnotator(GraphAnnotator):
     def _validate_intensity_images(
         self,
         tracks: Tracks,
-        intensity_images: Sequence[np.ndarray] | None,
+        intensity_images: Sequence[IntensityImage] | None,
         channel_names: Sequence[str] | None,
     ) -> None:
         """Validate and store the intensity images and channel names.
@@ -270,7 +274,7 @@ class RegionpropsAnnotator(GraphAnnotator):
 
     def set_intensity_images(
         self,
-        intensity_images: Sequence[np.ndarray] | None,
+        intensity_images: Sequence[IntensityImage] | None,
         channel_names: Sequence[str] | None = None,
     ) -> None:
         """Attach (or clear) the intensity images used to compute the intensity feature.
@@ -308,7 +312,9 @@ class RegionpropsAnnotator(GraphAnnotator):
             self.compute([self.intensity_key])
 
     @staticmethod
-    def _is_same_image(previous: list | None, current: list | None) -> bool:
+    def _is_same_image(
+        previous: list[IntensityImage] | None, current: list[IntensityImage] | None
+    ) -> bool:
         """Whether two intensity inputs are the very same images, channel for channel.
 
         Compared by identity: renaming a channel should not trigger a recompute, but
