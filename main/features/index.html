@@ -798,6 +798,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#funtracks.data_model.Tracks.regionprops_annotator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;regionprops_annotator
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#funtracks.data_model.Tracks.track_annotator" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1110,6 +1121,17 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;redo
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.data_model.Tracks.set_intensity_images" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;set_intensity_images
       
     </span>
   </a>
@@ -3282,6 +3304,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#funtracks.data_model.Tracks.regionprops_annotator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;regionprops_annotator
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#funtracks.data_model.Tracks.track_annotator" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3594,6 +3627,17 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;redo
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.data_model.Tracks.set_intensity_images" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;set_intensity_images
       
     </span>
   </a>
@@ -5994,6 +6038,44 @@ tracklet_id) are auto-detected by checking if they exist on the graph.</p>
           </tr>
           <tr class="doc-section-item">
             <td>
+                <code>intensity_images</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Sequence">Sequence</span>[<span title="funtracks.data_model.tracks.IntensityImage">IntensityImage</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Raw images to measure
+intensity in, one per channel, each shaped like the segmentation
+(t, [z], y, x). May be lazy (e.g. dask arrays); each node's bounding
+box is read on demand rather than the image being loaded up front.
+Required for the "intensity" feature; can also be set later with
+set_intensity_images.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>channel_names</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Sequence">Sequence</span>[<span title="str">str</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Display names, one per intensity
+image. Defaults to channel_0, channel_1, ... for multichannel input.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
                 <code>_segmentation</code>
             </td>
             <td>
@@ -6068,6 +6150,26 @@ existing GraphArrayView instance. Not intended for public use.</p>
     <div class="doc doc-contents ">
 
         <p>The maximum tracklet id currently in use.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="funtracks.data_model.Tracks.regionprops_annotator" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">regionprops_annotator</span>
+
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">regionprops_annotator</span><span class="p">:</span> <span class="n">RegionpropsAnnotator</span> <span class="o">|</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>The registered RegionpropsAnnotator, or None when there is no segmentation.</p>
 
     </div>
 
@@ -7385,6 +7487,104 @@ The action contains all necessary information about which elements to update.</p
             <td>
               <div class="doc-md-description">
                 <p>True if an action was redone, False if there were no actions to redo</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="funtracks.data_model.Tracks.set_intensity_images" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">set_intensity_images</span>
+
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">set_intensity_images</span><span class="p">(</span>
+    <span class="n">intensity_images</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">IntensityImage</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">channel_names</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Attach (or clear) the raw images used to compute the "intensity" feature.</p>
+<p>The intensity feature needs pixel values, which a Tracks does not otherwise
+carry. Call this before enable_features(["intensity"]); if intensity is already
+enabled, its values are recomputed here.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>intensity_images</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Sequence">Sequence</span>[<span title="funtracks.data_model.tracks.IntensityImage">IntensityImage</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Raw images, one per channel, each shaped like the
+segmentation (t, [z], y, x). Pass None or an empty list to clear.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>channel_names</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Sequence">Sequence</span>[<span title="str">str</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Display names, one per intensity image.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If there is no segmentation (and hence no RegionpropsAnnotator),
+or the images do not match the segmentation shape.</p>
               </div>
             </td>
           </tr>

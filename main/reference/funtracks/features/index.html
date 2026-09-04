@@ -3353,12 +3353,47 @@ If None, defaults to 4 to include all possible axis names.</p>
 
 
 </h2>
-<div class="doc-signature highlight"><pre><span></span><code><span class="nf">Intensity</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Feature</span>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">Intensity</span><span class="p">(</span>
+    <span class="n">channel_names</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Feature</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
 
-        <p>A regionprops feature for computing the intensity.</p>
+        <p>A regionprops feature for computing the mean intensity inside the mask.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>channel_names</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Sequence">Sequence</span>[<span title="str">str</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Names of the images being measured, one
+per intensity channel (e.g. the name of the raw layer). With one name the
+feature holds a single mean; with several it holds one mean per channel.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     <p><span class="doc-section-title">Returns:</span></p>
@@ -3376,7 +3411,7 @@ If None, defaults to 4 to include all possible axis names.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>A feature dict representing intensity</p>
+                <p>A feature dict representing mean intensity</p>
               </div>
             </td>
           </tr>
