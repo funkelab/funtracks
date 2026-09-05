@@ -569,10 +569,18 @@ class Tracks:
         """
         nodes = list(nodes)
 
-        df = self.graph_full.filter(node_ids=list(nodes)).node_attrs(
-            attr_keys=[td.DEFAULT_ATTR_KEYS.NODE_ID, self.features.time_key]
+        time_key = self.features.time_key
+        df = self.graph_full.filter(node_ids=nodes).node_attrs(
+            attr_keys=[td.DEFAULT_ATTR_KEYS.NODE_ID, time_key]
         )
-        return df[self.features.time_key].to_list()
+        id_to_val = dict(
+            zip(
+                df[td.DEFAULT_ATTR_KEYS.NODE_ID].to_list(),
+                df[time_key].to_list(),
+                strict=True,
+            )
+        )
+        return [id_to_val[node] for node in nodes]
 
     def get_time(self, node: Node) -> int:
         """Get the time frame of a given node. Raises an error if the node
@@ -727,8 +735,21 @@ class Tracks:
         return self.graph_full.nodes[int(node)][attr]
 
     def get_nodes_attr(self, nodes: Iterable[Node], attr: str):
-        """Get an attribute value for each of the given nodes."""
-        return [self.get_node_attr(node, attr) for node in nodes]
+        """Batch fetch one attribute for many nodes in one query.
+        NOTE: for single-node lookups use get_node_attr() instead.
+        """
+        nodes = list(nodes)
+        df = self.graph_full.filter(node_ids=nodes).node_attrs(
+            attr_keys=[td.DEFAULT_ATTR_KEYS.NODE_ID, attr]
+        )
+        id_to_val = dict(
+            zip(
+                df[td.DEFAULT_ATTR_KEYS.NODE_ID].to_list(),
+                df[attr].to_list(),
+                strict=True,
+            )
+        )
+        return [id_to_val[node] for node in nodes]
 
     def _set_edge_attr(self, edge: Edge, attr: str, value: Any):
         edge_id = self.graph_full.edge_id(edge[0], edge[1])
