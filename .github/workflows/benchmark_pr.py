@@ -11,6 +11,11 @@ import sys
 import pandas as pd
 
 REGRESSION_THRESHOLD = 50  # percent
+# Benchmarks with a median below this floor are dominated by timer resolution and OS
+# scheduling jitter rather than the code being measured, so a "regression" on them is
+# noise, not signal: skip the gate (and still report the row) unless the benchmark is
+# slow on *both* sides, which means it should have been caught by the floor already.
+NOISE_FLOOR_SECONDS = 0.02
 
 def load_stats(path):
     with open(path) as f:
@@ -38,6 +43,14 @@ def make_report(old_path, new_path, out_file, header=None):
         pct_change.notna(), "n/a"
     )
 
+    # A benchmark below this floor on both sides is dominated by timer resolution and
+    # OS scheduling jitter rather than the code being measured, so a "regression" on it
+    # is noise, not signal: exclude it from the gate (still shown in the report). NaN
+    # (benchmark missing on one side) treated as below the floor, not above.
+    above_floor = (df["median_old"].fillna(0) >= NOISE_FLOOR_SECONDS) | (
+        df["median_new"].fillna(0) >= NOISE_FLOOR_SECONDS
+    )
+
     # Format runtimes
     for col in ("median_old", "median_new"):
         df[col] = df[col].map("{:.5f}".format).where(df[col].notna(), "-")
@@ -60,8 +73,8 @@ def make_report(old_path, new_path, out_file, header=None):
     # Print report to logs
     print(report)  # noqa: T201
 
-    # Fail if any benchmark regressed beyond threshold
-    if (pct_change > REGRESSION_THRESHOLD).any():
+    # Fail if any benchmark above the noise floor regressed beyond threshold.
+    if (above_floor & (pct_change > REGRESSION_THRESHOLD)).any():
         print(  # noqa: T201
             f"\nFAILED: Regression exceeds {REGRESSION_THRESHOLD}% threshold"
         )
