@@ -32,10 +32,17 @@ from funtracks.utils.tracksdata_utils import (
 )
 
 if TYPE_CHECKING:
+    import dask.array as da
     import tracksdata as td
 
     from funtracks.actions import BasicAction
-    from funtracks.annotators import AnnotatorRegistry, GraphAnnotator
+    from funtracks.annotators import (
+        AnnotatorRegistry,
+        GraphAnnotator,
+        RegionpropsAnnotator,
+    )
+
+    IntensityImage: TypeAlias = np.ndarray | da.Array
 
 AttrValue: TypeAlias = Any
 Node: TypeAlias = int
@@ -77,6 +84,8 @@ class Tracks:
         scale: list[float] | None = None,
         ndim: int | None = None,
         features: FeatureDict | None = None,
+        intensity_images: Sequence[IntensityImage] | None = None,
+        channel_names: Sequence[str] | None = None,
         _segmentation: GraphArrayView | None = None,
     ):
         """Initialize a Tracks object.
@@ -107,6 +116,14 @@ class Tracks:
                 Assumes that all features in the dict already exist on the graph (will
                 be activated but not recomputed). If None, core computed features (pos,
                 tracklet_id) are auto-detected by checking if they exist on the graph.
+            intensity_images (Sequence[IntensityImage] | None): Raw images to measure
+                intensity in, one per channel, each shaped like the segmentation
+                (t, [z], y, x). May be lazy (e.g. dask arrays); each node's bounding
+                box is read on demand rather than the image being loaded up front.
+                Required for the "intensity" feature; can also be set later with
+                set_intensity_images.
+            channel_names (Sequence[str] | None): Display names, one per intensity
+                image. Defaults to channel_0, channel_1, ... for multichannel input.
             _segmentation (GraphArrayView | None): Internal parameter for reusing an
                 existing GraphArrayView instance. Not intended for public use.
         """
@@ -206,6 +223,9 @@ class Tracks:
             else features
         )
         # 2. Set up annotator registry for managing feature computation
+        # (read by _get_annotators to configure the RegionpropsAnnotator)
+        self._intensity_images = intensity_images
+        self._channel_names = channel_names
         self.annotators = self._get_annotators()
 
         # 3. Set up core computed features
@@ -336,7 +356,14 @@ class Tracks:
                 if isinstance(self.features.position_key, str)
                 else None
             )
-            annotator_list.append(RegionpropsAnnotator(self, pos_key=pos_key))
+            annotator_list.append(
+                RegionpropsAnnotator(
+                    self,
+                    pos_key=pos_key,
+                    intensity_images=self._intensity_images,
+                    channel_names=self._channel_names,
+                )
+            )
 
         # EdgeAnnotator: requires segmentation
         if EdgeAnnotator.can_annotate(self):
@@ -793,6 +820,46 @@ class Tracks:
             Dictionary mapping feature keys to Feature definitions
         """
         return {k: feat for k, (feat, _) in self.annotators.all_features.items()}
+
+    @property
+    def regionprops_annotator(self) -> RegionpropsAnnotator | None:
+        """The registered RegionpropsAnnotator, or None when there is no segmentation."""
+        from funtracks.annotators import RegionpropsAnnotator
+
+        for annotator in self.annotators:
+            if isinstance(annotator, RegionpropsAnnotator):
+                return annotator
+        return None
+
+    def set_intensity_images(
+        self,
+        intensity_images: Sequence[IntensityImage] | None,
+        channel_names: Sequence[str] | None = None,
+    ) -> None:
+        """Attach (or clear) the raw images used to compute the "intensity" feature.
+
+        The intensity feature needs pixel values, which a Tracks does not otherwise
+        carry. Call this before enable_features(["intensity"]); if intensity is already
+        enabled, its values are recomputed here.
+
+        Args:
+            intensity_images: Raw images, one per channel, each shaped like the
+                segmentation (t, [z], y, x). Pass None or an empty list to clear.
+            channel_names: Display names, one per intensity image.
+
+        Raises:
+            ValueError: If there is no segmentation (and hence no RegionpropsAnnotator),
+                or the images do not match the segmentation shape.
+        """
+        annotator = self.regionprops_annotator
+        if annotator is None:
+            raise ValueError(
+                "Cannot set intensity images: this Tracks has no segmentation, so "
+                "there is no RegionpropsAnnotator to compute intensity with."
+            )
+        annotator.set_intensity_images(intensity_images, channel_names)
+        self._intensity_images = intensity_images
+        self._channel_names = channel_names
 
     def enable_features(self, feature_keys: list[str], recompute: bool = True) -> None:
         """Enable multiple features for computation efficiently.
