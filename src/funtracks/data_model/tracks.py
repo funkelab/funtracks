@@ -984,22 +984,10 @@ class Tracks:
         return track_id
 
     def get_track_ids(self, nodes) -> list[int]:
-        """Batch version of get_track_id — one query fetching all nodes in the graph.
-        NOTE: always fetches the entire graph internally. Optimised for bulk (all-node)
-        calls. For small subsets or single nodes use get_track_id() instead."""
-
-        tracklet_key = self.features.tracklet_key
-        df = self.graph_full.node_attrs(
-            attr_keys=[td.DEFAULT_ATTR_KEYS.NODE_ID, tracklet_key]
-        )
-        id_to_val = dict(
-            zip(
-                df[td.DEFAULT_ATTR_KEYS.NODE_ID].to_list(),
-                df[tracklet_key].to_list(),
-                strict=True,
-            )
-        )
-        return [id_to_val[node] for node in nodes]
+        """Batch version of get_track_id — one query for all of `nodes` (see
+        get_nodes_attr). Optimised for bulk (all-node) calls; for small subsets or
+        single nodes use get_track_id() instead."""
+        return self.get_nodes_attr(nodes, self.features.tracklet_key)
 
     def get_lineage_id(self, node) -> int:
         """Get the lineage ID for a node.
