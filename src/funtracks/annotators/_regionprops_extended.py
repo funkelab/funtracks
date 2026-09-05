@@ -212,6 +212,7 @@ class ExtendedRegionProperties(RegionProperties):
 def regionprops_extended(
     mask: Mask,
     spacing: tuple[float, ...] | None,
+    intensity_image: np.ndarray | None = None,
 ) -> list[ExtendedRegionProperties]:
     """
     Create instances of ExtendedRegionProperties that extend
@@ -221,12 +222,16 @@ def regionprops_extended(
         mask (Mask): The labeled mask.
         spacing (tuple[float, ...]| None): The spacing between voxels in each dimension.
             If None, each voxel is assumed to be 1 in all dimensions.
+        intensity_image (np.ndarray | None): Optional intensity image needed for
+            intensity-based properties (e.g. ``intensity_mean``). It must already be
+            cropped to the mask bounding box — use ``mask.crop(image[t])`` — with an
+            optional trailing channel axis for multichannel intensities.
 
     Returns:
         list[ExtendedRegionProperties]: A list of ExtendedRegionProperties instances.
     """
 
-    region = mask.regionprops(spacing=spacing)
+    region = mask.regionprops(spacing=spacing, intensity_image=intensity_image)
 
     bbox_min = np.array(mask.bbox[: mask._mask.ndim]) if spacing is not None else None
 

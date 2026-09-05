@@ -1,11 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from collections.abc import Sequence
 
 from ._feature import Feature
-
-if TYPE_CHECKING:
-    pass
 
 
 def Area(ndim: int = 3) -> Feature:
@@ -27,19 +24,31 @@ def Area(ndim: int = 3) -> Feature:
     }
 
 
-def Intensity() -> Feature:
-    """A regionprops feature for computing the intensity.
+def Intensity(channel_names: Sequence[str] | None = None) -> Feature:
+    """A regionprops feature for computing the mean intensity inside the mask.
+
+    Args:
+        channel_names (Sequence[str] | None): Names of the images being measured, one
+            per intensity channel (e.g. the name of the raw layer). With one name the
+            feature holds a single mean; with several it holds one mean per channel.
 
     Returns:
-        Feature: A feature dict representing intensity
+        Feature: A feature dict representing mean intensity
     """
-    return {
+    num_values = 1 if channel_names is None else len(channel_names)
+    # Name every column after its source image, so a single-channel feature reads the
+    # same as one column of a multichannel one.
+    names = [f"Mean intensity ({name})" for name in channel_names or []]
+    feature: Feature = {
         "feature_type": "node",
         "value_type": "float",
-        "num_values": 1,
-        "display_name": "Intensity",
+        "num_values": num_values,
+        "display_name": names[0] if num_values == 1 and names else "Mean intensity",
         "default_value": None,
     }
+    if num_values > 1:
+        feature["value_names"] = names
+    return feature
 
 
 def EllipsoidAxes(ndim: int | None = 4) -> Feature:
