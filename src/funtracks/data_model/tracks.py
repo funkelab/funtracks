@@ -594,18 +594,7 @@ class Tracks:
         NOTE: fetches all nodes in the graph internally. Optimised for bulk use.
         For a single node use get_time() instead.
         """
-        nodes = list(nodes)
-        df = self.graph_full.node_attrs(
-            attr_keys=[td.DEFAULT_ATTR_KEYS.NODE_ID, self.features.time_key]
-        )
-        id_to_val = dict(
-            zip(
-                df[td.DEFAULT_ATTR_KEYS.NODE_ID].to_list(),
-                df[self.features.time_key].to_list(),
-                strict=True,
-            )
-        )
-        return [id_to_val[node] for node in nodes]
+        return self.get_nodes_attr(nodes, self.features.time_key)
 
     def get_time(self, node: Node) -> int:
         """Get the time frame of a given node. Raises an error if the node
@@ -760,8 +749,30 @@ class Tracks:
         return self.graph_full.nodes[int(node)][attr]
 
     def get_nodes_attr(self, nodes: Iterable[Node], attr: str):
-        """Get an attribute value for each of the given nodes."""
-        return [self.get_node_attr(node, attr) for node in nodes]
+        """Batch fetch one attribute for many nodes in one query.
+        NOTE: for single-node lookups use get_node_attr() instead.
+        """
+        nodes = list(nodes)
+        # filter(node_ids=...) only walks the requested nodes, so it wins when nodes
+        # is a small slice of the graph; but it also pays its own setup cost
+        # (local-id mapping, filter construction), so fetching the whole graph
+        # unfiltered wins when nodes is most of it anyway (empirically, >~75%).
+        if len(nodes) > 0.75 * self.graph_full.num_nodes():
+            df = self.graph_full.node_attrs(
+                attr_keys=[td.DEFAULT_ATTR_KEYS.NODE_ID, attr]
+            )
+        else:
+            df = self.graph_full.filter(node_ids=nodes).node_attrs(
+                attr_keys=[td.DEFAULT_ATTR_KEYS.NODE_ID, attr]
+            )
+        id_to_val = dict(
+            zip(
+                df[td.DEFAULT_ATTR_KEYS.NODE_ID].to_list(),
+                df[attr].to_list(),
+                strict=True,
+            )
+        )
+        return [id_to_val[node] for node in nodes]
 
     def _set_edge_attr(self, edge: Edge, attr: str, value: Any):
         edge_id = self.graph_full.edge_id(edge[0], edge[1])
@@ -1040,22 +1051,10 @@ class Tracks:
         return track_id
 
     def get_track_ids(self, nodes) -> list[int]:
-        """Batch version of get_track_id — one query fetching all nodes in the graph.
-        NOTE: always fetches the entire graph internally. Optimised for bulk (all-node)
-        calls. For small subsets or single nodes use get_track_id() instead."""
-
-        tracklet_key = self.features.tracklet_key
-        df = self.graph_full.node_attrs(
-            attr_keys=[td.DEFAULT_ATTR_KEYS.NODE_ID, tracklet_key]
-        )
-        id_to_val = dict(
-            zip(
-                df[td.DEFAULT_ATTR_KEYS.NODE_ID].to_list(),
-                df[tracklet_key].to_list(),
-                strict=True,
-            )
-        )
-        return [id_to_val[node] for node in nodes]
+        """Batch version of get_track_id — one query for all of `nodes` (see
+        get_nodes_attr). Optimised for bulk (all-node) calls; for small subsets or
+        single nodes use get_track_id() instead."""
+        return self.get_nodes_attr(nodes, self.features.tracklet_key)
 
     def get_lineage_id(self, node) -> int:
         """Get the lineage ID for a node.
