@@ -192,12 +192,9 @@ def _build_geff_metadata(
             "version": _funtracks_version(),
         }
 
-    # Note: the segmentation shape and scale live in the graph metadata under
-    # "shape"/"scale" and are written by tracksdata's `to_geff`, which merges
-    # `graph.metadata` into the geff metadata extras even when we pass our own
-    # GeffMetadata.
-    if tracks.scale is not None:
-        graph.metadata["scale"] = list(tracks.scale)
+    # Note: shape and scale live in graph metadata (Tracks.scale is a property
+    # backed by it) and are written by tracksdata's `to_geff` via `graph.metadata` -
+    # already carried forward here by split_position_attr's detach()/subgraph().
 
     metadata = GeffMetadata(
         geff_version=geff_spec.__version__,

@@ -346,10 +346,11 @@ def test_export_metadata(get_tracks, ndim, with_seg, tmp_path):
         assert seg_shape is None
 
     # Tracks.scale (segmentation spacing) is written to graph metadata, mirroring
-    # shape, never to axes.scale
+    # shape, never to axes.scale. tracksdata's own "scale" metadata is
+    # spatial-only (no time), unlike Tracks.scale (time first, dummy 1.0).
     seg_scale = td.io.read_graph_metadata(export_dir / "tracks.geff").get("scale")
     assert seg_scale is not None
-    assert list(seg_scale) == list(tracks.scale)
+    assert list(seg_scale) == list(tracks.scale)[1:]
 
     funtracks_extra = _funtracks_extra(export_dir / "tracks.geff")
     assert funtracks_extra is not None

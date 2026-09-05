@@ -190,7 +190,8 @@ class Tracks:
                 self.segmentation = None
         else:
             self.segmentation = None
-        self.scale = scale
+        if scale is not None:
+            self.scale = scale
         self.ndim = self._compute_ndim(
             self.segmentation.shape if self.segmentation is not None else None,
             scale,
@@ -239,6 +240,26 @@ class Tracks:
         # key and a registered TrackAnnotator, with tracklet_id/lineage_id registered
         # and computed. A provided FeatureDict that omitted them is completed here.
         self._ensure_track_features()
+
+    @property
+    def scale(self) -> list[float] | None:
+        """Segmentation voxel spacing (time first, dummy 1.0), or None if unknown.
+
+        Backed by ``graph_full.metadata["scale"]`` (one copy, no staleness), which
+        is tracksdata's own convention and is spatial-only - this property adds/
+        strips the dummy time entry at the boundary.
+        """
+        spatial_scale = self.graph_full.metadata.get("scale")
+        if spatial_scale is None:
+            return None
+        return [1.0, *spatial_scale]
+
+    @scale.setter
+    def scale(self, value: list[float] | None) -> None:
+        if value is None:
+            self.graph_full.metadata.pop("scale", None)
+        else:
+            self.graph_full.metadata["scale"] = list(value[1:])
 
     def _get_feature_set(
         self,

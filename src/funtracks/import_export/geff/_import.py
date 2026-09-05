@@ -368,12 +368,12 @@ class GeffTracksBuilder(TracksBuilder):
         (mislabeled) in the geff axes -- see ``read_header`` for detection.
 
         Returns:
-            Scale per dimension (time first), or None if unknown.
+            Scale per dimension (time first, dummy 1.0), or None if unknown.
         """
         if self._is_legacy_funtracks_geff:
             return self._axes_scale()
-        raw = self._graph_metadata_scale
-        return [float(s) for s in raw] if raw is not None else None
+        raw = self._graph_metadata_scale  # tracksdata's own convention: spatial-only
+        return [1.0, *(float(s) for s in raw)] if raw is not None else None
 
     def construct_graph(
         self,

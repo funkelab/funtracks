@@ -48,7 +48,9 @@ def test_scale_not_written_to_axes(get_tracks, tmp_path):
 
     meta = GeffMetadata.read(geff_path)
     assert all(ax.scale is None for ax in meta.axes)
-    assert meta.extra["tracksdata"]["scale"] == [1.0, 0.25, 0.5]
+    # tracksdata's own "scale" metadata is spatial-only (no time), unlike
+    # Tracks.scale (time first, dummy 1.0).
+    assert meta.extra["tracksdata"]["scale"] == [0.25, 0.5]
 
 
 def test_explicit_scale_overrides_metadata(get_tracks, tmp_path):
@@ -177,11 +179,13 @@ def test_legacy_funtracks_geff_scale_migrates_without_double_scaling_points(
     write_to_geff(tracks, geff_path)
     orig_pos = tracks.graph_solution.node_attrs(attr_keys=["pos"])["pos"].to_list()
 
-    # Simulate pre-fix funtracks output: scale lived in axes.scale, not
-    # graph.metadata["scale"], and there was no version string.
+    # Simulate pre-fix funtracks output: the *entire* Tracks.scale (time first,
+    # dummy 1.0) lived in axes.scale, one axis per dimension - not the spatial-only
+    # graph.metadata["scale"] written today - and there was no version string.
     meta = GeffMetadata.read(geff_path)
-    scale = meta.extra["tracksdata"].pop("scale")
-    for ax, s in zip(meta.axes, scale, strict=True):
+    spatial_scale = meta.extra["tracksdata"].pop("scale")
+    legacy_scale = [1.0, *spatial_scale]
+    for ax, s in zip(meta.axes, legacy_scale, strict=True):
         ax.scale = s
     del meta.extra["funtracks"]["version"]
     meta.write(geff_path)
