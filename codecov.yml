@@ -1,0 +1,12 @@
+coverage:
+  status:
+    project:
+      default:
+        # Removing covered code lowers total project coverage even though
+        # nothing untested was added; don't fail the check for that.
+        informational: true
+    patch:
+      default:
+        # Gate only on coverage of the lines actually changed in the PR.
+        target: auto
+        threshold: 1%

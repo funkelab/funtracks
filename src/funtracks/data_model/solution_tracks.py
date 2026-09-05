@@ -86,5 +86,4 @@ class SolutionTracks(Tracks):
             scale=tracks.scale,
             ndim=tracks.ndim,
             features=tracks.features,
-            _segmentation=tracks.segmentation,
         )
