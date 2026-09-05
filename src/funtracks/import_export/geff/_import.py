@@ -357,8 +357,9 @@ class GeffTracksBuilder(TracksBuilder):
         pos = self.in_memory_geff["node_props"].get("pos")
         if pos is None:
             return
-        # scale is [time, *spatial]; pos only holds the spatial dims.
-        pos["values"] = pos["values"] * np.asarray(scale[1:], dtype=pos["values"].dtype)
+        # scale is [time, *spatial]; pos only holds the spatial dims. Multiply in
+        # float64 to avoid int truncation with scale < 1
+        pos["values"] = pos["values"] * np.asarray(scale[1:], dtype=np.float64)
 
     def infer_segmentation_scale(self) -> list[float] | None:
         """Determine ``Tracks.scale`` (segmentation voxel spacing) for this file.

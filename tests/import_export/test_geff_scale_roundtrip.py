@@ -164,6 +164,38 @@ def test_axes_scale_applied_to_points_on_import():
     assert tracks.scale is None
 
 
+def test_axes_scale_applied_to_integer_points_without_truncation():
+    """A fractional axes.scale (e.g. 0.65) must not get cast to pos's own dtype
+    before multiplying: for integer pixel coordinates, casting the scale itself
+    to int truncates it to 0 first, zeroing every position."""
+    store, graph_data = create_mock_geff(
+        node_id_dtype="uint",
+        node_axis_dtypes={"position": "int64", "time": "int64"},
+        directed=True,
+        num_nodes=5,
+        num_edges=2,
+        include_t=True,
+        include_z=False,
+        include_y=True,
+        include_x=True,
+    )
+    meta = GeffMetadata.read(store)
+    for ax in meta.axes:
+        if ax.type == "space":
+            ax.scale = 0.65
+    meta.write(store)
+
+    orig_y = graph_data["node_props"]["y"]["values"]
+    orig_x = graph_data["node_props"]["x"]["values"]
+
+    tracks = import_from_geff(store)
+    df = tracks.graph_solution.node_attrs(attr_keys=["pos"])
+    pos = np.array(df["pos"].to_list())
+
+    np.testing.assert_allclose(pos[:, 0], orig_y * 0.65)
+    np.testing.assert_allclose(pos[:, 1], orig_x * 0.65)
+
+
 def test_legacy_funtracks_geff_scale_migrates_without_double_scaling_points(
     get_tracks, tmp_path
 ):
