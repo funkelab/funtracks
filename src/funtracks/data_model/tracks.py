@@ -567,20 +567,7 @@ class Tracks:
         NOTE: fetches all nodes in the graph internally. Optimised for bulk use.
         For a single node use get_time() instead.
         """
-        nodes = list(nodes)
-
-        time_key = self.features.time_key
-        df = self.graph_full.filter(node_ids=nodes).node_attrs(
-            attr_keys=[td.DEFAULT_ATTR_KEYS.NODE_ID, time_key]
-        )
-        id_to_val = dict(
-            zip(
-                df[td.DEFAULT_ATTR_KEYS.NODE_ID].to_list(),
-                df[time_key].to_list(),
-                strict=True,
-            )
-        )
-        return [id_to_val[node] for node in nodes]
+        return self.get_nodes_attr(nodes, self.features.time_key)
 
     def get_time(self, node: Node) -> int:
         """Get the time frame of a given node. Raises an error if the node
@@ -739,9 +726,18 @@ class Tracks:
         NOTE: for single-node lookups use get_node_attr() instead.
         """
         nodes = list(nodes)
-        df = self.graph_full.filter(node_ids=nodes).node_attrs(
-            attr_keys=[td.DEFAULT_ATTR_KEYS.NODE_ID, attr]
-        )
+        # filter(node_ids=...) only walks the requested nodes, so it wins when nodes
+        # is a small slice of the graph; but it also pays its own setup cost
+        # (local-id mapping, filter construction), so fetching the whole graph
+        # unfiltered wins when nodes is most of it anyway (empirically, >~75%).
+        if len(nodes) > 0.75 * self.graph_full.num_nodes():
+            df = self.graph_full.node_attrs(
+                attr_keys=[td.DEFAULT_ATTR_KEYS.NODE_ID, attr]
+            )
+        else:
+            df = self.graph_full.filter(node_ids=nodes).node_attrs(
+                attr_keys=[td.DEFAULT_ATTR_KEYS.NODE_ID, attr]
+            )
         id_to_val = dict(
             zip(
                 df[td.DEFAULT_ATTR_KEYS.NODE_ID].to_list(),
