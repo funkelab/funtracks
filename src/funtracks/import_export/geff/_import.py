@@ -3,6 +3,7 @@ from __future__ import annotations
 import warnings
 from typing import TYPE_CHECKING
 
+import numpy as np
 import tracksdata as td
 import zarr
 from geff._typing import InMemoryGeff
@@ -219,18 +220,31 @@ class GeffTracksBuilder(TracksBuilder):
 
         # Read funtracks FeatureDict from GEFF extra metadata if present
         # This will be passed to Tracks via the base build() method
-        if metadata.extra and "funtracks" in metadata.extra:
-            funtracks_extra = metadata.extra["funtracks"]
-            if "features" in funtracks_extra:
-                try:
-                    from funtracks.features import FeatureDict
+        funtracks_extra = (metadata.extra or {}).get("funtracks")
+        has_funtracks_features = bool(funtracks_extra and "features" in funtracks_extra)
+        if funtracks_extra is not None and has_funtracks_features:
+            try:
+                from funtracks.features import FeatureDict
 
-                    self.features = FeatureDict.from_json(funtracks_extra["features"])
-                except (KeyError, ValueError, TypeError):
-                    # If FeatureDict loading fails, features will remain None
-                    pass
+                self.features = FeatureDict.from_json(funtracks_extra["features"])
+            except (KeyError, ValueError, TypeError):
+                # If FeatureDict loading fails, features will remain None
+                pass
 
         self._shape = read_segmentation_shape(source_path, metadata=metadata)
+
+        # Backward compat: funtracks used to (incorrectly) write segmentation scale
+        # into axes.scale instead of graph.metadata["scale"], while pos was already
+        # written in world units. Applying axes.scale to pos for such a file would
+        # double-scale already-correct positions. Geffs written that way have a
+        # funtracks FeatureDict extra but no funtracks "version" string (the version
+        # string is new, added alongside this fix): detect that combination and, for
+        # those files only, skip scaling pos and instead treat axes.scale as the
+        # segmentation scale.
+        self._is_legacy_funtracks_geff = has_funtracks_features and "version" not in (
+            funtracks_extra or {}
+        )
+        self._graph_metadata_scale = td.io.read_graph_metadata(metadata).get("scale")
 
         # Warn when masks/bboxes are present but the shape is absent.
         # This happens with GEFFs written by older funtracks or external tools.
@@ -277,6 +291,89 @@ class GeffTracksBuilder(TracksBuilder):
 
         # Fall back to fuzzy matching when axes metadata is absent or incomplete
         return super().infer_node_name_map()
+
+    def _axes_scale(self) -> list[float] | None:
+        """Derive the per-dimension scale declared in the geff axes metadata.
+
+        The result is ordered like ``Tracks.scale``: time first, then the spatial
+        axes in the same order as ``self.node_name_map["pos"]`` (falling back to
+        the order the axes appear in the file).
+
+        Per the geff spec ``scale`` is optional per axis, so any axis without one
+        falls back to 1.0. Returns None when there is no axes metadata, when no
+        axis declares a scale at all, or when the axes cannot be lined up with the
+        graph's dimensions — in those cases the scale is genuinely unknown, and
+        callers should be able to tell that apart from unity.
+
+        Returns:
+            Scale per dimension (time first), or None if unknown.
+        """
+        geff_axes = getattr(self, "_geff_axes", [])
+        if not geff_axes:
+            return None
+
+        scale_by_name = {ax.name: ax.scale for ax in geff_axes}
+
+        # Reconstruct the dimension order used for the graph, not the file order.
+        pos_names = self.node_name_map.get("pos")
+        ordered: list[str] = []
+        time_name = self.node_name_map.get("time")
+        if isinstance(time_name, str):
+            ordered.append(time_name)
+        if isinstance(pos_names, list):
+            ordered.extend(pos_names)
+        if not ordered or not all(name in scale_by_name for name in ordered):
+            # The name map does not line up with the axes metadata (e.g. position
+            # stored as a single ndarray property): fall back to the file order.
+            ordered = [ax.name for ax in geff_axes]
+
+        # Only trust the result if it covers exactly the graph's dimensions,
+        # otherwise Tracks would reject the mismatched length.
+        expected_ndim = self.ndim
+        if expected_ndim is None and isinstance(pos_names, list):
+            expected_ndim = len(pos_names) + 1
+        if expected_ndim is not None and len(ordered) != expected_ndim:
+            return None
+
+        scales = [scale_by_name.get(name) for name in ordered]
+        if all(s is None for s in scales):
+            return None
+        return [1.0 if s is None else float(s) for s in scales]
+
+    def apply_points_scale(self) -> None:
+        """Multiply ``pos`` by the geff axes scale, so it ends up in world units.
+
+        No-op for legacy funtracks GEFFs (see ``read_header``): their axes.scale
+        is actually a mislabeled segmentation scale, and their ``pos`` is already
+        in world units, so applying it here would double-scale positions.
+        """
+        if self._is_legacy_funtracks_geff:
+            return
+        scale = self._axes_scale()
+        if scale is None:
+            return
+        if self.in_memory_geff is None:
+            raise ValueError("No data loaded. Call load_source() first.")
+        pos = self.in_memory_geff["node_props"].get("pos")
+        if pos is None:
+            return
+        # scale is [time, *spatial]; pos only holds the spatial dims.
+        pos["values"] = pos["values"] * np.asarray(scale[1:], dtype=pos["values"].dtype)
+
+    def infer_segmentation_scale(self) -> list[float] | None:
+        """Determine ``Tracks.scale`` (segmentation voxel spacing) for this file.
+
+        Reads ``graph.metadata["scale"]`` (see ``read_header``), except for
+        legacy funtracks GEFFs, whose segmentation scale was instead stored
+        (mislabeled) in the geff axes -- see ``read_header`` for detection.
+
+        Returns:
+            Scale per dimension (time first), or None if unknown.
+        """
+        if self._is_legacy_funtracks_geff:
+            return self._axes_scale()
+        raw = self._graph_metadata_scale
+        return [float(s) for s in raw] if raw is not None else None
 
     def construct_graph(
         self,
@@ -375,7 +472,15 @@ def import_from_geff(
             - For multi-value features like position, use a list: {"pos": ["y", "x"]}
             If None, property names are auto-inferred using fuzzy matching.
         segmentation_path: Optional path to segmentation data
-        scale: Optional spatial scale
+        scale: Optional segmentation voxel scale (``Tracks.scale``) -- this
+            only ever sets the segmentation scale, never the points' scale. If
+            None, defaults to the scale recorded in the geff's tracksdata graph
+            metadata (see :meth:`GeffTracksBuilder.infer_segmentation_scale`),
+            and stays None when the file does not declare one. This is
+            independent of the geff axes' own ``scale``, which (per the geff
+            spec) describes how to convert stored positions to world units and
+            is always applied to ``pos`` on import -- regardless of what is
+            passed here -- so that funtracks' world-units invariant holds.
         edge_name_map: Optional mapping from standard funtracks keys to GEFF
             edge property names. Example: {"iou": "overlap"}
         database: Optional path to a SQLite database file for backing storage.
@@ -417,6 +522,11 @@ def import_from_geff(
         builder.node_name_map = node_name_map
     if edge_name_map is not None and not has_feature_dict:
         builder.edge_name_map = edge_name_map
+
+    # An explicit scale always wins; otherwise honour what the file's metadata says.
+    if scale is None:
+        scale = builder.infer_segmentation_scale()
+
     return builder.build(
         directory,
         segmentation_path,
