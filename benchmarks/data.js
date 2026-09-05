@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788551320859,
+  "lastUpdate": 1788647072466,
   "repoUrl": "https://github.com/funkelab/funtracks",
   "entries": {
     "Python Benchmark with pytest-benchmark": [
@@ -2653,6 +2653,79 @@ window.BENCHMARK_DATA = {
             "unit": "iter/sec",
             "range": "stddev: 0.0007227882034974724",
             "extra": "mean: 100.22497799999049 msec\nrounds: 3"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "malinmayorc@janelia.hhmi.org",
+            "name": "Caroline Malin-Mayor",
+            "username": "cmalinmayor"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8dd9e621eb23f152b3139a0d8ae24459490e6db5",
+          "message": "Merge pull request #286 from funkelab/fix-stale-solution-tracks-seg\n\nDon't re-use the GraphArrayView in SOlutionTracks.from_tracks()",
+          "timestamp": "2026-09-05T18:23:51-04:00",
+          "tree_id": "a40f1fbcab16754b7961892f2f14f5ce20831e3e",
+          "url": "https://github.com/funkelab/funtracks/commit/8dd9e621eb23f152b3139a0d8ae24459490e6db5"
+        },
+        "date": 1788647070180,
+        "tool": "pytest",
+        "benches": [
+          {
+            "name": "tests/benchmarks/bench_actions.py::test_update_node_attrs_single",
+            "value": 602.444478717604,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0001459545241772159",
+            "extra": "mean: 1.6599039999978988 msec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_actions.py::test_update_node_attrs_bulk",
+            "value": 654.3550491230744,
+            "unit": "iter/sec",
+            "range": "stddev: 0.00009625632454036733",
+            "extra": "mean: 1.5282223333343836 msec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_actions.py::test_add_delete_edges",
+            "value": 11.785942949844305,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0004485391789730471",
+            "extra": "mean: 84.8468386666686 msec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_actions.py::test_update_segmentation",
+            "value": 30.83154495813611,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0008285680854220614",
+            "extra": "mean: 32.43431366666272 msec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_actions.py::test_delete_nodes",
+            "value": 4.879754552249774,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0037680568480372915",
+            "extra": "mean: 204.92834000000215 msec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_compute_graph_from_seg",
+            "value": 0.5431403978268269,
+            "unit": "iter/sec",
+            "range": "stddev: 0.03579300257797201",
+            "extra": "mean: 1.8411445806666673 sec\nrounds: 3"
+          },
+          {
+            "name": "tests/benchmarks/bench_candidate_graph.py::test_graph_to_solution",
+            "value": 12.463530204611601,
+            "unit": "iter/sec",
+            "range": "stddev: 0.0009674851434440216",
+            "extra": "mean: 80.23408966666541 msec\nrounds: 3"
           }
         ]
       }
