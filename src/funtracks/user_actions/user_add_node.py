@@ -86,16 +86,24 @@ class UserAddNode(ActionGroup):
         time = attributes[time_key]
 
         # check if node with this track id exists already at current time point
-        if self.tracks.has_track_id_at_time(track_id, time):
-            warnings.warn(
-                f"Starting a new track, because track id {track_id} already "
-                f"exists at time point {time}",
-                stacklevel=2,
-            )
-            track_id = self.tracks.get_next_track_id()
-            attributes[track_id_key] = track_id
-
-        pred, succ = self.tracks.get_track_neighbors(track_id, time)
+        pred = None
+        succ = None
+        for cand_time, cand in self.tracks.get_track_node_times(track_id):
+            if cand_time == time:
+                warnings.warn(
+                    f"Starting a new track, because track id {track_id} already "
+                    f"exists at time point {time}",
+                    stacklevel=2,
+                )
+                track_id = self.tracks.get_next_track_id()
+                attributes[track_id_key] = track_id
+                pred, succ = None, None
+                break
+            elif cand_time < time:
+                pred = cand
+            else:
+                succ = cand
+                break
 
         # check if you are adding a node to a track that divided previously
         if pred is not None and len(self.tracks.successors(pred)) == 2:

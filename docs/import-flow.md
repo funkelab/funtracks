@@ -181,7 +181,7 @@ tracks = import_from_geff(
     name_map=None,  # Auto-infer column mappings
     segmentation_path=Path("seg.tif"),
     scale=[1.0, 1.0, 1.0],
-    node_features={"area": True}
+    node_features={"area": True},
 )
 ```
 
@@ -194,14 +194,14 @@ from funtracks.import_export import tracks_from_df
 df = pd.read_csv("tracks.csv")
 
 # Load segmentation array
-seg = ... # Load your segmentation array (e.g., from tiff, zarr)
+seg = ...  # Load your segmentation array (e.g., from tiff, zarr)
 
 # Import tracks
 tracks = tracks_from_df(
     df=df,
     segmentation=seg,  # Pre-loaded segmentation array
     scale=[1.0, 1.0, 1.0],
-    features={"Area": "area"}  # Load area from 'area' column
+    features={"Area": "area"},  # Load area from 'area' column
 )
 ```
 
@@ -224,7 +224,7 @@ tracks = builder.build(
     source_path=Path("data.zarr"),
     segmentation_path=Path("seg.tif"),
     scale=[1.0, 1.0, 1.0],
-    node_features={"area": True}
+    node_features={"area": True},
 )
 ```
 
@@ -239,8 +239,5 @@ builder.prepare("data.csv")  # Auto-infer name_map
 print(builder.name_map)
 builder.name_map["time"] = "frame_number"
 
-tracks = builder.build(
-    source_path="data.csv",
-    segmentation_path="seg.tif"
-)
+tracks = builder.build(source_path="data.csv", segmentation_path="seg.tif")
 ```

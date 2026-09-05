@@ -5,6 +5,7 @@ from .user_connect_nodes import UserConnectNodes
 from .user_delete_edge import UserDeleteEdge
 from .user_delete_node import UserDeleteNode
 from .user_delete_nodes import UserDeleteNodes
+from .user_set_division import UserSetDivision
 from .user_update_node_attrs import UserUpdateNodeAttrs
 from .user_update_nodes_attrs import UserUpdateNodesAttrs
 from .user_update_segmentation import UserUpdateSegmentation
@@ -16,6 +17,7 @@ __all__ = [
     "UserDeleteEdge",
     "UserDeleteNode",
     "UserDeleteNodes",
+    "UserSetDivision",
     "UserSwapPredecessors",
     "UserUpdateNodeAttrs",
     "UserUpdateNodesAttrs",
