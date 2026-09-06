@@ -185,12 +185,13 @@ def _build_geff_metadata(
         for name, axis_type in zip(axis_names, axis_types, strict=True)
     ]
 
-    extra: dict = {}
+    # The version stamp goes on every geff funtracks writes, including subgroup
+    # exports that omit the FeatureDict: it is what tells import that this file's
+    # points are already in world units. Without it a subgroup export looks like a
+    # foreign geff and its points would be scaled again (see `read_header`).
+    extra: dict = {"funtracks": {"version": _funtracks_version()}}
     if include_features:
-        extra["funtracks"] = {
-            "features": tracks.features.dump_json(),
-            "version": _funtracks_version(),
-        }
+        extra["funtracks"]["features"] = tracks.features.dump_json()
 
     # Note: shape and scale live in graph metadata (Tracks.scale is a property
     # backed by it) and are written by tracksdata's `to_geff` via `graph.metadata` -

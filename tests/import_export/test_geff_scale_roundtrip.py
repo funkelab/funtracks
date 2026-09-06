@@ -226,3 +226,24 @@ def test_legacy_funtracks_geff_scale_migrates_without_double_scaling_points(
     assert loaded.scale == [1.0, 0.25, 0.5]
     loaded_pos = loaded.graph_solution.node_attrs(attr_keys=["pos"])["pos"].to_list()
     np.testing.assert_allclose(loaded_pos, orig_pos)
+
+
+def test_subgroup_export_is_still_marked_as_funtracks(get_tracks, tmp_path):
+    """Subgroup exports omit the FeatureDict but must keep the version stamp:
+    it is what marks their points as already being in world units. Without it
+    they read as a foreign geff and their points get scaled a second time."""
+    tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
+    tracks.scale = [1.0, 0.25, 0.5]
+    node_ids = list(tracks.graph_solution.node_ids())[:2]
+    orig_pos = [tracks.get_position(node_id) for node_id in node_ids]
+
+    export_to_geff(tracks, tmp_path / "container", node_ids=node_ids)
+    geff_path = tmp_path / "container" / "tracks.geff"
+
+    meta = GeffMetadata.read(geff_path)
+    assert "features" not in meta.extra["funtracks"]
+    assert meta.extra["funtracks"]["version"] is not None
+
+    loaded = import_from_geff(geff_path)
+    loaded_pos = loaded.graph_solution.node_attrs(attr_keys=["pos"])["pos"].to_list()
+    np.testing.assert_allclose(sorted(loaded_pos), sorted(orig_pos))

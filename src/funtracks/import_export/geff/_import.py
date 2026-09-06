@@ -221,8 +221,7 @@ class GeffTracksBuilder(TracksBuilder):
         # Read funtracks FeatureDict from GEFF extra metadata if present
         # This will be passed to Tracks via the base build() method
         funtracks_extra = (metadata.extra or {}).get("funtracks")
-        has_funtracks_features = bool(funtracks_extra and "features" in funtracks_extra)
-        if funtracks_extra is not None and has_funtracks_features:
+        if funtracks_extra and "features" in funtracks_extra:
             try:
                 from funtracks.features import FeatureDict
 
@@ -237,12 +236,12 @@ class GeffTracksBuilder(TracksBuilder):
         # into axes.scale instead of graph.metadata["scale"], while pos was already
         # written in world units. Applying axes.scale to pos for such a file would
         # double-scale already-correct positions. Geffs written that way have a
-        # funtracks FeatureDict extra but no funtracks "version" string (the version
-        # string is new, added alongside this fix): detect that combination and, for
-        # those files only, skip scaling pos and instead treat axes.scale as the
-        # segmentation scale.
-        self._is_legacy_funtracks_geff = has_funtracks_features and "version" not in (
-            funtracks_extra or {}
+        # funtracks extra but no funtracks "version" string (the version string is
+        # new, added alongside this fix, and written on every export): detect that
+        # combination and, for those files only, skip scaling pos and instead treat
+        # axes.scale as the segmentation scale.
+        self._is_legacy_funtracks_geff = (
+            funtracks_extra is not None and "version" not in funtracks_extra
         )
         self._graph_metadata_scale = td.io.read_graph_metadata(metadata).get("scale")
 
