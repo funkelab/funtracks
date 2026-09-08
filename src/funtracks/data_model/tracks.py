@@ -6,6 +6,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     TypeAlias,
+    cast,
 )
 from warnings import warn
 
@@ -44,11 +45,10 @@ if TYPE_CHECKING:
 
     IntensityImage: TypeAlias = np.ndarray | da.Array
 
-AttrValue: TypeAlias = Any
+AttrValue: TypeAlias = float | int | str | bool | list[float]
 Node: TypeAlias = int
 Edge: TypeAlias = tuple[Node, Node]
-AttrValues: TypeAlias = list[AttrValue]
-Attrs: TypeAlias = dict[str, AttrValues]
+Attrs: TypeAlias = dict[str, list[AttrValue]]
 
 logger = logging.getLogger(__name__)
 
@@ -611,11 +611,8 @@ class Tracks:
         self.set_positions([node], np.expand_dims(np.array(position), axis=0))
 
     def get_times(self, nodes: Iterable[Node]) -> Sequence[int]:
-        """Batch fetch times for many nodes in one query.
-        NOTE: fetches all nodes in the graph internally. Optimised for bulk use.
-        For a single node use get_time() instead.
-        """
-        return self.get_nodes_attr(nodes, self.features.time_key)
+        """Batch fetch times for many nodes in one query."""
+        return cast("list[int]", self.get_nodes_attr(nodes, self.features.time_key))
 
     def get_time(self, node: Node) -> int:
         """Get the time frame of a given node. Raises an error if the node
@@ -627,7 +624,7 @@ class Tracks:
         Returns:
             int: The time frame that the node is in
         """
-        return int(self.get_node_attr(node, self.features.time_key))
+        return int(cast("int", self.get_node_attr(node, self.features.time_key)))
 
     def get_mask(
         self, node: Node, mask_key: str = td.DEFAULT_ATTR_KEYS.MASK
@@ -752,12 +749,14 @@ class Tracks:
     # listeners on the view (e.g. GraphArrayView) do not see these writes. Writers
     # whose attrs the view renders (t/bbox/mask) must go through graph_solution
     # instead — see `update_mask`.
-    def _set_node_attr(self, node: Node, attr: str, value: Any):
+    def _set_node_attr(self, node: Node, attr: str, value: AttrValue):
         if isinstance(value, np.ndarray):
             value = list(value)
         self.graph_full.nodes[node][attr] = value
 
-    def _set_nodes_attr(self, nodes: Iterable[Node], attr: str, values: Iterable[Any]):
+    def _set_nodes_attr(
+        self, nodes: Iterable[Node], attr: str, values: Iterable[AttrValue]
+    ):
         nodes_list = list(nodes)
         values_list = list(values)
         if nodes_list:
@@ -765,15 +764,25 @@ class Tracks:
                 attrs={attr: values_list}, node_ids=nodes_list
             )
 
-    def get_node_attr(self, node: Node, attr: str):
-        """Get an attribute value for a single node (resolved on graph_full)."""
-        return self.graph_full.nodes[int(node)][attr]
+    def get_node_attr(self, node: Node, attr: str) -> AttrValue:
+        """Get an attribute value for a single node (resolved on graph_full).
 
-    def get_nodes_attr(self, nodes: Iterable[Node], attr: str):
+        Vector attributes (e.g. pos, bbox) are returned as plain lists, matching
+        get_nodes_attr, rather than the pl.Series the backend returns internally.
+        """
+        value = self.graph_full.nodes[int(node)][attr]
+        if isinstance(value, pl.Series):
+            return value.to_list()
+        return value
+
+    def get_nodes_attr(self, nodes: Iterable[Node], attr: str) -> list[AttrValue]:
         """Batch fetch one attribute for many nodes in one query.
-        NOTE: for single-node lookups use get_node_attr() instead.
+
+        Optimized for rustworkx backend, likely needs different
+        optimization for SQL backend.
         """
         nodes = list(nodes)
+
         # filter(node_ids=...) only walks the requested nodes, so it wins when nodes
         # is a small slice of the graph; but it also pays its own setup cost
         # (local-id mapping, filter construction), so fetching the whole graph
@@ -795,13 +804,15 @@ class Tracks:
         )
         return [id_to_val[node] for node in nodes]
 
-    def _set_edge_attr(self, edge: Edge, attr: str, value: Any):
+    def _set_edge_attr(self, edge: Edge, attr: str, value: AttrValue):
         edge_id = self.graph_full.edge_id(edge[0], edge[1])
         # Wrap in a single-element list: update_edge_attrs reads a bare list value
         # (e.g. a vector feature) as one-value-per-edge.
         self.graph_full.update_edge_attrs(attrs={attr: [value]}, edge_ids=[edge_id])
 
-    def _set_edges_attr(self, edges: Iterable[Edge], attr: str, values: Iterable[Any]):
+    def _set_edges_attr(
+        self, edges: Iterable[Edge], attr: str, values: Iterable[AttrValue]
+    ):
         for edge, value in zip(edges, values, strict=False):
             edge_id = self.graph_full.edge_id(edge[0], edge[1])
             self.graph_full.update_edge_attrs(attrs={attr: value}, edge_ids=[edge_id])
@@ -1069,13 +1080,12 @@ class Tracks:
     def get_track_id(self, node) -> int:
         """Get the tracklet id of a single node."""
         track_id = self.get_node_attr(node, self.features.tracklet_key)
-        return track_id
+        return cast("int", track_id)
 
     def get_track_ids(self, nodes) -> list[int]:
-        """Batch version of get_track_id — one query for all of `nodes` (see
-        get_nodes_attr). Optimised for bulk (all-node) calls; for small subsets or
-        single nodes use get_track_id() instead."""
-        return self.get_nodes_attr(nodes, self.features.tracklet_key)
+        """Batch version of get_track_id — one query for many `nodes`.
+        More efficient than a python loop over single nodes."""
+        return cast("list[int]", self.get_nodes_attr(nodes, self.features.tracklet_key))
 
     def get_lineage_id(self, node) -> int:
         """Get the lineage ID for a node.
@@ -1086,7 +1096,7 @@ class Tracks:
         Returns:
             The lineage ID.
         """
-        return self.get_node_attr(node, self.features.lineage_key)
+        return cast("int", self.get_node_attr(node, self.features.lineage_key))
 
     def get_track_node_times(self, track_id: int) -> list[tuple[int, Node]]:
         """Fetch every (time, node) pair for a tracklet, sorted by time.
