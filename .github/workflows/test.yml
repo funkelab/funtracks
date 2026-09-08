@@ -105,6 +105,9 @@ jobs:
         with:
           body-path: report.md
 
+      # macos-latest runners are noisy enough (shared vCPUs, no dedicated capacity) that
+      # even 2x rounds still produce 2-3x swings on operations in the tens-of-ms range
+      # with no code change involved.
       - name: Fail if regression detected
-        if: steps.report.outcome == 'failure'
+        if: steps.report.outcome == 'failure' && matrix.platform != 'macos-latest'
         run: exit 1
