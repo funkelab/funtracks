@@ -809,6 +809,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#funtracks.data_model.Tracks.scale" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;scale
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#funtracks.data_model.Tracks.track_annotator" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3308,6 +3319,17 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;regionprops_annotator
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.data_model.Tracks.scale" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;scale
       
     </span>
   </a>
@@ -5853,7 +5875,7 @@ graph_full; the user-visible tracking solution.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code><span title="funtracks.data_model.Tracks.scale">scale</span></code></td>
+            <td><code><a class="autorefs autorefs-internal" title="            scale (funtracks.data_model.Tracks.scale)" href="#funtracks.data_model.Tracks.scale">scale</a></code></td>
             <td>
                   <code><span title="list">list</span>[<span title="float">float</span>] | None</code>
             </td>
@@ -6170,6 +6192,29 @@ existing GraphArrayView instance. Not intended for public use.</p>
     <div class="doc doc-contents ">
 
         <p>The registered RegionpropsAnnotator, or None when there is no segmentation.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h4 id="funtracks.data_model.Tracks.scale" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">scale</span>
+
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">scale</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Segmentation voxel spacing (time first, dummy 1.0), or None if unknown.</p>
+<p>Backed by <code>graph_full.metadata["scale"]</code> (one copy, no staleness), which
+is tracksdata's own convention and is spatial-only - this property adds/
+strips the dummy time entry at the boundary.</p>
 
     </div>
 

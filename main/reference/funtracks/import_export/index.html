@@ -1862,6 +1862,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#funtracks.import_export.GeffTracksBuilder.apply_points_scale" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;apply_points_scale
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#funtracks.import_export.GeffTracksBuilder.construct_graph" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1877,6 +1888,17 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;infer_node_name_map
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.import_export.GeffTracksBuilder.infer_segmentation_scale" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;infer_segmentation_scale
       
     </span>
   </a>
@@ -1927,6 +1949,17 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;axis_names
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.import_export.TracksBuilder.apply_points_scale" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;apply_points_scale
       
     </span>
   </a>
@@ -2495,6 +2528,29 @@
 <div class="doc doc-object doc-function">
 
 
+<h3 id="funtracks.import_export.GeffTracksBuilder.apply_points_scale" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">apply_points_scale</span>
+
+
+</h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">apply_points_scale</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Multiply <code>pos</code> by the geff axes scale, so it ends up in world units.</p>
+<p>No-op for legacy funtracks GEFFs (see <code>read_header</code>): their axes.scale
+is actually a mislabeled segmentation scale, and their <code>pos</code> is already
+in world units, so applying it here would double-scale positions.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
 <h3 id="funtracks.import_export.GeffTracksBuilder.construct_graph" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">construct_graph</span>
 
@@ -2559,6 +2615,52 @@ can misassign properties when many non-spatiotemporal properties are present.</p
             <td>
               <div class="doc-md-description">
                 <p>Inferred node_name_map mapping standard keys to source property names</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="funtracks.import_export.GeffTracksBuilder.infer_segmentation_scale" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">infer_segmentation_scale</span>
+
+
+</h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">infer_segmentation_scale</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Determine <code>Tracks.scale</code> (segmentation voxel spacing) for this file.</p>
+<p>Reads <code>graph.metadata["scale"]</code> (see <code>read_header</code>), except for
+legacy funtracks GEFFs, whose segmentation scale was instead stored
+(mislabeled) in the geff axes -- see <code>read_header</code> for detection.</p>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="list">list</span>[<span title="float">float</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Scale per dimension (time first, dummy 1.0), or None if unknown.</p>
               </div>
             </td>
           </tr>
@@ -2765,6 +2867,32 @@ If ndim is None, returns ["z", "y", "x"] as default.</p>
 
 
 
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="funtracks.import_export.TracksBuilder.apply_points_scale" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">apply_points_scale</span>
+
+
+</h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">apply_points_scale</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Scale combined <code>pos</code> values in place, if the source declares a scale.</p>
+<p>No-op by default (deliberately not <code>@abstractmethod</code>: this default is a
+valid, usable behavior, not a contract every subclass must fulfill).
+Funtracks requires <code>pos</code> to be in world units; formats that can store
+points in a different unit alongside an explicit scale (e.g. GEFF's
+<code>axes.scale</code>) override this to multiply <code>pos</code> by that scale after
+:meth:<code>_combine_multi_value_props</code> has assembled it.</p>
+
+
+    </div>
+
+</div>
 
 <div class="doc doc-object doc-function">
 

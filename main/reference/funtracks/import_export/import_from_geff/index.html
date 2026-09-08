@@ -2054,7 +2054,15 @@ If None, property names are auto-inferred using fuzzy matching.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Optional spatial scale</p>
+                <p>Optional segmentation voxel scale (<code>Tracks.scale</code>) -- this
+only ever sets the segmentation scale, never the points' scale. If
+None, defaults to the scale recorded in the geff's tracksdata graph
+metadata (see :meth:<code>GeffTracksBuilder.infer_segmentation_scale</code>),
+and stays None when the file does not declare one. This is
+independent of the geff axes' own <code>scale</code>, which (per the geff
+spec) describes how to convert stored positions to world units and
+is always applied to <code>pos</code> on import -- regardless of what is
+passed here -- so that funtracks' world-units invariant holds.</p>
               </div>
             </td>
             <td>
