@@ -3929,7 +3929,8 @@ a node is added or track IDs are updated via UpdateTrackIDs.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Get an attribute value for each of the given nodes.</p>
+        <p>Batch fetch one attribute for many nodes in one query.
+NOTE: for single-node lookups use get_node_attr() instead.</p>
 
 
     </div>
@@ -4185,9 +4186,9 @@ For a single node use get_time() instead.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Batch version of get_track_id — one query fetching all nodes in the graph.
-NOTE: always fetches the entire graph internally. Optimised for bulk (all-node)
-calls. For small subsets or single nodes use get_track_id() instead.</p>
+        <p>Batch version of get_track_id — one query for all of <code>nodes</code> (see
+get_nodes_attr). Optimised for bulk (all-node) calls; for small subsets or
+single nodes use get_track_id() instead.</p>
 
 
     </div>
