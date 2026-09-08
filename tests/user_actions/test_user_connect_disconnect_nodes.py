@@ -1,4 +1,4 @@
-"""Tests for UserConnectNodes.
+"""Tests for UserConnectNodes and UserDisconnectNodes.
 
 The fixture graph is::
 
@@ -12,7 +12,11 @@ The fixture graph is::
 import pytest
 
 from funtracks.exceptions import InvalidActionError
-from funtracks.user_actions import UserConnectNodes
+from funtracks.user_actions import (
+    UserConnectNodes,
+    UserDisconnectNodes,
+    is_connected_chain,
+)
 
 
 @pytest.fixture
@@ -39,7 +43,7 @@ class TestConnect:
         """Connecting several nodes gives them all the first node's tracklet id."""
 
         # break 3 -> 4 -> 5 apart first so that we can reconnect it as a chain
-        UserConnectNodes(tracks, [3, 4, 5])
+        UserDisconnectNodes(tracks, [3, 4, 5])
         assert len({tracks.get_track_id(n) for n in (3, 4, 5)}) == 3
 
         UserConnectNodes(tracks, [3, 4, 5])
@@ -75,9 +79,9 @@ class TestConnect:
 
 class TestDisconnect:
     def test_disconnect_fully_connected_selection(self, tracks):
-        """Selecting an already connected chain breaks it apart again."""
+        """A connected chain is broken apart, every fragment getting its own id."""
 
-        action = UserConnectNodes(tracks, [3, 4, 5])
+        action = UserDisconnectNodes(tracks, [3, 4, 5])
         assert not tracks.graph_solution.has_edge(3, 4)
         assert not tracks.graph_solution.has_edge(4, 5)
         track_ids = [tracks.get_track_id(n) for n in (3, 4, 5)]
@@ -90,9 +94,67 @@ class TestDisconnect:
     def test_disconnect_keeps_edges_outside_selection(self, tracks):
         """Only the edges between the selected nodes are removed."""
 
-        UserConnectNodes(tracks, [4, 5])
+        UserDisconnectNodes(tracks, [4, 5])
         assert not tracks.graph_solution.has_edge(4, 5)
         assert tracks.graph_solution.has_edge(3, 4)  # incoming edge of the first node
+
+    def test_disconnect_selection_order_is_irrelevant(self, tracks):
+        UserDisconnectNodes(tracks, [5, 4])
+        assert not tracks.graph_solution.has_edge(4, 5)
+
+    def test_disconnect_partially_connected_selection(self, tracks):
+        """Pairs that are not connected are skipped rather than rejected."""
+
+        # 3 -> 4 exists, 4 -> 6 does not
+        UserDisconnectNodes(tracks, [3, 4, 6])
+        assert not tracks.graph_solution.has_edge(3, 4)
+        assert tracks.graph_solution.has_edge(4, 5)  # outside the selection, untouched
+
+    def test_disconnect_when_nothing_is_connected(self, tracks):
+        """Disconnecting a selection that has no edges at all is invalid."""
+
+        with pytest.raises(InvalidActionError, match="nothing to disconnect") as info:
+            UserDisconnectNodes(tracks, [2, 6])
+        assert info.value.forceable is False
+
+    def test_disconnect_rejects_invalid_selections(self, tracks):
+        with pytest.raises(InvalidActionError, match="same time point"):
+            UserDisconnectNodes(tracks, [2, 3])
+        with pytest.raises(InvalidActionError, match="at least two nodes"):
+            UserDisconnectNodes(tracks, [1])
+        with pytest.raises(InvalidActionError, match="not in solution"):
+            UserDisconnectNodes(tracks, [1, 42])
+
+    def test_disconnect_undo_redo_through_history(self, tracks):
+        UserDisconnectNodes(tracks, [3, 4, 5])
+        assert not tracks.graph_solution.has_edge(3, 4)
+
+        tracks.undo()
+        assert tracks.graph_solution.has_edge(3, 4)
+        assert tracks.graph_solution.has_edge(4, 5)
+
+        tracks.redo()
+        assert not tracks.graph_solution.has_edge(3, 4)
+        assert not tracks.graph_solution.has_edge(4, 5)
+
+
+class TestIsConnectedChain:
+    def test_true_for_a_connected_chain(self, tracks):
+        assert is_connected_chain(tracks, [3, 4, 5]) is True
+        assert is_connected_chain(tracks, [5, 3, 4]) is True  # order is irrelevant
+
+    def test_false_when_a_pair_is_missing(self, tracks):
+        assert is_connected_chain(tracks, [3, 4, 6]) is False
+        assert is_connected_chain(tracks, [2, 6]) is False
+        # 1 -> 2 exists, but 2 -> 4 does not (4's parent is 3)
+        assert is_connected_chain(tracks, [1, 2, 4]) is False
+
+    def test_false_for_an_invalid_selection(self, tracks):
+        """The caller falls through to UserConnectNodes, which raises the real error."""
+
+        assert is_connected_chain(tracks, [2, 3]) is False  # same time point
+        assert is_connected_chain(tracks, [1]) is False
+        assert is_connected_chain(tracks, [1, 42]) is False
 
 
 class TestConflicts:
@@ -152,6 +214,14 @@ class TestConflicts:
 
 
 class TestInvalid:
+    def test_connect_when_everything_is_connected(self, tracks):
+        """There is nothing left to connect: UserDisconnectNodes is the action to use."""
+
+        with pytest.raises(InvalidActionError, match="nothing to connect") as info:
+            UserConnectNodes(tracks, [3, 4, 5])
+        assert info.value.forceable is False
+        assert tracks.graph_solution.has_edge(3, 4)  # nothing was applied
+
     def test_horizontal_nodes_not_forceable(self, tracks):
         """Nodes 2 and 3 are both in time point 1."""
 
@@ -168,7 +238,7 @@ class TestInvalid:
         with pytest.raises(InvalidActionError, match="at least two nodes"):
             UserConnectNodes(tracks, [1])
         with pytest.raises(InvalidActionError, match="at least two nodes"):
-            UserConnectNodes(tracks, [1, 1])
+            UserConnectNodes(tracks, [1, 1])  # de-duplicated to a single node
 
     def test_node_not_in_solution(self, tracks):
         with pytest.raises(InvalidActionError, match="not in solution"):
@@ -244,7 +314,7 @@ class TestLinear:
 
 class TestHasDivisionChoice:
     def test_false_for_fully_connected_selection(self, tracks):
-        """A selection that would be disconnected has nothing to choose."""
+        """A selection with nothing left to connect has nothing to choose."""
 
         assert UserConnectNodes.has_division_choice(tracks, [3, 4, 5]) is False
 
