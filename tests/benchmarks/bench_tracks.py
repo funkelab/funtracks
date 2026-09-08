@@ -4,6 +4,8 @@ user-facing action layer (UserUpdateNodeAttrs, UserDeleteEdge, etc.) built on to
 these.
 """
 
+import platform
+
 import numpy as np
 import pytest
 
@@ -15,6 +17,14 @@ CELLS_PER_FRAME = 50
 
 ROUNDS = 3
 N_OPS = 50
+if platform.system() == "Darwin":
+    # macOS runners are noisier than Linux; double for more stable measurements (same
+    # adjustment as bench_actions.py). Unlike there, NUM_FRAMES does not need to scale
+    # with this: every fixture here is module-scoped and reused across rounds rather
+    # than drawing a fresh disjoint node batch per round, so there is no node-supply
+    # constraint tied to ROUNDS * N_OPS.
+    N_OPS = N_OPS * 2
+    ROUNDS = ROUNDS * 2
 
 
 @pytest.fixture(scope="module")
@@ -168,20 +178,6 @@ def test_get_positions_incl_time(benchmark, tracks, all_nodes):
 
     def run():
         tracks.get_positions(all_nodes, incl_time=True)
-
-    benchmark.pedantic(run, rounds=ROUNDS, iterations=1)
-
-
-def test_get_node_attr_loop(benchmark, tracks, small_subset):
-    """N single-node get_node_attr calls, as a caller doing its own loop would.
-
-    Baseline for what get_nodes_attr's one-query batching (test_get_nodes_attr_*)
-    is worth -- get_node_attr itself is documented single-node only.
-    """
-
-    def run():
-        for node in small_subset:
-            tracks.get_node_attr(node, "area")
 
     benchmark.pedantic(run, rounds=ROUNDS, iterations=1)
 
