@@ -384,6 +384,17 @@ class TracksBuilder(ABC):
                 if c in props and c != std_key:
                     del props[c]
 
+    def apply_points_scale(self) -> None:  # noqa: B027
+        """Scale combined ``pos`` values in place, if the source declares a scale.
+
+        No-op by default (deliberately not ``@abstractmethod``: this default is a
+        valid, usable behavior, not a contract every subclass must fulfill).
+        Funtracks requires ``pos`` to be in world units; formats that can store
+        points in a different unit alongside an explicit scale (e.g. GEFF's
+        ``axes.scale``) override this to multiply ``pos`` by that scale after
+        :meth:`_combine_multi_value_props` has assembled it.
+        """
+
     def validate(self) -> None:
         """Validate the loaded InMemoryGeff data.
 
@@ -821,6 +832,9 @@ class TracksBuilder(ABC):
             self._combine_multi_value_props(
                 self.in_memory_geff["edge_props"], self.edge_name_map
             )
+
+        # 2b. Scale points to world units, if the source declares a scale for them
+        self.apply_points_scale()
 
         # 3. Validate InMemoryGeff (includes spatial_dims array shape validation)
         self.validate()
