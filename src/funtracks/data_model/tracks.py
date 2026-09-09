@@ -6,6 +6,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     TypeAlias,
+    cast,
 )
 from warnings import warn
 
@@ -32,16 +33,22 @@ from funtracks.utils.tracksdata_utils import (
 )
 
 if TYPE_CHECKING:
+    import dask.array as da
     import tracksdata as td
 
     from funtracks.actions import BasicAction
-    from funtracks.annotators import AnnotatorRegistry, GraphAnnotator
+    from funtracks.annotators import (
+        AnnotatorRegistry,
+        GraphAnnotator,
+        RegionpropsAnnotator,
+    )
 
-AttrValue: TypeAlias = Any
+    IntensityImage: TypeAlias = np.ndarray | da.Array
+
+AttrValue: TypeAlias = float | int | str | bool | list[float]
 Node: TypeAlias = int
 Edge: TypeAlias = tuple[Node, Node]
-AttrValues: TypeAlias = list[AttrValue]
-Attrs: TypeAlias = dict[str, AttrValues]
+Attrs: TypeAlias = dict[str, list[AttrValue]]
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +84,8 @@ class Tracks:
         scale: list[float] | None = None,
         ndim: int | None = None,
         features: FeatureDict | None = None,
+        intensity_images: Sequence[IntensityImage] | None = None,
+        channel_names: Sequence[str] | None = None,
         _segmentation: GraphArrayView | None = None,
     ):
         """Initialize a Tracks object.
@@ -107,6 +116,14 @@ class Tracks:
                 Assumes that all features in the dict already exist on the graph (will
                 be activated but not recomputed). If None, core computed features (pos,
                 tracklet_id) are auto-detected by checking if they exist on the graph.
+            intensity_images (Sequence[IntensityImage] | None): Raw images to measure
+                intensity in, one per channel, each shaped like the segmentation
+                (t, [z], y, x). May be lazy (e.g. dask arrays); each node's bounding
+                box is read on demand rather than the image being loaded up front.
+                Required for the "intensity" feature; can also be set later with
+                set_intensity_images.
+            channel_names (Sequence[str] | None): Display names, one per intensity
+                image. Defaults to channel_0, channel_1, ... for multichannel input.
             _segmentation (GraphArrayView | None): Internal parameter for reusing an
                 existing GraphArrayView instance. Not intended for public use.
         """
@@ -173,7 +190,8 @@ class Tracks:
                 self.segmentation = None
         else:
             self.segmentation = None
-        self.scale = scale
+        if scale is not None:
+            self.scale = scale
         self.ndim = self._compute_ndim(
             self.segmentation.shape if self.segmentation is not None else None,
             scale,
@@ -206,6 +224,9 @@ class Tracks:
             else features
         )
         # 2. Set up annotator registry for managing feature computation
+        # (read by _get_annotators to configure the RegionpropsAnnotator)
+        self._intensity_images = intensity_images
+        self._channel_names = channel_names
         self.annotators = self._get_annotators()
 
         # 3. Set up core computed features
@@ -219,6 +240,26 @@ class Tracks:
         # key and a registered TrackAnnotator, with tracklet_id/lineage_id registered
         # and computed. A provided FeatureDict that omitted them is completed here.
         self._ensure_track_features()
+
+    @property
+    def scale(self) -> list[float] | None:
+        """Segmentation voxel spacing (time first, dummy 1.0), or None if unknown.
+
+        Backed by ``graph_full.metadata["scale"]`` (one copy, no staleness), which
+        is tracksdata's own convention and is spatial-only - this property adds/
+        strips the dummy time entry at the boundary.
+        """
+        spatial_scale = self.graph_full.metadata.get("scale")
+        if spatial_scale is None:
+            return None
+        return [1.0, *spatial_scale]
+
+    @scale.setter
+    def scale(self, value: list[float] | None) -> None:
+        if value is None:
+            self.graph_full.metadata.pop("scale", None)
+        else:
+            self.graph_full.metadata["scale"] = list(value[1:])
 
     def _get_feature_set(
         self,
@@ -336,7 +377,14 @@ class Tracks:
                 if isinstance(self.features.position_key, str)
                 else None
             )
-            annotator_list.append(RegionpropsAnnotator(self, pos_key=pos_key))
+            annotator_list.append(
+                RegionpropsAnnotator(
+                    self,
+                    pos_key=pos_key,
+                    intensity_images=self._intensity_images,
+                    channel_names=self._channel_names,
+                )
+            )
 
         # EdgeAnnotator: requires segmentation
         if EdgeAnnotator.can_annotate(self):
@@ -563,22 +611,8 @@ class Tracks:
         self.set_positions([node], np.expand_dims(np.array(position), axis=0))
 
     def get_times(self, nodes: Iterable[Node]) -> Sequence[int]:
-        """Batch fetch times for many nodes in one query.
-        NOTE: fetches all nodes in the graph internally. Optimised for bulk use.
-        For a single node use get_time() instead.
-        """
-        nodes = list(nodes)
-        df = self.graph_full.node_attrs(
-            attr_keys=[td.DEFAULT_ATTR_KEYS.NODE_ID, self.features.time_key]
-        )
-        id_to_val = dict(
-            zip(
-                df[td.DEFAULT_ATTR_KEYS.NODE_ID].to_list(),
-                df[self.features.time_key].to_list(),
-                strict=True,
-            )
-        )
-        return [id_to_val[node] for node in nodes]
+        """Batch fetch times for many nodes in one query."""
+        return cast("list[int]", self.get_nodes_attr(nodes, self.features.time_key))
 
     def get_time(self, node: Node) -> int:
         """Get the time frame of a given node. Raises an error if the node
@@ -590,7 +624,7 @@ class Tracks:
         Returns:
             int: The time frame that the node is in
         """
-        return int(self.get_node_attr(node, self.features.time_key))
+        return int(cast("int", self.get_node_attr(node, self.features.time_key)))
 
     def get_mask(
         self, node: Node, mask_key: str = td.DEFAULT_ATTR_KEYS.MASK
@@ -715,12 +749,14 @@ class Tracks:
     # listeners on the view (e.g. GraphArrayView) do not see these writes. Writers
     # whose attrs the view renders (t/bbox/mask) must go through graph_solution
     # instead — see `update_mask`.
-    def _set_node_attr(self, node: Node, attr: str, value: Any):
+    def _set_node_attr(self, node: Node, attr: str, value: AttrValue):
         if isinstance(value, np.ndarray):
             value = list(value)
         self.graph_full.nodes[node][attr] = value
 
-    def _set_nodes_attr(self, nodes: Iterable[Node], attr: str, values: Iterable[Any]):
+    def _set_nodes_attr(
+        self, nodes: Iterable[Node], attr: str, values: Iterable[AttrValue]
+    ):
         nodes_list = list(nodes)
         values_list = list(values)
         if nodes_list:
@@ -728,21 +764,55 @@ class Tracks:
                 attrs={attr: values_list}, node_ids=nodes_list
             )
 
-    def get_node_attr(self, node: Node, attr: str):
-        """Get an attribute value for a single node (resolved on graph_full)."""
-        return self.graph_full.nodes[int(node)][attr]
+    def get_node_attr(self, node: Node, attr: str) -> AttrValue:
+        """Get an attribute value for a single node (resolved on graph_full).
 
-    def get_nodes_attr(self, nodes: Iterable[Node], attr: str):
-        """Get an attribute value for each of the given nodes."""
-        return [self.get_node_attr(node, attr) for node in nodes]
+        Vector attributes (e.g. pos, bbox) are returned as plain lists, matching
+        get_nodes_attr, rather than the pl.Series the backend returns internally.
+        """
+        value = self.graph_full.nodes[int(node)][attr]
+        if isinstance(value, pl.Series):
+            return value.to_list()
+        return value
 
-    def _set_edge_attr(self, edge: Edge, attr: str, value: Any):
+    def get_nodes_attr(self, nodes: Iterable[Node], attr: str) -> list[AttrValue]:
+        """Batch fetch one attribute for many nodes in one query.
+
+        Optimized for rustworkx backend, likely needs different
+        optimization for SQL backend.
+        """
+        nodes = list(nodes)
+
+        # filter(node_ids=...) only walks the requested nodes, so it wins when nodes
+        # is a small slice of the graph; but it also pays its own setup cost
+        # (local-id mapping, filter construction), so fetching the whole graph
+        # unfiltered wins when nodes is most of it anyway (empirically, >~75%).
+        if len(nodes) > 0.75 * self.graph_full.num_nodes():
+            df = self.graph_full.node_attrs(
+                attr_keys=[td.DEFAULT_ATTR_KEYS.NODE_ID, attr]
+            )
+        else:
+            df = self.graph_full.filter(node_ids=nodes).node_attrs(
+                attr_keys=[td.DEFAULT_ATTR_KEYS.NODE_ID, attr]
+            )
+        id_to_val = dict(
+            zip(
+                df[td.DEFAULT_ATTR_KEYS.NODE_ID].to_list(),
+                df[attr].to_list(),
+                strict=True,
+            )
+        )
+        return [id_to_val[node] for node in nodes]
+
+    def _set_edge_attr(self, edge: Edge, attr: str, value: AttrValue):
         edge_id = self.graph_full.edge_id(edge[0], edge[1])
         # Wrap in a single-element list: update_edge_attrs reads a bare list value
         # (e.g. a vector feature) as one-value-per-edge.
         self.graph_full.update_edge_attrs(attrs={attr: [value]}, edge_ids=[edge_id])
 
-    def _set_edges_attr(self, edges: Iterable[Edge], attr: str, values: Iterable[Any]):
+    def _set_edges_attr(
+        self, edges: Iterable[Edge], attr: str, values: Iterable[AttrValue]
+    ):
         for edge, value in zip(edges, values, strict=False):
             edge_id = self.graph_full.edge_id(edge[0], edge[1])
             self.graph_full.update_edge_attrs(attrs={attr: value}, edge_ids=[edge_id])
@@ -782,6 +852,46 @@ class Tracks:
             Dictionary mapping feature keys to Feature definitions
         """
         return {k: feat for k, (feat, _) in self.annotators.all_features.items()}
+
+    @property
+    def regionprops_annotator(self) -> RegionpropsAnnotator | None:
+        """The registered RegionpropsAnnotator, or None when there is no segmentation."""
+        from funtracks.annotators import RegionpropsAnnotator
+
+        for annotator in self.annotators:
+            if isinstance(annotator, RegionpropsAnnotator):
+                return annotator
+        return None
+
+    def set_intensity_images(
+        self,
+        intensity_images: Sequence[IntensityImage] | None,
+        channel_names: Sequence[str] | None = None,
+    ) -> None:
+        """Attach (or clear) the raw images used to compute the "intensity" feature.
+
+        The intensity feature needs pixel values, which a Tracks does not otherwise
+        carry. Call this before enable_features(["intensity"]); if intensity is already
+        enabled, its values are recomputed here.
+
+        Args:
+            intensity_images: Raw images, one per channel, each shaped like the
+                segmentation (t, [z], y, x). Pass None or an empty list to clear.
+            channel_names: Display names, one per intensity image.
+
+        Raises:
+            ValueError: If there is no segmentation (and hence no RegionpropsAnnotator),
+                or the images do not match the segmentation shape.
+        """
+        annotator = self.regionprops_annotator
+        if annotator is None:
+            raise ValueError(
+                "Cannot set intensity images: this Tracks has no segmentation, so "
+                "there is no RegionpropsAnnotator to compute intensity with."
+            )
+        annotator.set_intensity_images(intensity_images, channel_names)
+        self._intensity_images = intensity_images
+        self._channel_names = channel_names
 
     def enable_features(self, feature_keys: list[str], recompute: bool = True) -> None:
         """Enable multiple features for computation efficiently.
@@ -966,25 +1076,12 @@ class Tracks:
     def get_track_id(self, node) -> int:
         """Get the tracklet id of a single node."""
         track_id = self.get_node_attr(node, self.features.tracklet_key)
-        return track_id
+        return cast("int", track_id)
 
     def get_track_ids(self, nodes) -> list[int]:
-        """Batch version of get_track_id — one query fetching all nodes in the graph.
-        NOTE: always fetches the entire graph internally. Optimised for bulk (all-node)
-        calls. For small subsets or single nodes use get_track_id() instead."""
-
-        tracklet_key = self.features.tracklet_key
-        df = self.graph_full.node_attrs(
-            attr_keys=[td.DEFAULT_ATTR_KEYS.NODE_ID, tracklet_key]
-        )
-        id_to_val = dict(
-            zip(
-                df[td.DEFAULT_ATTR_KEYS.NODE_ID].to_list(),
-                df[tracklet_key].to_list(),
-                strict=True,
-            )
-        )
-        return [id_to_val[node] for node in nodes]
+        """Batch version of get_track_id — one query for many `nodes`.
+        More efficient than a python loop over single nodes."""
+        return cast("list[int]", self.get_nodes_attr(nodes, self.features.tracklet_key))
 
     def get_lineage_id(self, node) -> int:
         """Get the lineage ID for a node.
@@ -995,7 +1092,32 @@ class Tracks:
         Returns:
             The lineage ID.
         """
-        return self.get_node_attr(node, self.features.lineage_key)
+        return cast("int", self.get_node_attr(node, self.features.lineage_key))
+
+    def get_track_node_times(self, track_id: int) -> list[tuple[int, Node]]:
+        """Fetch every (time, node) pair for a tracklet, sorted by time.
+
+        One query for the whole tracklet; callers that need existence checks,
+        neighbor lookups, or time->node lookups can all derive their answer
+        from this same list instead of each issuing their own query.
+        """
+        nodes = self.track_annotator.tracklet_id_to_nodes.get(track_id)
+        if not nodes:
+            return []
+
+        time_key = self.features.time_key
+        df = self.graph_full.filter(node_ids=list(nodes)).node_attrs(
+            attr_keys=[td.DEFAULT_ATTR_KEYS.NODE_ID, time_key]
+        )
+        pairs = list(
+            zip(
+                df[time_key].to_list(),
+                df[td.DEFAULT_ATTR_KEYS.NODE_ID].to_list(),
+                strict=True,
+            )
+        )
+        pairs.sort(key=lambda pair: pair[0])
+        return pairs
 
     def get_track_neighbors(
         self, track_id: int, time: int
@@ -1014,21 +1136,12 @@ class Tracks:
             track id, and the first node after time with the given track id,
             or Nones if there are no such nodes.
         """
-        if (
-            track_id not in self.track_annotator.tracklet_id_to_nodes
-            or len(self.track_annotator.tracklet_id_to_nodes[track_id]) == 0
-        ):
-            return None, None
-        candidates = sorted(
-            self.track_annotator.tracklet_id_to_nodes[track_id], key=self.get_time
-        )
-
         pred = None
         succ = None
-        for cand in candidates:
-            if self.get_time(cand) < time:
+        for cand_time, cand in self.get_track_node_times(track_id):
+            if cand_time < time:
                 pred = cand
-            elif self.get_time(cand) > time:
+            elif cand_time > time:
                 succ = cand
                 break
         return (
@@ -1046,8 +1159,7 @@ class Tracks:
         Returns:
             True if a node with given track id exists at given time point.
         """
-        nodes = self.track_annotator.tracklet_id_to_nodes.get(track_id)
-        if not nodes:
-            return False
-
-        return time in [self.get_time(node) for node in nodes]
+        time = int(time)
+        return any(
+            cand_time == time for cand_time, _ in self.get_track_node_times(track_id)
+        )
