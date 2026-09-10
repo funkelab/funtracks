@@ -144,10 +144,14 @@ class Tracks:
         if "solution" not in graph.edge_attr_keys():
             graph.add_edge_attr_key("solution", default_value=True, dtype=pl.Boolean)
         self.graph_full = graph
+        # ViewMode.LIVE: the root pushes its attribute writes (and new attr keys)
+        # back into this view. funtracks writes values/schema on graph_full and reads
+        # them via graph_solution, so the view must stay live. Since tracksdata rc10,
+        # views default to WRITE_THROUGH (no root->view propagation), so this is required.
         self.graph_solution = graph.filter(
             td.NodeAttr("solution") == True,  # noqa: E712
             td.EdgeAttr("solution") == True,  # noqa: E712
-        ).subgraph()
+        ).subgraph(mode=td.graph.ViewMode.LIVE)
         if _segmentation is not None:
             # Reuse provided segmentation instance (internal use only)
             self.segmentation = _segmentation
