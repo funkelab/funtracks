@@ -2004,6 +2004,7 @@
     <span class="n">database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">position_attrs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">ndim</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+    <span class="n">backend</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"memory"</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">td</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">BaseGraph</span>
 </code></pre></div>
 
@@ -2030,7 +2031,11 @@ position_attrs : list[str] | None
     Defaults to ['pos'] if None.
 ndim : int
     Number of dimensions including time, so 2D+T dataset has ndim = 3.
-    Defaults to 3 (2D+time).</p>
+    Defaults to 3 (2D+time).
+backend : str
+    Which tracksdata backend to build: "sql" for a database-backed <code>SQLGraph</code>
+    (SQLite at <code>database</code>) or "memory" for an in-memory <code>IndexedRXGraph</code>.
+    Defaults to "memory".</p>
 <h4 id="funtracks.utils.create_empty_graph--returns">Returns</h4>
 <p>td.graph.BaseGraph
     An empty tracksdata base graph with standard node and edge attributes

@@ -2368,7 +2368,7 @@ segmentation : np.ndarray
 
 </h2>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">convert_graph_nx_to_td</span><span class="p">(</span>
-    <span class="n">graph_nx</span><span class="p">:</span> <span class="n">DiGraph</span><span class="p">,</span>
+    <span class="n">graph_nx</span><span class="p">:</span> <span class="n">DiGraph</span><span class="p">,</span> <span class="n">backend</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"memory"</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">td</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">BaseGraph</span>
 </code></pre></div>
 
@@ -2402,6 +2402,22 @@ segmentation : np.ndarray
             </td>
             <td>
                 <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>backend</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Backend for the new graph ("memory" or "sql").</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;memory&#39;</code>
             </td>
           </tr>
       </tbody>
@@ -2451,6 +2467,7 @@ segmentation : np.ndarray
     <span class="n">database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">position_attrs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">ndim</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
+    <span class="n">backend</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"memory"</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">td</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">BaseGraph</span>
 </code></pre></div>
 
@@ -2477,7 +2494,11 @@ position_attrs : list[str] | None
     Defaults to ['pos'] if None.
 ndim : int
     Number of dimensions including time, so 2D+T dataset has ndim = 3.
-    Defaults to 3 (2D+time).</p>
+    Defaults to 3 (2D+time).
+backend : str
+    Which tracksdata backend to build: "sql" for a database-backed <code>SQLGraph</code>
+    (SQLite at <code>database</code>) or "memory" for an in-memory <code>IndexedRXGraph</code>.
+    Defaults to "memory".</p>
 <h4 id="funtracks.utils.tracksdata_utils.create_empty_graph--returns">Returns</h4>
 <p>td.graph.BaseGraph
     An empty tracksdata base graph with standard node and edge attributes
@@ -2832,8 +2853,10 @@ pixels = td_mask_to_pixels(mask, time=5, ndim=3)</p>
 
 </h2>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">td_relabel_nodes</span><span class="p">(</span>
-    <span class="n">graph</span><span class="p">,</span> <span class="n">mapping</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">td</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">IndexedRXGraph</span>
+    <span class="n">graph</span><span class="p">,</span>
+    <span class="n">mapping</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span>
+    <span class="n">backend</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">td</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">BaseGraph</span>
 </code></pre></div>
 
     <div class="doc doc-contents ">
@@ -2883,6 +2906,23 @@ pixels = td_mask_to_pixels(mask, time=5, ndim=3)</p>
                 <em>required</em>
             </td>
           </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>backend</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Backend for the new graph ("memory" or "sql"). If None, matches the
+input graph's backend so relabeling never silently changes it.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
       </tbody>
     </table>
 
@@ -2898,7 +2938,7 @@ pixels = td_mask_to_pixels(mask, time=5, ndim=3)</p>
       <tbody>
           <tr class="doc-section-item">
             <td>
-                  <code><span title="tracksdata.graph.IndexedRXGraph">IndexedRXGraph</span></code>
+                  <code><span title="tracksdata.graph.BaseGraph">BaseGraph</span></code>
             </td>
             <td>
               <div class="doc-md-description">

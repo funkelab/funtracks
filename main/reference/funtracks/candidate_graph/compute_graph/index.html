@@ -1962,6 +1962,7 @@
     <span class="n">points_list</span><span class="p">:</span> <span class="n">ndarray</span><span class="p">,</span>
     <span class="n">max_edge_distance</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
     <span class="n">scale</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">backend</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"memory"</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">td</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">BaseGraph</span>
 </code></pre></div>
 
@@ -2035,6 +2036,22 @@ isotropic.</p>
                   <code>None</code>
             </td>
           </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>backend</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Graph backend, "memory" or "sql". Defaults to "memory".</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;memory&#39;</code>
+            </td>
+          </tr>
       </tbody>
     </table>
 
@@ -2080,6 +2097,7 @@ isotropic.</p>
     <span class="n">iou</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">scale</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">t_start</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">backend</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"memory"</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">td</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">BaseGraph</span>
 </code></pre></div>
 
@@ -2188,6 +2206,22 @@ time values. Defaults to 0.</p>
             </td>
             <td>
                   <code>0</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>backend</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Graph backend, "memory" or "sql". Defaults to "memory".</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;memory&#39;</code>
             </td>
           </tr>
       </tbody>
