@@ -169,6 +169,7 @@ def tracks_from_df(
     segmentation: np.ndarray | None = None,
     scale: list[float] | None = None,
     node_name_map: dict[str, str | list[str]] | None = None,
+    backend: str = "memory",
 ) -> Tracks:
     """Import tracks from pandas DataFrame.
 
@@ -193,6 +194,7 @@ def tracks_from_df(
             - Values are column names from the DataFrame (e.g., "t", "Area")
             - For multi-value features like position, use a list: {"pos": ["y", "x"]}
             If None, column names are auto-inferred using fuzzy matching.
+        backend: Graph backend, "memory" or "sql". Defaults to "memory".
 
     Returns:
         Tracks: a solution tracks object
@@ -218,4 +220,5 @@ def tracks_from_df(
         segmentation,
         scale=scale,
         node_name_map=builder.node_name_map,
+        backend=backend,
     )

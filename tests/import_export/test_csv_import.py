@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import pytest
+import tracksdata as td
 
 from funtracks.data_model import Tracks
 from funtracks.import_export import tracks_from_df
@@ -38,11 +39,13 @@ def df_3d():
 class TestDataFrameImportBasic:
     """Test basic DataFrame import."""
 
-    def test_import_2d(self, simple_df_2d):
+    def test_import_2d(self, simple_df_2d, backend):
         """Test importing 2D DataFrame."""
-        tracks = tracks_from_df(simple_df_2d)
+        tracks = tracks_from_df(simple_df_2d, backend=backend)
 
         assert isinstance(tracks, Tracks)
+        expected_cls = td.graph.SQLGraph if backend == "sql" else td.graph.IndexedRXGraph
+        assert isinstance(tracks.graph_full, expected_cls)
         assert tracks.graph_solution.num_nodes() == 4
         assert tracks.graph_solution.num_edges() == 3
         assert tracks.ndim == 3
