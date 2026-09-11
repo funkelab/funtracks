@@ -1,11 +1,16 @@
 import platform
 
+import numpy as np
 import pytest
 
 from funtracks.user_actions import (
     UserAddEdge,
+    UserAddNode,
     UserDeleteEdge,
     UserDeleteNode,
+    UserDeleteNodes,
+    UserSetDivision,
+    UserSwapPredecessors,
     UserUpdateNodeAttrs,
     UserUpdateNodesAttrs,
     UserUpdateSegmentation,
@@ -60,6 +65,24 @@ def solution_edges(tracks):
         if successors:
             edges.append((node, int(successors[0])))
     return edges
+
+
+@pytest.fixture(scope="module")
+def frame_nodes(tracks):
+    """Node ids grouped by frame, in id order within each frame.
+
+    solution_edges/_node_batches walk forward through the movie in track-chain
+    order, which suits the single-node benchmarks above but not test_set_division
+    or test_swap_predecessors: both need several nodes at the same (or an adjacent)
+    time point from distinct tracks, which this fixture gives directly. make_tracks
+    links 1:1 between frames, so frame t's node at index i and frame t+1's node at
+    index i are already connected -- callers pick nodes by differing index to land
+    on distinct tracks instead of an existing edge.
+    """
+    nodes = sorted(int(n) for n in tracks.graph_solution.node_ids())
+    return [
+        nodes[t * CELLS_PER_FRAME : (t + 1) * CELLS_PER_FRAME] for t in range(NUM_FRAMES)
+    ]
 
 
 def _node_batches(solution_edges, n_rounds=ROUNDS, per_round=N_OPS):
@@ -131,6 +154,107 @@ def test_add_delete_edges(benchmark, tracks, solution_edges):
     benchmark.pedantic(run, rounds=ROUNDS, iterations=1)
 
 
+def test_swap_predecessors(benchmark, tracks, frame_nodes):
+    """Alternating predecessor swap between two nodes at the same time point.
+
+    Swapping twice is its own inverse, so the graph is unchanged afterwards. Uses a
+    frame past what solution_edges-based benchmarks touch, and a dedicated pair
+    per round so a mid-run failure in one round can't leave a later round's nodes
+    in an unexpected state.
+    """
+    # frame_nodes[t][i] and frame_nodes[t-1][i] are already connected (1:1 linking in
+    # make_tracks), so pairing index 0 at time t with index 1 at time t-1 gives each
+    # node a predecessor from a different track -- the shape the swap is for.
+    base_frame = NUM_FRAMES - ROUNDS - 1
+    pairs = [
+        (frame_nodes[base_frame + r][0], frame_nodes[base_frame + r][1])
+        for r in range(ROUNDS)
+    ]
+    pairs = iter(pairs)
+
+    def run():
+        nodes = next(pairs)
+        for _ in range(N_OPS // 2):
+            UserSwapPredecessors(tracks, nodes)
+            UserSwapPredecessors(tracks, nodes)
+
+    benchmark.pedantic(run, rounds=ROUNDS, iterations=1)
+
+
+def test_set_division(benchmark, tracks, frame_nodes):
+    """Alternating make/break of a division between a parent and two children.
+
+    Making then breaking is self-inverting, so the graph is unchanged afterwards.
+    The two children are two distinct-track nodes at the frame after the parent;
+    making the division deletes their existing (different-track) predecessor edges
+    and adds the parent -> child edges instead, which is the expensive case
+    (UserSetDivision's own conflicting-edge cleanup, not just a bare 2-edge add).
+    """
+    base_frame = NUM_FRAMES - ROUNDS - 2
+    trios = [
+        (
+            frame_nodes[base_frame + r][0],
+            frame_nodes[base_frame + r + 1][0],
+            frame_nodes[base_frame + r + 1][1],
+        )
+        for r in range(ROUNDS)
+    ]
+    trios = iter(trios)
+
+    def run():
+        nodes = next(trios)
+        for _ in range(N_OPS // 2):
+            UserSetDivision(tracks, nodes)
+            UserSetDivision(tracks, nodes)
+
+    benchmark.pedantic(run, rounds=ROUNDS, iterations=1)
+
+
+def test_add_delete_node(benchmark, tracks):
+    """Alternating add and delete of a brand-new, unconnected node.
+
+    Self-inverting, so the graph is unchanged afterwards. The new node starts its
+    own track (no predecessor/successor edges), which is UserAddNode's cheapest
+    graph-structural path; this isolates UserAddNode/UserDeleteNode's own
+    bookkeeping (track/lineage id assignment, history) from
+    test_update_segmentation's paint-existing-node case above.
+
+    Every node in this graph carries mask/bbox (see _graph_builders.make_tracks),
+    which registers a spatial index that requires bbox on every node added to it --
+    a bare position dict raises inside tracksdata's spatial filter -- so pixels are
+    passed here rather than a position, same as a real "paint a new cell" call.
+
+    UserDeleteNode soft-deletes: the node id keeps living in graph_full afterwards,
+    so a deleted id can never be reused by a later UserAddNode (it raises "already
+    exists"). Node ids therefore come from a counter that only increases across
+    rounds, rather than being reused per round like the other benchmarks' node
+    batches.
+    """
+    time_key = tracks.features.time_key
+    track_key = tracks.features.tracklet_key
+    next_node_id = max(int(n) for n in tracks.graph_full.node_ids()) + 1
+
+    # A small 3x3 pixel patch at time 0, away from any real cell.
+    ys, xs = np.meshgrid(np.arange(3), np.arange(3), indexing="ij")
+    ts = np.zeros_like(ys)
+    pixels = (ts.ravel(), ys.ravel(), xs.ravel())
+
+    counter = [0]
+
+    def run():
+        for _ in range(N_OPS // 2):
+            node = next_node_id + counter[0]
+            counter[0] += 1
+            attrs = {
+                time_key: 0,
+                track_key: tracks.get_next_track_id(),
+            }
+            UserAddNode(tracks, node, attrs, pixels=pixels)
+            UserDeleteNode(tracks, node)
+
+    benchmark.pedantic(run, rounds=ROUNDS, iterations=1)
+
+
 def test_update_segmentation(benchmark, tracks, solution_edges):
     """Alternating paint-out and paint-back of one sub-mask patch.
 
@@ -185,5 +309,22 @@ def test_delete_nodes(benchmark, tracks, solution_edges):
     def run():
         for node in next(batches):
             UserDeleteNode(tracks, node)
+
+    benchmark.pedantic(run, rounds=ROUNDS, iterations=1)
+
+
+def test_delete_nodes_bulk(benchmark, tracks, solution_edges):
+    """The same N deletions as test_delete_nodes, as one batched action.
+
+    UserDeleteNodes exists to collapse history and refresh into a single entry for
+    the whole batch; this pairs with test_delete_nodes to show what that batching is
+    worth, the same comparison test_update_node_attrs_bulk makes for attribute
+    updates. Destructive and not self-inverting, so this also runs late and takes a
+    fresh slice of nodes past test_delete_nodes'.
+    """
+    batches = iter(_node_batches(solution_edges[3 * ROUNDS * N_OPS :]))
+
+    def run():
+        UserDeleteNodes(tracks, next(batches))
 
     benchmark.pedantic(run, rounds=ROUNDS, iterations=1)

@@ -2,6 +2,7 @@ import dask.array as da
 import numpy as np
 import pytest
 import tifffile
+import tracksdata as td
 import zarr
 from geff.testing.data import create_mock_geff
 
@@ -296,7 +297,9 @@ def test_segmentation_axes_mismatch(valid_geff, tmp_path):
         import_from_geff(store, name_map, segmentation_path=seg_path)
 
 
-def test_tracks_with_segmentation(valid_geff, invalid_geff, valid_segmentation, tmp_path):
+def test_tracks_with_segmentation(
+    valid_geff, invalid_geff, valid_segmentation, tmp_path, backend
+):
     """Test relabeling of the segmentation from seg_id to node_id."""
 
     store, _ = valid_geff
@@ -317,7 +320,10 @@ def test_tracks_with_segmentation(valid_geff, invalid_geff, valid_segmentation, 
         name_map_with_features,
         segmentation_path=valid_segmentation_path,
         scale=scale,
+        backend=backend,
     )
+    expected_cls = td.graph.SQLGraph if backend == "sql" else td.graph.IndexedRXGraph
+    assert isinstance(tracks.graph_full, expected_cls)
     assert hasattr(tracks, "segmentation")
     assert tracks.segmentation.shape == valid_segmentation.shape
     # Get last node by ID (don't rely on iteration order)
