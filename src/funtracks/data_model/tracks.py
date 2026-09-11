@@ -475,25 +475,30 @@ class Tracks:
         annotator = self.track_annotator
         self.features.tracklet_key = annotator.tracklet_key
         self.features.lineage_key = annotator.lineage_key
-        # A tracklet column can exist yet still hold the -1 sentinel ("not computed",
-        # the column default). Trusting it would activate stale ids and seed a phantom
-        # tracklet -1 in the annotator bookkeeping, so force a recompute from topology.
-        if self._has_uncomputed_track_ids(annotator.tracklet_key):
-            self.enable_features([annotator.tracklet_key, annotator.lineage_key])
+        # A tracklet or lineage column can exist yet still hold the -1 sentinel ("not
+        # computed", the column default). Trusting it would activate stale ids and seed
+        # a phantom track -1 in the annotator bookkeeping, so force a recompute from
+        # topology. Both ids are computed together, so a sentinel in either recomputes
+        # both.
+        track_keys = [annotator.tracklet_key, annotator.lineage_key]
+        if self._has_uncomputed_track_ids(track_keys):
+            self.enable_features(track_keys)
         else:
-            self._register_core_features([annotator.tracklet_key, annotator.lineage_key])
+            self._register_core_features(track_keys)
 
-    def _has_uncomputed_track_ids(self, tracklet_key: str) -> bool:
-        """True if the tracklet column exists but any node still holds the -1 sentinel.
+    def _has_uncomputed_track_ids(self, track_keys: list[str]) -> bool:
+        """True if any track-id column exists but still holds the -1 sentinel.
 
-        A missing column returns False: _register_core_features computes it from scratch.
+        Missing columns are ignored: _register_core_features computes them from scratch.
         """
         if self.graph_solution.num_nodes() == 0:
             return False
-        if tracklet_key not in self.graph_solution.node_attr_keys():
+        existing = set(self.graph_solution.node_attr_keys())
+        keys = [key for key in track_keys if key in existing]
+        if not keys:
             return False
-        values = self.graph_solution.node_attrs(attr_keys=[tracklet_key])[tracklet_key]
-        return bool((values == -1).any())
+        attrs = self.graph_solution.node_attrs(attr_keys=keys)
+        return any(bool((attrs[key] == -1).any()) for key in keys)
 
     def nodes(self):
         """Return the node ids of the solution graph as a numpy array."""
