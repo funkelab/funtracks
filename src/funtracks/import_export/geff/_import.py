@@ -415,7 +415,9 @@ class GeffTracksBuilder(TracksBuilder):
             ):
                 if not isinstance(mask_val, Mask):
                     nodes_to_update.append(node_id)
-                    new_masks.append(Mask(mask_val.astype(bool), bbox=bbox_val))
+                    new_masks.append(
+                        Mask(np.asarray(mask_val, dtype=bool), bbox=bbox_val)
+                    )
 
             if nodes_to_update:
                 graph.update_node_attrs(
