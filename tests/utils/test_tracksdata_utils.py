@@ -5,12 +5,15 @@ import threading
 import numpy as np
 import pytest
 import tracksdata as td
+from tracksdata.nodes import Mask
 
 from funtracks.utils.tracksdata_utils import (
     create_empty_graph,
     create_empty_graphview_graph,
     pixels_to_td_mask,
     td_mask_to_pixels,
+    tighten_td_mask,
+    union_td_masks,
 )
 
 # Import from conftest
@@ -200,3 +203,83 @@ def test_create_empty_graphview_graph_warns():
         view = create_empty_graphview_graph(node_attributes=["pos"], ndim=3)
 
     assert isinstance(view, td.graph.GraphView)
+
+
+def test_tighten_td_mask_shrinks_bounding_box():
+    """A box with empty margin is shrunk around the set pixels, keeping them put."""
+    array = np.zeros((6, 7), dtype=bool)
+    array[2:4, 3:6] = True
+    mask = Mask(array, bbox=np.array([10, 20, 16, 27]))
+
+    tightened = tighten_td_mask(mask)
+
+    assert np.array_equal(np.asarray(tightened.bbox), [12, 23, 14, 26])
+    assert tightened.mask.shape == (2, 3)
+    assert tightened.mask.all()
+    # the pixels themselves did not move
+    assert np.array_equal(
+        np.array(np.nonzero(array)) + np.array([[10], [20]]),
+        np.array(np.nonzero(tightened.mask)) + np.array([[12], [23]]),
+    )
+
+
+def test_tighten_td_mask_leaves_tight_box_alone():
+    mask = Mask(np.ones((2, 3), dtype=bool), bbox=np.array([1, 2, 3, 5]))
+    assert tighten_td_mask(mask) is mask
+
+
+def test_tighten_td_mask_rejects_empty():
+    mask = Mask(np.zeros((2, 3), dtype=bool), bbox=np.array([0, 0, 2, 3]))
+    with pytest.raises(ValueError, match="empty mask"):
+        tighten_td_mask(mask)
+
+
+def test_union_td_masks_combines_disjoint_boxes():
+    """The union spans every set pixel, with a box tightened around them."""
+    left = Mask(np.ones((2, 2), dtype=bool), bbox=np.array([0, 0, 2, 2]))
+    right = Mask(np.ones((1, 3), dtype=bool), bbox=np.array([5, 4, 6, 7]))
+
+    combined = union_td_masks([left, right])
+
+    assert np.array_equal(np.asarray(combined.bbox), [0, 0, 6, 7])
+    assert combined.mask.sum() == left.mask.sum() + right.mask.sum()
+    assert combined.mask[0:2, 0:2].all()
+    assert combined.mask[5, 4:7].all()
+
+
+def test_union_td_masks_tightens_loose_inputs():
+    """Callers may pass masks in whatever box they had; the union is still tight."""
+    array = np.zeros((5, 5), dtype=bool)
+    array[1, 1] = True
+    loose = Mask(array, bbox=np.array([0, 0, 5, 5]))
+
+    combined = union_td_masks([loose, loose])
+
+    assert np.array_equal(np.asarray(combined.bbox), [1, 1, 2, 2])
+    assert combined.mask.shape == (1, 1)
+
+
+def test_union_td_masks_matches_pixels_to_td_mask():
+    """Unioning parts agrees with building one mask from all their pixels at once."""
+    rng = np.random.default_rng(0)
+    pixels_per_part = []
+    masks = []
+    for offset in (0, 7, 13):
+        coords = rng.integers(0, 4, size=(2, 6)) + offset
+        pixels = (np.full(coords.shape[1], 3), coords[0], coords[1])
+        pixels_per_part.append(pixels)
+        masks.append(pixels_to_td_mask(pixels, ndim=3))
+
+    combined = union_td_masks(masks)
+    expected = pixels_to_td_mask(
+        tuple(np.concatenate([p[dim] for p in pixels_per_part]) for dim in range(3)),
+        ndim=3,
+    )
+
+    assert np.array_equal(np.asarray(combined.bbox), np.asarray(expected.bbox))
+    assert np.array_equal(combined.mask, expected.mask)
+
+
+def test_union_td_masks_rejects_empty_sequence():
+    with pytest.raises(ValueError, match="zero masks"):
+        union_td_masks([])

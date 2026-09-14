@@ -1,5 +1,6 @@
 import tempfile
 import uuid
+from collections.abc import Sequence
 from typing import Any
 from warnings import warn
 
@@ -320,6 +321,86 @@ def pixels_to_td_mask(
         return mask, area
     else:
         return mask
+
+
+def tighten_td_mask(mask: Mask) -> Mask:
+    """
+    Shrink a mask's bounding box to just enclose its set pixels.
+
+    Callers that build a mask inside a box they already had can leave the box as is and
+    tighten once at the end, rather than paying for a crop at every intermediate step.
+
+    Args:
+        mask: The mask to tighten. Must have at least one set pixel.
+
+    Returns:
+        Mask: The same pixels, with a bounding box that has no empty margin.
+            Returned as is if the box is already tight.
+    """
+
+    array = mask.mask
+    axes = range(array.ndim)
+    # Reducing onto one axis at a time is cheaper than listing every set pixel
+    # when the mask is large.
+    extents = [
+        np.flatnonzero(array.any(axis=tuple(other for other in axes if other != axis)))
+        for axis in axes
+    ]
+    if any(len(extent) == 0 for extent in extents):
+        raise ValueError("Cannot tighten the bounding box of an empty mask.")
+
+    start = np.array([extent[0] for extent in extents])
+    stop = np.array([extent[-1] + 1 for extent in extents])
+    if not start.any() and np.array_equal(stop, array.shape):  # mask is tight already
+        return mask
+
+    bbox = np.asarray(mask.bbox)
+    offset = bbox[: array.ndim]
+    cropped = array[tuple(slice(a, b) for a, b in zip(start, stop, strict=True))]
+    return Mask(cropped.copy(), bbox=np.concatenate([start + offset, stop + offset]))
+
+
+def union_td_masks(masks: Sequence[Mask]) -> Mask:
+    """
+    Combine masks into one mask covering every pixel any of them sets.
+
+    Args:
+        masks: The masks to combine. Must be non-empty, and all masks must have
+            the same number of spatial dimensions (they are assumed to belong to
+            the same time point).
+
+    Returns:
+        Mask: A mask that is True wherever any of the given masks is True, with a
+            bounding box tightened around those pixels.
+    """
+
+    if len(masks) == 0:
+        raise ValueError("Cannot take the union of zero masks.")
+
+    # Tighten the parts first, over their own (small) boxes. The box enclosing
+    # tight boxes is itself tight, so the combined mask needs no second pass -
+    # which matters because that pass would run over the whole combined box, and
+    # combining many small masks spread far apart makes it a big, mostly empty one.
+    masks = [tighten_td_mask(mask) for mask in masks]
+    if len(masks) == 1:
+        return masks[0]
+
+    bboxes = np.array([np.asarray(mask.bbox) for mask in masks])
+    spatial_dims = bboxes.shape[1] // 2
+    start = bboxes[:, :spatial_dims].min(axis=0)
+    stop = bboxes[:, spatial_dims:].max(axis=0)
+
+    combined = np.zeros(stop - start, dtype=bool)
+    for mask, bbox in zip(masks, bboxes, strict=True):
+        offset = bbox[:spatial_dims] - start
+        combined[
+            tuple(
+                slice(off, off + size)
+                for off, size in zip(offset, mask.mask.shape, strict=True)
+            )
+        ] |= mask.mask
+
+    return Mask(combined, bbox=np.concatenate([start, stop]))
 
 
 def td_mask_to_pixels(mask: Mask, time: int, ndim: int) -> tuple[np.ndarray, ...]:

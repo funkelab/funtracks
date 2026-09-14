@@ -6,7 +6,7 @@ import pytest
 from funtracks.actions import ActionGroup
 from funtracks.exceptions import InvalidActionError
 from funtracks.user_actions import UserDeleteNodes, UserUpdateSegmentation
-from funtracks.utils.tracksdata_utils import td_mask_to_pixels
+from funtracks.utils.tracksdata_utils import pixels_to_td_mask, td_mask_to_pixels
 
 iou_key = "iou"
 area_key = "area"
@@ -344,3 +344,105 @@ def test_delete_nodes_not_top_level(get_tracks, ndim):
 
     assert not tracks.graph.has_node(3)
     assert len(tracks.action_history.undo_stack) == n_actions
+
+
+@pytest.mark.parametrize("ndim", [3])
+class TestUpdatedPixelsForms:
+    """The mask form and the multi-index form must describe the same edit.
+
+    Callers that already hold a mask (a viewer whose paint events carry a
+    bounding box and a mask) should pass it straight through rather than
+    expanding it into coordinates only for it to be rebuilt here.
+    """
+
+    def _remove_all_but_one_pixel(self, tracks, node_id):
+        pixels = td_mask_to_pixels(
+            tracks.get_mask(node_id), tracks.get_time(node_id), ndim=tracks.ndim
+        )
+        return tuple(axis[1:] for axis in pixels)
+
+    def test_mask_form_matches_index_form(self, get_tracks, ndim):
+        by_index = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
+        by_mask = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
+        node_id = 3
+
+        pixels = self._remove_all_but_one_pixel(by_index, node_id)
+        time = int(pixels[0][0])
+        mask = pixels_to_td_mask(pixels, by_mask.ndim)
+
+        UserUpdateSegmentation(
+            by_index, new_value=0, updated_pixels=[(pixels, node_id)], current_track_id=1
+        )
+        UserUpdateSegmentation(
+            by_mask,
+            new_value=0,
+            updated_pixels=[(mask, time, node_id)],
+            current_track_id=1,
+        )
+
+        assert by_mask.graph_solution.has_node(node_id)
+        assert np.array_equal(
+            by_mask.get_mask(node_id).mask, by_index.get_mask(node_id).mask
+        )
+        assert np.array_equal(
+            np.asarray(by_mask.get_mask(node_id).bbox),
+            np.asarray(by_index.get_mask(node_id).bbox),
+        )
+        assert by_mask.get_position(node_id) == by_index.get_position(node_id)
+        assert by_mask.get_node_attr(node_id, area_key) == by_index.get_node_attr(
+            node_id, area_key
+        )
+
+    def test_mask_form_adds_new_node(self, get_tracks, ndim):
+        """Painting background into a new label works from the mask form too."""
+        by_index = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
+        by_mask = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
+        new_value = max(by_index.graph_full.node_ids()) + 1
+
+        # a patch of background, away from the existing nodes
+        coords = np.array([[95, 95], [95, 96], [96, 95], [96, 96]]).T
+        pixels = (np.full(coords.shape[1], 0), coords[0], coords[1])
+        mask = pixels_to_td_mask(pixels, by_mask.ndim)
+
+        UserUpdateSegmentation(
+            by_index,
+            new_value=new_value,
+            updated_pixels=[(pixels, 0)],
+            current_track_id=by_index.get_next_track_id(),
+        )
+        UserUpdateSegmentation(
+            by_mask,
+            new_value=new_value,
+            updated_pixels=[(mask, 0, 0)],
+            current_track_id=by_mask.get_next_track_id(),
+        )
+
+        assert by_mask.graph_solution.has_node(new_value)
+        assert np.array_equal(
+            by_mask.get_mask(new_value).mask, by_index.get_mask(new_value).mask
+        )
+        assert by_mask.get_position(new_value) == by_index.get_position(new_value)
+
+    def test_mask_form_deletes_fully_covered_node(self, get_tracks, ndim):
+        """Erasing every pixel of a node deletes it, whichever form is used."""
+        by_index = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
+        by_mask = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
+        node_id = 3
+
+        pixels = td_mask_to_pixels(
+            by_index.get_mask(node_id), by_index.get_time(node_id), ndim=by_index.ndim
+        )
+        mask = pixels_to_td_mask(pixels, by_mask.ndim)
+
+        UserUpdateSegmentation(
+            by_index, new_value=0, updated_pixels=[(pixels, node_id)], current_track_id=1
+        )
+        UserUpdateSegmentation(
+            by_mask,
+            new_value=0,
+            updated_pixels=[(mask, int(pixels[0][0]), node_id)],
+            current_track_id=1,
+        )
+
+        assert not by_index.graph_solution.has_node(node_id)
+        assert not by_mask.graph_solution.has_node(node_id)
