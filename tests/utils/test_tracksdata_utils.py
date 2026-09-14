@@ -228,6 +228,39 @@ def test_tighten_td_mask_leaves_tight_box_alone():
     assert tighten_td_mask(mask) is mask
 
 
+def test_tighten_td_mask_when_only_some_faces_are_tight():
+    """Tight on one axis and loose on another still has to be tightened."""
+    array = np.zeros((4, 4), dtype=bool)
+    array[:, 1:3] = True  # spans the whole first axis, but not the second
+    mask = Mask(array, bbox=np.array([0, 0, 4, 4]))
+
+    tightened = tighten_td_mask(mask)
+
+    assert np.array_equal(np.asarray(tightened.bbox), [0, 1, 4, 3])
+    assert tightened.mask.shape == (4, 2)
+    assert tightened.mask.all()
+
+
+@pytest.mark.parametrize("n_set_faces", range(4))
+def test_tighten_td_mask_agrees_with_listing_every_pixel(n_set_faces):
+    """However many faces happen to be occupied, the box matches the set pixels."""
+    rng = np.random.default_rng(n_set_faces)
+    array = np.zeros((7, 9), dtype=bool)
+    array[2:5, 3:8] = rng.random((3, 5)) < 0.7
+    array[2, 3] = array[4, 7] = True  # keep the intended extent non-empty
+    for face in range(n_set_faces):
+        array[(0, face), (face, 0)] = True  # push pixels onto the outer faces
+
+    tightened = tighten_td_mask(Mask(array, bbox=np.array([10, 20, 17, 29])))
+
+    rows, cols = np.nonzero(array)
+    assert np.array_equal(
+        np.asarray(tightened.bbox),
+        [rows.min() + 10, cols.min() + 20, rows.max() + 11, cols.max() + 21],
+    )
+    assert tightened.mask.sum() == array.sum()
+
+
 def test_tighten_td_mask_rejects_empty():
     mask = Mask(np.zeros((2, 3), dtype=bool), bbox=np.array([0, 0, 2, 3]))
     with pytest.raises(ValueError, match="empty mask"):

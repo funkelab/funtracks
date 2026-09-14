@@ -340,6 +340,14 @@ def tighten_td_mask(mask: Mask) -> Mask:
 
     array = mask.mask
     axes = range(array.ndim)
+
+    # Check first if we can return early because the box is tight already, by verifying
+    # if every one of its faces holds a set pixel
+    if array.size and all(
+        array.take(face, axis=axis).any() for axis in axes for face in (0, -1)
+    ):
+        return mask
+
     # Reducing onto one axis at a time is cheaper than listing every set pixel
     # when the mask is large.
     extents = [
@@ -351,8 +359,6 @@ def tighten_td_mask(mask: Mask) -> Mask:
 
     start = np.array([extent[0] for extent in extents])
     stop = np.array([extent[-1] + 1 for extent in extents])
-    if not start.any() and np.array_equal(stop, array.shape):  # mask is tight already
-        return mask
 
     bbox = np.asarray(mask.bbox)
     offset = bbox[: array.ndim]
