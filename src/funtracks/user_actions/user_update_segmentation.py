@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections import defaultdict
+from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -16,32 +18,55 @@ if TYPE_CHECKING:
     from funtracks.data_model import Tracks
 
 
-def _as_mask_update(
-    update: tuple[tuple[np.ndarray, ...], int] | tuple[Mask, int, int],
+def _create_mask_per_label(
+    updates: Sequence[tuple[tuple[np.ndarray, ...], int] | tuple[Mask, int, int]],
     ndim: int,
-) -> tuple[Mask, int, int]:
-    """Normalize an updated-pixels entry to (mask, time, old value).
+) -> list[tuple[Mask, int, int]]:
+    """Turn updated-pixels entries into one mask per node to apply it to.
 
-    The mask form is what the segmentation is actually stored as, so callers
-    that already hold one should pass it directly. The multi-index form is accepted for
-    callers that only have pixel coordinates, and is converted here.
+    Entries come in either as (mask, time, old value), the form the segmentation
+    is stored as, or as (multi-index, old value) for callers that only have pixel
+    coordinates, which are converted here. A label may be reported more than once,
+    so entries are grouped per label and time point and their masks combined.
 
     Args:
-        update: Either a (mask, time, old value) triple, or a legacy
-            (multi-index, old value) pair whose multi-index has one array of
+        updates: The entries to combine. A multi-index entry has one array of
             coordinates per dimension, time first.
         ndim: The number of dimensions of the segmentation, time included.
 
     Returns:
-        tuple[Mask, int, int]: the mask of the pixels that changed, the time
-            point they are in, and their value before the change.
+        list[tuple[Mask, int, int]]: one (mask, time, old value) per label and
+            time point, ordered by those, so the actions built from them do not
+            depend on the order the entries came in.
     """
 
-    if len(update) == 3:
-        return update
+    masks_per_node: dict[tuple[int, int], list[Mask]] = defaultdict(list)
+    pixels_per_node: dict[tuple[int, int], list[tuple[np.ndarray, ...]]] = defaultdict(
+        list
+    )
+    for update in updates:
+        if len(update) == 3:
+            mask, time, old_value = update
+            masks_per_node[(old_value, time)].append(mask)
+        else:
+            pixels, old_value = update
+            pixels_per_node[(old_value, int(pixels[0][0]))].append(pixels)
 
-    pixels, old_value = update
-    return pixels_to_td_mask(pixels, ndim), int(pixels[0][0]), old_value
+    combined = []
+    for key in sorted(masks_per_node.keys() | pixels_per_node.keys()):
+        masks = list(masks_per_node[key])
+        if key in pixels_per_node:
+            # Gather this node's coordinates before building anything, so the mask
+            # is built once for the node rather than once per entry.
+            coordinates = tuple(
+                np.concatenate([pixels[dim] for pixels in pixels_per_node[key]])
+                for dim in range(ndim)
+            )
+            masks.append(pixels_to_td_mask(coordinates, ndim))
+        old_value, time = key
+        combined.append((union_td_masks(masks), time, old_value))
+
+    return combined
 
 
 class UserUpdateSegmentation(ActionGroup):
@@ -62,11 +87,12 @@ class UserUpdateSegmentation(ActionGroup):
         Args:
             tracks (Tracks): The solution tracks that the user is updating.
             new_value (int): The new value that the user painted with
-            updated_pixels: A list of node update actions, one per label that was
-                painted over. Each is either a (mask, time, old value) triple, or a
-                (multi-index, old value) pair whose multi-index points to the array
-                elements that were changed (a tuple with len ndims). Prefer the mask
-                form since it is in the right format already.
+            updated_pixels: The pixels that changed, as a list of entries that are
+                each either a (mask, time, old value) triple, or a (multi-index, old
+                value) pair whose multi-index points to the array elements that were
+                changed (a tuple with len ndims). Prefer the mask form since it is in
+                the right format already. A label may appear in more than one entry and
+                those entries are combined.
             current_track_id (int): The track id to use if adding a new node, usually
                 the currently selected track id in the viewer.
             force (bool): Whether to force the operation by removing conflicting edges.
@@ -81,13 +107,10 @@ class UserUpdateSegmentation(ActionGroup):
         if self.tracks.segmentation is None:
             raise ValueError("Cannot update non-existing segmentation.")
 
-        updates = [_as_mask_update(update, self.tracks.ndim) for update in updated_pixels]
-        # Discard entries where pixels get overwritten with the same value
-        updates = [
-            (mask, time, old_value)
-            for mask, time, old_value in updates
-            if old_value != new_value
-        ]
+        # Discard entries where pixels get overwritten with the same value. Both
+        # accepted forms carry the old value last.
+        updated_pixels = [update for update in updated_pixels if update[-1] != new_value]
+        updates = _create_mask_per_label(updated_pixels, self.tracks.ndim)
         if new_value != 0 and updates:
             times = {time for _, time, _ in updates}
             assert len(times) == 1, "Can only update one time point at a time"
