@@ -438,6 +438,10 @@ class Tracks:
         Registers the position feature from the RegionpropsAnnotator into the
         FeatureDict, activating it if it already exists on the graph or computing it
         otherwise. Track-id features are handled separately by _ensure_track_features.
+
+        Skipped when position_key already names one column per axis: those columns
+        hold the positions, so the annotator's pos_key would only add a mask centroid
+        nothing reads. Callers who want it anyway can enable_features([pos_key]).
         """
         # Import here to avoid circular dependency
         from funtracks.annotators import RegionpropsAnnotator
@@ -448,6 +452,8 @@ class Tracks:
                 pos_key = annotator.pos_key
                 if self.features.position_key is None:
                     self.features.position_key = pos_key
+                elif not isinstance(self.features.position_key, str):
+                    continue
                 core_features.append(pos_key)
         self._register_core_features(core_features)
 
