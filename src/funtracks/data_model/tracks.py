@@ -1073,12 +1073,11 @@ class Tracks:
         return self.track_annotator.max_tracklet_id + 1
 
     def get_next_node_id(self) -> int:
-        """Return a node id that is not in use, and will not be reused.
+        """Return a new unique node id that is not in the graph.
 
         Ids are unique across ``graph_full`` and never reused, so callers that
-        need one before the node exists - a viewer choosing the label to paint
-        with, say - should ask here rather than scanning the graph themselves.
-        A soft-deleted node keeps its id, so this never hands back an id that
+        need one before the node exists should ask here rather than scanning the graph
+        themselves. A soft-deleted node keeps its id, so this never hands back an id that
         undoing a delete would bring back.
 
         The highest id in use is looked up once and maintained from there, since
