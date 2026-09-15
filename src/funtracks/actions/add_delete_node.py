@@ -112,6 +112,11 @@ class AddNode(BasicAction):
                 attrs=attrs, index=self.node, validate_keys=False
             )
 
+        # Keep the id bookkeeping current, so get_next_node_id never hands this
+        # id out again, not even after the node is (soft-)deleted.
+        if self.tracks._max_node_id is not None:
+            self.tracks._max_node_id = max(self.tracks._max_node_id, int(self.node))
+
         # Always notify annotators - they will check their own preconditions
         self.tracks.notify_annotators(self)
 
