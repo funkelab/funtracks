@@ -1,7 +1,9 @@
+import numpy as np
 import pytest
 
 from funtracks.exceptions import InvalidActionError
 from funtracks.user_actions import (
+    UserAddNode,
     UserMergeNodes,
     get_merge_groups,
     get_track_id_options,
@@ -69,15 +71,25 @@ class TestUserMergeNodes:
     def test_merge_three_nodes(self, get_tracks, ndim):
         """A group of any size is merged in one go."""
         tracks = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
-        # move node 6 to t=1 so that nodes 2, 3 and 6 all share a time point
-        tracks._set_node_attr(6, tracks.features.time_key, 1)
+        # add a lone node 7 in t=1, so that nodes 2, 3 and 7 all share a time point.
+        # A node's time point cannot be edited after the fact (the SQL backend rejects
+        # it), so the third node has to be created in t=1 in the first place.
+        node = 7
+        block = np.zeros(tracks.segmentation.shape, dtype=bool)
+        block[(1, *(slice(96, 100),) * (ndim - 1))] = True
+        UserAddNode(
+            tracks,
+            node,
+            {"t": 1, "track_id": tracks.get_next_track_id()},
+            pixels=np.nonzero(block),
+        )
 
-        pixels = pixel_set(tracks, 2) | pixel_set(tracks, 3) | pixel_set(tracks, 6)
-        UserMergeNodes(tracks, [2, 3, 6], track_ids=3)
+        pixels = pixel_set(tracks, 2) | pixel_set(tracks, 3) | pixel_set(tracks, node)
+        UserMergeNodes(tracks, [2, 3, node], track_ids=3)
 
         assert tracks.graph_solution.has_node(3)
         assert not tracks.graph_solution.has_node(2)
-        assert not tracks.graph_solution.has_node(6)
+        assert not tracks.graph_solution.has_node(node)
         assert pixel_set(tracks, 3) == pixels
 
     def test_merge_multiple_groups(self, get_tracks, ndim):
