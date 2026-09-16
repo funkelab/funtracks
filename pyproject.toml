@@ -38,7 +38,9 @@ dependencies =[
     "dask>=2025.5.0",
     "pandas>=2.3.3",
     "zarr>=2.18,<4",
-    "tracksdata>=0.1.0rc10",
+    # TEMPORARY pin: GraphView(root_fallback=True), royerlab/tracksdata#340.
+    # Restore "tracksdata>=<release>" once that PR lands in a release.
+    "tracksdata @ git+https://github.com/TeunHuijben/tracksdata.git@e2513cc9509969878118a5b2cc5e5922cb6265af",
     "tqdm>=4.66.1",
     # zarr 2.x's util.py imports cbuffer_sizes/cbuffer_metainfo from
     # numcodecs.blosc, which numcodecs >= 0.16 removed. Pin numcodecs per

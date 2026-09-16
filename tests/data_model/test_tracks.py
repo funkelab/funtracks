@@ -336,13 +336,17 @@ def test_delete_feature_mask_removes_both_columns(
 
     assert "mask" in tracks.features
     assert "bbox" in tracks.features
-    assert "mask" in tracks.graph_solution.node_attr_keys()
-    assert "bbox" in tracks.graph_solution.node_attr_keys()
+    # graph_full, not graph_solution: the solution view is lean on a database-backed
+    # graph and never holds the mask column itself.
+    assert "mask" in tracks.graph_full.node_attr_keys()
+    assert "bbox" in tracks.graph_full.node_attr_keys()
 
     tracks.delete_feature("mask")
 
     assert "mask" not in tracks.features
     assert "bbox" not in tracks.features
+    assert "mask" not in tracks.graph_full.node_attr_keys()
+    assert "bbox" not in tracks.graph_full.node_attr_keys()
     assert "mask" not in tracks.graph_solution.node_attr_keys()
     assert "bbox" not in tracks.graph_solution.node_attr_keys()
 
