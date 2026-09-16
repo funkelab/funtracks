@@ -152,6 +152,9 @@ class Tracks:
             td.NodeAttr("solution") == True,  # noqa: E712
             td.EdgeAttr("solution") == True,  # noqa: E712
         ).subgraph(mode=td.graph.ViewMode.LIVE)
+        # Highest node id handed out so far, filled in on first use by
+        # get_next_node_id and kept up to date from there.
+        self._max_node_id: int | None = None
         if _segmentation is not None:
             # Reuse provided segmentation instance (internal use only)
             self.segmentation = _segmentation
@@ -1068,6 +1071,22 @@ class Tracks:
         a node is added or track IDs are updated via UpdateTrackIDs.
         """
         return self.track_annotator.max_tracklet_id + 1
+
+    def get_next_node_id(self) -> int:
+        """Return a new unique node id that is not in the graph.
+
+        Ids are unique across ``graph_full`` and never reused, so callers that
+        need one before the node exists should ask here rather than scanning the graph
+        themselves. A soft-deleted node keeps its id, so this never hands back an id that
+        undoing a delete would bring back.
+
+        The highest id in use is looked up once and maintained from there, since
+        listing every node id is O(number of nodes) and, on a database-backed
+        graph, a query returning the whole table.
+        """
+        if self._max_node_id is None:
+            self._max_node_id = max(self.graph_full.node_ids(), default=-1)
+        return self._max_node_id + 1
 
     def get_next_lineage_id(self) -> int:
         """Return the next available lineage_id.
