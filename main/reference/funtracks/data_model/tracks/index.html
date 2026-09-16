@@ -1283,6 +1283,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#funtracks.data_model.tracks.Tracks.get_next_node_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;get_next_node_id
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#funtracks.data_model.tracks.Tracks.get_next_track_id" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2496,6 +2507,17 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;get_next_lineage_id
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.data_model.tracks.Tracks.get_next_node_id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;get_next_node_id
       
     </span>
   </a>
@@ -3868,6 +3890,33 @@ Defaults to the standard mask key.</p>
         <p>Return the next available lineage_id.</p>
 <p>The max_lineage_id in TrackAnnotator is updated automatically when
 a node is added or lineage IDs are updated via UpdateTrackIDs.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="funtracks.data_model.tracks.Tracks.get_next_node_id" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">get_next_node_id</span>
+
+
+</h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">get_next_node_id</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Return a new unique node id that is not in the graph.</p>
+<p>Ids are unique across <code>graph_full</code> and never reused, so callers that
+need one before the node exists should ask here rather than scanning the graph
+themselves. A soft-deleted node keeps its id, so this never hands back an id that
+undoing a delete would bring back.</p>
+<p>The highest id in use is looked up once and maintained from there, since
+listing every node id is O(number of nodes) and, on a database-backed
+graph, a query returning the whole table.</p>
 
 
     </div>
