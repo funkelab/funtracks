@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Sequence
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeAlias, cast
 
 import numpy as np
 from tracksdata.nodes import Mask
@@ -17,21 +17,27 @@ from .user_delete_node import UserDeleteNode
 if TYPE_CHECKING:
     from funtracks.data_model import Tracks
 
+# The two forms an updated-pixels entry can take: the mask form the segmentation
+# is stored as, and the multi-index form callers that only have pixel coordinates
+# report. Both carry the old value last.
+MaskUpdate: TypeAlias = tuple[Mask, int, int]
+MultiIndexUpdate: TypeAlias = tuple[tuple[np.ndarray, ...], int]
 
-def _create_mask_per_label(
-    updates: Sequence[tuple[tuple[np.ndarray, ...], int] | tuple[Mask, int, int]],
+
+def _create_masks_from_multi_index(
+    updates: Sequence[MultiIndexUpdate],
     ndim: int,
-) -> list[tuple[Mask, int, int]]:
-    """Turn updated-pixels entries into one mask per node to apply it to.
+) -> list[MaskUpdate]:
+    """Turn multi-index updated-pixels entries into one mask per node.
 
-    Entries come in either as (mask, time, old value), the form the segmentation
-    is stored as, or as (multi-index, old value) for callers that only have pixel
-    coordinates, which are converted here. A label may be reported more than once,
-    so entries are grouped per label and time point and their masks combined.
+    Entries come as (multi-index, old value) from callers that only have pixel
+    coordinates. A label may be reported more than once, so entries are grouped
+    per label and time point, and one mask is built per group.
 
     Args:
         updates: The entries to combine. A multi-index entry has one array of
-            coordinates per dimension, time first.
+            coordinates per dimension, time first, and all of its coordinates
+            belong to the same time point.
         ndim: The number of dimensions of the segmentation, time included.
 
     Returns:
@@ -40,33 +46,51 @@ def _create_mask_per_label(
             depend on the order the entries came in.
     """
 
-    masks_per_node: dict[tuple[int, int], list[Mask]] = defaultdict(list)
     pixels_per_node: dict[tuple[int, int], list[tuple[np.ndarray, ...]]] = defaultdict(
         list
     )
-    for update in updates:
-        if len(update) == 3:
-            mask, time, old_value = update
-            masks_per_node[(old_value, time)].append(mask)
-        else:
-            pixels, old_value = update
-            pixels_per_node[(old_value, int(pixels[0][0]))].append(pixels)
+    for pixels, old_value in updates:
+        pixels_per_node[(old_value, int(pixels[0][0]))].append(pixels)
 
     combined = []
-    for key in sorted(masks_per_node.keys() | pixels_per_node.keys()):
-        masks = list(masks_per_node[key])
-        if key in pixels_per_node:
-            # Gather this node's coordinates before building anything, so the mask
-            # is built once for the node rather than once per entry.
-            coordinates = tuple(
-                np.concatenate([pixels[dim] for pixels in pixels_per_node[key]])
-                for dim in range(ndim)
-            )
-            masks.append(pixels_to_td_mask(coordinates, ndim))
-        old_value, time = key
-        combined.append((union_td_masks(masks), time, old_value))
+    for (old_value, time), entries in sorted(pixels_per_node.items()):
+        # Gather this node's coordinates before building anything, so the mask is
+        # built once for the node rather than once per entry.
+        coordinates = tuple(
+            np.concatenate([pixels[dim] for pixels in entries]) for dim in range(ndim)
+        )
+        combined.append((pixels_to_td_mask(coordinates, ndim), time, old_value))
 
     return combined
+
+
+def _create_masks_from_bboxes(
+    updates: Sequence[MaskUpdate],
+) -> list[MaskUpdate]:
+    """Combine mask updated-pixels entries into one mask per node.
+
+    Entries come as (mask, time, old value), the form the segmentation is stored
+    as. A label may be reported more than once, so entries are grouped per label
+    and time point and their masks combined.
+
+    Args:
+        updates: The entries to combine.
+
+    Returns:
+        list[tuple[Mask, int, int]]: one (mask, time, old value) per label and
+            time point, ordered by those, so the actions built from them do not
+            depend on the order the entries came in. Each mask's bounding box is
+            tightened around its own pixels, whatever box it came in with.
+    """
+
+    masks_per_node: dict[tuple[int, int], list[Mask]] = defaultdict(list)
+    for mask, time, old_value in updates:
+        masks_per_node[(old_value, time)].append(mask)
+
+    return [
+        (union_td_masks(masks), time, old_value)
+        for (old_value, time), masks in sorted(masks_per_node.items())
+    ]
 
 
 class UserUpdateSegmentation(ActionGroup):
@@ -74,7 +98,7 @@ class UserUpdateSegmentation(ActionGroup):
         self,
         tracks: Tracks,
         new_value: int,
-        updated_pixels: list[tuple[tuple[np.ndarray, ...], int] | tuple[Mask, int, int]],
+        updated_pixels: list[MultiIndexUpdate | MaskUpdate],
         current_track_id: int,
         force: bool = False,
         _top_level: bool = True,
@@ -110,7 +134,23 @@ class UserUpdateSegmentation(ActionGroup):
         # Discard entries where pixels get overwritten with the same value. Both
         # accepted forms carry the old value last.
         updated_pixels = [update for update in updated_pixels if update[-1] != new_value]
-        updates = _create_mask_per_label(updated_pixels, self.tracks.ndim)
+
+        # Updated pixels can either be provided as (Mask, time, old value) triple, or
+        # as a multi-index entry (multi-index, old value) pair (napari ≤0.7).
+        # mypy cannot narrow a union of tuple types by their length, so name the
+        # form each branch has established.
+        updates: list[MaskUpdate]
+        if not updated_pixels:
+            updates = []
+        elif len(updated_pixels[0]) == 3:
+            updates = _create_masks_from_bboxes(
+                cast("Sequence[MaskUpdate]", updated_pixels)
+            )
+        else:
+            updates = _create_masks_from_multi_index(
+                cast("Sequence[MultiIndexUpdate]", updated_pixels), self.tracks.ndim
+            )
+
         if new_value != 0 and updates:
             times = {time for _, time, _ in updates}
             assert len(times) == 1, "Can only update one time point at a time"
