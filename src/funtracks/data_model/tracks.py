@@ -29,6 +29,8 @@ from funtracks.features import (
     Time,
 )
 from funtracks.utils.tracksdata_utils import (
+    all_node_attr_keys,
+    solution_view,
     to_polars_dtype,
 )
 
@@ -86,6 +88,7 @@ class Tracks:
         features: FeatureDict | None = None,
         intensity_images: Sequence[IntensityImage] | None = None,
         channel_names: Sequence[str] | None = None,
+        lean_solution_view: bool | None = None,
         _segmentation: GraphArrayView | None = None,
     ):
         """Initialize a Tracks object.
@@ -124,6 +127,11 @@ class Tracks:
                 set_intensity_images.
             channel_names (Sequence[str] | None): Display names, one per intensity
                 image. Defaults to channel_0, channel_1, ... for multichannel input.
+            lean_solution_view (bool | None): Whether graph_solution leaves out the
+                blob columns nothing reads from it, reading those through to
+                graph_full on demand. None (default) decides by backend - see
+                funtracks.utils.tracksdata_utils.solution_view. PROVISIONAL: may be
+                removed without deprecation once leanness is unconditional.
             _segmentation (GraphArrayView | None): Internal parameter for reusing an
                 existing GraphArrayView instance. Not intended for public use.
         """
@@ -144,14 +152,7 @@ class Tracks:
         if "solution" not in graph.edge_attr_keys():
             graph.add_edge_attr_key("solution", default_value=True, dtype=pl.Boolean)
         self.graph_full = graph
-        # ViewMode.LIVE: the root pushes its attribute writes (and new attr keys)
-        # back into this view. funtracks writes values/schema on graph_full and reads
-        # them via graph_solution, so the view must stay live. Since tracksdata rc10,
-        # views default to WRITE_THROUGH (no root->view propagation), so this is required.
-        self.graph_solution = graph.filter(
-            td.NodeAttr("solution") == True,  # noqa: E712
-            td.EdgeAttr("solution") == True,  # noqa: E712
-        ).subgraph(mode=td.graph.ViewMode.LIVE)
+        self.graph_solution = solution_view(graph, lean_solution_view)
         # Highest node id handed out so far, filled in on first use by
         # get_next_node_id and kept up to date from there.
         self._max_node_id: int | None = None
@@ -247,6 +248,26 @@ class Tracks:
         # key and a registered TrackAnnotator, with tracklet_id/lineage_id registered
         # and computed. A provided FeatureDict that omitted them is completed here.
         self._ensure_track_features()
+
+    def _solution_view_all_attrs(self) -> td.graph.GraphView:
+        """A solution view holding every node attribute column, not just the lean set.
+
+        Private escape hatch for funtracks' own export paths; it goes away with the
+        lean/non-lean distinction. ``graph_solution`` may be lean, which is right for
+        reading - excluded columns fall back to graph_full - but wrong for code that
+        copies the view's columns rather than querying them (``detach()``, a nested
+        ``subgraph()``).
+
+        Returns:
+            ``graph_solution`` itself when it already holds every column, otherwise a
+            freshly built non-lean view (LIVE like the original, so writes through it
+            still reach graph_full).
+        """
+        if not set(self.graph_full.node_attr_keys()) - set(
+            self.graph_solution.node_attr_keys()
+        ):
+            return self.graph_solution
+        return solution_view(self.graph_full, lean=False)
 
     @property
     def scale(self) -> list[float] | None:
@@ -431,9 +452,10 @@ class Tracks:
         if self.graph_solution.num_nodes() == 0:
             return True
 
-        # Check which attributes exist
-        node_attrs = set(self.graph_solution.node_attr_keys())
-        return key in node_attrs
+        # all_node_attr_keys, not node_attr_keys: a lean solution view does not list
+        # the columns it reads through to graph_full, and a feature that lives in one
+        # of them exists all the same - reporting it missing would recompute it.
+        return key in set(all_node_attr_keys(self.graph_solution))
 
     def _setup_core_computed_features(self) -> None:
         """Sets up core computed position features.
