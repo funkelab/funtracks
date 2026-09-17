@@ -187,23 +187,16 @@ class RegionpropsAnnotator(GraphAnnotator):
             channel_names: Optional display names, one per intensity image. Defaults
                 to ``channel_0``, ``channel_1``, ... for multichannel input.
         """
-        if pos_key is None:
-            pos_key = DEFAULT_POS_KEY
-        self.pos_key: str | list[str] = (
-            pos_key if isinstance(pos_key, str) else list(pos_key)
-        )
-        # The position keys as a list, whichever layout is in use, for the code paths
-        # that only care about "which columns hold the centroid".
-        self.pos_keys: list[str] = (
-            [self.pos_key] if isinstance(self.pos_key, str) else list(self.pos_key)
-        )
-        # Axis key -> which component of the centroid it holds. Empty for the stacked
-        # layout, where the one key takes the whole coordinate.
-        self._pos_component: dict[str, int] = (
-            {}
-            if isinstance(self.pos_key, str)
-            else {key: idx for idx, key in enumerate(self.pos_key)}
-        )
+        self._set_pos_key(DEFAULT_POS_KEY if pos_key is None else pos_key)
+        # A split position needs exactly one key per spatial axis: too few would
+        # silently drop the fastest axis and shift the rest, too many would index off
+        # the end of every centroid.
+        if not isinstance(self.pos_key, str) and len(self.pos_key) != tracks.ndim - 1:
+            raise ValueError(
+                f"Got {len(self.pos_key)} position keys {self.pos_key} for "
+                f"{tracks.ndim - 1} spatial dimensions (ndim={tracks.ndim}): a split "
+                "position needs one key per spatial axis, slowest first"
+            )
         self.area_key = DEFAULT_AREA_KEY
         self.ellipse_axis_radii_key = DEFAULT_ELLIPSE_AXIS_KEY
         self.circularity_key = DEFAULT_CIRCULARITY_KEY
@@ -220,11 +213,13 @@ class RegionpropsAnnotator(GraphAnnotator):
             self.channel_names,
         )
         # Replace the default position spec with the requested key(s): one spec
-        # holding the whole coordinate, or one scalar spec per axis.
-        if self.pos_keys != [DEFAULT_POS_KEY]:
-            default_spec = next(spec for spec in specs if spec.key == DEFAULT_POS_KEY)
-            specs.remove(default_spec)
-            if isinstance(self.pos_key, str):
+        # holding the whole coordinate, or one scalar spec per axis. Keyed off the
+        # *type* of pos_key, not its content: ["pos"] is a split layout that happens
+        # to reuse the default name, and must still get a scalar spec.
+        default_spec = next(spec for spec in specs if spec.key == DEFAULT_POS_KEY)
+        if isinstance(self.pos_key, str):
+            if self.pos_key != DEFAULT_POS_KEY:
+                specs.remove(default_spec)
                 specs.append(
                     FeatureSpec(
                         self.pos_key,
@@ -232,11 +227,12 @@ class RegionpropsAnnotator(GraphAnnotator):
                         default_spec.regionprops_attr,
                     )
                 )
-            else:
-                specs.extend(
-                    FeatureSpec(key, PositionAxis(key), default_spec.regionprops_attr)
-                    for key in self.pos_key
-                )
+        else:
+            specs.remove(default_spec)
+            specs.extend(
+                FeatureSpec(key, PositionAxis(key), default_spec.regionprops_attr)
+                for key in self.pos_key
+            )
 
         feats = {spec.key: spec.feature for spec in specs}
         super().__init__(tracks, feats)
@@ -511,6 +507,34 @@ class RegionpropsAnnotator(GraphAnnotator):
         # graph each write is an UPDATE, and a split position is several columns.
         self.tracks._set_nodes_attrs(all_node_ids, all_values)
 
+    def _set_pos_key(self, pos_key: str | Sequence[str]) -> None:
+        """Set where the centroid is written, and rebuild what is derived from it.
+
+        The one place ``pos_key`` is assigned, so the centroid-component lookup can
+        never drift out of step with it.
+
+        Args:
+            pos_key: A single key for the stacked layout, or one key per spatial axis.
+        """
+        self.pos_key: str | list[str] = (
+            pos_key if isinstance(pos_key, str) else list(pos_key)
+        )
+        # Axis key -> which component of the centroid it holds. Empty for the stacked
+        # layout, where the one key takes the whole coordinate.
+        self._pos_component: dict[str, int] = (
+            {}
+            if isinstance(self.pos_key, str)
+            else {key: idx for idx, key in enumerate(self.pos_key)}
+        )
+
+    @property
+    def pos_keys(self) -> list[str]:
+        """The position keys as a list, whichever layout is in use.
+
+        For the code paths that only care about "which columns hold the centroid".
+        """
+        return [self.pos_key] if isinstance(self.pos_key, str) else list(self.pos_key)
+
     def _pos_value(self, key: str, centroid: list[float]) -> Any:
         """The value to store at a position key, given the whole centroid.
 
@@ -585,6 +609,10 @@ class RegionpropsAnnotator(GraphAnnotator):
             keys_to_compute = [
                 key for key in keys_to_compute if key != self.intensity_key
             ]
+            if not keys_to_compute:
+                # Intensity was all that was active, so there is nothing left to run
+                # regionprops on this node for (mirrors the same guard in compute).
+                return
 
         time = self.tracks.get_time(node)
 
@@ -622,13 +650,13 @@ class RegionpropsAnnotator(GraphAnnotator):
             self.regionprops_names[new_key] = rp_name
 
         # Keep the position keys in sync: they decide where the centroid is written
-        if old_key in self.pos_keys:
-            self.pos_keys[self.pos_keys.index(old_key)] = new_key
-            if isinstance(self.pos_key, str):
-                self.pos_key = new_key
-            else:
-                self.pos_key[self.pos_key.index(old_key)] = new_key
-                self._pos_component[new_key] = self._pos_component.pop(old_key)
+        if isinstance(self.pos_key, str):
+            if old_key == self.pos_key:
+                self._set_pos_key(new_key)
+        elif old_key in self.pos_key:
+            renamed = list(self.pos_key)
+            renamed[renamed.index(old_key)] = new_key
+            self._set_pos_key(renamed)
 
         # Keep the intensity key in sync: it gates intensity-image handling
         if old_key == self.intensity_key:

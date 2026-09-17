@@ -231,6 +231,7 @@ class Tracks:
             if features is None
             else features
         )
+        self._validate_position_key()
         # 2. Set up annotator registry for managing feature computation
         # (read by _get_annotators to configure the RegionpropsAnnotator)
         self._intensity_images = intensity_images
@@ -351,6 +352,28 @@ class Tracks:
 
         return feature_dict
 
+    def _validate_position_key(self) -> None:
+        """Check a per-axis position_key against ndim, before anything reads it.
+
+        One key per spatial axis is not a convention but a requirement: everything
+        downstream pairs a position with the axes ndim implies, so a mismatch
+        surfaces late and obscurely (CSV export zips the coordinate against
+        ``["z", "y", "x"]``/``["y", "x"]`` with ``strict=True``, and with a
+        segmentation the annotator would write the centroid into the wrong columns).
+
+        Raises:
+            ValueError: If position_key names a number of axes other than ndim - 1.
+        """
+        position_key = self.features.position_key
+        if position_key is None or isinstance(position_key, str):
+            return
+        if len(position_key) != self.ndim - 1:
+            raise ValueError(
+                f"Got {len(position_key)} position keys {list(position_key)} for "
+                f"{self.ndim - 1} spatial dimensions (ndim={self.ndim}): positions "
+                "stored per axis need one key per spatial axis, slowest first"
+            )
+
     def _get_annotators(self) -> AnnotatorRegistry:
         """Instantiate and return core annotators based on available data.
 
@@ -455,7 +478,13 @@ class Tracks:
 
     def _register_core_features(self, keys: list[str]) -> None:
         """Register each key as a feature: activate it if it already exists on the
-        graph, otherwise enable (compute) it."""
+        graph, otherwise enable (compute) it.
+
+        The missing keys are computed in a single call, not one at a time: an
+        annotator can compute a whole batch more cheaply than each key alone (a split
+        position needs one centroid pass for all its axes, not one pass per axis).
+        """
+        missing: list[str] = []
         for key in keys:
             if self._check_existing_feature(key):
                 if key not in self.features:
@@ -463,7 +492,9 @@ class Tracks:
                     self.add_feature(key, feature)
                 self.annotators.activate_features([key])
             else:
-                self.enable_features([key])
+                missing.append(key)
+        if missing:
+            self.enable_features(missing)
 
     def _ensure_track_features(self) -> None:
         """Ensure the track-id core features exist on this Tracks.

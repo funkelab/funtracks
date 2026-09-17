@@ -3,6 +3,7 @@ import polars as pl
 import pytest
 from tracksdata.nodes import Mask
 
+import funtracks.annotators._regionprops_annotator as rp_module
 from funtracks.actions import UpdateNodeSeg, UpdateTrackIDs
 from funtracks.annotators import RegionpropsAnnotator
 from funtracks.data_model import Tracks
@@ -485,6 +486,52 @@ class TestRegionpropsAnnotator:
             "wrote its centroid somewhere position_key does not point at"
         )
         assert after == pytest.approx(_mask_centroid(tracks.get_mask(node_id)))
+
+    def test_split_position_computed_from_scratch(self, get_graph, ndim, monkeypatch):
+        """A graph with masks but no position columns at all gets one column per axis.
+
+        This is the compute path for a split position: the per-axis columns are absent,
+        so they are computed rather than activated. It must also stay on the cheap
+        centroid path, which needs every axis in a single compute() call - computing
+        them one at a time would run the full regionprops machinery once per axis.
+        """
+        graph = get_graph(ndim, with_pos=False, with_seg=True)
+        pos_keys = ["y", "x"] if ndim == 3 else ["z", "y", "x"]
+        assert not set(pos_keys) & set(graph.node_attr_keys())
+
+        calls = []
+        real = rp_module.regionprops_extended
+        monkeypatch.setattr(
+            rp_module,
+            "regionprops_extended",
+            lambda *a, **k: (calls.append(1), real(*a, **k))[1],
+        )
+        tracks = Tracks(graph, ndim=ndim, pos_attr=pos_keys, **track_attrs)
+
+        assert calls == [], (
+            "positions were computed via full regionprops instead of the centroid "
+            "fast path: the axis keys did not reach compute() together"
+        )
+        assert "pos" not in tracks.graph_full.node_attr_keys()
+        for key in pos_keys:
+            assert key in tracks.graph_full.node_attr_keys()
+        for node_id in tracks.graph_solution.node_ids():
+            assert list(tracks.get_position(node_id)) == pytest.approx(
+                _mask_centroid(tracks.get_mask(node_id))
+            )
+
+    def test_split_pos_key_must_have_one_key_per_axis(self, get_graph, ndim):
+        """A per-axis pos_key of the wrong length must be rejected, not guessed at.
+
+        Too few keys would silently store the slowest axes and drop the fastest one;
+        too many would index off the end of every centroid.
+        """
+        graph = get_graph(ndim, with_seg=True)
+        tracks = Tracks(graph, ndim=ndim, **track_attrs)
+        wrong_length = ["y", "x"] if ndim == 4 else ["z", "y", "x"]
+
+        with pytest.raises(ValueError, match="one key per spatial axis"):
+            RegionpropsAnnotator(tracks, pos_key=wrong_length)
 
     def test_ignores_irrelevant_actions(self, get_graph, ndim):
         """Test that RegionpropsAnnotator ignores actions that don't affect
