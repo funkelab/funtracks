@@ -171,6 +171,19 @@ def test_set_positions_str(graph_2d_with_segmentation):
         tracks.get_positions(["0"])
 
 
+@pytest.mark.parametrize("pos_attr", [["y"], ["z", "y", "x"]])
+def test_position_key_list_must_match_ndim(graph_2d_list, pos_attr):
+    """A per-axis pos_attr of the wrong length is rejected up front.
+
+    Checked even without a segmentation, where the columns are static and nothing
+    recomputes them: ndim still decides how many coordinates everything downstream
+    expects, so a mismatch would surface later and obscurely (CSV export zips the
+    position against the axes ndim implies, strictly).
+    """
+    with pytest.raises(ValueError, match="one key per spatial axis"):
+        Tracks(graph_2d_list, pos_attr=pos_attr, ndim=3, **track_attrs)
+
+
 def test_set_positions_list(graph_2d_list):
     tracks = Tracks(graph_2d_list, pos_attr=["y", "x"], ndim=3, **track_attrs)
     tracks.set_positions((1, 2), [(1, 2), (3, 4)])
