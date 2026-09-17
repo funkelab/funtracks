@@ -29,6 +29,8 @@ from funtracks.features import (
     Time,
 )
 from funtracks.utils.tracksdata_utils import (
+    all_node_attr_keys,
+    solution_view,
     to_polars_dtype,
 )
 
@@ -86,6 +88,7 @@ class Tracks:
         features: FeatureDict | None = None,
         intensity_images: Sequence[IntensityImage] | None = None,
         channel_names: Sequence[str] | None = None,
+        lean_solution_view: bool | None = None,
         _segmentation: GraphArrayView | None = None,
     ):
         """Initialize a Tracks object.
@@ -124,6 +127,11 @@ class Tracks:
                 set_intensity_images.
             channel_names (Sequence[str] | None): Display names, one per intensity
                 image. Defaults to channel_0, channel_1, ... for multichannel input.
+            lean_solution_view (bool | None): Whether graph_solution leaves out the
+                blob columns nothing reads from it, reading those through to
+                graph_full on demand. None (default) decides by backend - see
+                funtracks.utils.tracksdata_utils.solution_view. PROVISIONAL: may be
+                removed without deprecation once leanness is unconditional.
             _segmentation (GraphArrayView | None): Internal parameter for reusing an
                 existing GraphArrayView instance. Not intended for public use.
         """
@@ -144,17 +152,15 @@ class Tracks:
         if "solution" not in graph.edge_attr_keys():
             graph.add_edge_attr_key("solution", default_value=True, dtype=pl.Boolean)
         self.graph_full = graph
-        # ViewMode.LIVE: the root pushes its attribute writes (and new attr keys)
-        # back into this view. funtracks writes values/schema on graph_full and reads
-        # them via graph_solution, so the view must stay live. Since tracksdata rc10,
-        # views default to WRITE_THROUGH (no root->view propagation), so this is required.
-        self.graph_solution = graph.filter(
-            td.NodeAttr("solution") == True,  # noqa: E712
-            td.EdgeAttr("solution") == True,  # noqa: E712
-        ).subgraph(mode=td.graph.ViewMode.LIVE)
+        self.graph_solution = solution_view(graph, lean_solution_view)
         # Highest node id handed out so far, filled in on first use by
         # get_next_node_id and kept up to date from there.
         self._max_node_id: int | None = None
+        self._segmentation_array: GraphArrayView | None = None
+        # Reduced-resolution, display-only views, keyed by normalized downscale
+        # factors. Cached so that repeated requests for the same factor (every
+        # 2D/3D toggle in a viewer) keep their chunk cache warm.
+        self._display_views: dict[tuple[int, ...], GraphArrayView] = {}
         if _segmentation is not None:
             # Reuse provided segmentation instance (internal use only)
             self.segmentation = _segmentation
@@ -247,6 +253,136 @@ class Tracks:
         # key and a registered TrackAnnotator, with tracklet_id/lineage_id registered
         # and computed. A provided FeatureDict that omitted them is completed here.
         self._ensure_track_features()
+
+    def _solution_view_all_attrs(self) -> td.graph.GraphView:
+        """A solution view holding every node attribute column, not just the lean set.
+
+        Private escape hatch for funtracks' own export paths; it goes away with the
+        lean/non-lean distinction. ``graph_solution`` may be lean, which is right for
+        reading - excluded columns fall back to graph_full - but wrong for code that
+        copies the view's columns rather than querying them (``detach()``, a nested
+        ``subgraph()``).
+
+        Returns:
+            ``graph_solution`` itself when it already holds every column, otherwise a
+            freshly built non-lean view (LIVE like the original, so writes through it
+            still reach graph_full).
+        """
+        if not set(self.graph_full.node_attr_keys()) - set(
+            self.graph_solution.node_attr_keys()
+        ):
+            return self.graph_solution
+        return solution_view(self.graph_full, lean=False)
+
+    @property
+    def segmentation(self) -> GraphArrayView | None:
+        """Full-resolution label array rendered from ``graph_solution``, or None.
+
+        This is the authoritative segmentation: segmentation export, intensity image
+        validation and IoU all read it, so it always lives on the full-resolution
+        grid. For a cheaper array to *render*, use :meth:`display_segmentation`.
+        """
+        return self._segmentation_array
+
+    @segmentation.setter
+    def segmentation(self, value: GraphArrayView | None) -> None:
+        downscale = getattr(value, "downscale", None)
+        if downscale is not None and any(f != 1 for f in downscale):
+            raise ValueError(
+                f"Cannot assign a downscaled GraphArrayView (downscale={downscale}) "
+                "to tracks.segmentation: it is the full-resolution array that "
+                "segmentation export and feature computation read, and a coarse "
+                "shape there renders full-resolution masks into an undersized array "
+                "without erroring. Hold the view returned by display_segmentation() "
+                "at the call site instead."
+            )
+        self._segmentation_array = value
+        self._display_views = {}
+
+    def _normalize_downscale(self, downscale: int | Sequence[int]) -> tuple[int, ...]:
+        """Validate ``downscale`` and broadcast it to one factor per spatial axis."""
+        n_spatial = self.ndim - 1
+        if isinstance(downscale, (int, np.integer)):
+            factors = (int(downscale),) * n_spatial
+        else:
+            values = list(downscale)
+            if not all(isinstance(f, (int, np.integer)) for f in values):
+                raise ValueError(f"`downscale` must be integer, got {downscale!r}")
+            if len(values) != n_spatial:
+                hint = (
+                    ", which looks like a time-first sequence (as in Tracks.scale)"
+                    if len(values) == self.ndim
+                    else ""
+                )
+                raise ValueError(
+                    f"`downscale` is spatial-only, expected length {n_spatial} for "
+                    f"ndim={self.ndim}; got {len(values)}{hint}."
+                )
+            factors = tuple(int(f) for f in values)
+        if any(f < 1 for f in factors):
+            raise ValueError(f"`downscale` factors must be >= 1, got {factors}")
+        return factors
+
+    def display_segmentation(
+        self, downscale: int | Sequence[int]
+    ) -> GraphArrayView | None:
+        """A reduced-resolution view of the segmentation, for rendering only.
+
+        Rendering a full-resolution 3D timepoint materializes the whole volume; a
+        downscaled view shrinks both the buffer and the paint cost, while still
+        drawing every object (anything thinner than the factor becomes a single
+        voxel, so it stays visible and selectable).
+
+        Args:
+            downscale: One integer factor per *spatial* axis (length ``ndim - 1``),
+                or a single int broadcast to all of them. Prefer the explicit tuple
+                and pick factors that equalize physical voxel size, i.e. keep
+                ``scale[i] * downscale[i]`` roughly constant: on anisotropic data an
+                isotropic factor coarsens the axis with the least to give.
+
+        Returns:
+            A ``GraphArrayView`` over the same graph at the requested resolution, or
+            None when this Tracks has no segmentation. Returns ``self.segmentation``
+            itself when every factor is 1. Views are cached per factor, so asking
+            repeatedly keeps the chunk cache rather than rebuilding it.
+
+        Note:
+            Coordinates read out of a coarse view are in downscaled coordinates, and
+            the shape and size of what it paints are not quantitative. Never feed
+            them back into an edit or a metric without checking ``view.downscale``.
+        """
+        if self.segmentation is None:
+            return None
+        factors = self._normalize_downscale(downscale)
+        if all(f == 1 for f in factors):
+            return self.segmentation
+        if factors not in self._display_views:
+            self._display_views[factors] = GraphArrayView(
+                graph=self.graph_solution,
+                shape=self.segmentation.full_shape,
+                attr_key="node_id",
+                offset=0,
+                downscale=factors,
+                # Inherit the dtype rather than letting GraphArrayView infer it:
+                # the probe is a full node_id column read, and the authoritative
+                # view has already paid for it once.
+                dtype=self.segmentation.dtype,
+            )
+        return self._display_views[factors]
+
+    def display_scale(self, downscale: int | Sequence[int]) -> list[float] | None:
+        """Voxel spacing of ``display_segmentation(downscale)``, or None if unknown.
+
+        A coarse array needs a proportionally larger voxel size, or it renders at a
+        fraction of its true extent. This mirrors :attr:`scale` (time first, and
+        None when the graph carries no scale metadata) rather than manufacturing a
+        scale out of the factors alone, which would look valid but mean nothing.
+        """
+        scale = self.scale
+        if scale is None:
+            return None
+        factors = self._normalize_downscale(downscale)
+        return [scale[0], *(s * f for s, f in zip(scale[1:], factors, strict=True))]
 
     @property
     def scale(self) -> list[float] | None:
@@ -431,9 +567,10 @@ class Tracks:
         if self.graph_solution.num_nodes() == 0:
             return True
 
-        # Check which attributes exist
-        node_attrs = set(self.graph_solution.node_attr_keys())
-        return key in node_attrs
+        # all_node_attr_keys, not node_attr_keys: a lean solution view does not list
+        # the columns it reads through to graph_full, and a feature that lives in one
+        # of them exists all the same - reporting it missing would recompute it.
+        return key in set(all_node_attr_keys(self.graph_solution))
 
     def _setup_core_computed_features(self) -> None:
         """Sets up core computed position features.

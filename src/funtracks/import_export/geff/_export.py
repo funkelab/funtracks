@@ -240,9 +240,15 @@ def split_position_attr(tracks: Tracks) -> tuple[td.graph.GraphView, list[str] |
     """
     pos_key = tracks.features.position_key
 
+    # Not graph_solution: that view may be lean (built without the mask column, which
+    # it reads through to graph_full on demand), and both `detach()` and `to_geff()`
+    # copy the columns the view itself holds rather than querying for the rest - so a
+    # lean view would write a geff whose masks are all null.
+    solution = tracks._solution_view_all_attrs()
+
     if isinstance(pos_key, str):
         # Position is stored as a single attribute, need to split
-        new_graph = tracks.graph_solution.detach()
+        new_graph = solution.detach()
         new_graph = new_graph.filter().subgraph()
 
         # Register new attribute keys
@@ -274,6 +280,6 @@ def split_position_attr(tracks: Tracks) -> tuple[td.graph.GraphView, list[str] |
         return new_graph, new_keys
     elif pos_key is not None:
         # Position is already split into separate attributes
-        return tracks.graph_solution, list(pos_key)
+        return solution, list(pos_key)
     else:
-        return tracks.graph_solution, None
+        return solution, None
