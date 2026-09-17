@@ -23,6 +23,7 @@ from funtracks.features import (
     Feature,
     FeatureDict,
     Position,
+    PositionAxis,
     SegBbox,
     SegMask,
     Solution,
@@ -321,19 +322,15 @@ class Tracks:
 
         # Register position feature
         if isinstance(pos_attr, tuple | list):
-            # Multiple position attributes (one per axis) -
-            # always static, already on nodes
-            multi_position_key = list(pos_attr)
-            for attr in pos_attr:
-                feature_dict[attr] = {
-                    "feature_type": "node",
-                    "value_type": "float",
-                    "num_values": 1,
-                    "default_value": None,
-                }
-            # For multi-axis, set position_key directly
-            # (not a single feature to register)
-            feature_dict.position_key = multi_position_key
+            # One position attribute per axis. position_key holds the whole list, and
+            # is what every position read/write in the repo goes through.
+            feature_dict.position_key = list(pos_attr)
+            if self.segmentation is None:
+                # Static, already on the nodes. With segmentation the
+                # RegionpropsAnnotator owns these keys and registers them, exactly as
+                # it does for a single stacked key.
+                for attr in pos_attr:
+                    feature_dict[attr] = PositionAxis(attr)
         elif self.segmentation is None:
             # Single position attribute without segmentation - static, provided by user
             single_position_key = pos_attr
@@ -378,16 +375,14 @@ class Tracks:
 
         # RegionpropsAnnotator: requires segmentation
         if RegionpropsAnnotator.can_annotate(self):
-            # Pass position_key only if it's a single string (not multi-axis list)
-            pos_key = (
-                self.features.position_key
-                if isinstance(self.features.position_key, str)
-                else None
-            )
+            # position_key is the single source of truth for where positions live, in
+            # either layout: one stacked key, or one key per axis. Hand it straight to
+            # the annotator so it writes the centroid to the columns that are actually
+            # read back. None means "no positions yet" and lets it pick its default.
             annotator_list.append(
                 RegionpropsAnnotator(
                     self,
-                    pos_key=pos_key,
+                    pos_key=self.features.position_key,
                     intensity_images=self._intensity_images,
                     channel_names=self._channel_names,
                 )
@@ -438,13 +433,14 @@ class Tracks:
     def _setup_core_computed_features(self) -> None:
         """Sets up core computed position features.
 
-        Registers the position feature from the RegionpropsAnnotator into the
-        FeatureDict, activating it if it already exists on the graph or computing it
-        otherwise. Track-id features are handled separately by _ensure_track_features.
+        Registers the position feature(s) from the RegionpropsAnnotator into the
+        FeatureDict, activating them if they already exist on the graph or computing
+        them otherwise. Track-id features are handled separately by
+        _ensure_track_features.
 
-        Skipped when position_key already names one column per axis: those columns
-        hold the positions, so the annotator's pos_key would only add a mask centroid
-        nothing reads. Callers who want it anyway can enable_features([pos_key]).
+        Registers whichever keys position_key names — one stacked key, or one per
+        axis. The annotator was built from the same keys, so no other position
+        column is required, fetched or computed.
         """
         # Import here to avoid circular dependency
         from funtracks.annotators import RegionpropsAnnotator
@@ -452,12 +448,9 @@ class Tracks:
         core_features: list[str] = []
         for annotator in self.annotators:
             if isinstance(annotator, RegionpropsAnnotator):
-                pos_key = annotator.pos_key
                 if self.features.position_key is None:
-                    self.features.position_key = pos_key
-                elif not isinstance(self.features.position_key, str):
-                    continue
-                core_features.append(pos_key)
+                    self.features.position_key = annotator.pos_key
+                core_features.extend(annotator.pos_keys)
         self._register_core_features(core_features)
 
     def _register_core_features(self, keys: list[str]) -> None:
@@ -772,15 +765,48 @@ class Tracks:
             value = list(value)
         self.graph_full.nodes[node][attr] = value
 
+    def _set_node_attrs(self, node: Node, attrs: dict[str, AttrValue]):
+        """Write several attributes for one node in one backend call.
+
+        Each value is wrapped in a single-element list, because update_node_attrs
+        reads a bare list as one value per node id: without the wrapper a vector
+        value (a stacked position, a bbox) would be spread across node ids instead
+        of stored on this one.
+
+        Args:
+            node (Node): The node id to write.
+            attrs (dict[str, AttrValue]): Maps each attribute key to its value.
+        """
+        if not attrs:
+            return
+        wrapped = {
+            key: [list(value) if isinstance(value, np.ndarray) else value]
+            for key, value in attrs.items()
+        }
+        self.graph_full.update_node_attrs(attrs=wrapped, node_ids=[int(node)])
+
     def _set_nodes_attr(
         self, nodes: Iterable[Node], attr: str, values: Iterable[AttrValue]
     ):
+        self._set_nodes_attrs(nodes, {attr: list(values)})
+
+    def _set_nodes_attrs(self, nodes: Iterable[Node], attrs: Attrs):
+        """Write several attributes for many nodes in one backend call.
+
+        One call per attribute would be one UPDATE per column on a SQL-backed graph,
+        so annotators computing a batch of features (or one position per axis) pass
+        them together.
+
+        Args:
+            nodes (Iterable[Node]): The node ids to write.
+            attrs (Attrs): Maps each attribute key to one value per node, in the same
+                order as `nodes`.
+        """
         nodes_list = list(nodes)
-        values_list = list(values)
-        if nodes_list:
-            self.graph_full.update_node_attrs(
-                attrs={attr: values_list}, node_ids=nodes_list
-            )
+        # Nothing to write is a no-op, not a call: the SQL backend sizes its chunks
+        # by len(attrs) and divides by zero on an empty one.
+        if nodes_list and attrs:
+            self.graph_full.update_node_attrs(attrs=attrs, node_ids=nodes_list)
 
     def get_node_attr(self, node: Node, attr: str) -> AttrValue:
         """Get an attribute value for a single node (resolved on graph_full).

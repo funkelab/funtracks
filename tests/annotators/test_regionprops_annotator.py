@@ -1,4 +1,5 @@
 import numpy as np
+import polars as pl
 import pytest
 from tracksdata.nodes import Mask
 
@@ -49,6 +50,31 @@ def _x_gradient_image(ndim: int) -> np.ndarray:
     """Intensity image whose value is the x index, so intensity follows mask shape."""
     shape = _seg_shape(ndim)
     return np.broadcast_to(np.arange(shape[-1], dtype=np.float32), shape)
+
+
+def _split_pos_columns(graph, ndim: int) -> list[str]:
+    """Move the stacked "pos" column into one column per spatial axis.
+
+    Returns the axis column names, slowest axis first.
+    """
+    pos_keys = ["y", "x"] if ndim == 3 else ["z", "y", "x"]
+    for key in pos_keys:
+        graph.add_node_attr_key(key, default_value=None, dtype=pl.Float64)
+    for node in graph.node_ids():
+        pos = graph.nodes[node]["pos"]
+        for idx, key in enumerate(pos_keys):
+            graph.nodes[node][key] = float(pos[idx])
+    graph.remove_node_attr_key("pos")
+    return pos_keys
+
+
+def _mask_centroid(mask: Mask) -> list[float]:
+    """Centroid of a mask in pixel coordinates, straight from the mask array."""
+    bbox_min = mask.bbox[: mask.mask.ndim]
+    return [
+        float(idx.mean() + lo)
+        for idx, lo in zip(np.nonzero(mask.mask), bbox_min, strict=True)
+    ]
 
 
 @pytest.mark.parametrize("ndim", [3, 4])
@@ -427,6 +453,38 @@ class TestRegionpropsAnnotator:
                 f"Bug value would be local_centroid * scale + bbox_min = {bug_value}"
             ),
         )
+
+    @pytest.mark.parametrize("split_pos", [False, True])
+    def test_position_follows_segmentation_edit(self, get_graph, ndim, split_pos):
+        """Editing a mask must move the node's position, in whichever columns
+        position_key names.
+
+        position_key is the single source of truth for where positions live: one
+        stacked "pos" column, or one column per axis. With per-axis columns the
+        annotator has to write those columns - computing a "pos" column that
+        get_position never reads leaves the position stale forever.
+        """
+        graph = get_graph(ndim, with_seg=True)
+        pos_attr = _split_pos_columns(graph, ndim) if split_pos else "pos"
+        tracks = Tracks(graph, ndim=ndim, pos_attr=pos_attr, **track_attrs)
+        assert tracks.features.position_key == pos_attr
+
+        node_id = 3
+        before = list(tracks.get_position(node_id))
+
+        # Remove the half of the mask nearest the origin, which shifts the centroid
+        # along that axis by much more than any rounding.
+        mask = tracks.get_mask(node_id)
+        removal = mask.mask.copy()
+        removal[mask.mask.shape[0] // 2 :] = False
+        UpdateNodeSeg(tracks, node_id, Mask(removal, mask.bbox), added=False)
+
+        after = list(tracks.get_position(node_id))
+        assert after != before, (
+            "the position did not change after the mask was edited: the annotator "
+            "wrote its centroid somewhere position_key does not point at"
+        )
+        assert after == pytest.approx(_mask_centroid(tracks.get_mask(node_id)))
 
     def test_ignores_irrelevant_actions(self, get_graph, ndim):
         """Test that RegionpropsAnnotator ignores actions that don't affect

@@ -280,14 +280,13 @@ def test_multi_axis_pos_attr_with_segmentation(graph_3d_with_segmentation, drop_
             "the unused 'pos' column was computed from the masks"
         )
     assert "pos" not in tracks.features, (
-        "the annotator's fallback pos_key was registered as a feature, but it is "
-        "not where positions are read from"
+        "'pos' was registered as a feature, but it is not where positions are read from"
     )
 
-    # Mask centroids stay reachable for callers that do want them alongside the
-    # per-axis positions, which remain the positions.
-    tracks.enable_features(["pos"])
-    assert "pos" in tracks.features
-    assert "pos" in tracks.graph_full.node_attr_keys()
-    assert tracks.features.position_key == ["z", "y", "x"]
-    assert list(tracks.get_position(node_id)) == expected
+    # The per-axis keys are the position feature, and the only one on offer: "pos"
+    # is not a column this Tracks has, so it cannot be asked for either.
+    for key in ["z", "y", "x"]:
+        assert key in tracks.features
+    assert "pos" not in tracks.annotators.all_features
+    with pytest.raises(KeyError, match="Features not available"):
+        tracks.enable_features(["pos"])

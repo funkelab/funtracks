@@ -17,6 +17,7 @@ from funtracks.features import (
     Intensity,
     Perimeter,
     Position,
+    PositionAxis,
 )
 
 from ._graph_annotator import GraphAnnotator
@@ -166,14 +167,17 @@ class RegionpropsAnnotator(GraphAnnotator):
     def __init__(
         self,
         tracks: Tracks,
-        pos_key: str | None = DEFAULT_POS_KEY,
+        pos_key: str | Sequence[str] | None = DEFAULT_POS_KEY,
         intensity_images: Sequence[IntensityImage] | None = None,
         channel_names: Sequence[str] | None = None,
     ):
         """
         Args:
             tracks: The tracks to compute features for.
-            pos_key: Graph attribute to write the centroid to.
+            pos_key: Graph attribute(s) to write the centroid to. A single string for
+                one stacked column holding the whole coordinate, or one key per
+                spatial axis (slowest first, e.g. ``["z", "y", "x"]``) to write one
+                scalar column per axis. Mirrors ``FeatureDict.position_key``.
             intensity_images: Optional raw images to measure intensity in, one per
                 channel, each shaped like the segmentation ``(t, [z], y, x)``. The
                 intensity feature holds one mean per channel. The images are held as
@@ -183,7 +187,23 @@ class RegionpropsAnnotator(GraphAnnotator):
             channel_names: Optional display names, one per intensity image. Defaults
                 to ``channel_0``, ``channel_1``, ... for multichannel input.
         """
-        self.pos_key: str = pos_key if pos_key is not None else DEFAULT_POS_KEY
+        if pos_key is None:
+            pos_key = DEFAULT_POS_KEY
+        self.pos_key: str | list[str] = (
+            pos_key if isinstance(pos_key, str) else list(pos_key)
+        )
+        # The position keys as a list, whichever layout is in use, for the code paths
+        # that only care about "which columns hold the centroid".
+        self.pos_keys: list[str] = (
+            [self.pos_key] if isinstance(self.pos_key, str) else list(self.pos_key)
+        )
+        # Axis key -> which component of the centroid it holds. Empty for the stacked
+        # layout, where the one key takes the whole coordinate.
+        self._pos_component: dict[str, int] = (
+            {}
+            if isinstance(self.pos_key, str)
+            else {key: idx for idx, key in enumerate(self.pos_key)}
+        )
         self.area_key = DEFAULT_AREA_KEY
         self.ellipse_axis_radii_key = DEFAULT_ELLIPSE_AXIS_KEY
         self.circularity_key = DEFAULT_CIRCULARITY_KEY
@@ -199,16 +219,24 @@ class RegionpropsAnnotator(GraphAnnotator):
             tracks.ndim,
             self.channel_names,
         )
-        # update position key in spec
-        if self.pos_key != DEFAULT_POS_KEY:
-            for feat in specs:
-                if feat.key == DEFAULT_POS_KEY:
-                    specs.remove(feat)
-                    new_feat = FeatureSpec(
-                        self.pos_key, feat.feature, feat.regionprops_attr
+        # Replace the default position spec with the requested key(s): one spec
+        # holding the whole coordinate, or one scalar spec per axis.
+        if self.pos_keys != [DEFAULT_POS_KEY]:
+            default_spec = next(spec for spec in specs if spec.key == DEFAULT_POS_KEY)
+            specs.remove(default_spec)
+            if isinstance(self.pos_key, str):
+                specs.append(
+                    FeatureSpec(
+                        self.pos_key,
+                        default_spec.feature,
+                        default_spec.regionprops_attr,
                     )
-                    specs.append(new_feat)
-                    break
+                )
+            else:
+                specs.extend(
+                    FeatureSpec(key, PositionAxis(key), default_spec.regionprops_attr)
+                    for key in self.pos_key
+                )
 
         feats = {spec.key: spec.feature for spec in specs}
         super().__init__(tracks, feats)
@@ -428,6 +456,10 @@ class RegionpropsAnnotator(GraphAnnotator):
             keys_to_compute = [
                 key for key in keys_to_compute if key != self.intensity_key
             ]
+            if not keys_to_compute:
+                # Intensity was all that was asked for, so there is nothing left to
+                # walk every node and its mask for.
+                return
 
         spacing = None if self.tracks.scale is None else tuple(self.tracks.scale[1:])
         all_node_ids = []
@@ -439,7 +471,7 @@ class RegionpropsAnnotator(GraphAnnotator):
         # it straight from the mask array. If any other feature is requested we run the
         # regionprops pass anyway and its centroid comes for free, so pos goes through
         # the normal path with everything else.
-        fast_pos = keys_to_compute == [self.pos_key]
+        fast_pos = set(keys_to_compute) == set(self.pos_keys)
 
         node_ids = [
             node_id for node_id in self.graph.node_ids() if self.graph.has_node(node_id)
@@ -463,7 +495,9 @@ class RegionpropsAnnotator(GraphAnnotator):
             mask = self.graph.nodes[node_id]["mask"]
             all_node_ids.append(node_id)
             if fast_pos:
-                all_values[self.pos_key].append(_centroid(mask, spacing))
+                centroid = _centroid(mask, spacing)
+                for key in keys_to_compute:
+                    all_values[key].append(self._pos_value(key, centroid))
                 continue
             (region,) = regionprops_extended(
                 mask,
@@ -471,11 +505,26 @@ class RegionpropsAnnotator(GraphAnnotator):
                 intensity_image=frames.crop(mask, time),
             )
             for key in keys_to_compute:
-                value = _to_attr_value(getattr(region, self.regionprops_names[key]))
-                all_values[key].append(value)
+                all_values[key].append(self._region_value(key, region))
 
-        for key in keys_to_compute:
-            self.tracks._set_nodes_attr(all_node_ids, key, all_values[key])
+        # One write for every computed column, rather than one per column: on a SQL
+        # graph each write is an UPDATE, and a split position is several columns.
+        self.tracks._set_nodes_attrs(all_node_ids, all_values)
+
+    def _pos_value(self, key: str, centroid: list[float]) -> Any:
+        """The value to store at a position key, given the whole centroid.
+
+        One stacked key takes the whole coordinate; an axis key takes its own
+        component.
+        """
+        index = self._pos_component.get(key)
+        return centroid if index is None else centroid[index]
+
+    def _region_value(self, key: str, region: Any) -> Any:
+        """The value to store at a feature key, read off a computed region."""
+        value = _to_attr_value(getattr(region, self.regionprops_names[key]))
+        index = self._pos_component.get(key)
+        return value if index is None else value[index]
 
     def _regionprops_update(
         self, node_id: int, mask: Mask, feature_keys: list[str], time: int | None = None
@@ -501,9 +550,9 @@ class RegionpropsAnnotator(GraphAnnotator):
             # Skip labels that aren't nodes in the graph (e.g., unselected detections)
             if not self.graph.has_node(node_id):
                 continue
-            for key in feature_keys:
-                value = _to_attr_value(getattr(region, self.regionprops_names[key]))
-                self.tracks._set_node_attr(node_id, key, value)
+            self.tracks._set_node_attrs(
+                node_id, {key: self._region_value(key, region) for key in feature_keys}
+            )
 
     def update(self, action: BasicAction):
         """Update the regionprops features based on the action.
@@ -571,6 +620,15 @@ class RegionpropsAnnotator(GraphAnnotator):
         if old_key in self.regionprops_names:
             rp_name = self.regionprops_names.pop(old_key)
             self.regionprops_names[new_key] = rp_name
+
+        # Keep the position keys in sync: they decide where the centroid is written
+        if old_key in self.pos_keys:
+            self.pos_keys[self.pos_keys.index(old_key)] = new_key
+            if isinstance(self.pos_key, str):
+                self.pos_key = new_key
+            else:
+                self.pos_key[self.pos_key.index(old_key)] = new_key
+                self._pos_component[new_key] = self._pos_component.pop(old_key)
 
         # Keep the intensity key in sync: it gates intensity-image handling
         if old_key == self.intensity_key:
