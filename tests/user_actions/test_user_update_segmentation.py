@@ -162,6 +162,48 @@ class TestUpdateNodeSeg:
         assert len(update_seg_action.actions) == 2  # one for adding a node,
         # and one for updating existing node 1
 
+    def test_node_to_select_is_the_label_painted_with(self, get_tracks, ndim):
+        """A stroke names the node it went into, so that the views can select it.
+
+        It used to name only a node the stroke had created, which left a viewer with
+        no way to tell which node a correction to an existing one belonged to.
+        """
+
+        tracks = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
+        node_id = 3
+        orig_pixels = td_mask_to_pixels(
+            tracks.get_mask(node_id), tracks.get_time(node_id), ndim=tracks.ndim
+        )
+        one_pixel = tuple(np.array([orig_pixels[d][0]]) for d in range(len(orig_pixels)))
+
+        # correcting a node that is already there names that node
+        grown = (*one_pixel[:-1], np.array([10]))
+        action = UserUpdateSegmentation(
+            tracks, new_value=node_id, updated_pixels=[(grown, 0)], current_track_id=1
+        )
+        assert action.node_to_select == node_id
+
+        # so does painting a label that does not name a node yet
+        new_value = 42
+        grown = (*one_pixel[:-1], np.array([11]))
+        action = UserUpdateSegmentation(
+            tracks,
+            new_value=new_value,
+            updated_pixels=[(grown, 0)],
+            current_track_id=tracks.get_next_track_id(),
+        )
+        assert tracks.graph_solution.has_node(new_value)
+        assert action.node_to_select == new_value
+
+        # erasing names nothing: it says nothing about what to work on next
+        action = UserUpdateSegmentation(
+            tracks,
+            new_value=0,
+            updated_pixels=[(one_pixel, node_id)],
+            current_track_id=1,
+        )
+        assert action.node_to_select is None
+
     def test_user_erase_seg(self, get_tracks, ndim):
         tracks = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
         node_id = 3
