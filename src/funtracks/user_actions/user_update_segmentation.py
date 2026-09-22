@@ -152,6 +152,8 @@ class UserUpdateSegmentation(ActionGroup):
             )
 
         if new_value != 0 and updates:
+            # name the node that was painted with
+            node_to_select = new_value
             times = {time for _, time, _ in updates}
             assert len(times) == 1, "Can only update one time point at a time"
             time = int(times.pop())
@@ -191,7 +193,6 @@ class UserUpdateSegmentation(ActionGroup):
                         _top_level=False,
                     )
                 )
-                node_to_select = new_value
 
         # Now that the InvalidAction check for adding a new node has passed, we can add
         # actions for updating/deleting existing nodes
