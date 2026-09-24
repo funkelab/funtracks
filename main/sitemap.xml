@@ -121,6 +121,10 @@
          <lastmod>2026-09-24</lastmod>
     </url>
     <url>
+         <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/user_actions/user_connect_nodes/</loc>
+         <lastmod>2026-09-24</lastmod>
+    </url>
+    <url>
          <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/user_actions/user_delete_edge/</loc>
          <lastmod>2026-09-24</lastmod>
     </url>
@@ -130,6 +134,10 @@
     </url>
     <url>
          <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/user_actions/user_delete_nodes/</loc>
+         <lastmod>2026-09-24</lastmod>
+    </url>
+    <url>
+         <loc>https://funkelab.github.io/funtracks/main/reference/funtracks/user_actions/user_disconnect_nodes/</loc>
          <lastmod>2026-09-24</lastmod>
     </url>
     <url>
