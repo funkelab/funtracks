@@ -38,7 +38,10 @@ dependencies =[
     "dask>=2025.5.0",
     "pandas>=2.3.3",
     "zarr>=2.18,<4",
-    "tracksdata>=0.1.0rc10",
+    # rc11 is the first release whose sqlalchemy dependency carries the asyncio
+    # extra. Without it, sqlalchemy 2.1 installs without greenlet and every
+    # SQLGraph test fails to import. See .claude/tracksdata_sqla.md.
+    "tracksdata>=0.1.0rc11",
     "tqdm>=4.66.1",
     # zarr 2.x's util.py imports cbuffer_sizes/cbuffer_metainfo from
     # numcodecs.blosc, which numcodecs >= 0.16 removed. Pin numcodecs per
