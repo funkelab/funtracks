@@ -231,6 +231,101 @@ def create_empty_graphview_graph(*args: Any, **kwargs: Any) -> td.graph.GraphVie
     ).subgraph()
 
 
+# Node attribute columns a lean solution view leaves out (see `solution_view`).
+# `mask` is pickled blob data - gigabytes on a multi-million-node database - that
+# nothing reads from the view: the segmentation is rendered by `GraphArrayView`, which
+# fetches masks from the root per chunk. `bbox` stays local on purpose: the R-tree
+# GraphArrayView queries is built on the view, and keeping that spatial index local is
+# what makes each root lookup cheap (one chunk, not a whole timepoint).
+_LEAN_VIEW_EXCLUDED = frozenset({td.DEFAULT_ATTR_KEYS.MASK})
+
+
+def solution_view(
+    graph: td.graph.BaseGraph, lean: bool | None = None
+) -> td.graph.GraphView:
+    """Build the ``solution == True`` view of a base graph.
+
+    ViewMode.LIVE: the root pushes its attribute writes (and new attr keys) back into
+    the view. funtracks writes values/schema on graph_full and reads them via
+    graph_solution, so the view must stay live. Views default to WRITE_THROUGH (no
+    root->view propagation) since tracksdata rc10, so this is required.
+
+    A *lean* view is built without ``_LEAN_VIEW_EXCLUDED`` and with
+    ``root_fallback=True``, so a read for one of those keys is served from the root
+    instead of raising. That skips reading and unpickling every mask into the view,
+    which is most of the cost of building it on a database-backed graph.
+
+    Args:
+        graph: The base graph to view.
+        lean: Whether to leave the excluded columns out. None decides by backend: a
+            rustworkx-backed view shares the root's attribute dicts, so leaving a
+            column out of it frees nothing and only adds a root lookup per read; a
+            view over a graph with its own storage (e.g. SQLGraph) does not share.
+
+    Returns:
+        The live solution view.
+    """
+    if lean is None:
+        lean = not isinstance(graph, td.graph.RustWorkXGraph)
+    keys = [key for key in graph.node_attr_keys() if key not in _LEAN_VIEW_EXCLUDED]
+    solution = graph.filter(
+        td.NodeAttr("solution") == True,  # noqa: E712
+        td.EdgeAttr("solution") == True,  # noqa: E712
+    )
+    if not lean or len(keys) == len(graph.node_attr_keys()):
+        return solution.subgraph(mode=td.graph.ViewMode.LIVE)
+    # Name the keys to *keep*, never the ones to drop: a live view materialises any
+    # attr key later added to the root, so a column can only be left out at
+    # construction. Later additions (e.g. from enable_features) join the view
+    # regardless, which is fine - they are small scalars.
+    return solution.subgraph(
+        mode=td.graph.ViewMode.LIVE, node_attr_keys=keys, root_fallback=True
+    )
+
+
+def all_node_attr_keys(graph: td.graph.BaseGraph) -> list[str]:
+    """Every node attribute key a graph can serve, not just the ones it stores.
+
+    ``graph.node_attr_keys()`` on a lean view (see ``solution_view``) lists only its
+    local columns, so a membership test like ``"mask" in graph.node_attr_keys()`` is
+    False even though reading ``mask`` works - the danger being that such a test takes
+    a "no masks here" branch silently rather than raising.
+
+    A shim for a gap in tracksdata: a view knows which keys it can serve (its own plus
+    its root's) but has no API that says so. Expected to collapse into an upstream
+    accessor (``available_node_attr_keys()``).
+
+    Args:
+        graph: The graph or view to inspect.
+
+    Returns:
+        The view's own keys plus any it reads through to its root, ids included.
+    """
+    keys = graph.node_attr_keys(return_ids=True)
+    if getattr(graph, "_root_fallback", False):
+        root_keys = graph._root.node_attr_keys(return_ids=True)
+        keys = list(dict.fromkeys([*keys, *root_keys]))
+    return keys
+
+
+def all_node_attrs(graph: td.graph.BaseGraph) -> pl.DataFrame:
+    """Every node attribute of a graph, as a DataFrame.
+
+    Like ``graph.node_attrs()``, except that a bare ``node_attrs()`` on a lean view
+    returns only the columns it holds locally - deliberately, since a fallback would
+    undo the point of leaving them out - so the excluded ones have to be asked for by
+    name. See ``all_node_attr_keys``.
+
+    Args:
+        graph: The graph or view to read.
+
+    Returns:
+        A DataFrame with one row per node, holding the view's own columns plus any
+        the view reads through to its root.
+    """
+    return graph.node_attrs(attr_keys=all_node_attr_keys(graph))
+
+
 def assert_node_attrs_equal_with_masks(
     object1, object2, check_column_order: bool = False, check_row_order: bool = False
 ):
@@ -241,8 +336,8 @@ def assert_node_attrs_equal_with_masks(
     if isinstance(object1, td.graph.BaseGraph) and (
         isinstance(object2, td.graph.BaseGraph)
     ):
-        node_attrs1 = object1.node_attrs()
-        node_attrs2 = object2.node_attrs()
+        node_attrs1 = all_node_attrs(object1)
+        node_attrs2 = all_node_attrs(object2)
     elif isinstance(object1, pl.DataFrame) and isinstance(object2, pl.DataFrame):
         node_attrs1 = object1
         node_attrs2 = object2
