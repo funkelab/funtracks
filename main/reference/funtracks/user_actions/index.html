@@ -1360,6 +1360,8 @@
       
         
       
+        
+      
     
     
     
@@ -1536,6 +1538,34 @@
     
   
     <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>user_delete_nodes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="user_merge_nodes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>user_merge_nodes
   
 
     
@@ -1866,6 +1896,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#funtracks.user_actions.UserMergeNodes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;UserMergeNodes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#funtracks.user_actions.UserSetDivision" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1914,6 +1955,28 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;UserUpdateSegmentation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#funtracks.user_actions.get_merge_groups" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;get_merge_groups
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#funtracks.user_actions.get_track_id_options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;get_track_id_options
       
     </span>
   </a>
@@ -2767,6 +2830,180 @@ so that the whole group is undone in one step. Defaults to True.</p>
 
 
 
+<h2 id="funtracks.user_actions.UserMergeNodes" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">UserMergeNodes</span>
+
+
+</h2>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">UserMergeNodes</span><span class="p">(</span>
+    <span class="n">tracks</span><span class="p">:</span> <span class="n">Tracks</span><span class="p">,</span>
+    <span class="n">nodes</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Node</span><span class="p">],</span>
+    <span class="n">track_ids</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">_top_level</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="            ActionGroup (funtracks.actions._base.ActionGroup)" href="../actions/#funtracks.actions.ActionGroup">ActionGroup</a></code></p>
+
+
+
+        <p>Merge each horizontal set of selected nodes into a single node.</p>
+<p>The selection is grouped by time point, and every group holding more than one node
+is merged. Selected nodes that are alone in their time point are ignored. Merging
+works like flood filling one label with another: the masks of the other nodes in the
+group are added to the node that carries the requested tracklet id, and those other
+nodes are deleted. The surviving node therefore keeps its own id and edges.</p>
+<p>The requested tracklet id picks the node to merge into; it is not forced onto the
+result afterwards. Deleting the other nodes can still re-assign tracklet ids through
+the usual rules, for example when the merged nodes were the two children of a
+division and that division collapses into a single track.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>tracks</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="funtracks.data_model.Tracks" href="../../../features/#funtracks.data_model.Tracks">Tracks</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The tracks to merge the nodes in.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>nodes</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Iterable">Iterable</span>[<span title="funtracks.data_model.tracks.Node">Node</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The nodes to merge. At least two of them must share a
+time point.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>track_ids</code>
+            </td>
+            <td>
+                  <code><span title="int">int</span> | <span title="collections.abc.Mapping">Mapping</span>[<span title="int">int</span>, <span title="int">int</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The tracklet id to keep.
+Either a single tracklet id, which must be present in every merged group,
+or a mapping from time point to the tracklet id to keep in that group. If
+None, the lowest tracklet id of each group is kept. Defaults to None.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>_top_level</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If True, add this action to the history and emit refresh.
+Set to False when used as a sub-action inside a compound action.
+Defaults to True.</p>
+              </div>
+            </td>
+            <td>
+                  <code>True</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="            InvalidActionError (funtracks.exceptions.InvalidActionError)" href="../exceptions/#funtracks.exceptions.InvalidActionError">InvalidActionError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If fewer than two distinct nodes are given, if a node is
+not in the solution graph, if no two selected nodes share a time point, if
+the tracks have no segmentation, or if a requested tracklet id does not
+name exactly one node of its group.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
 <h2 id="funtracks.user_actions.UserSetDivision" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">UserSetDivision</span>
 
@@ -3502,6 +3739,242 @@ group, so that the whole group is undone in one step. Defaults to True.</p>
 
 </div>
 
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="funtracks.user_actions.get_merge_groups" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">get_merge_groups</span>
+
+
+</h2>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">get_merge_groups</span><span class="p">(</span>
+    <span class="n">tracks</span><span class="p">:</span> <span class="n">Tracks</span><span class="p">,</span> <span class="n">nodes</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Node</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">Node</span><span class="p">]]</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Group the selected nodes into the horizontal sets that will be merged.</p>
+<p>Nodes that are alone in their time point cannot be merged with anything and
+are left out of the result.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>tracks</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="funtracks.data_model.Tracks" href="../../../features/#funtracks.data_model.Tracks">Tracks</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The tracks the nodes belong to.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>nodes</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Iterable">Iterable</span>[<span title="funtracks.data_model.tracks.Node">Node</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The selected nodes.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="dict">dict</span>[<span title="int">int</span>, <span title="list">list</span>[<span title="funtracks.data_model.tracks.Node">Node</span>]]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>dict[int, list[Node]]: A mapping from time point to the nodes selected in
+that time point, only for time points holding more than one node, and
+sorted by time.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="            InvalidActionError (funtracks.exceptions.InvalidActionError)" href="../exceptions/#funtracks.exceptions.InvalidActionError">InvalidActionError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If fewer than two distinct nodes are given, if a node is
+not in the solution graph, or if no two selected nodes share a time point.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="funtracks.user_actions.get_track_id_options" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">get_track_id_options</span>
+
+
+</h2>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">get_track_id_options</span><span class="p">(</span>
+    <span class="n">tracks</span><span class="p">:</span> <span class="n">Tracks</span><span class="p">,</span> <span class="n">nodes</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Node</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Get the tracklet ids that can be picked for each horizontal set.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>tracks</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="funtracks.data_model.Tracks" href="../../../features/#funtracks.data_model.Tracks">Tracks</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The tracks the nodes belong to.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>nodes</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Iterable">Iterable</span>[<span title="funtracks.data_model.tracks.Node">Node</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The selected nodes.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="dict">dict</span>[<span title="int">int</span>, <span title="list">list</span>[<span title="int">int</span>]]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>dict[int, list[int]]: A mapping from time point to the sorted tracklet ids of
+the nodes selected in that time point.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="            InvalidActionError (funtracks.exceptions.InvalidActionError)" href="../exceptions/#funtracks.exceptions.InvalidActionError">InvalidActionError</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>See :func:<code>get_merge_groups</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
 
 
 
