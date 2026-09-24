@@ -1339,6 +1339,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#funtracks.features.PositionAxis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;PositionAxis
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#funtracks.features.SegBbox" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2380,6 +2391,17 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;Position
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#funtracks.features.PositionAxis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;PositionAxis
       
     </span>
   </a>
@@ -3738,6 +3760,84 @@ of dimensions of the position values.</p>
             <td>
               <div class="doc-md-description">
                 <p>A feature dict representing position</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="funtracks.features.PositionAxis" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">PositionAxis</span>
+
+
+</h2>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">PositionAxis</span><span class="p">(</span><span class="n">axis</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Feature</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>A feature to hold one axis of a node's position.</p>
+<p>Used when positions are stored as one column per axis rather than as a single
+stacked <code>Position</code>. The two layouts are interchangeable: which one is in use
+is recorded by <code>FeatureDict.position_key</code> (a str for stacked, a list of axis
+keys for split).</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>axis</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The axis name, e.g. "z", "y" or "x".</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+<th>Name</th>          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+<td><code>Feature</code></td>            <td>
+                  <code><a class="autorefs autorefs-internal" title="            Feature (funtracks.features._feature.Feature)" href="#funtracks.features.Feature">Feature</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A feature dict representing one position coordinate</p>
               </div>
             </td>
           </tr>

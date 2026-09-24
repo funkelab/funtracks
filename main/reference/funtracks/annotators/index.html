@@ -1105,6 +1105,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#funtracks.annotators.RegionpropsAnnotator.pos_keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;pos_keys
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#funtracks.annotators.RegionpropsAnnotator.can_annotate" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2697,6 +2708,17 @@
   
     <nav class="md-nav" aria-label=" RegionpropsAnnotator">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.annotators.RegionpropsAnnotator.pos_keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-attribute"></code>&nbsp;pos_keys
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#funtracks.annotators.RegionpropsAnnotator.can_annotate" class="md-nav__link">
@@ -4475,7 +4497,7 @@ elements.</p>
 </h2>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">RegionpropsAnnotator</span><span class="p">(</span>
     <span class="n">tracks</span><span class="p">:</span> <span class="n">Tracks</span><span class="p">,</span>
-    <span class="n">pos_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">DEFAULT_POS_KEY</span><span class="p">,</span>
+    <span class="n">pos_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">DEFAULT_POS_KEY</span><span class="p">,</span>
     <span class="n">intensity_images</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">IntensityImage</span><span class="p">]</span>
     <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">channel_names</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -4533,11 +4555,14 @@ the self.include value at the corresponding index to the feature in self.feature
                 <code>pos_key</code>
             </td>
             <td>
-                  <code><span title="str">str</span> | None</code>
+                  <code><span title="str">str</span> | <span title="collections.abc.Sequence">Sequence</span>[<span title="str">str</span>] | None</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Graph attribute to write the centroid to.</p>
+                <p>Graph attribute(s) to write the centroid to. A single string for
+one stacked column holding the whole coordinate, or one key per
+spatial axis (slowest first, e.g. <code>["z", "y", "x"]</code>) to write one
+scalar column per axis. Mirrors <code>FeatureDict.position_key</code>.</p>
               </div>
             </td>
             <td>
@@ -4602,6 +4627,27 @@ to <code>channel_0</code>, <code>channel_1</code>, ... for multichannel input.</
 
 
 
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="funtracks.annotators.RegionpropsAnnotator.pos_keys" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-attribute"></code>            <span class="doc doc-object-name doc-attribute-name">pos_keys</span>
+
+
+</h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">pos_keys</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>The position keys as a list, whichever layout is in use.</p>
+<p>For the code paths that only care about "which columns hold the centroid".</p>
+
+    </div>
+
+</div>
 
 
 
