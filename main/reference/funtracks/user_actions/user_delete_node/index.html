@@ -2027,10 +2027,7 @@
 
 </h2>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">UserDeleteNode</span><span class="p">(</span>
-    <span class="n">tracks</span><span class="p">:</span> <span class="n">Tracks</span><span class="p">,</span>
-    <span class="n">node</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-    <span class="n">pixels</span><span class="p">:</span> <span class="kc">None</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">ndarray</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">_top_level</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">tracks</span><span class="p">:</span> <span class="n">Tracks</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">_top_level</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
 <span class="p">)</span>
 </code></pre></div>
 
@@ -2083,24 +2080,6 @@
             </td>
             <td>
                 <em>required</em>
-            </td>
-          </tr>
-          <tr class="doc-section-item">
-            <td>
-                <code>pixels</code>
-            </td>
-            <td>
-                  <code><span title="tuple">tuple</span>[<span title="numpy.ndarray">ndarray</span>, ...] | None</code>
-            </td>
-            <td>
-              <div class="doc-md-description">
-                <p>The pixels of the node in the
-segmentation, if known. Will be computed if not provided.
-Defaults to None.</p>
-              </div>
-            </td>
-            <td>
-                  <code>None</code>
             </td>
           </tr>
           <tr class="doc-section-item">
