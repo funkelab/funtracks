@@ -388,6 +388,20 @@ def test_delete_nodes_not_top_level(get_tracks, ndim):
     assert len(tracks.action_history.undo_stack) == n_actions
 
 
+def test_empty_multi_index_entry_is_skipped(get_tracks):
+    """An entry with no pixels changes nothing, rather than being an error."""
+    tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
+    empty = (np.array([], dtype=int),) * tracks.ndim
+    mask_before = tracks.get_mask(3).mask.copy()
+
+    action = UserUpdateSegmentation(
+        tracks, new_value=0, updated_pixels=[(empty, 3)], current_track_id=1
+    )
+
+    assert action.actions == []
+    assert np.array_equal(tracks.get_mask(3).mask, mask_before)
+
+
 def test_mixed_updated_pixels_forms_are_rejected(get_tracks):
     """One list must use one form; mixing them would fail on an unpack later."""
     tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)

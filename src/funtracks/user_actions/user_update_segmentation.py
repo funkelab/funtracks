@@ -55,6 +55,10 @@ def _create_masks_from_multi_index(
         list
     )
     for pixels, old_value in updates:
+        if len(pixels[0]) == 0:
+            # An entry with no pixels changes nothing, so it has no time point to
+            # group it under either.
+            continue
         times = np.unique(pixels[0])
         if len(times) != 1:
             raise ValueError(
