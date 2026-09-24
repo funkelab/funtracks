@@ -388,6 +388,21 @@ def test_delete_nodes_not_top_level(get_tracks, ndim):
     assert len(tracks.action_history.undo_stack) == n_actions
 
 
+def test_mixed_updated_pixels_forms_are_rejected(get_tracks):
+    """One list must use one form; mixing them would fail on an unpack later."""
+    tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
+    pixels = (np.array([0]), np.array([5]), np.array([5]))
+    mask = pixels_to_td_mask(pixels, tracks.ndim)
+
+    with pytest.raises(ValueError, match="same form"):
+        UserUpdateSegmentation(
+            tracks,
+            new_value=0,
+            updated_pixels=[(mask, 0, 3), (pixels, 4)],
+            current_track_id=1,
+        )
+
+
 def test_multi_index_entry_spanning_two_time_points_is_rejected(get_tracks):
     """A mask has no time axis, so two slices in one entry would silently merge."""
     tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)

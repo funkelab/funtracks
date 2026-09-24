@@ -148,19 +148,28 @@ class UserUpdateSegmentation(ActionGroup):
         updated_pixels = [update for update in updated_pixels if update[-1] != new_value]
 
         # Updated pixels can either be provided as (Mask, time, old value) triple, or
-        # as a multi-index entry (multi-index, old value) pair (napari ≤0.7).
+        # as a multi-index entry (multi-index, old value) pair (napari ≤0.7). The
+        # whole list must use one form, so look at every entry rather than the first:
+        # a mixed list would otherwise pick a branch and fail on an unpack later.
         # mypy cannot narrow a union of tuple types by their length, so name the
         # form each branch has established.
         updates: list[MaskUpdate]
+        lengths = {len(update) for update in updated_pixels}
         if not updated_pixels:
             updates = []
-        elif len(updated_pixels[0]) == 3:
+        elif lengths == {3}:
             updates = _create_masks_from_bboxes(
                 cast("Sequence[MaskUpdate]", updated_pixels)
             )
-        else:
+        elif lengths == {2}:
             updates = _create_masks_from_multi_index(
                 cast("Sequence[MultiIndexUpdate]", updated_pixels), self.tracks.ndim
+            )
+        else:
+            raise ValueError(
+                "updated_pixels entries must all use the same form, either "
+                "(mask, time, old value) triples or (multi-index, old value) pairs, "
+                f"but entry lengths were {sorted(lengths)}."
             )
 
         if new_value != 0 and updates:
