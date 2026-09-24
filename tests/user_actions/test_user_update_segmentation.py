@@ -388,6 +388,17 @@ def test_delete_nodes_not_top_level(get_tracks, ndim):
     assert len(tracks.action_history.undo_stack) == n_actions
 
 
+def test_multi_index_entry_spanning_two_time_points_is_rejected(get_tracks):
+    """A mask has no time axis, so two slices in one entry would silently merge."""
+    tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
+    pixels = (np.array([0, 1]), np.array([5, 50]), np.array([5, 50]))
+
+    with pytest.raises(ValueError, match="single time point"):
+        UserUpdateSegmentation(
+            tracks, new_value=0, updated_pixels=[(pixels, 3)], current_track_id=1
+        )
+
+
 @pytest.mark.parametrize("ndim", [3])
 class TestUpdatedPixelsForms:
     """The mask form and the multi-index form must describe the same edit.

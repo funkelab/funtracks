@@ -44,13 +44,25 @@ def _create_masks_from_multi_index(
         list[tuple[Mask, int, int]]: one (mask, time, old value) per label and
             time point, ordered by those, so the actions built from them do not
             depend on the order the entries came in.
+
+    Raises:
+        ValueError: If an entry's coordinates do not all belong to one time point.
+            The mask built from an entry has no time axis, so pixels from two time
+            points would silently collapse into one mask.
     """
 
     pixels_per_node: dict[tuple[int, int], list[tuple[np.ndarray, ...]]] = defaultdict(
         list
     )
     for pixels, old_value in updates:
-        pixels_per_node[(old_value, int(pixels[0][0]))].append(pixels)
+        times = np.unique(pixels[0])
+        if len(times) != 1:
+            raise ValueError(
+                "Each updated-pixels entry must cover a single time point, but one "
+                f"for value {old_value} covers {times.tolist()}. Split it per time "
+                "point before passing it in."
+            )
+        pixels_per_node[(old_value, int(times[0]))].append(pixels)
 
     combined = []
     for (old_value, time), entries in sorted(pixels_per_node.items()):
