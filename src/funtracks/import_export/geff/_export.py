@@ -249,8 +249,9 @@ def split_position_attr(tracks: Tracks) -> tuple[td.graph.GraphView, list[str] |
         new_graph.add_node_attr_key("x", default_value=0.0, dtype=pl.Float64)
         new_graph.add_node_attr_key("y", default_value=0.0, dtype=pl.Float64)
 
-        # Get all position values at once
-        pos_values = new_graph.node_attrs()["pos"].to_numpy()
+        # Get all position values at once, from the column position_key names -
+        # which is not necessarily called "pos"
+        pos_values = new_graph.node_attrs()[pos_key].to_numpy()
         ndim = pos_values.shape[1]
 
         if ndim == 2:
