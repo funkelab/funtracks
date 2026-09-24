@@ -2291,6 +2291,7 @@ Defaults to True.</p>
     <span class="n">node</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">attributes</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
     <span class="n">pixels</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">ndarray</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">mask</span><span class="p">:</span> <span class="n">Mask</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">force</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">_top_level</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span>
@@ -2385,7 +2386,27 @@ Must contain "time" and tracks.features.tracklet_key.</p>
             <td>
               <div class="doc-md-description">
                 <p>The pixels of the associated
-segmentation to add to the tracks. Defaults to None.</p>
+segmentation to add to the tracks. Defaults to None. Ignored when
+<code>mask</code> is given.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>mask</code>
+            </td>
+            <td>
+                  <code><span title="tracksdata.nodes.Mask">Mask</span> | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The segmentation to add to the tracks, in the
+bounding box + mask form it is stored as. Prefer this over <code>pixels</code>
+when the caller already holds a mask, to avoid converting back and
+forth. Defaults to None.</p>
               </div>
             </td>
             <td>
@@ -4014,7 +4035,7 @@ All lists must have the same length as nodes.</p>
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">UserUpdateSegmentation</span><span class="p">(</span>
     <span class="n">tracks</span><span class="p">:</span> <span class="n">Tracks</span><span class="p">,</span>
     <span class="n">new_value</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-    <span class="n">updated_pixels</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">ndarray</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="nb">int</span><span class="p">]],</span>
+    <span class="n">updated_pixels</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">MultiIndexUpdate</span> <span class="o">|</span> <span class="n">MaskUpdate</span><span class="p">],</span>
     <span class="n">current_track_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">force</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">_top_level</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
@@ -4081,14 +4102,16 @@ add_node action doesn't have anything with pixels.</p>
                 <code>updated_pixels</code>
             </td>
             <td>
-                  <code><span title="list">list</span>[<span title="tuple">tuple</span>[<span title="tuple">tuple</span>[<span title="numpy.ndarray">ndarray</span>, ...], <span title="int">int</span>]]</code>
+                  <code><span title="list">list</span>[<span title="funtracks.user_actions.user_update_segmentation.MultiIndexUpdate">MultiIndexUpdate</span> | <span title="funtracks.user_actions.user_update_segmentation.MaskUpdate">MaskUpdate</span>]</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>A list of node
-update actions, consisting of a numpy multi-index, pointing to the array
-elements that were changed (a tuple with len ndims), and the value
-before the change</p>
+                <p>The pixels that changed, as a list of entries that are
+each either a (mask, time, old value) triple, or a (multi-index, old
+value) pair whose multi-index points to the array elements that were
+changed (a tuple with len ndims). Prefer the mask form since it is in
+the right format already. A label may appear in more than one entry and
+those entries are combined.</p>
               </div>
             </td>
             <td>

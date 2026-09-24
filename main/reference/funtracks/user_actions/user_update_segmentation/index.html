@@ -2029,7 +2029,7 @@
 <div class="doc-signature highlight"><pre><span></span><code><span class="nf">UserUpdateSegmentation</span><span class="p">(</span>
     <span class="n">tracks</span><span class="p">:</span> <span class="n">Tracks</span><span class="p">,</span>
     <span class="n">new_value</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-    <span class="n">updated_pixels</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">ndarray</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="nb">int</span><span class="p">]],</span>
+    <span class="n">updated_pixels</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">MultiIndexUpdate</span> <span class="o">|</span> <span class="n">MaskUpdate</span><span class="p">],</span>
     <span class="n">current_track_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
     <span class="n">force</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="n">_top_level</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
@@ -2096,14 +2096,16 @@ add_node action doesn't have anything with pixels.</p>
                 <code>updated_pixels</code>
             </td>
             <td>
-                  <code><span title="list">list</span>[<span title="tuple">tuple</span>[<span title="tuple">tuple</span>[<span title="numpy.ndarray">ndarray</span>, ...], <span title="int">int</span>]]</code>
+                  <code><span title="list">list</span>[<span title="funtracks.user_actions.user_update_segmentation.MultiIndexUpdate">MultiIndexUpdate</span> | <span title="funtracks.user_actions.user_update_segmentation.MaskUpdate">MaskUpdate</span>]</code>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>A list of node
-update actions, consisting of a numpy multi-index, pointing to the array
-elements that were changed (a tuple with len ndims), and the value
-before the change</p>
+                <p>The pixels that changed, as a list of entries that are
+each either a (mask, time, old value) triple, or a (multi-index, old
+value) pair whose multi-index points to the array elements that were
+changed (a tuple with len ndims). Prefer the mask form since it is in
+the right format already. A label may appear in more than one entry and
+those entries are combined.</p>
               </div>
             </td>
             <td>

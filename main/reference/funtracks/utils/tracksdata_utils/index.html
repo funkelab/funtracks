@@ -2077,10 +2077,32 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#funtracks.utils.tracksdata_utils.tighten_td_mask" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;tighten_td_mask
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#funtracks.utils.tracksdata_utils.to_polars_dtype" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;to_polars_dtype
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#funtracks.utils.tracksdata_utils.union_td_masks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;union_td_masks
       
     </span>
   </a>
@@ -2335,10 +2357,32 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#funtracks.utils.tracksdata_utils.tighten_td_mask" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;tighten_td_mask
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#funtracks.utils.tracksdata_utils.to_polars_dtype" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;to_polars_dtype
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#funtracks.utils.tracksdata_utils.union_td_masks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-function"></code>&nbsp;union_td_masks
       
     </span>
   </a>
@@ -3047,6 +3091,83 @@ input graph's backend so relabeling never silently changes it.</p>
 <div class="doc doc-object doc-function">
 
 
+<h2 id="funtracks.utils.tracksdata_utils.tighten_td_mask" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">tighten_td_mask</span>
+
+
+</h2>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">tighten_td_mask</span><span class="p">(</span><span class="n">mask</span><span class="p">:</span> <span class="n">Mask</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Mask</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Shrink a mask's bounding box to just enclose its set pixels.</p>
+<p>Callers that build a mask inside a box they already had can leave the box as is and
+tighten once at the end, rather than paying for a crop at every intermediate step.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>mask</code>
+            </td>
+            <td>
+                  <code><span title="tracksdata.nodes.Mask">Mask</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The mask to tighten. Must have at least one set pixel.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+<th>Name</th>          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+<td><code>Mask</code></td>            <td>
+                  <code><span title="tracksdata.nodes.Mask">Mask</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The same pixels, with a bounding box that has no empty margin.
+Returned as is if the box is already tight.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
 <h2 id="funtracks.utils.tracksdata_utils.to_polars_dtype" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">to_polars_dtype</span>
 
@@ -3148,6 +3269,85 @@ input graph's backend so relabeling never silently changes it.</p>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">to_polars_dtype</span><span class="p">(</span><span class="s2">""</span><span class="p">)</span>  <span class="c1"># String value</span>
 <span class="go">String</span>
 </code></pre></div>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h2 id="funtracks.utils.tracksdata_utils.union_td_masks" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-function"></code>            <span class="doc doc-object-name doc-function-name">union_td_masks</span>
+
+
+</h2>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">union_td_masks</span><span class="p">(</span><span class="n">masks</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Mask</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Mask</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Combine masks into one mask covering every pixel any of them sets.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>masks</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Sequence">Sequence</span>[<span title="tracksdata.nodes.Mask">Mask</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The masks to combine. Must be non-empty, and all masks must have
+the same number of spatial dimensions (they are assumed to belong to
+the same time point).</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+<th>Name</th>          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+<td><code>Mask</code></td>            <td>
+                  <code><span title="tracksdata.nodes.Mask">Mask</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>A mask that is True wherever any of the given masks is True, with a
+bounding box tightened around those pixels. Always a freshly allocated
+mask, never one of the inputs, so the caller keeps sole ownership of
+what it passed in and the result can be stored on the graph.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
     </div>
