@@ -58,6 +58,8 @@ class UserUpdateSegmentation(ActionGroup):
             if old_value != new_value
         ]
         if new_value != 0 and updated_pixels:
+            # name the node that was painted with
+            node_to_select = new_value
             all_pixels = tuple(
                 np.concatenate([pixels[dim] for pixels, _ in updated_pixels])
                 for dim in range(self.tracks.ndim)
@@ -102,7 +104,6 @@ class UserUpdateSegmentation(ActionGroup):
                         _top_level=False,
                     )
                 )
-                node_to_select = new_value
 
         # Now that the InvalidAction check for adding a new node has passed, we can add
         # actions for updating/deleting existing nodes

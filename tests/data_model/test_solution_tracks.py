@@ -53,6 +53,22 @@ def test_recompute_track_ids_when_sentinel_present(graph_2d_with_track_id):
     assert -1 not in tracks.get_track_ids(tracks.nodes())
 
 
+def test_recompute_lineage_ids_when_only_lineage_sentinel_present(
+    graph_2d_with_track_id,
+):
+    """The -1 sentinel can sit in the lineage column while the tracklet column holds
+    real ids (e.g. a writer that fills track_id but not lineage_id). Tracks must
+    recompute rather than serve -1 lineage ids."""
+    graph = graph_2d_with_track_id
+    node_ids = list(graph.node_ids())
+    graph.update_node_attrs(attrs={"lineage_id": [-1] * len(node_ids)}, node_ids=node_ids)
+
+    tracks = Tracks(graph, ndim=3, **track_attrs)
+
+    lineage_ids = [tracks.get_lineage_id(node) for node in tracks.nodes()]
+    assert -1 not in lineage_ids
+
+
 def test_next_track_id(graph_2d_with_track_id):
     tracks = Tracks(graph_2d_with_track_id, ndim=3, **track_attrs)
     assert tracks.get_next_track_id() == 6
