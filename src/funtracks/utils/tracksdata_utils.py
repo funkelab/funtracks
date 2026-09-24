@@ -1,6 +1,8 @@
+import operator
 import tempfile
 import uuid
 from collections.abc import Sequence
+from functools import reduce
 from typing import Any
 from warnings import warn
 
@@ -377,7 +379,9 @@ def union_td_masks(masks: Sequence[Mask]) -> Mask:
 
     Returns:
         Mask: A mask that is True wherever any of the given masks is True, with a
-            bounding box tightened around those pixels.
+            bounding box tightened around those pixels. Always a freshly allocated
+            mask, never one of the inputs, so the caller keeps sole ownership of
+            what it passed in and the result can be stored on the graph.
     """
 
     if len(masks) == 0:
@@ -389,24 +393,11 @@ def union_td_masks(masks: Sequence[Mask]) -> Mask:
     # combining many small masks spread far apart makes it a big, mostly empty one.
     masks = [tighten_td_mask(mask) for mask in masks]
     if len(masks) == 1:
-        return masks[0]
+        # tighten_td_mask hands back an already tight mask unchanged, so copy here:
+        # the result is stored on the graph, and the input belongs to the caller.
+        return Mask(masks[0].mask.copy(), bbox=masks[0].bbox.copy())
 
-    bboxes = np.array([np.asarray(mask.bbox) for mask in masks])
-    spatial_dims = bboxes.shape[1] // 2
-    start = bboxes[:, :spatial_dims].min(axis=0)
-    stop = bboxes[:, spatial_dims:].max(axis=0)
-
-    combined = np.zeros(stop - start, dtype=bool)
-    for mask, bbox in zip(masks, bboxes, strict=True):
-        offset = bbox[:spatial_dims] - start
-        combined[
-            tuple(
-                slice(off, off + size)
-                for off, size in zip(offset, mask.mask.shape, strict=True)
-            )
-        ] |= mask.mask
-
-    return Mask(combined, bbox=np.concatenate([start, stop]))
+    return reduce(operator.or_, masks)
 
 
 def td_mask_to_pixels(mask: Mask, time: int, ndim: int) -> tuple[np.ndarray, ...]:

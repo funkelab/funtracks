@@ -313,6 +313,20 @@ def test_union_td_masks_matches_pixels_to_td_mask():
     assert np.array_equal(combined.mask, expected.mask)
 
 
+def test_union_td_masks_never_returns_an_input():
+    """The result is stored on the graph, so it must not alias a caller's mask."""
+    mask = Mask(np.ones((2, 2), dtype=bool), bbox=np.array([0, 0, 2, 2]))
+
+    combined = union_td_masks([mask])
+
+    assert combined is not mask
+    assert combined.mask is not mask.mask
+    assert combined.bbox is not mask.bbox
+    # mutating the result leaves the input alone
+    combined.mask[0, 0] = False
+    assert mask.mask.all()
+
+
 def test_union_td_masks_rejects_empty_sequence():
     with pytest.raises(ValueError, match="zero masks"):
         union_td_masks([])
