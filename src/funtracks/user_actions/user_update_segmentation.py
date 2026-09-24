@@ -116,9 +116,7 @@ class UserUpdateSegmentation(ActionGroup):
             mask_old_value = self.tracks.graph_full.nodes[old_value]["mask"]
             # If pixels fully overlaps with old_value mask, delete node
             if mask_pixels.intersection(mask_old_value) == mask_old_value.mask.sum():
-                self.actions.append(
-                    UserDeleteNode(tracks, old_value, pixels=pixels, _top_level=False)
-                )
+                self.actions.append(UserDeleteNode(tracks, old_value, _top_level=False))
             else:
                 self.actions.append(
                     UpdateNodeSeg(tracks, old_value, mask_pixels, added=False)
