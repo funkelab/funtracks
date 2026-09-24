@@ -1088,9 +1088,11 @@ class Tracks:
         The highest id in use is looked up once and maintained from there, since
         listing every node id is O(number of nodes) and, on a database-backed
         graph, a query returning the whole table.
+
+        Ids start at 1, since 0 is the background label of a segmentation.
         """
         if self._max_node_id is None:
-            self._max_node_id = max(self.graph_full.node_ids(), default=-1)
+            self._max_node_id = max(self.graph_full.node_ids(), default=0)
         return self._max_node_id + 1
 
     def get_next_lineage_id(self) -> int:
