@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import numpy as np
-
 from funtracks.exceptions import InvalidActionError
 
 from ..actions._base import ActionGroup
@@ -20,16 +18,12 @@ class UserDeleteNode(ActionGroup):
         self,
         tracks: Tracks,
         node: int,
-        pixels: None | tuple[np.ndarray, ...] = None,
         _top_level: bool = True,
     ):
         """
         Args:
             tracks (Tracks): The tracks to delete the node from.
             node (int): The node id to delete.
-            pixels (tuple[np.ndarray, ...] | None): The pixels of the node in the
-                segmentation, if known. Will be computed if not provided.
-                Defaults to None.
             _top_level (bool): If True, add this action to the history and emit
                 refresh. Set to False when used as a sub-action inside a compound
                 action. Defaults to True.
