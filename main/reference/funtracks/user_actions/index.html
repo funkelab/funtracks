@@ -3161,11 +3161,8 @@ so that the whole group is undone in one step. Defaults to True.</p>
 
 
         <p>Break the edges between a selection of nodes, the inverse of connecting them.</p>
-<p>The selected nodes are sorted by time and paired up consecutively, the same way
-:class:<code>UserConnectNodes</code> chains them, and the edges between those pairs are
-removed. Each fragment that comes loose gets its own tracklet id. Pairs that are
-not connected are skipped, so a partly connected selection is broken apart rather
-than rejected, and edges to nodes outside of the selection are left alone.</p>
+<p>Every existing edge between two of the selected nodes is removed, including skip
+edges, and each fragment that comes loose gets its own tracklet id.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -3205,7 +3202,7 @@ than rejected, and edges to nodes outside of the selection are left alone.</p>
             <td>
               <div class="doc-md-description">
                 <p>The nodes to disconnect. At least two nodes are
-required, and no two nodes may be in the same time point.</p>
+required.</p>
               </div>
             </td>
             <td>
@@ -3250,8 +3247,8 @@ Defaults to True.</p>
             <td>
               <div class="doc-md-description">
                 <p>If fewer than two distinct nodes are given, if a node is
-not in the solution graph, if two nodes share a time point, or if none of
-the selected nodes are connected to each other. Never forceable.</p>
+not in the solution graph, or if none of the selected nodes are connected
+to each other. Never forceable.</p>
               </div>
             </td>
           </tr>
