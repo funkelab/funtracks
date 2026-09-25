@@ -36,7 +36,9 @@ def test_create_tracks(graph_3d_with_segmentation: td.graph.BaseGraph):
     assert isinstance(tracks.features[pos_key], dict)
     assert tracks.get_positions([1]).tolist() == [[50, 50, 50]]
     assert tracks.get_time(1) == 0
-    with pytest.raises(KeyError):
+    # Missing NODE id (not a missing attr key): tracksdata's single-node getitem path
+    # still diverges by backend (KeyError in-memory, ValueError on SQL)
+    with pytest.raises((KeyError, ValueError)):
         tracks.get_position(0)
 
     # create track with graph and seg
@@ -167,6 +169,19 @@ def test_set_positions_str(graph_2d_with_segmentation):
     # test invalid node id
     with pytest.raises(KeyError):
         tracks.get_positions(["0"])
+
+
+@pytest.mark.parametrize("pos_attr", [["y"], ["z", "y", "x"]])
+def test_position_key_list_must_match_ndim(graph_2d_list, pos_attr):
+    """A per-axis pos_attr of the wrong length is rejected up front.
+
+    Checked even without a segmentation, where the columns are static and nothing
+    recomputes them: ndim still decides how many coordinates everything downstream
+    expects, so a mismatch would surface later and obscurely (CSV export zips the
+    position against the axes ndim implies, strictly).
+    """
+    with pytest.raises(ValueError, match="one key per spatial axis"):
+        Tracks(graph_2d_list, pos_attr=pos_attr, ndim=3, **track_attrs)
 
 
 def test_set_positions_list(graph_2d_list):
@@ -383,7 +398,9 @@ def test_update_mask_syncs_bbox(graph_2d_with_segmentation):
     stored_mask = tracks.graph_solution.nodes[1][td.DEFAULT_ATTR_KEYS.MASK]
     stored_bbox = tracks.graph_solution.nodes[1][td.DEFAULT_ATTR_KEYS.BBOX]
 
-    assert stored_mask is new_mask
+    # Value equality, not identity: the SQL backend materializes a fresh Mask on
+    # read rather than returning the same object (unlike the in-memory backend).
+    assert stored_mask == new_mask
     assert np.array_equal(stored_bbox, new_mask.bbox)
 
 
@@ -488,3 +505,15 @@ def test_update_scale_leaves_pixel_space_features_alone(get_graph, monkeypatch):
     tracks.update_scale([1.0, 2.0, 3.0])
 
     assert computed == [["area"]]
+
+
+def test_has_track_id_at_time(get_tracks):
+    """Track 3 spans t=1, 2 and 4, but not t=0 or t=3."""
+
+    tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
+
+    assert tracks.has_track_id_at_time(3, 1)
+    assert tracks.has_track_id_at_time(3, 4)
+    assert not tracks.has_track_id_at_time(3, 0)
+    assert not tracks.has_track_id_at_time(3, 3)
+    assert not tracks.has_track_id_at_time(99, 0)

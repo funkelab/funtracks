@@ -19,6 +19,7 @@ def nodes_from_segmentation(
     scale: list[float] | None = None,
     mask: bool = True,
     t_start: int = 0,
+    backend: str = "memory",
 ) -> tuple[td.graph.BaseGraph, dict[int, list[Any]]]:
     """Extract candidate nodes from a segmentation. Returns a tracksdata graph
     with only nodes, and also a dictionary from frames to node_ids for
@@ -49,6 +50,7 @@ def nodes_from_segmentation(
             segmentation. Frame i will get t = t_start + i. Useful when the
             segmentation is a slice of a larger array and nodes need absolute
             time values. Defaults to 0.
+        backend (str, optional): Graph backend, "memory" or "sql". Defaults to "memory".
 
     Returns:
         tuple[td.graph.BaseGraph, dict[int, list[Any]]]: A candidate graph with only
@@ -74,6 +76,7 @@ def nodes_from_segmentation(
         node_attributes=node_attributes,
         position_attrs=["pos"],
         ndim=segmentation.ndim,
+        backend=backend,
     )
 
     node_frame_dict: dict[int, list[Any]] = {}
@@ -120,6 +123,7 @@ def nodes_from_segmentation(
 
 def nodes_from_points_list(
     points_list: np.ndarray,
+    backend: str = "memory",
 ) -> tuple[td.graph.BaseGraph, dict[int, list[Any]]]:
     """Extract candidate nodes from a list of points. Uses the index of the
     point in the list as its unique id.
@@ -133,6 +137,7 @@ def nodes_from_points_list(
         points_list (np.ndarray): An NxD numpy array with N points and D
             (3 or 4) dimensions, in pixel coordinates. Dimensions should be in
             order (t, [z], y, x).
+        backend (str, optional): Graph backend, "memory" or "sql". Defaults to "memory".
 
     Returns:
         tuple[td.graph.BaseGraph, dict[int, list[Any]]]: A candidate graph with only
@@ -146,6 +151,7 @@ def nodes_from_points_list(
         node_attributes=["pos"],
         position_attrs=["pos"],
         ndim=ndim,
+        backend=backend,
     )
 
     node_frame_dict: dict[int, list[Any]] = {}

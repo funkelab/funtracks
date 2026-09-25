@@ -16,8 +16,8 @@ import numpy as np
 import tracksdata as td
 from geff._typing import InMemoryGeff
 
-from funtracks.data_model.tracks import Tracks
-from funtracks.features import Feature
+from funtracks.data_model.tracks import PositionUnits, Tracks
+from funtracks.features import Feature, FeatureDict, Position
 from funtracks.import_export._import_segmentation import (
     load_segmentation,
     read_dims,
@@ -104,12 +104,23 @@ class TracksBuilder(ABC):
     """
 
     TIME_ATTR = "time"
+    # Every builder stacks the per-axis source coordinates into this one column
+    # (see _combine_multi_value_props), so an imported Tracks always has a stacked
+    # position, never one column per axis.
+    POSITION_ATTR = "pos"
 
     def __init__(self) -> None:
         """Initialize builder state."""
         # State transferred between steps
         self.in_memory_geff: InMemoryGeff | None = None
         self.ndim: int | None = None
+        # A complete FeatureDict recovered from the source, when it carries one (geff
+        # written by funtracks does). None means the features get inferred instead.
+        self.features: FeatureDict | None = None
+        # Whether "pos" ends up in pixel or world coordinates after apply_points_scale.
+        # Pixel by default; a format that actually converts positions (e.g. the GEFF
+        # builder, when the file declares real-world axes) sets this to "world".
+        self.position_units: PositionUnits = "pixel"
 
         # Name maps: {standard_key -> source_property_name(s)}
         # Keys are standard funtracks attribute names (e.g., "time", "pos", "seg_id")
@@ -384,6 +395,18 @@ class TracksBuilder(ABC):
                 if c in props and c != std_key:
                     del props[c]
 
+    def apply_points_scale(self) -> None:  # noqa: B027
+        """Scale combined ``pos`` values in place, if the source declares a scale.
+
+        No-op by default (deliberately not ``@abstractmethod``: this default is a
+        valid, usable behavior, not a contract every subclass must fulfill), which
+        leaves ``self.position_units`` at its default ``"pixel"``. Formats that can
+        store points in a different unit alongside an explicit scale (e.g. GEFF's
+        ``axes.scale``) override this to multiply ``pos`` by that scale after
+        :meth:`_combine_multi_value_props` has assembled it, and to set
+        ``self.position_units = "world"`` when they do.
+        """
+
     def validate(self) -> None:
         """Validate the loaded InMemoryGeff data.
 
@@ -409,7 +432,7 @@ class TracksBuilder(ABC):
         # Validate graph structure and optional properties.
         # Skip when a FeatureDict was pre-loaded (e.g. from GEFF metadata):
         # the data came from a valid funtracks Tracks object, so we trust it.
-        if not (hasattr(self, "features") and self.features is not None):
+        if self.features is None:
             validate_in_memory_geff(self.in_memory_geff)
 
     def relabel_zero_based_node_ids(self, has_segmentation: bool) -> bool:
@@ -475,6 +498,7 @@ class TracksBuilder(ABC):
         self,
         node_name_map: dict[str, str | list[str]] | None = None,
         database: str | None = None,
+        backend: str = "memory",
     ) -> td.graph.BaseGraph:
         """Construct Tracksdata graph from validated InMemoryGeff data.
 
@@ -485,6 +509,7 @@ class TracksBuilder(ABC):
                 attribute dtype.
             database: Optional path to a SQLite database file for backing storage.
                 If None (default), an in-memory/temp graph is used.
+            backend: Graph backend, "memory" or "sql". Defaults to "memory".
 
         Returns:
             Tracksdata base graph with standard keys
@@ -547,6 +572,7 @@ class TracksBuilder(ABC):
             node_default_values=node_default_values,
             database=database,
             ndim=self.ndim,
+            backend=backend,
         )
 
         node_ids = [int(i) for i in self.in_memory_geff["node_ids"]]
@@ -755,6 +781,36 @@ class TracksBuilder(ABC):
         """
         return scale
 
+    def _retarget_position_key(self, graph: td.graph.BaseGraph) -> None:
+        """Point a restored FeatureDict's position_key at the column the graph has.
+
+        A geff stores coordinates as one array per axis, and the builder stacks them
+        back into a single ``pos`` column. A FeatureDict saved from a Tracks whose
+        positions were stored per axis still names those axis keys, which the rebuilt
+        graph does not have - so a save/load normalizes a split position to the
+        stacked one, and position_key has to say so. Leaving it would point every
+        position read at missing columns.
+
+        Args:
+            graph: The freshly constructed graph, used to see which columns exist.
+        """
+        if self.features is None:
+            return
+        position_key = self.features.position_key
+        if position_key is None or isinstance(position_key, str):
+            return
+        node_keys = set(graph.node_attr_keys())
+        if all(key in node_keys for key in position_key):
+            # The axis columns survived after all; nothing to retarget.
+            return
+        stacked_key = self.POSITION_ATTR
+        if stacked_key not in node_keys:
+            return
+        axes = list(position_key)
+        for key in axes:
+            self.features.pop(key, None)
+        self.features.register_position_feature(stacked_key, Position(axes=axes))
+
     def build(
         self,
         source: Path | pd.DataFrame,
@@ -762,6 +818,7 @@ class TracksBuilder(ABC):
         scale: list[float] | None = None,
         node_name_map: dict[str, str | list[str]] | None = None,
         database: str | None = None,
+        backend: str = "memory",
     ) -> Tracks:
         """Orchestrate the full construction process.
 
@@ -772,6 +829,7 @@ class TracksBuilder(ABC):
             node_name_map: Optional node_name_map to override self.node_name_map
             database: Optional path to a SQLite database file for backing storage.
                 If None (default), an in-memory/temp graph is used.
+            backend: Graph backend, "memory" or "sql". Defaults to "memory".
 
         Returns:
             Fully constructed Tracks object
@@ -838,6 +896,9 @@ class TracksBuilder(ABC):
                 self.in_memory_geff["edge_props"], self.edge_name_map
             )
 
+        # 2b. Scale points to world units, if the source declares a scale for them
+        self.apply_points_scale()
+
         # 3. Validate InMemoryGeff (includes spatial_dims array shape validation)
         self.validate()
 
@@ -847,7 +908,7 @@ class TracksBuilder(ABC):
         self.relabel_zero_based_node_ids(has_segmentation=segmentation is not None)
 
         # 4. Construct graph
-        graph = self.construct_graph(node_name_map, database=database)
+        graph = self.construct_graph(node_name_map, database=database, backend=backend)
 
         # 5. Handle segmentation
         segmentation_array, scale, graph = self.handle_segmentation(
@@ -862,12 +923,14 @@ class TracksBuilder(ABC):
         # construct_graph() always stores time as "t" (tracksdata convention),
         # regardless of TIME_ATTR, so we pass "t" here explicitly.
         # If a FeatureDict was loaded (e.g., from GEFF metadata), use it directly
-        if hasattr(self, "features") and self.features is not None:
+        if self.features is not None:
+            self._retarget_position_key(graph)
             tracks = Tracks(
                 graph=graph,
                 ndim=self.ndim,
                 scale=scale,
                 features=self.features,
+                position_units=self.position_units,
             )
         else:
             # The builder always produces a solution, so declare tracklet/lineage
@@ -875,17 +938,18 @@ class TracksBuilder(ABC):
             # these attrs already exist on the graph (activate) or need computing.
             tracks = Tracks(
                 graph=graph,
-                pos_attr="pos",
+                pos_attr=self.POSITION_ATTR,
                 time_attr="t",
                 tracklet_attr="tracklet_id",
                 lineage_attr="lineage_id",
                 ndim=self.ndim,
                 scale=scale,
+                position_units=self.position_units,
             )
 
         # 8. Enable and register features from name maps
         # Skip if we already loaded a complete FeatureDict
-        if not (hasattr(self, "features") and self.features is not None):
+        if self.features is None:
             self.enable_features(tracks, self.node_name_map, feature_type="node")
             if self.edge_name_map is not None:
                 self.enable_features(tracks, self.edge_name_map, feature_type="edge")

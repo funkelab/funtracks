@@ -6,7 +6,7 @@ import pytest
 from funtracks.actions import ActionGroup
 from funtracks.exceptions import InvalidActionError
 from funtracks.user_actions import UserDeleteNodes, UserUpdateSegmentation
-from funtracks.utils.tracksdata_utils import td_mask_to_pixels
+from funtracks.utils.tracksdata_utils import pixels_to_td_mask, td_mask_to_pixels
 
 iou_key = "iou"
 area_key = "area"
@@ -161,6 +161,48 @@ class TestUpdateNodeSeg:
         assert tracks.graph_solution.has_node(new_value)
         assert len(update_seg_action.actions) == 2  # one for adding a node,
         # and one for updating existing node 1
+
+    def test_node_to_select_is_the_label_painted_with(self, get_tracks, ndim):
+        """A stroke names the node it went into, so that the views can select it.
+
+        It used to name only a node the stroke had created, which left a viewer with
+        no way to tell which node a correction to an existing one belonged to.
+        """
+
+        tracks = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
+        node_id = 3
+        orig_pixels = td_mask_to_pixels(
+            tracks.get_mask(node_id), tracks.get_time(node_id), ndim=tracks.ndim
+        )
+        one_pixel = tuple(np.array([orig_pixels[d][0]]) for d in range(len(orig_pixels)))
+
+        # correcting a node that is already there names that node
+        grown = (*one_pixel[:-1], np.array([10]))
+        action = UserUpdateSegmentation(
+            tracks, new_value=node_id, updated_pixels=[(grown, 0)], current_track_id=1
+        )
+        assert action.node_to_select == node_id
+
+        # so does painting a label that does not name a node yet
+        new_value = 42
+        grown = (*one_pixel[:-1], np.array([11]))
+        action = UserUpdateSegmentation(
+            tracks,
+            new_value=new_value,
+            updated_pixels=[(grown, 0)],
+            current_track_id=tracks.get_next_track_id(),
+        )
+        assert tracks.graph_solution.has_node(new_value)
+        assert action.node_to_select == new_value
+
+        # erasing names nothing: it says nothing about what to work on next
+        action = UserUpdateSegmentation(
+            tracks,
+            new_value=0,
+            updated_pixels=[(one_pixel, node_id)],
+            current_track_id=1,
+        )
+        assert action.node_to_select is None
 
     def test_user_erase_seg(self, get_tracks, ndim):
         tracks = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
@@ -344,3 +386,227 @@ def test_delete_nodes_not_top_level(get_tracks, ndim):
 
     assert not tracks.graph.has_node(3)
     assert len(tracks.action_history.undo_stack) == n_actions
+
+
+def test_empty_multi_index_entry_is_skipped(get_tracks):
+    """An entry with no pixels changes nothing, rather than being an error."""
+    tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
+    empty = (np.array([], dtype=int),) * tracks.ndim
+    mask_before = tracks.get_mask(3).mask.copy()
+
+    action = UserUpdateSegmentation(
+        tracks, new_value=0, updated_pixels=[(empty, 3)], current_track_id=1
+    )
+
+    assert action.actions == []
+    assert np.array_equal(tracks.get_mask(3).mask, mask_before)
+
+
+def test_mixed_updated_pixels_forms_are_rejected(get_tracks):
+    """One list must use one form; mixing them would fail on an unpack later."""
+    tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
+    pixels = (np.array([0]), np.array([5]), np.array([5]))
+    mask = pixels_to_td_mask(pixels, tracks.ndim)
+
+    with pytest.raises(ValueError, match="same form"):
+        UserUpdateSegmentation(
+            tracks,
+            new_value=0,
+            updated_pixels=[(mask, 0, 3), (pixels, 4)],
+            current_track_id=1,
+        )
+
+
+def test_multi_index_entry_spanning_two_time_points_is_rejected(get_tracks):
+    """A mask has no time axis, so two slices in one entry would silently merge."""
+    tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
+    pixels = (np.array([0, 1]), np.array([5, 50]), np.array([5, 50]))
+
+    with pytest.raises(ValueError, match="single time point"):
+        UserUpdateSegmentation(
+            tracks, new_value=0, updated_pixels=[(pixels, 3)], current_track_id=1
+        )
+
+
+@pytest.mark.parametrize("ndim", [3])
+class TestUpdatedPixelsForms:
+    """The mask form and the multi-index form must describe the same edit.
+
+    Callers that already hold a mask (a viewer whose paint events carry a
+    bounding box and a mask) should pass it straight through rather than
+    expanding it into coordinates only for it to be rebuilt here.
+    """
+
+    def _remove_all_but_one_pixel(self, tracks, node_id):
+        pixels = td_mask_to_pixels(
+            tracks.get_mask(node_id), tracks.get_time(node_id), ndim=tracks.ndim
+        )
+        return tuple(axis[1:] for axis in pixels)
+
+    def test_mask_form_matches_index_form(self, get_tracks, ndim):
+        by_index = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
+        by_mask = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
+        node_id = 3
+
+        pixels = self._remove_all_but_one_pixel(by_index, node_id)
+        time = int(pixels[0][0])
+        mask = pixels_to_td_mask(pixels, by_mask.ndim)
+
+        UserUpdateSegmentation(
+            by_index, new_value=0, updated_pixels=[(pixels, node_id)], current_track_id=1
+        )
+        UserUpdateSegmentation(
+            by_mask,
+            new_value=0,
+            updated_pixels=[(mask, time, node_id)],
+            current_track_id=1,
+        )
+
+        assert by_mask.graph_solution.has_node(node_id)
+        assert np.array_equal(
+            by_mask.get_mask(node_id).mask, by_index.get_mask(node_id).mask
+        )
+        assert np.array_equal(
+            np.asarray(by_mask.get_mask(node_id).bbox),
+            np.asarray(by_index.get_mask(node_id).bbox),
+        )
+        assert by_mask.get_position(node_id) == by_index.get_position(node_id)
+        assert by_mask.get_node_attr(node_id, area_key) == by_index.get_node_attr(
+            node_id, area_key
+        )
+
+    def test_mask_form_adds_new_node(self, get_tracks, ndim):
+        """Painting background into a new label works from the mask form too."""
+        by_index = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
+        by_mask = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
+        new_value = max(by_index.graph_full.node_ids()) + 1
+
+        # a patch of background, away from the existing nodes
+        coords = np.array([[95, 95], [95, 96], [96, 95], [96, 96]]).T
+        pixels = (np.full(coords.shape[1], 0), coords[0], coords[1])
+        mask = pixels_to_td_mask(pixels, by_mask.ndim)
+
+        UserUpdateSegmentation(
+            by_index,
+            new_value=new_value,
+            updated_pixels=[(pixels, 0)],
+            current_track_id=by_index.get_next_track_id(),
+        )
+        UserUpdateSegmentation(
+            by_mask,
+            new_value=new_value,
+            updated_pixels=[(mask, 0, 0)],
+            current_track_id=by_mask.get_next_track_id(),
+        )
+
+        assert by_mask.graph_solution.has_node(new_value)
+        assert np.array_equal(
+            by_mask.get_mask(new_value).mask, by_index.get_mask(new_value).mask
+        )
+        assert by_mask.get_position(new_value) == by_index.get_position(new_value)
+
+    def test_mask_form_deletes_fully_covered_node(self, get_tracks, ndim):
+        """Erasing every pixel of a node deletes it, whichever form is used."""
+        by_index = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
+        by_mask = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
+        node_id = 3
+
+        pixels = td_mask_to_pixels(
+            by_index.get_mask(node_id), by_index.get_time(node_id), ndim=by_index.ndim
+        )
+        mask = pixels_to_td_mask(pixels, by_mask.ndim)
+
+        UserUpdateSegmentation(
+            by_index, new_value=0, updated_pixels=[(pixels, node_id)], current_track_id=1
+        )
+        UserUpdateSegmentation(
+            by_mask,
+            new_value=0,
+            updated_pixels=[(mask, int(pixels[0][0]), node_id)],
+            current_track_id=1,
+        )
+
+        assert not by_index.graph_solution.has_node(node_id)
+        assert not by_mask.graph_solution.has_node(node_id)
+
+    def _split_in_two(self, pixels):
+        half = len(pixels[0]) // 2
+        first = tuple(axis[:half] for axis in pixels)
+        second = tuple(axis[half:] for axis in pixels)
+        assert len(first[0]) and len(second[0]), "need two non-empty fragments"
+        return first, second
+
+    def test_fragments_of_one_label_are_combined_before_deleting(self, get_tracks, ndim):
+        """A label reported in several entries is unioned, so full cover deletes it.
+
+        No single fragment covers the node, so the delete can only be decided
+        once they are combined. Both forms have to agree on that.
+        """
+        by_index = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
+        by_mask = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
+        node_id = 3
+
+        pixels = td_mask_to_pixels(
+            by_index.get_mask(node_id), by_index.get_time(node_id), ndim=by_index.ndim
+        )
+        time = int(pixels[0][0])
+        first, second = self._split_in_two(pixels)
+
+        UserUpdateSegmentation(
+            by_index,
+            new_value=0,
+            updated_pixels=[(first, node_id), (second, node_id)],
+            current_track_id=1,
+        )
+        UserUpdateSegmentation(
+            by_mask,
+            new_value=0,
+            updated_pixels=[
+                (pixels_to_td_mask(first, by_mask.ndim), time, node_id),
+                (pixels_to_td_mask(second, by_mask.ndim), time, node_id),
+            ],
+            current_track_id=1,
+        )
+
+        assert not by_index.graph_solution.has_node(node_id)
+        assert not by_mask.graph_solution.has_node(node_id)
+
+    def test_fragments_of_one_label_match_across_forms(self, get_tracks, ndim):
+        """Fragments that only partly cover a node shrink it, the same either way."""
+        by_index = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
+        by_mask = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
+        node_id = 3
+
+        pixels = self._remove_all_but_one_pixel(by_index, node_id)
+        time = int(pixels[0][0])
+        first, second = self._split_in_two(pixels)
+
+        UserUpdateSegmentation(
+            by_index,
+            new_value=0,
+            updated_pixels=[(first, node_id), (second, node_id)],
+            current_track_id=1,
+        )
+        UserUpdateSegmentation(
+            by_mask,
+            new_value=0,
+            updated_pixels=[
+                (pixels_to_td_mask(first, by_mask.ndim), time, node_id),
+                (pixels_to_td_mask(second, by_mask.ndim), time, node_id),
+            ],
+            current_track_id=1,
+        )
+
+        assert by_index.graph_solution.has_node(node_id)
+        assert by_mask.graph_solution.has_node(node_id)
+        assert by_mask.get_mask(node_id).mask.sum() == 1
+        assert np.array_equal(
+            by_mask.get_mask(node_id).mask, by_index.get_mask(node_id).mask
+        )
+        assert np.array_equal(
+            np.asarray(by_mask.get_mask(node_id).bbox),
+            np.asarray(by_index.get_mask(node_id).bbox),
+        )
+        assert by_mask.get_node_attr(node_id, area_key) == by_index.get_node_attr(
+            node_id, area_key
+        )

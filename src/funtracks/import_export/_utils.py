@@ -122,8 +122,16 @@ def rename_feature(tracks: Tracks, old_key: str, new_key: str) -> None:
         tracks.features.pop(old_key)
     tracks.add_feature(new_key, feature_dict)
 
-    # Update FeatureDict special key attributes if we renamed position or tracklet
-    if tracks.features.position_key == old_key:
+    # Update FeatureDict special key attributes if we renamed position or tracklet.
+    # position_key can be a list of per-axis keys, in which case only the renamed
+    # axis moves - leaving it stale would point positions at a column that no longer
+    # exists while the annotator writes the new one.
+    position_key = tracks.features.position_key
+    if position_key == old_key:
         tracks.features.position_key = new_key
+    elif isinstance(position_key, list) and old_key in position_key:
+        renamed = list(position_key)
+        renamed[renamed.index(old_key)] = new_key
+        tracks.features.position_key = renamed
     if tracks.features.tracklet_key == old_key:
         tracks.features.tracklet_key = new_key

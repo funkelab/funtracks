@@ -1,5 +1,8 @@
+import operator
 import tempfile
 import uuid
+from collections.abc import Sequence
+from functools import reduce
 from typing import Any
 from warnings import warn
 
@@ -68,6 +71,25 @@ def to_polars_dtype(dtype_or_value: str | Any) -> pl.DataType:
         raise ValueError(f"Unsupported type: {type(dtype_or_value)}")
 
 
+def _new_empty_backend(
+    backend: str = "memory", database: str | None = None
+) -> td.graph.BaseGraph:
+    """Construct an empty tracksdata base graph on the requested backend.
+
+    Args:
+        backend: "memory" for an in-memory ``IndexedRXGraph``, or "sql" for a
+            SQLite-backed ``SQLGraph`` at ``database``.
+        database: SQLite path (sql backend only). A unique temp file if None.
+    """
+    if backend == "memory":
+        return td.graph.IndexedRXGraph()
+    if backend == "sql":
+        if database is None:
+            database = f"{tempfile.gettempdir()}/funtracks_{uuid.uuid4().hex[:8]}.db"
+        return td.graph.SQLGraph(drivername="sqlite", database=database, overwrite=True)
+    raise ValueError(f"Unknown backend {backend!r}; expected 'sql' or 'memory'.")
+
+
 def create_empty_graph(
     node_attributes: list[str] | None = None,
     edge_attributes: list[str] | None = None,
@@ -76,6 +98,7 @@ def create_empty_graph(
     database: str | None = None,
     position_attrs: list[str] | None = None,
     ndim: int = 3,
+    backend: str = "memory",
 ) -> td.graph.BaseGraph:
     """
     Create an empty tracksdata base graph with standard node and edge attributes.
@@ -100,6 +123,10 @@ def create_empty_graph(
     ndim : int
         Number of dimensions including time, so 2D+T dataset has ndim = 3.
         Defaults to 3 (2D+time).
+    backend : str
+        Which tracksdata backend to build: "sql" for a database-backed ``SQLGraph``
+        (SQLite at ``database``) or "memory" for an in-memory ``IndexedRXGraph``.
+        Defaults to "memory".
 
     Returns
     -------
@@ -109,12 +136,6 @@ def create_empty_graph(
     """
     if position_attrs is None:
         position_attrs = ["pos"]
-
-    # Generate unique database path if not specified
-    if database is None:
-        temp_dir = tempfile.gettempdir()
-        unique_id = uuid.uuid4().hex[:8]
-        database = f"{temp_dir}/funtracks_test_{unique_id}.db"
 
     if node_default_values is not None:
         assert len(node_default_values) == len(node_attributes or []), (
@@ -130,14 +151,8 @@ def create_empty_graph(
     else:
         edge_default_values = [0.0] * len(edge_attributes or [])
 
-    # Initialize an empty graph
-    # kwargs = {
-    #     "drivername": "sqlite",
-    #     "database": database,
-    #     "overwrite": True,
-    # }
-    # graph_td = td.graph.SQLGraph(**kwargs)
-    graph_td = td.graph.IndexedRXGraph()
+    # Initialize an empty graph on the requested backend.
+    graph_td = _new_empty_backend(backend, database)
 
     # Add standard node and edge attributes
     if "pos" in (node_attributes or []) or any(
@@ -310,6 +325,81 @@ def pixels_to_td_mask(
         return mask
 
 
+def tighten_td_mask(mask: Mask) -> Mask:
+    """
+    Shrink a mask's bounding box to just enclose its set pixels.
+
+    Callers that build a mask inside a box they already had can leave the box as is and
+    tighten once at the end, rather than paying for a crop at every intermediate step.
+
+    Args:
+        mask: The mask to tighten. Must have at least one set pixel.
+
+    Returns:
+        Mask: The same pixels, with a bounding box that has no empty margin.
+            Returned as is if the box is already tight.
+    """
+
+    array = mask.mask
+    axes = range(array.ndim)
+
+    # Check first if we can return early because the box is tight already, by verifying
+    # if every one of its faces holds a set pixel
+    if array.size and all(
+        array.take(face, axis=axis).any() for axis in axes for face in (0, -1)
+    ):
+        return mask
+
+    # Reducing onto one axis at a time is cheaper than listing every set pixel
+    # when the mask is large.
+    extents = [
+        np.flatnonzero(array.any(axis=tuple(other for other in axes if other != axis)))
+        for axis in axes
+    ]
+    if any(len(extent) == 0 for extent in extents):
+        raise ValueError("Cannot tighten the bounding box of an empty mask.")
+
+    start = np.array([extent[0] for extent in extents])
+    stop = np.array([extent[-1] + 1 for extent in extents])
+
+    bbox = np.asarray(mask.bbox)
+    offset = bbox[: array.ndim]
+    cropped = array[tuple(slice(a, b) for a, b in zip(start, stop, strict=True))]
+    return Mask(cropped.copy(), bbox=np.concatenate([start + offset, stop + offset]))
+
+
+def union_td_masks(masks: Sequence[Mask]) -> Mask:
+    """
+    Combine masks into one mask covering every pixel any of them sets.
+
+    Args:
+        masks: The masks to combine. Must be non-empty, and all masks must have
+            the same number of spatial dimensions (they are assumed to belong to
+            the same time point).
+
+    Returns:
+        Mask: A mask that is True wherever any of the given masks is True, with a
+            bounding box tightened around those pixels. Always a freshly allocated
+            mask, never one of the inputs, so the caller keeps sole ownership of
+            what it passed in and the result can be stored on the graph.
+    """
+
+    if len(masks) == 0:
+        raise ValueError("Cannot take the union of zero masks.")
+
+    # Tighten the parts first, over their own (small) boxes. The box enclosing
+    # tight boxes is itself tight, so the combined mask needs no second pass -
+    # which matters because that pass would run over the whole combined box, and
+    # combining many small masks spread far apart makes it a big, mostly empty one.
+    masks = [tighten_td_mask(mask) for mask in masks]
+    if len(masks) == 1:
+        # tighten_td_mask hands back an already tight mask unchanged, so copy here:
+        # the result is stored on the graph, and the input belongs to the caller.
+        return Mask(masks[0].mask.copy(), bbox=masks[0].bbox.copy())
+
+    return reduce(operator.or_, masks)
+
+
 def td_mask_to_pixels(mask: Mask, time: int, ndim: int) -> tuple[np.ndarray, ...]:
     """
     Convert tracksdata mask to pixel coordinates.
@@ -446,28 +536,25 @@ def add_masks_and_bboxes_to_graph(
     return graph
 
 
-def td_relabel_nodes(graph, mapping: dict[int, int]) -> td.graph.IndexedRXGraph:
+def td_relabel_nodes(
+    graph, mapping: dict[int, int], backend: str | None = None
+) -> td.graph.BaseGraph:
     """Relabel nodes in a tracksdata graph according to a mapping.
 
     Args:
         graph: A tracksdata graph
         mapping: Dictionary mapping old node IDs to new node IDs
+        backend: Backend for the new graph ("memory" or "sql"). If None, matches the
+            input graph's backend so relabeling never silently changes it.
 
     Returns:
         A new tracksdata graph with relabeled nodes
     """
 
-    # For IndexedRXGraph or SQLGraph
     old_graph = graph
-
-    # database = f"{tempfile.gettempdir()}/funtracks_{uuid.uuid4().hex[:8]}.db"
-    # kwargs = {
-    #     "drivername": "sqlite",
-    #     "database": database,
-    #     "overwrite": True,
-    # }
-    # new_graph = td.graph.SQLGraph(**kwargs)
-    new_graph = td.graph.IndexedRXGraph()
+    if backend is None:
+        backend = "sql" if isinstance(graph, td.graph.SQLGraph) else "memory"
+    new_graph = _new_empty_backend(backend)
 
     # Copy attribute key registrations with defaults and dtypes
     node_schemas = graph._node_attr_schemas()
@@ -510,25 +597,21 @@ def td_relabel_nodes(graph, mapping: dict[int, int]) -> td.graph.IndexedRXGraph:
     return new_graph
 
 
-def convert_graph_nx_to_td(graph_nx: nx.DiGraph) -> td.graph.BaseGraph:
+def convert_graph_nx_to_td(
+    graph_nx: nx.DiGraph, backend: str = "memory"
+) -> td.graph.BaseGraph:
     """Convert a NetworkX DiGraph to a tracksdata graph.
 
     Args:
         graph_nx: The NetworkX DiGraph to convert.
+        backend: Backend for the new graph ("memory" or "sql").
 
     Returns:
         A tracksdata graph representing the same graph.
     """
 
-    # Initialize an empty tracksdata graph
-    # database = f"{tempfile.gettempdir()}/funtracks_{uuid.uuid4().hex[:8]}.db"
-    # kwargs = {
-    #     "drivername": "sqlite",
-    #     "database": database,
-    #     "overwrite": True,
-    # }
-    # graph_td = td.graph.SQLGraph(**kwargs)
-    graph_td = td.graph.IndexedRXGraph()
+    # Initialize an empty tracksdata graph on the requested backend
+    graph_td = _new_empty_backend(backend)
 
     # Get all nodes and edges with attributes
     all_nodes = list(graph_nx.nodes(data=True))

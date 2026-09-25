@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from importlib.metadata import PackageNotFoundError, version
 from typing import (
     TYPE_CHECKING,
     Literal,
@@ -19,6 +20,19 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from funtracks.data_model.tracks import Tracks
+
+
+def _funtracks_version() -> str | None:
+    """Return the installed funtracks version, or None if unavailable.
+
+    Used to tag GEFFs at write time so import can distinguish them from
+    GEFFs written by pre-fix funtracks versions, which wrote (unreliable)
+    segmentation scale into the geff axes instead of graph.metadata["scale"].
+    """
+    try:
+        return version("funtracks")
+    except PackageNotFoundError:
+        return None
 
 
 def write_to_geff(
@@ -163,27 +177,39 @@ def _build_geff_metadata(
         if tracks.ndim == 3
         else ["time", "space", "space", "space"]
     )
-    if tracks.scale is None:
-        tracks.scale = (1.0,) * tracks.ndim
 
-    # Create axes metadata
-    axes = []
-    for name, axis_type, scale in zip(axis_names, axis_types, tracks.scale, strict=True):
-        axes.append(
-            {
-                "name": name,
-                "type": axis_type,
-                "scale": scale,
-            }
-        )
+    # Create axes metadata. When position_units is "world" points are already in
+    # world units, so no "scale" is written to the geff axes (world is the
+    # default a foreign reader should assume for an axis with no scale at all).
+    # When "pixel", the segmentation scale is written into axes.scale too, so a
+    # round trip through geff (or a foreign geff reader) can tell these apart
+    # from a genuine unit conversion: apply_points_scale on import recognizes an
+    # axes scale that matches tracks.scale as "this describes the segmentation,
+    # not a conversion" and leaves pos alone.
+    axis_scale = None
+    if tracks.position_units == "pixel" and tracks.scale is not None:
+        axis_scale = dict(zip(axis_names, tracks.scale, strict=True))
+    axes = [
+        {
+            "name": name,
+            "type": axis_type,
+            **({"scale": axis_scale[name]} if axis_scale is not None else {}),
+        }
+        for name, axis_type in zip(axis_names, axis_types, strict=True)
+    ]
 
-    extra: dict = {}
+    # The version stamp goes on every geff funtracks writes, including subgroup
+    # exports that omit the FeatureDict: it is what tells import that this file's
+    # points are already in world units. Without it a subgroup export looks like a
+    # foreign geff and its points would be scaled again (see `read_header`).
+    extra: dict = {"funtracks": {"version": _funtracks_version()}}
     if include_features:
-        extra["funtracks"] = {"features": tracks.features.dump_json()}
+        extra["funtracks"]["features"] = tracks.features.dump_json()
 
-    # Note: the segmentation shape lives in the graph metadata under "shape" and is
-    # written by tracksdata's `to_geff`, which merges `graph.metadata` into the geff
-    # metadata extras even when we pass our own GeffMetadata. Nothing to do here.
+    # Note: shape and scale live in graph metadata (Tracks.scale is a property
+    # backed by it) and are written by tracksdata's `to_geff` via `graph.metadata` -
+    # already carried forward here by split_position_attr's detach()/subgraph().
+
     metadata = GeffMetadata(
         geff_version=geff_spec.__version__,
         directed=True,
@@ -236,8 +262,9 @@ def split_position_attr(tracks: Tracks) -> tuple[td.graph.GraphView, list[str] |
         new_graph.add_node_attr_key("x", default_value=0.0, dtype=pl.Float64)
         new_graph.add_node_attr_key("y", default_value=0.0, dtype=pl.Float64)
 
-        # Get all position values at once
-        pos_values = new_graph.node_attrs()["pos"].to_numpy()
+        # Get all position values at once, from the column position_key names -
+        # which is not necessarily called "pos"
+        pos_values = new_graph.node_attrs()[pos_key].to_numpy()
         ndim = pos_values.shape[1]
 
         if ndim == 2:

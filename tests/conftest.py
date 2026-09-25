@@ -125,6 +125,17 @@ def make_3d_cube_mask(start_corner=(0, 0, 0), width=4) -> Mask:
     )
 
 
+@pytest.fixture(params=["memory", "sql"])
+def backend(request) -> str:
+    """Run graph-based tests on both backends.
+
+    Every graph fixture below depends on this, so tests that use a graph fixture
+    automatically run once per backend. Select one with `pytest -k memory` /
+    `pytest -k sql`.
+    """
+    return request.param
+
+
 def _make_graph(
     *,
     ndim: int = 3,
@@ -134,6 +145,7 @@ def _make_graph(
     with_iou: bool = False,
     with_masks: bool = False,
     database: str | None = None,
+    backend: str = "memory",
 ) -> td.graph.BaseGraph:
     """Generate a test graph with configurable features.
 
@@ -145,6 +157,7 @@ def _make_graph(
         with_iou: Include iou edge attribute (requires with_area=True)
         with_masks: Include mask and bbox node attributes
         database: Database path for SQLGraph (if None, uses default)
+        backend: Graph backend ("memory" or "sql")
 
     Returns:
         A graph with the requested features
@@ -172,6 +185,11 @@ def _make_graph(
         node_attributes.append(td.DEFAULT_ATTR_KEYS.BBOX)
         node_default_values.append(0.0)
 
+    # Use an in-memory SQLite DB for tests: a per-test .db file is very slow on
+    # Windows CI (file create/fsync/delete), and tests don't need on-disk persistence.
+    if backend == "sql":
+        database = ":memory:"
+
     graph = create_empty_graph(
         node_attributes=node_attributes,
         node_default_values=node_default_values,
@@ -179,6 +197,7 @@ def _make_graph(
         database=database,
         position_attrs=["pos"] if with_pos else None,
         ndim=ndim,
+        backend=backend,
     )
 
     # Base node data (always has time)
@@ -288,28 +307,30 @@ def _make_graph(
 
 
 @pytest.fixture
-def graph_clean(tmp_path) -> td.graph.BaseGraph:
+def graph_clean(tmp_path, backend) -> td.graph.BaseGraph:
     """Base graph with only time - no positions or computed features."""
     db_path = str(tmp_path / "graph_clean.db")
-    return _make_graph(ndim=3, database=db_path)
+    return _make_graph(ndim=3, database=db_path, backend=backend)
 
 
 @pytest.fixture
-def graph_2d_with_position(tmp_path) -> td.graph.BaseGraph:
+def graph_2d_with_position(tmp_path, backend) -> td.graph.BaseGraph:
     """Graph with 2D positions - for Tracks without segmentation."""
     db_path = str(tmp_path / "graph_2d_position.db")
-    return _make_graph(ndim=3, with_pos=True, database=db_path)
+    return _make_graph(ndim=3, with_pos=True, database=db_path, backend=backend)
 
 
 @pytest.fixture
-def graph_2d_with_track_id(tmp_path) -> td.graph.BaseGraph:
+def graph_2d_with_track_id(tmp_path, backend) -> td.graph.BaseGraph:
     """Graph with 2D positions and track_id - for Tracks without segmentation."""
     db_path = str(tmp_path / "graph_2d_track_id.db")
-    return _make_graph(ndim=3, with_pos=True, with_track_id=True, database=db_path)
+    return _make_graph(
+        ndim=3, with_pos=True, with_track_id=True, database=db_path, backend=backend
+    )
 
 
 @pytest.fixture
-def graph_2d_with_segmentation(tmp_path) -> td.graph.BaseGraph:
+def graph_2d_with_segmentation(tmp_path, backend) -> td.graph.BaseGraph:
     """Graph with segmentation (masks/bboxes) and all computed features."""
     db_path = str(tmp_path / "graph_2d_segmentation.db")
     return _make_graph(
@@ -320,25 +341,28 @@ def graph_2d_with_segmentation(tmp_path) -> td.graph.BaseGraph:
         with_iou=True,
         with_masks=True,
         database=db_path,
+        backend=backend,
     )
 
 
 @pytest.fixture
-def graph_3d_with_position(tmp_path) -> td.graph.BaseGraph:
+def graph_3d_with_position(tmp_path, backend) -> td.graph.BaseGraph:
     """Graph with 3D positions - for Tracks without segmentation."""
     db_path = str(tmp_path / "graph_3d_position.db")
-    return _make_graph(ndim=4, with_pos=True, database=db_path)
+    return _make_graph(ndim=4, with_pos=True, database=db_path, backend=backend)
 
 
 @pytest.fixture
-def graph_3d_with_track_id(tmp_path) -> td.graph.BaseGraph:
+def graph_3d_with_track_id(tmp_path, backend) -> td.graph.BaseGraph:
     """Graph with 3D positions and track_id - for Tracks without segmentation."""
     db_path = str(tmp_path / "graph_3d_track_id.db")
-    return _make_graph(ndim=4, with_pos=True, with_track_id=True, database=db_path)
+    return _make_graph(
+        ndim=4, with_pos=True, with_track_id=True, database=db_path, backend=backend
+    )
 
 
 @pytest.fixture
-def graph_3d_with_segmentation(tmp_path) -> td.graph.BaseGraph:
+def graph_3d_with_segmentation(tmp_path, backend) -> td.graph.BaseGraph:
     """Graph with segmentation (masks/bboxes) and all computed features."""
     db_path = str(tmp_path / "graph_3d_segmentation.db")
     return _make_graph(
@@ -349,6 +373,7 @@ def graph_3d_with_segmentation(tmp_path) -> td.graph.BaseGraph:
         with_iou=True,
         with_masks=True,
         database=db_path,
+        backend=backend,
     )
 
 
@@ -431,9 +456,9 @@ def get_tracks(get_graph) -> Callable[..., "Tracks"]:
 
 
 @pytest.fixture
-def graph_2d_list(tmp_path) -> td.graph.BaseGraph:
-    db_path = str(tmp_path / "graph_2d_list.db")
-    graph = create_empty_graph(database=db_path)
+def graph_2d_list(tmp_path, backend) -> td.graph.BaseGraph:
+    db_path = ":memory:" if backend == "sql" else str(tmp_path / "graph_2d_list.db")
+    graph = create_empty_graph(database=db_path, backend=backend)
 
     nodes = [
         {
@@ -472,7 +497,7 @@ def sphere(center, radius, shape):
 
 
 @pytest.fixture
-def get_graph(tmp_path) -> Callable[..., td.graph.BaseGraph]:
+def get_graph(tmp_path, backend) -> Callable[..., td.graph.BaseGraph]:
     """Factory fixture to create a graph with configurable features.
 
     Args:
@@ -507,6 +532,7 @@ def get_graph(tmp_path) -> Callable[..., td.graph.BaseGraph]:
             with_iou=with_seg,
             with_masks=with_seg,
             database=db_path,
+            backend=backend,
         )
 
     return _get_graph

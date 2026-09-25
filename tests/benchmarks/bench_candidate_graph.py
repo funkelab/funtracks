@@ -4,6 +4,8 @@ To diagnose regressions, we recommend running line-profiler locally as shown in
 profile_candidate_graph.py
 """
 
+import platform
+
 import numpy as np
 import pytest
 from skimage.draw import disk
@@ -16,6 +18,8 @@ FRAME_SHAPE = (700, 1100)
 CELLS_PER_FRAME = 150
 MAX_EDGE_DISTANCE = 50.0
 ROUNDS = 3
+if platform.system() == "Darwin":
+    ROUNDS = ROUNDS * 2
 
 
 def _generate_segmentation(
