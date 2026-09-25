@@ -103,7 +103,7 @@ class TestDisconnect:
         assert not tracks.graph_solution.has_edge(4, 5)
 
     def test_disconnect_partially_connected_selection(self, tracks):
-        """Pairs that are not connected are skipped rather than rejected."""
+        """Nodes that are not connected are skipped rather than rejected."""
 
         # 3 -> 4 exists, 4 -> 6 does not
         UserDisconnectNodes(tracks, [3, 4, 6])
@@ -117,9 +117,40 @@ class TestDisconnect:
             UserDisconnectNodes(tracks, [2, 6])
         assert info.value.forceable is False
 
-    def test_disconnect_rejects_invalid_selections(self, tracks):
-        with pytest.raises(InvalidActionError, match="same time point"):
+    def test_disconnect_unconnected_nodes_in_same_time_point(self, tracks):
+        """Nodes in the same time point can never be connected to each other."""
+
+        with pytest.raises(InvalidActionError, match="nothing to disconnect"):
             UserDisconnectNodes(tracks, [2, 3])
+
+    def test_disconnect_mother_and_daughters(self, tracks):
+        """Nodes sharing a time point are fine, all their edges are broken."""
+
+        action = UserDisconnectNodes(tracks, [1, 2, 3])
+        assert not tracks.graph_solution.has_edge(1, 2)
+        assert not tracks.graph_solution.has_edge(1, 3)
+        assert tracks.graph_solution.has_edge(3, 4)  # 4 is not selected
+        assert len({tracks.get_track_id(n) for n in (1, 2, 3)}) == 3
+
+        action.inverse()
+        assert tracks.graph_solution.has_edge(1, 2)
+        assert tracks.graph_solution.has_edge(1, 3)
+
+    def test_disconnect_skip_edge(self, tracks):
+        """A skip edge between two selected nodes is broken."""
+
+        UserConnectNodes(tracks, [2, 6])
+        UserDisconnectNodes(tracks, [2, 6])
+        assert not tracks.graph_solution.has_edge(2, 6)
+
+    def test_disconnect_needs_a_direct_edge(self, tracks):
+        """Nodes connected only through an unselected node share no edge."""
+
+        # 3 -> 4 -> 5, but there is no edge 3 -> 5
+        with pytest.raises(InvalidActionError, match="nothing to disconnect"):
+            UserDisconnectNodes(tracks, [3, 5])
+
+    def test_disconnect_rejects_invalid_selections(self, tracks):
         with pytest.raises(InvalidActionError, match="at least two nodes"):
             UserDisconnectNodes(tracks, [1])
         with pytest.raises(InvalidActionError, match="not in solution"):
