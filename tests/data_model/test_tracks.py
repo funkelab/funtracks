@@ -180,6 +180,32 @@ def test_set_positions_list(graph_2d_list):
     )
 
 
+def test_position_scale_defaults_to_pixel(graph_2d_with_segmentation):
+    """position_units defaults to "pixel", so position_scale is just tracks.scale."""
+    scale = [1.0, 2.0, 3.0]
+    tracks = Tracks(graph_2d_with_segmentation, ndim=3, scale=scale, **track_attrs)
+    assert tracks.position_units == "pixel"
+    assert tracks.position_scale == scale
+    # tracks.scale itself must stay the real segmentation scale either way
+    assert tracks.scale == scale
+
+
+def test_position_scale_is_identity_in_world_mode(graph_2d_with_segmentation):
+    """In world mode positions need no further scaling, but tracks.scale must not
+    change: the segmentation is still pixel-indexed and still needs it."""
+    scale = [1.0, 2.0, 3.0]
+    tracks = Tracks(
+        graph_2d_with_segmentation,
+        ndim=3,
+        scale=scale,
+        position_units="world",
+        **track_attrs,
+    )
+    assert tracks.position_units == "world"
+    assert tracks.position_scale is None
+    assert tracks.scale == scale
+
+
 def test_get_mask_none(graph_2d_with_track_id):
     tracks = Tracks(graph_2d_with_track_id, ndim=3, **track_attrs)
     assert tracks.get_mask(1) is None

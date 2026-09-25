@@ -171,6 +171,85 @@ class TestRegionpropsAnnotator:
             ),
         )
 
+    @pytest.mark.parametrize("only_pos", [True, False])
+    def test_centroid_world_coords_with_position_units_world(
+        self, get_graph, ndim, only_pos
+    ):
+        """With position_units="world", 'pos' must be in world coordinates.
+
+        Same node 6 cube as test_centroid_pixel_coords_with_scale, but with
+        position_units="world": the centroid must come out scaled, through both
+        the fast mask-only path and the skimage regionprops path.
+        """
+        graph = get_graph(ndim, with_seg=True)
+        if ndim == 3:
+            scale = [1.0, 2.0, 3.0]
+            pixel_centroid = np.array([97.5, 97.5])
+        else:
+            scale = [1.0, 2.0, 3.0, 4.0]
+            pixel_centroid = np.array([97.5, 97.5, 97.5])
+
+        tracks = Tracks(
+            graph,
+            ndim=ndim,
+            scale=scale,
+            position_units="world",
+            **track_attrs,
+        )
+        tracks.enable_features(["pos"] if only_pos else ["pos", "area"])
+
+        pos = np.array(tracks.graph_solution.nodes[6]["pos"])
+        world_centroid = pixel_centroid * np.array(scale[1:])
+
+        np.testing.assert_allclose(
+            pos,
+            world_centroid,
+            atol=0.1,
+            err_msg=(
+                f"Centroid must be scaled to world coordinates when "
+                f"position_units='world'. Got {pos}, expected {world_centroid}."
+            ),
+        )
+
+    def test_position_scale_dependent_only_in_world_mode(self, get_graph, ndim):
+        """The 'pos' feature is scale_dependent iff position_units is 'world'.
+
+        area etc. are always scale_dependent; 'pos' should only join them when
+        it is actually derived using the scale (world mode).
+        """
+        graph = get_graph(ndim, with_seg=True)
+
+        pixel_tracks = Tracks(graph, ndim=ndim, **track_attrs)
+        assert pixel_tracks.features["pos"].get("scale_dependent", False) is False
+
+        world_graph = get_graph(ndim, with_seg=True)
+        world_tracks = Tracks(
+            world_graph, ndim=ndim, position_units="world", **track_attrs
+        )
+        assert world_tracks.features["pos"].get("scale_dependent", False) is True
+
+    def test_update_scale_recomputes_position_in_world_mode(self, get_graph, ndim):
+        """Changing tracks.scale must recompute 'pos' when it is in world units."""
+        graph = get_graph(ndim, with_seg=True)
+        scale_a = [1.0] * ndim
+        scale_b = [1.0, 4.0, 4.0] if ndim == 3 else [1.0, 4.0, 4.0, 4.0]
+
+        tracks = Tracks(
+            graph,
+            ndim=ndim,
+            scale=scale_a,
+            position_units="world",
+            **track_attrs,
+        )
+        tracks.enable_features(["pos"])
+        before = np.array(tracks.get_position(6))
+
+        tracks.update_scale(scale_b)
+
+        after = np.array(tracks.get_position(6))
+        ratio = np.array(scale_b[1:]) / np.array(scale_a[1:])
+        np.testing.assert_allclose(after, before * ratio, atol=0.1)
+
     def test_ignores_irrelevant_actions(self, get_graph, ndim):
         """Test that RegionpropsAnnotator ignores actions that don't affect
         segmentation.

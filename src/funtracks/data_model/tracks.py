@@ -5,6 +5,7 @@ from collections.abc import Iterable, Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
+    Literal,
     TypeAlias,
 )
 from warnings import warn
@@ -42,6 +43,7 @@ Node: TypeAlias = int
 Edge: TypeAlias = tuple[Node, Node]
 AttrValues: TypeAlias = list[AttrValue]
 Attrs: TypeAlias = dict[str, AttrValues]
+PositionUnits: TypeAlias = Literal["pixel", "world"]
 
 logger = logging.getLogger(__name__)
 
@@ -52,12 +54,18 @@ class Tracks:
     The graph nodes represent detections and must have a time attribute and
     position attribute. Edges in the graph represent links across time.
 
-    Coordinate convention: node positions (and segmentation masks/bounding boxes)
-    are stored in pixel coordinates. ``scale`` holds the size of one pixel per
-    dimension, and is what converts those coordinates to world units. Derived
-    measurements that are physically meaningful (area/volume, perimeter, ellipsoid
-    axes) are computed with the scale applied and are therefore already in world
-    units.
+    Coordinate convention: segmentation masks and bounding boxes are always stored
+    in pixel coordinates, since they index directly into the segmentation array.
+    ``scale`` holds the size of one pixel per dimension and is what converts pixel
+    coordinates to world units; it describes the segmentation regardless of which
+    units node positions happen to be in. Derived measurements that are physically
+    meaningful (area/volume, perimeter, ellipsoid axes) are always computed with
+    the scale applied and are therefore in world units.
+
+    Node positions themselves can be stored either way - see ``position_units``.
+    This matters for data that already lives in world units (e.g. a large existing
+    database of point detections): funtracks does not rewrite positions in place
+    just to normalize them to pixel coordinates.
 
     Attributes:
         graph_full (td.graph.BaseGraph): The full graph (first-class): every node/edge
@@ -68,7 +76,12 @@ class Tracks:
         features (FeatureDict): Dictionary of features tracked on graph nodes/edges.
         annotators (AnnotatorRegistry): List of annotators that compute features.
         scale (list[float] | None): The size of one pixel in each dimension,
-            including time. Converts the stored pixel coordinates to world units.
+            including time. Describes the segmentation, independent of
+            ``position_units``; see ``position_scale`` for the scale to apply to
+            node positions specifically.
+        position_units (Literal["pixel", "world"]): Whether node positions (as
+            returned by get_position/get_positions) are stored in pixel or world
+            coordinates. Defaults to "pixel".
         ndim (int): Number of dimensions (3 for 2D+time, 4 for 3D+time).
     """
 
@@ -85,6 +98,7 @@ class Tracks:
         scale: list[float] | None = None,
         ndim: int | None = None,
         features: FeatureDict | None = None,
+        position_units: PositionUnits = "pixel",
         _segmentation: GraphArrayView | None = None,
     ):
         """Initialize a Tracks object.
@@ -115,6 +129,11 @@ class Tracks:
                 Assumes that all features in the dict already exist on the graph (will
                 be activated but not recomputed). If None, core computed features (pos,
                 tracklet_id) are auto-detected by checking if they exist on the graph.
+            position_units (Literal["pixel", "world"]): Whether the graph's node
+                positions are already in pixel or in world coordinates. Defaults to
+                "pixel". Positions are never rewritten to match this - it only tells
+                funtracks (and a RegionpropsAnnotator, if segmentation is present)
+                which unit the stored/computed positions are in.
             _segmentation (GraphArrayView | None): Internal parameter for reusing an
                 existing GraphArrayView instance. Not intended for public use.
         """
@@ -182,6 +201,7 @@ class Tracks:
         else:
             self.segmentation = None
         self.scale = scale
+        self.position_units: PositionUnits = position_units
         self.ndim = self._compute_ndim(
             self.segmentation.shape if self.segmentation is not None else None,
             scale,
@@ -269,6 +289,23 @@ class Tracks:
             raise
 
         self.refresh.emit()
+
+    @property
+    def position_scale(self) -> list[float] | None:
+        """The scale to apply to get_position()/get_positions() output for world units.
+
+        ``scale`` always describes the segmentation (pixel size), regardless of
+        ``position_units``. This is the scale a position consumer should use
+        instead: identity when positions are already in world units (nothing left
+        to convert), or ``scale`` itself when they still need converting.
+
+        A napari points/tracks layer, for instance, should be constructed with
+        ``data=tracks.get_position(...)`` and ``scale=tracks.position_scale`` - never
+        ``tracks.scale`` directly, which would double-scale a world-unit position.
+        """
+        if self.position_units == "world":
+            return None
+        return self.scale
 
     def _get_feature_set(
         self,

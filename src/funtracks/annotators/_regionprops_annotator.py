@@ -23,6 +23,7 @@ from ._regionprops_extended import regionprops_extended
 if TYPE_CHECKING:
     from funtracks.actions import BasicAction
     from funtracks.data_model import Tracks
+    from funtracks.data_model.tracks import PositionUnits
 
 DEFAULT_POS_KEY = "pos"
 DEFAULT_AREA_KEY = "area"
@@ -31,15 +32,17 @@ DEFAULT_CIRCULARITY_KEY = "circularity"
 DEFAULT_PERIMETER_KEY = "perimeter"
 
 
-def _centroid(mask: Mask) -> list[float]:
-    """Centroid in pixel coordinates, read directly from the mask array.
+def _centroid(mask: Mask, spacing: tuple[float, ...] | None) -> list[float]:
+    """Centroid read directly from the mask array, in pixel or world coordinates.
 
-    Equivalent to ``ExtendedRegionProperties.centroid_pixel`` (``local_centroid +
-    bbox_min``) but skips the skimage regionprops machinery (find_objects, region
-    caching), which is wasted overhead when only the centroid is needed.
+    Equivalent to ``ExtendedRegionProperties.centroid_pixel``/``.centroid`` but
+    skips the skimage regionprops machinery (find_objects, region caching), which
+    is wasted overhead when only the centroid is needed.
 
     Args:
         mask: A Mask object representing one detection.
+        spacing: Voxel spacing per spatial dimension to scale the centroid by, or
+            None to return it in pixel coordinates.
 
     Returns:
         The centroid coordinates, one float per spatial dimension.
@@ -47,7 +50,10 @@ def _centroid(mask: Mask) -> list[float]:
     arr = mask.mask
     bbox_min = mask.bbox[: arr.ndim]
     local = np.array([idx.mean() for idx in np.nonzero(arr)])
-    return [float(v) for v in local + bbox_min]
+    pixel = local + bbox_min
+    if spacing is not None:
+        pixel = pixel * np.asarray(spacing)
+    return [float(v) for v in pixel]
 
 
 class FeatureSpec(NamedTuple):
@@ -74,9 +80,11 @@ class RegionpropsAnnotator(GraphAnnotator):
     - circularity/sphericity
     - perimeter/surface area
 
-    The centroid is stored in pixel coordinates, matching how the segmentation
-    itself is indexed. All size/shape measurements are computed with
-    ``tracks.scale`` as the voxel spacing and are therefore in world units.
+    The centroid is stored in pixel or world coordinates according to
+    ``tracks.position_units`` (pixel by default, matching how the segmentation
+    itself is indexed). All size/shape measurements are always computed with
+    ``tracks.scale`` as the voxel spacing and are therefore in world units,
+    regardless of ``position_units``.
 
     Defaults to computing all features, but individual ones can be turned off by changing
     the self.include value at the corresponding index to the feature in self.features.
@@ -109,6 +117,7 @@ class RegionpropsAnnotator(GraphAnnotator):
 
         specs = RegionpropsAnnotator._define_features(
             tracks.ndim,
+            position_units=tracks.position_units,
         )
         # update position key in spec
         if self.pos_key != DEFAULT_POS_KEY:
@@ -130,6 +139,7 @@ class RegionpropsAnnotator(GraphAnnotator):
     def _define_features(
         cls,
         ndim: int,
+        position_units: PositionUnits = "pixel",
     ) -> list[FeatureSpec]:
         """Define all supported regionprops features along with keys and function names.
 
@@ -138,6 +148,10 @@ class RegionpropsAnnotator(GraphAnnotator):
 
         Args:
             ndim: Total number of dimensions including time (3 or 4)
+            position_units: Whether the position feature should be computed (and
+                recomputed) in pixel or world coordinates. World positions are
+                ``scale_dependent``: they need re-deriving whenever ``tracks.scale``
+                changes, the same as area/perimeter/etc. Pixel positions do not.
 
         Returns:
             list[FeatureSpec]: List of feature specifications with key, feature,
@@ -147,8 +161,16 @@ class RegionpropsAnnotator(GraphAnnotator):
         # Default to 3D when ndim is None to enable matching all position columns
         axis_names = ["z", "y", "x"] if ndim is None or ndim == 4 else ["y", "x"]
 
+        position_feature = Position(axes=axis_names)
+        if position_units == "world":
+            position_feature["scale_dependent"] = True
+
         return [
-            FeatureSpec(DEFAULT_POS_KEY, Position(axes=axis_names), "centroid_pixel"),
+            FeatureSpec(
+                DEFAULT_POS_KEY,
+                position_feature,
+                "centroid" if position_units == "world" else "centroid_pixel",
+            ),
             FeatureSpec(DEFAULT_AREA_KEY, Area(ndim=ndim), "area"),
             # TODO: Add in intensity when image is passed
             # FeatureSpec("intensity", Intensity(ndim=ndim), "intensity"),
@@ -200,6 +222,9 @@ class RegionpropsAnnotator(GraphAnnotator):
         # regionprops pass anyway and its centroid comes for free, so pos goes through
         # the normal path with everything else.
         fast_pos = keys_to_compute == [self.pos_key]
+        # Only scale the fast-path centroid when positions are stored in world units;
+        # centroid_pixel is the pixel-coordinate path and must stay unscaled.
+        pos_spacing = spacing if self.tracks.position_units == "world" else None
 
         for node_id in self.graph.node_ids():
             if not self.graph.has_node(node_id):
@@ -207,7 +232,7 @@ class RegionpropsAnnotator(GraphAnnotator):
             mask = self.graph.nodes[node_id]["mask"]
             all_node_ids.append(node_id)
             if fast_pos:
-                all_values[self.pos_key].append(_centroid(mask))
+                all_values[self.pos_key].append(_centroid(mask, pos_spacing))
                 continue
             (region,) = regionprops_extended(mask, spacing=spacing)
             for key in keys_to_compute:

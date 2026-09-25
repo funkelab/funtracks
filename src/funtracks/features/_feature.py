@@ -43,8 +43,10 @@ class Feature(TypedDict):
         scale_dependent (bool): Optional. True if the value is computed with
             ``Tracks.scale`` and therefore has to be recomputed when the scale
             changes (see `Tracks.update_scale`). Features measured in pixel space
-            (`Position`) or derived from graph structure (`TrackletID`, `IoU`)
-            leave this unset.
+            or derived from graph structure (`TrackletID`, `IoU`) leave this unset.
+            `Position` is scale-dependent only when `Tracks.position_units` is
+            "world" (a computed world-unit centroid moves when the scale changes);
+            when it is "pixel" (the default), `Position` leaves this unset too.
     """
 
     feature_type: FeatureType
