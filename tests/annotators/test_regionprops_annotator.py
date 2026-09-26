@@ -416,15 +416,17 @@ class TestRegionpropsAnnotator:
         # Should not raise an error, just return silently
         rp_ann.compute()  # No error expected
 
-    def test_centroid_world_coords_with_scale(self, get_graph, ndim):
-        """Centroid in 'pos' must be pixel_centroid * scale (world units).
-
-        Without the fix, skimage returns local_centroid * spacing + bbox_min_pixel
-        (mixed units). The correct formula is (local_centroid + bbox_min_pixel) *
-        spacing = pixel_centroid * spacing.
+    @pytest.mark.parametrize("only_pos", [True, False])
+    def test_centroid_pixel_coords_with_scale(self, get_graph, ndim, only_pos):
+        """Centroid in 'pos' must stay in pixel coordinates, whatever the scale.
 
         Node 6 has a cube/square at corner (96, 96, ...) with width 4,
-        so pixel centroid = 97.5 in each spatial axis.
+        so the pixel centroid is 97.5 in each spatial axis.
+
+        Both computation paths are covered: the fast mask-only path taken when
+        'pos' is the sole requested feature, and the skimage regionprops path
+        (which runs with the scale as spacing) taken when other features are
+        requested alongside it.
         """
         graph = get_graph(ndim, with_seg=True)
         if ndim == 3:
@@ -436,24 +438,100 @@ class TestRegionpropsAnnotator:
 
         tracks = Tracks(graph, ndim=ndim, scale=scale, **track_attrs)
         # Force recomputation so regionprops runs with the given scale as spacing
-        tracks.enable_features(["pos"])
+        tracks.enable_features(["pos"] if only_pos else ["pos", "area"])
 
         pos = np.array(tracks.graph_solution.nodes[6]["pos"])
-        expected = pixel_centroid * np.array(scale[1:])
 
-        bug_value = np.array([1.5] * len(pixel_centroid)) * np.array(
-            scale[1:]
-        ) + np.array([96.0] * len(pixel_centroid))
+        world_value = pixel_centroid * np.array(scale[1:])
         np.testing.assert_allclose(
             pos,
-            expected,
+            pixel_centroid,
             atol=0.1,
             err_msg=(
-                f"World centroid must be pixel_centroid * scale. "
-                f"Got {pos}, expected {expected}. "
-                f"Bug value would be local_centroid * scale + bbox_min = {bug_value}"
+                f"Centroid must be stored in pixel coordinates. "
+                f"Got {pos}, expected {pixel_centroid}. "
+                f"World coordinates would be {world_value}"
             ),
         )
+
+    @pytest.mark.parametrize("only_pos", [True, False])
+    def test_centroid_world_coords_with_position_units_world(
+        self, get_graph, ndim, only_pos
+    ):
+        """With position_units="world", 'pos' must be in world coordinates.
+
+        Same node 6 cube as test_centroid_pixel_coords_with_scale, but with
+        position_units="world": the centroid must come out scaled, through both
+        the fast mask-only path and the skimage regionprops path.
+        """
+        graph = get_graph(ndim, with_seg=True)
+        if ndim == 3:
+            scale = [1.0, 2.0, 3.0]
+            pixel_centroid = np.array([97.5, 97.5])
+        else:
+            scale = [1.0, 2.0, 3.0, 4.0]
+            pixel_centroid = np.array([97.5, 97.5, 97.5])
+
+        tracks = Tracks(
+            graph,
+            ndim=ndim,
+            scale=scale,
+            position_units="world",
+            **track_attrs,
+        )
+        tracks.enable_features(["pos"] if only_pos else ["pos", "area"])
+
+        pos = np.array(tracks.graph_solution.nodes[6]["pos"])
+        world_centroid = pixel_centroid * np.array(scale[1:])
+
+        np.testing.assert_allclose(
+            pos,
+            world_centroid,
+            atol=0.1,
+            err_msg=(
+                f"Centroid must be scaled to world coordinates when "
+                f"position_units='world'. Got {pos}, expected {world_centroid}."
+            ),
+        )
+
+    def test_position_scale_dependent_only_in_world_mode(self, get_graph, ndim):
+        """The 'pos' feature is scale_dependent iff position_units is 'world'.
+
+        area etc. are always scale_dependent; 'pos' should only join them when
+        it is actually derived using the scale (world mode).
+        """
+        graph = get_graph(ndim, with_seg=True)
+
+        pixel_tracks = Tracks(graph, ndim=ndim, **track_attrs)
+        assert pixel_tracks.features["pos"].get("scale_dependent", False) is False
+
+        world_graph = get_graph(ndim, with_seg=True)
+        world_tracks = Tracks(
+            world_graph, ndim=ndim, position_units="world", **track_attrs
+        )
+        assert world_tracks.features["pos"].get("scale_dependent", False) is True
+
+    def test_update_scale_recomputes_position_in_world_mode(self, get_graph, ndim):
+        """Changing tracks.scale must recompute 'pos' when it is in world units."""
+        graph = get_graph(ndim, with_seg=True)
+        scale_a = [1.0] * ndim
+        scale_b = [1.0, 4.0, 4.0] if ndim == 3 else [1.0, 4.0, 4.0, 4.0]
+
+        tracks = Tracks(
+            graph,
+            ndim=ndim,
+            scale=scale_a,
+            position_units="world",
+            **track_attrs,
+        )
+        tracks.enable_features(["pos"])
+        before = np.array(tracks.get_position(6))
+
+        tracks.update_scale(scale_b)
+
+        after = np.array(tracks.get_position(6))
+        ratio = np.array(scale_b[1:]) / np.array(scale_a[1:])
+        np.testing.assert_allclose(after, before * ratio, atol=0.1)
 
     @pytest.mark.parametrize("split_pos", [False, True])
     def test_position_follows_segmentation_edit(self, get_graph, ndim, split_pos):

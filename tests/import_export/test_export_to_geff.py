@@ -47,11 +47,6 @@ def _assert_valid_geff_export(export_dir, expected_num_nodes=None):
     attrs = dict(z.attrs)
     assert "geff" in attrs
     assert "axes" in attrs["geff"]
-    # Tracks.scale (segmentation spacing) must never be written to axes.scale:
-    # per the geff spec that field means "multiply pos by this to get world
-    # units", which pos already is. It belongs in graph metadata (_seg_scale).
-    for ax in attrs["geff"]["axes"]:
-        assert ax["scale"] is None
 
     if expected_num_nodes is not None:
         assert len(z["nodes/ids"][:]) == expected_num_nodes
@@ -357,11 +352,18 @@ def test_export_metadata(get_tracks, ndim, with_seg, tmp_path):
         assert seg_shape is None
 
     # Tracks.scale (segmentation spacing) is written to graph metadata, mirroring
-    # shape, never to axes.scale. tracksdata's own "scale" metadata is
-    # spatial-only (no time), unlike Tracks.scale (time first, dummy 1.0).
+    # shape. tracksdata's own "scale" metadata is spatial-only (no time), unlike
+    # Tracks.scale (time first, dummy 1.0).
     seg_scale = td.io.read_graph_metadata(export_dir / "tracks.geff").get("scale")
     assert seg_scale is not None
     assert list(seg_scale) == list(tracks.scale)[1:]
+
+    # position_units defaults to "pixel", so the same scale is also written into
+    # axes.scale: a foreign reader needs it there to reconstruct world units, even
+    # though funtracks itself keeps positions in pixel coordinates.
+    assert tracks.position_units == "pixel"
+    space_axes = [ax for ax in axes if ax["type"] == "space"]
+    assert [ax["scale"] for ax in space_axes] == list(tracks.scale)[1:]
 
     funtracks_extra = _funtracks_extra(export_dir / "tracks.geff")
     assert funtracks_extra is not None
@@ -428,6 +430,43 @@ def test_write_to_geff_roundtrip(get_tracks, ndim, with_seg, tmp_path):
         np.testing.assert_array_equal(
             np.asarray(loaded.segmentation[:]), np.asarray(tracks.segmentation[:])
         )
+
+
+@pytest.mark.parametrize("ndim", [3, 4])
+def test_geff_roundtrip_keeps_pixel_coordinates(get_tracks, ndim, tmp_path):
+    """Positions are pixel coordinates on both sides of a geff round trip.
+
+    geff stores pixel coordinates plus a per-axis scale, which is exactly how
+    funtracks stores them, so an anisotropic scale must not move any coordinate:
+    not the ones written into the store, and not the ones read back.
+    """
+    scale = [1.0, 2.0, 3.0] if ndim == 3 else [1.0, 2.0, 3.0, 4.0]
+    axis_names = ["y", "x"] if ndim == 3 else ["z", "y", "x"]
+
+    tracks = get_tracks(ndim=ndim, with_seg=False, prefill_track_ids=True)
+    tracks.scale = scale
+    node_ids = sorted(tracks.graph_solution.node_ids())
+    original_pos = tracks.get_positions(node_ids)
+
+    geff_path = tmp_path / "my_tracks.geff"
+    write_to_geff(tracks, geff_path)
+
+    # The coordinates in the store are the unchanged pixel coordinates, and the
+    # scale is carried alongside them in the axes metadata.
+    z = zarr.open(str(geff_path), mode="r")
+    stored = np.stack(
+        [np.asarray(z[f"nodes/props/{name}/values"][:]) for name in axis_names], axis=1
+    )
+    np.testing.assert_allclose(stored, original_pos)
+    axes = {ax["name"]: ax["scale"] for ax in dict(z.attrs)["geff"]["axes"]}
+    assert [axes[name] for name in axis_names] == scale[1:]
+
+    # Exporting must not have touched the live graph either.
+    np.testing.assert_allclose(tracks.get_positions(node_ids), original_pos)
+
+    loaded = import_from_geff(geff_path)
+    np.testing.assert_allclose(loaded.get_positions(node_ids), original_pos)
+    assert list(loaded.scale) == scale
 
 
 def test_write_to_geff_no_parent_container(get_tracks, tmp_path):

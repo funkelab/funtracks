@@ -215,7 +215,7 @@ class GeffTracksBuilder(TracksBuilder):
         self.importable_node_props = list(metadata.node_props_metadata.keys())
         self.importable_edge_props = list(metadata.edge_props_metadata.keys())
 
-        # Store axes metadata for use in infer_node_name_map
+        # Store axes metadata for use in infer_node_name_map and scale resolution
         self._geff_axes = metadata.axes or []
 
         # Read funtracks FeatureDict from GEFF extra metadata if present
@@ -339,16 +339,65 @@ class GeffTracksBuilder(TracksBuilder):
             return None
         return [1.0 if s is None else float(s) for s in scales]
 
-    def apply_points_scale(self) -> None:
-        """Multiply ``pos`` by the geff axes scale, so it ends up in world units.
+    def _spatial_axes_are_pixel(self) -> bool | None:
+        """Whether the geff's spatial axes explicitly declare a "pixel" unit.
 
-        No-op for legacy funtracks GEFFs (see ``read_header``): their axes.scale
-        is actually a mislabeled segmentation scale, and their ``pos`` is already
-        in world units, so applying it here would double-scale positions.
+        Per the geff/OME-Zarr spec, "pixel" is a valid space unit and is the
+        clearest signal available: a file that says so means what it says,
+        regardless of what its ``scale`` values happen to be. Returns None when
+        no spatial axis declares a unit at all, so the caller can fall back to
+        comparing scales instead.
+
+        Returns:
+            True if every spatial axis with a declared unit says "pixel", False
+            if any says something else, None if none declare a unit.
+        """
+        geff_axes = getattr(self, "_geff_axes", [])
+        space_axes = [ax for ax in geff_axes if ax.type == "space"]
+        units = [ax.unit for ax in space_axes if ax.unit is not None]
+        if not units:
+            return None
+        return all(unit == "pixel" for unit in units)
+
+    def apply_points_scale(self) -> None:
+        """Decide whether ``pos`` is in pixel or world coordinates, and convert if so.
+
+        No-op for legacy funtracks GEFFs (see ``read_header``): their axes.scale is
+        actually a mislabeled segmentation scale, and their ``pos`` is already in
+        world units (the scale was baked into the stored values long ago), so this
+        marks them "world" without multiplying again.
+
+        Otherwise, "pixel" vs. "world" is decided by, in order:
+        1. The spatial axes' declared ``unit`` (see ``_spatial_axes_are_pixel``),
+           when present - the file says what it means, explicitly.
+        2. Whether the axes scale (``_axes_scale``) matches the segmentation scale
+           (``infer_segmentation_scale``). A geff whose axes scale is exactly the
+           segmentation's voxel size is describing the segmentation, not
+           converting ``pos`` - so ``pos`` is pixel and left unscaled. A axes
+           scale that differs from the segmentation scale (including an axes
+           scale with no segmentation to compare against) is a real unit
+           conversion, and is applied to ``pos``.
+        3. No declared unit and no declared scale at all: nothing suggests these
+           are anything other than pixel coordinates, so "pixel" is left as is.
         """
         if self._is_legacy_funtracks_geff:
+            self.position_units = "world"
             return
+
+        is_pixel = self._spatial_axes_are_pixel()
         scale = self._axes_scale()
+
+        if is_pixel is None:
+            if scale is None:
+                # No unit, no scale declared: nothing suggests these are anything
+                # but pixel coordinates.
+                return
+            seg_scale = self.infer_segmentation_scale()
+            is_pixel = scale == seg_scale
+
+        if is_pixel:
+            return
+
         if scale is None:
             return
         if self.in_memory_geff is None:
@@ -359,6 +408,7 @@ class GeffTracksBuilder(TracksBuilder):
         # scale is [time, *spatial]; pos only holds the spatial dims. Multiply in
         # float64 to avoid int truncation with scale < 1
         pos["values"] = pos["values"] * np.asarray(scale[1:], dtype=np.float64)
+        self.position_units = "world"
 
     def infer_segmentation_scale(self) -> list[float] | None:
         """Determine ``Tracks.scale`` (segmentation voxel spacing) for this file.
@@ -476,15 +526,17 @@ def import_from_geff(
             - For multi-value features like position, use a list: {"pos": ["y", "x"]}
             If None, property names are auto-inferred using fuzzy matching.
         segmentation_path: Optional path to segmentation data
-        scale: Optional segmentation voxel scale (``Tracks.scale``) -- this
-            only ever sets the segmentation scale, never the points' scale. If
-            None, defaults to the scale recorded in the geff's tracksdata graph
-            metadata (see :meth:`GeffTracksBuilder.infer_segmentation_scale`),
-            and stays None when the file does not declare one. This is
-            independent of the geff axes' own ``scale``, which (per the geff
-            spec) describes how to convert stored positions to world units and
-            is always applied to ``pos`` on import -- regardless of what is
-            passed here -- so that funtracks' world-units invariant holds.
+        scale: Optional segmentation voxel scale (``Tracks.scale``) -- this only
+            ever sets the segmentation scale, never the points' scale. If None,
+            defaults to the scale recorded in the geff's tracksdata graph metadata
+            (see :meth:`GeffTracksBuilder.infer_segmentation_scale`), and stays
+            None when the file does not declare one. This is independent of the
+            geff axes' own ``scale``: per the geff spec, that describes how to
+            convert stored positions to world units, and is applied to ``pos`` on
+            import when it actually differs from the segmentation scale (see
+            :meth:`GeffTracksBuilder.apply_points_scale`) -- resulting
+            ``Tracks.position_units`` reflects whether that happened ("world") or
+            not ("pixel", the default when nothing on the file says otherwise).
         edge_name_map: Optional mapping from standard funtracks keys to GEFF
             edge property names. Example: {"iou": "overlap"}
         database: Optional path to a SQLite database file for backing storage.

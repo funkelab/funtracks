@@ -16,7 +16,7 @@ import numpy as np
 import tracksdata as td
 from geff._typing import InMemoryGeff
 
-from funtracks.data_model.tracks import Tracks
+from funtracks.data_model.tracks import PositionUnits, Tracks
 from funtracks.features import Feature, FeatureDict, Position
 from funtracks.import_export._import_segmentation import (
     load_segmentation,
@@ -117,6 +117,10 @@ class TracksBuilder(ABC):
         # A complete FeatureDict recovered from the source, when it carries one (geff
         # written by funtracks does). None means the features get inferred instead.
         self.features: FeatureDict | None = None
+        # Whether "pos" ends up in pixel or world coordinates after apply_points_scale.
+        # Pixel by default; a format that actually converts positions (e.g. the GEFF
+        # builder, when the file declares real-world axes) sets this to "world".
+        self.position_units: PositionUnits = "pixel"
 
         # Name maps: {standard_key -> source_property_name(s)}
         # Keys are standard funtracks attribute names (e.g., "time", "pos", "seg_id")
@@ -395,11 +399,12 @@ class TracksBuilder(ABC):
         """Scale combined ``pos`` values in place, if the source declares a scale.
 
         No-op by default (deliberately not ``@abstractmethod``: this default is a
-        valid, usable behavior, not a contract every subclass must fulfill).
-        Funtracks requires ``pos`` to be in world units; formats that can store
-        points in a different unit alongside an explicit scale (e.g. GEFF's
+        valid, usable behavior, not a contract every subclass must fulfill), which
+        leaves ``self.position_units`` at its default ``"pixel"``. Formats that can
+        store points in a different unit alongside an explicit scale (e.g. GEFF's
         ``axes.scale``) override this to multiply ``pos`` by that scale after
-        :meth:`_combine_multi_value_props` has assembled it.
+        :meth:`_combine_multi_value_props` has assembled it, and to set
+        ``self.position_units = "world"`` when they do.
         """
 
     def validate(self) -> None:
@@ -672,7 +677,7 @@ class TracksBuilder(ABC):
         # sample_node = next(iter(graph.node_ids()))
         has_position = "pos" in graph.node_attr_keys()
         if has_position:
-            validate_graph_seg_match(graph, seg_array, scale, self.axis_names)
+            validate_graph_seg_match(graph, seg_array, self.axis_names)
 
         # Check if relabeling is needed (seg_id != node_id)
         node_props = self.in_memory_geff["node_props"]
@@ -766,6 +771,15 @@ class TracksBuilder(ABC):
 
         if static_features:
             tracks.features.update(static_features)
+
+    def _resolve_import_scale(self, scale: list[float] | None) -> list[float] | None:
+        """Return the scale to use for this import.
+
+        By default the caller-provided scale is used as-is (e.g. the scale a user
+        entered in a scale widget for a CSV import). Format-specific builders can
+        override this to source the scale elsewhere.
+        """
+        return scale
 
     def _retarget_position_key(self, graph: td.graph.BaseGraph) -> None:
         """Point a restored FeatureDict's position_key at the column the graph has.
@@ -866,6 +880,13 @@ class TracksBuilder(ABC):
         if self.in_memory_geff is None:
             raise ValueError("load_source() must populate self.in_memory_geff")
 
+        # Resolve the scale to use for this import. By default the caller-provided
+        # scale is used (e.g. from a scale widget); format-specific builders may
+        # override this to read a scale out of the source (the GEFF builder from the
+        # axes metadata). Runs after load_source so those builders can use anything the
+        # load turned up.
+        scale = self._resolve_import_scale(scale)
+
         # 2. Combine multi-value feature columns
         self._combine_multi_value_props(
             self.in_memory_geff["node_props"], self.node_name_map
@@ -909,6 +930,7 @@ class TracksBuilder(ABC):
                 ndim=self.ndim,
                 scale=scale,
                 features=self.features,
+                position_units=self.position_units,
             )
         else:
             # The builder always produces a solution, so declare tracklet/lineage
@@ -922,6 +944,7 @@ class TracksBuilder(ABC):
                 lineage_attr="lineage_id",
                 ndim=self.ndim,
                 scale=scale,
+                position_units=self.position_units,
             )
 
         # 8. Enable and register features from name maps

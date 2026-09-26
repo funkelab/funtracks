@@ -1,11 +1,16 @@
 """Regression tests for the geff scale round-trip.
 
 Two scales, two homes: ``Tracks.scale`` (segmentation voxel spacing) lives in
-``graph.metadata["scale"]`` and is never written to axes.scale; GEFF's
-per-axis ``scale`` means "multiply pos by this to get world units" and is
-always applied to ``pos`` on import, independent of ``Tracks.scale``. GEFFs
-written by pre-fix funtracks are the one exception -- see
-``test_legacy_funtracks_geff_scale_migrates_without_double_scaling_points``.
+``graph.metadata["scale"]``. GEFF's per-axis ``scale`` means "multiply pos by
+this to get world units" per the geff spec, but funtracks also writes it equal
+to ``Tracks.scale`` when ``position_units`` is "pixel" (the default), so a
+foreign reader has a scale to work with even though funtracks itself keeps
+positions in pixel coordinates. On import, an axes scale that matches the
+segmentation scale is recognized as describing the segmentation rather than
+converting points, and is left unapplied to ``pos`` (``position_units`` stays
+"pixel"); a genuinely different axes scale is applied and ``position_units``
+becomes "world". GEFFs written by pre-fix funtracks are a further exception --
+see ``test_legacy_funtracks_geff_scale_migrates_without_double_scaling_points``.
 """
 
 import numpy as np
@@ -36,21 +41,31 @@ def test_scale_survives_export_to_geff_roundtrip(get_tracks, tmp_path):
     assert loaded.scale == [1.0, 2.0, 0.25, 0.5]
 
 
-def test_scale_not_written_to_axes(get_tracks, tmp_path):
-    """Tracks.scale (segmentation spacing) must not leak into axes.scale,
-    which per the geff spec means something else: how to convert pos to
-    world units."""
+def test_pixel_scale_written_to_axes_and_not_double_applied(get_tracks, tmp_path):
+    """Tracks.scale (segmentation spacing) is also written to axes.scale when
+    position_units is "pixel" (the default), so a foreign reader has a scale to
+    work with. On import it must be recognized as describing the segmentation,
+    not a unit conversion, and left unapplied to pos - it round-trips as pixel,
+    not silently promoted to world."""
     tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
     tracks.scale = [1.0, 0.25, 0.5]
+    assert tracks.position_units == "pixel"
+    node_ids = sorted(tracks.graph_solution.node_ids())
+    original_pos = tracks.get_positions(node_ids)
 
     geff_path = tmp_path / "tracks.geff"
     write_to_geff(tracks, geff_path)
 
     meta = GeffMetadata.read(geff_path)
-    assert all(ax.scale is None for ax in meta.axes)
+    space_axes = [ax for ax in meta.axes if ax.type == "space"]
+    assert [ax.scale for ax in space_axes] == [0.25, 0.5]
     # tracksdata's own "scale" metadata is spatial-only (no time), unlike
     # Tracks.scale (time first, dummy 1.0).
     assert meta.extra["tracksdata"]["scale"] == [0.25, 0.5]
+
+    loaded = import_from_geff(geff_path)
+    assert loaded.position_units == "pixel"
+    np.testing.assert_allclose(loaded.get_positions(node_ids), original_pos)
 
 
 def test_explicit_scale_overrides_metadata(get_tracks, tmp_path):
