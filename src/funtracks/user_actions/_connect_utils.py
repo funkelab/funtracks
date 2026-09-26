@@ -1,10 +1,10 @@
 """Shared logic for connecting and disconnecting a selection of nodes.
 
-Both :class:`UserConnectNodes` and :class:`UserDisconnectNodes` treat a selection as
-one chain: the nodes are sorted by time and paired up consecutively, and the action
-operates on the edges between those pairs. Gaps in time are allowed, so the nodes do
-not need to be in consecutive time points, but two nodes in the same time point cannot
-be chained and are rejected.
+:class:`UserConnectNodes` treats a selection as one chain: the nodes are sorted by
+time and paired up consecutively, and the action operates on the edges between those
+pairs. Gaps in time are allowed, so the nodes do not need to be in consecutive time
+points, but two nodes in the same time point cannot be chained and are rejected.
+:class:`UserDisconnectNodes` only shares the validation of the selection.
 """
 
 from __future__ import annotations
