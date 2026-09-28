@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import tracksdata as td
+from tracksdata.nodes import Mask
 
 from funtracks.exceptions import InvalidActionError
 from funtracks.utils.tracksdata_utils import pixels_to_td_mask
@@ -34,6 +35,7 @@ class UserAddNode(ActionGroup):
         node: int,
         attributes: dict[str, Any],
         pixels: tuple[np.ndarray, ...] | None = None,
+        mask: Mask | None = None,
         force: bool = False,
         _top_level: bool = True,
     ):
@@ -44,7 +46,12 @@ class UserAddNode(ActionGroup):
             attributes (dict[str, Any]): A dictionary from attribute strings to values.
                 Must contain "time" and tracks.features.tracklet_key.
             pixels (tuple[np.ndarray, ...] | None, optional): The pixels of the associated
-                segmentation to add to the tracks. Defaults to None.
+                segmentation to add to the tracks. Defaults to None. Ignored when
+                ``mask`` is given.
+            mask (Mask | None, optional): The segmentation to add to the tracks, in the
+                bounding box + mask form it is stored as. Prefer this over ``pixels``
+                when the caller already holds a mask, to avoid converting back and
+                forth. Defaults to None.
             force (bool, optional): Whether to force the action by removing any
                 conflicting edges. Defaults to False.
             _top_level (bool): If True, add this action to the history and emit
@@ -160,8 +167,9 @@ class UserAddNode(ActionGroup):
         if pred is not None and succ is not None:
             self.actions.append(DeleteEdge(tracks, (pred, succ)))
         # put mask+bbox into attributes
-        if pixels is not None:
+        if mask is None and pixels is not None:
             mask = pixels_to_td_mask(pixels, self.tracks.ndim)
+        if mask is not None:
             mask_key = td.DEFAULT_ATTR_KEYS.MASK
             attributes[mask_key] = mask
             mask_feature = tracks.features.get(mask_key)

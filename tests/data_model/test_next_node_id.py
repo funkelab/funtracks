@@ -2,8 +2,9 @@
 
 import pytest
 
+from funtracks.data_model import Tracks
 from funtracks.user_actions import UserAddNode, UserDeleteNode, UserUpdateSegmentation
-from funtracks.utils.tracksdata_utils import td_mask_to_pixels
+from funtracks.utils.tracksdata_utils import create_empty_graph, td_mask_to_pixels
 
 
 @pytest.mark.parametrize("ndim", [3])
@@ -113,3 +114,17 @@ def test_next_node_id_on_an_empty_graph(get_tracks):
 
     assert tracks.get_next_node_id() >= 0
     assert not tracks.graph_solution.has_node(tracks.get_next_node_id())
+
+
+def test_next_node_id_on_a_graph_without_nodes():
+    """A graph that never had nodes (e.g. tracking from scratch) must not hand out 0,
+    the background label of a segmentation."""
+    graph = create_empty_graph(
+        node_attributes=["pos", "area", "mask", "bbox"],
+        position_attrs=["pos"],
+        ndim=3,
+    )
+    graph._update_metadata(shape=(5, 64, 64))
+    tracks = Tracks(graph=graph, ndim=3, time_attr="t", pos_attr="pos")
+
+    assert tracks.get_next_node_id() == 1
