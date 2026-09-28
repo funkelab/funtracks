@@ -69,9 +69,12 @@ def test_save_load(
     else:
         assert loaded.segmentation is None
 
-    # graphs_equal doesn't exist for TracksData, so we check properties
-    assert set(loaded.graph_solution.node_attr_keys()) == set(
-        tracks.graph_solution.node_attr_keys()
+    # graphs_equal doesn't exist for TracksData, so we check properties.
+    # Node attr keys are compared on graph_full: the solution view is lean on a
+    # database-backed graph (no local mask column) and not on the loaded, in-memory
+    # one, so the views legitimately disagree while the data does not.
+    assert set(loaded.graph_full.node_attr_keys()) == set(
+        tracks.graph_full.node_attr_keys()
     )
     assert set(loaded.graph_solution.edge_attr_keys()) == set(
         tracks.graph_solution.edge_attr_keys()
