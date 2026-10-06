@@ -1,4 +1,5 @@
 from __future__ import annotations
+from funtracks.annotators._dummy_trainable_annotator import DummyTrainableAnnotator
 
 import logging
 from collections.abc import Iterable, Sequence
@@ -392,6 +393,7 @@ class Tracks:
             AnnotatorRegistry,
             EdgeAnnotator,
             RegionpropsAnnotator,
+            DummyTrainableAnnotator,
         )
 
         annotator_list: list[GraphAnnotator] = []
@@ -414,6 +416,8 @@ class Tracks:
         # EdgeAnnotator: requires segmentation
         if EdgeAnnotator.can_annotate(self):
             annotator_list.append(EdgeAnnotator(self))
+
+        annotator_list.append(DummyTrainableAnnotator(self))
 
         # TrackAnnotator is registered on every Tracks — track ids are a core feature,
         # not a separate "type" of tracks. On an empty solution view it simply computes
@@ -474,6 +478,7 @@ class Tracks:
                 if self.features.position_key is None:
                     self.features.position_key = annotator.pos_key
                 core_features.extend(annotator.pos_keys)
+        core_features.append("trainable_score")
         self._register_core_features(core_features)
 
     def _register_core_features(self, keys: list[str]) -> None:
