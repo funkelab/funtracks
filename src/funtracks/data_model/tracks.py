@@ -928,6 +928,35 @@ class Tracks:
         """
         return {k: feat for k, (feat, _) in self.annotators.all_features.items()}
 
+    def register_annotator(
+        self, annotator: GraphAnnotator, enable_all: bool = False
+    ) -> None:
+        """Add a custom annotator to this Tracks' annotator registry.
+
+        Makes the annotator's features available via get_available_features().
+        By default they are not activated or computed - call enable_features()
+        with the desired keys afterwards.
+
+        Args:
+            annotator: An already-constructed GraphAnnotator (or subclass)
+                instance, built against this same Tracks.
+            enable_all: If True, immediately enable (activate and compute) every
+                feature the annotator owns, instead of leaving them inactive.
+
+        Raises:
+            ValueError: If any feature key the annotator owns collides with a
+                key already owned by a registered annotator.
+        """
+        collisions = set(annotator.all_features) & set(self.annotators.all_features)
+        if collisions:
+            raise ValueError(
+                f"Cannot register annotator: feature keys {sorted(collisions)} "
+                "are already owned by another registered annotator."
+            )
+        self.annotators.append(annotator)
+        if enable_all:
+            self.enable_features(list(annotator.all_features))
+
     @property
     def regionprops_annotator(self) -> RegionpropsAnnotator | None:
         """The registered RegionpropsAnnotator, or None when there is no segmentation."""
