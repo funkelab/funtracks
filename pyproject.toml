@@ -8,7 +8,7 @@ dynamic = ["version"]
 description = "Cell tracking data model"
 readme = "README.md"
 license = { text = "BSD 3-Clause License" }
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [
     { name = "Caroline Malin-Mayor", email = "malinmayorc@janelia.hhmi.org" },
 ]
@@ -21,7 +21,6 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -48,7 +47,7 @@ dependencies =[
     # Python version (mirroring geff) instead of pinning zarr, so tracksdata
     # remains co-installable with downstream tools still on zarr 2.x.
     "numcodecs>=0.13",
-    "numcodecs>=0.13,<0.16; python_version > '3.10,<=3.11'", # TODO: remove pin once the 16 release is stable
+    "numcodecs>=0.13,<0.16; python_version <= '3.11'", # TODO: remove pin once the 16 release is stable
     "numcodecs>=0.15; python_version >= '3.13'", # TODO: remove pin once the 16 release is stable
 ]
 
@@ -83,7 +82,7 @@ norecursedirs = ["tests/benchmarks"]
 
 [tool.ruff]
 line-length = 90
-target-version = "py310"
+target-version = "py311"
 fix = true
 src = ["src"]
 extend-exclude = [".github"]
@@ -121,7 +120,7 @@ unfixable = [
 
 [tool.mypy]
 ignore_missing_imports = true
-python_version = "3.10"
+python_version = "3.11"
 explicit_package_bases = true
 
 [tool.coverage.report]
