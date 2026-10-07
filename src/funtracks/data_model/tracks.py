@@ -1,5 +1,4 @@
 from __future__ import annotations
-from funtracks.annotators._dummy_trainable_annotator import DummyTrainableAnnotator
 
 import logging
 from collections.abc import Iterable, Sequence
@@ -392,8 +391,8 @@ class Tracks:
         from funtracks.annotators import (
             AnnotatorRegistry,
             EdgeAnnotator,
+            HoctAnnotator,
             RegionpropsAnnotator,
-            DummyTrainableAnnotator,
         )
 
         annotator_list: list[GraphAnnotator] = []
@@ -417,7 +416,7 @@ class Tracks:
         if EdgeAnnotator.can_annotate(self):
             annotator_list.append(EdgeAnnotator(self))
 
-        annotator_list.append(DummyTrainableAnnotator(self))
+        annotator_list.append(HoctAnnotator(self, retrain_every=1))
 
         # TrackAnnotator is registered on every Tracks — track ids are a core feature,
         # not a separate "type" of tracks. On an empty solution view it simply computes

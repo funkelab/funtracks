@@ -8,7 +8,7 @@ dynamic = ["version"]
 description = "Cell tracking data model"
 readme = "README.md"
 license = { text = "BSD 3-Clause License" }
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [
     { name = "Caroline Malin-Mayor", email = "malinmayorc@janelia.hhmi.org" },
 ]
@@ -52,6 +52,9 @@ dependencies =[
     "numcodecs>=0.15; python_version >= '3.13'", # TODO: remove pin once the 16 release is stable
 ]
 
+[project.optional-dependencies]
+hoct = ["hoct[scoring]"]
+
 [project.urls]
 "Bug Tracker" = "https://github.com/funkelab/funtracks/issues"
 "Documentation" = "https://funkelab.github.io/funtracks/"
@@ -68,6 +71,7 @@ docs = [
     "mkdocstrings[python]>=0.28.2",
     "mkdocs-api-autonav>=0.4.0"]
 dev = [
+    "funtracks[hoct]",
     "ruff>=0.12",
     "pre-commit>=4,<5",
     "mypy>=1,<2",
@@ -128,3 +132,6 @@ explicit_package_bases = true
 exclude_also = [
     "if TYPE_CHECKING:",
 ]
+
+[tool.uv.sources]
+hoct = { git = "https://github.com/funkelab/hoct" }
