@@ -134,4 +134,4 @@ exclude_also = [
 ]
 
 [tool.uv.sources]
-hoct = { git = "https://github.com/funkelab/hoct" }
+hoct = { git = "https://github.com/funkelab/hoct", branch="scoring_correcting" }
