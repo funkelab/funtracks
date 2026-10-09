@@ -391,6 +391,7 @@ class Tracks:
         from funtracks.annotators import (
             AnnotatorRegistry,
             EdgeAnnotator,
+            HoctAnnotator,
             RegionpropsAnnotator,
         )
 
@@ -414,6 +415,8 @@ class Tracks:
         # EdgeAnnotator: requires segmentation
         if EdgeAnnotator.can_annotate(self):
             annotator_list.append(EdgeAnnotator(self))
+
+        annotator_list.append(HoctAnnotator(self, retrain_every=1))
 
         # TrackAnnotator is registered on every Tracks — track ids are a core feature,
         # not a separate "type" of tracks. On an empty solution view it simply computes
@@ -474,6 +477,7 @@ class Tracks:
                 if self.features.position_key is None:
                     self.features.position_key = annotator.pos_key
                 core_features.extend(annotator.pos_keys)
+        core_features.append("trainable_score")
         self._register_core_features(core_features)
 
     def _register_core_features(self, keys: list[str]) -> None:
