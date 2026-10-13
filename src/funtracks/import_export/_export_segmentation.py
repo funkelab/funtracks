@@ -96,6 +96,8 @@ def export_segmentation(
     shape = tracks.segmentation.shape
 
     if label_attr is not None:
+        # A subgraph of a lean solution view inherits its key list and its root
+        # fallback, so the masks this renders are fetched from graph_full per chunk.
         graph = (
             tracks.graph_solution.filter(node_ids=list(node_ids)).subgraph()
             if node_ids is not None
