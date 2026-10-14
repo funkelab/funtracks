@@ -404,8 +404,10 @@ class TestRegionpropsAnnotator:
         graph = get_graph(ndim, with_seg=False)
         tracks = Tracks(graph, ndim=ndim, **track_attrs)
         assert tracks.regionprops_annotator is None
-        with pytest.raises(ValueError, match="no segmentation"):
-            tracks.set_intensity_images([_frame_index_image(ndim)])
+        # Without a segmentation, intensity is measured around the points instead
+        raw = _frame_index_image(ndim)
+        tracks.set_intensity_images([raw])
+        assert tracks.point_intensity_annotator.intensity_images[0] is raw
 
     def test_missing_seg(self, get_graph, ndim):
         """Test that RegionpropsAnnotator gracefully handles missing segmentation."""

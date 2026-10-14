@@ -41,6 +41,7 @@ if TYPE_CHECKING:
     from funtracks.annotators import (
         AnnotatorRegistry,
         GraphAnnotator,
+        PointIntensityAnnotator,
         RegionpropsAnnotator,
     )
 
@@ -379,6 +380,7 @@ class Tracks:
 
         Creates annotators conditionally:
         - RegionpropsAnnotator: Only if segmentation is provided
+        - PointIntensityAnnotator: Only if segmentation is NOT provided
         - EdgeAnnotator: Only if segmentation is provided
         - TrackAnnotator: Always (every Tracks has track ids)
 
@@ -391,6 +393,7 @@ class Tracks:
         from funtracks.annotators import (
             AnnotatorRegistry,
             EdgeAnnotator,
+            PointIntensityAnnotator,
             RegionpropsAnnotator,
         )
 
@@ -406,6 +409,17 @@ class Tracks:
                 RegionpropsAnnotator(
                     self,
                     pos_key=self.features.position_key,
+                    intensity_images=self._intensity_images,
+                    channel_names=self._channel_names,
+                )
+            )
+
+        # PointIntensityAnnotator: measures around the points when there is no
+        # segmentation to measure inside
+        if PointIntensityAnnotator.can_annotate(self):
+            annotator_list.append(
+                PointIntensityAnnotator(
+                    self,
                     intensity_images=self._intensity_images,
                     channel_names=self._channel_names,
                 )
@@ -938,6 +952,25 @@ class Tracks:
                 return annotator
         return None
 
+    @property
+    def point_intensity_annotator(self) -> PointIntensityAnnotator | None:
+        """The registered PointIntensityAnnotator, or None when there is a
+        segmentation."""
+        from funtracks.annotators import PointIntensityAnnotator
+
+        for annotator in self.annotators:
+            if isinstance(annotator, PointIntensityAnnotator):
+                return annotator
+        return None
+
+    @property
+    def intensity_annotator(
+        self,
+    ) -> RegionpropsAnnotator | PointIntensityAnnotator | None:
+        """The annotator that computes the "intensity" feature: inside the masks when
+        there is a segmentation, around the points otherwise."""
+        return self.regionprops_annotator or self.point_intensity_annotator
+
     def set_intensity_images(
         self,
         intensity_images: Sequence[IntensityImage] | None,
@@ -949,24 +982,55 @@ class Tracks:
         carry. Call this before enable_features(["intensity"]); if intensity is already
         enabled, its values are recomputed here.
 
+        With a segmentation, intensity is the mean inside each mask. Without one, it
+        is the mean in a disk/sphere around each point (see set_intensity_diameter).
+
         Args:
             intensity_images: Raw images, one per channel, each shaped like the
-                segmentation (t, [z], y, x). Pass None or an empty list to clear.
+                segmentation (t, [z], y, x), or with the dimensions of the tracks if
+                there is no segmentation. Pass None or an empty list to clear.
             channel_names: Display names, one per intensity image.
 
         Raises:
-            ValueError: If there is no segmentation (and hence no RegionpropsAnnotator),
-                or the images do not match the segmentation shape.
+            ValueError: If there is no annotator to compute intensity with, or the
+                images do not fit the tracks.
         """
-        annotator = self.regionprops_annotator
+        annotator = self.intensity_annotator
         if annotator is None:
             raise ValueError(
-                "Cannot set intensity images: this Tracks has no segmentation, so "
-                "there is no RegionpropsAnnotator to compute intensity with."
+                "Cannot set intensity images: there is no annotator to compute "
+                "intensity with."
             )
         annotator.set_intensity_images(intensity_images, channel_names)
         self._intensity_images = intensity_images
         self._channel_names = channel_names
+
+    def set_intensity_diameter(self, diameter: float) -> None:
+        """Set the diameter of the disk/sphere that point intensity is measured in.
+
+        Only applies to tracks without a segmentation, where intensity is measured
+        around each point. Recomputes the intensity feature if it is enabled.
+
+        Args:
+            diameter: The diameter in world units (the units of the node positions).
+
+        Raises:
+            ValueError: If the tracks have a segmentation (intensity is then measured
+                inside the masks), or the diameter is not positive.
+        """
+        annotator = self.point_intensity_annotator
+        if annotator is None:
+            raise ValueError(
+                "Cannot set an intensity diameter: this Tracks has a segmentation, so "
+                "intensity is measured inside the masks."
+            )
+        annotator.set_diameter(diameter)
+
+    @property
+    def intensity_diameter(self) -> float | None:
+        """The point intensity diameter, or None when there is a segmentation."""
+        annotator = self.point_intensity_annotator
+        return None if annotator is None else annotator.diameter
 
     def enable_features(self, feature_keys: list[str], recompute: bool = True) -> None:
         """Enable multiple features for computation efficiently.
