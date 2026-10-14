@@ -178,10 +178,23 @@ def _build_geff_metadata(
         else ["time", "space", "space", "space"]
     )
 
-    # Create axes metadata. Points are always in world units, so no "scale" is
-    # written to the geff axes.
+    # Create axes metadata. When position_units is "world" points are already in
+    # world units, so no "scale" is written to the geff axes (world is the
+    # default a foreign reader should assume for an axis with no scale at all).
+    # When "pixel", the segmentation scale is written into axes.scale too, so a
+    # round trip through geff (or a foreign geff reader) can tell these apart
+    # from a genuine unit conversion: apply_points_scale on import recognizes an
+    # axes scale that matches tracks.scale as "this describes the segmentation,
+    # not a conversion" and leaves pos alone.
+    axis_scale = None
+    if tracks.position_units == "pixel" and tracks.scale is not None:
+        axis_scale = dict(zip(axis_names, tracks.scale, strict=True))
     axes = [
-        {"name": name, "type": axis_type}
+        {
+            "name": name,
+            "type": axis_type,
+            **({"scale": axis_scale[name]} if axis_scale is not None else {}),
+        }
         for name, axis_type in zip(axis_names, axis_types, strict=True)
     ]
 

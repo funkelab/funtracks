@@ -195,6 +195,32 @@ def test_set_positions_list(graph_2d_list):
     )
 
 
+def test_position_scale_defaults_to_pixel(graph_2d_with_segmentation):
+    """position_units defaults to "pixel", so position_scale is just tracks.scale."""
+    scale = [1.0, 2.0, 3.0]
+    tracks = Tracks(graph_2d_with_segmentation, ndim=3, scale=scale, **track_attrs)
+    assert tracks.position_units == "pixel"
+    assert tracks.position_scale == scale
+    # tracks.scale itself must stay the real segmentation scale either way
+    assert tracks.scale == scale
+
+
+def test_position_scale_is_identity_in_world_mode(graph_2d_with_segmentation):
+    """In world mode positions need no further scaling, but tracks.scale must not
+    change: the segmentation is still pixel-indexed and still needs it."""
+    scale = [1.0, 2.0, 3.0]
+    tracks = Tracks(
+        graph_2d_with_segmentation,
+        ndim=3,
+        scale=scale,
+        position_units="world",
+        **track_attrs,
+    )
+    assert tracks.position_units == "world"
+    assert tracks.position_scale is None
+    assert tracks.scale == scale
+
+
 def test_get_mask_none(graph_2d_with_track_id):
     tracks = Tracks(graph_2d_with_track_id, ndim=3, **track_attrs)
     assert tracks.get_mask(1) is None
@@ -376,6 +402,109 @@ def test_update_mask_syncs_bbox(graph_2d_with_segmentation):
     # read rather than returning the same object (unlike the in-memory backend).
     assert stored_mask == new_mask
     assert np.array_equal(stored_bbox, new_mask.bbox)
+
+
+@pytest.fixture
+def scaled_tracks(get_graph) -> Tracks:
+    """2D+time tracks with segmentation, an unscaled scale, and size features on."""
+    tracks = Tracks(
+        get_graph(3, with_seg=True), ndim=3, scale=[1.0, 1.0, 1.0], **track_attrs
+    )
+    tracks.enable_features(["pos", "area", "ellipse_axis_radii"])
+    return tracks
+
+
+def _node_attrs(tracks: Tracks, key: str) -> dict[int, object]:
+    """Every node's value for one feature, as plain floats/lists for comparison."""
+    return {
+        node: np.asarray(tracks.get_node_attr(node, key)).tolist()
+        for node in tracks.graph_full.node_ids()
+    }
+
+
+def test_update_scale(scaled_tracks):
+    areas_before = _node_attrs(scaled_tracks, "area")
+    positions_before = _node_attrs(scaled_tracks, "pos")
+    refreshes = []
+    scaled_tracks.refresh.connect(lambda *args: refreshes.append(args))
+
+    scaled_tracks.update_scale([1, 2, 3])
+
+    assert scaled_tracks.scale == [1.0, 2.0, 3.0]
+    assert len(refreshes) == 1
+
+    # areas are in world units, so they follow the new voxel size
+    areas_after = _node_attrs(scaled_tracks, "area")
+    for node, before in areas_before.items():
+        assert areas_after[node] == pytest.approx(before * 6.0)
+
+    # positions stay in pixel coordinates
+    assert _node_attrs(scaled_tracks, "pos") == positions_before
+
+
+def test_update_scale_unchanged_is_noop(scaled_tracks):
+    refreshes = []
+    scaled_tracks.refresh.connect(lambda *args: refreshes.append(args))
+    scaled_tracks.update_scale([1, 1, 1])
+    assert refreshes == []
+
+
+def test_update_scale_skips_disabled_features(get_graph):
+    tracks = Tracks(
+        get_graph(3, with_seg=True), ndim=3, scale=[1.0, 1.0, 1.0], **track_attrs
+    )
+    tracks.enable_features(["pos"])
+
+    tracks.update_scale([1.0, 2.0, 2.0])
+
+    assert tracks.scale == [1.0, 2.0, 2.0]
+    assert "area" not in tracks.features
+
+
+def test_update_scale_wrong_ndim(scaled_tracks):
+    with pytest.raises(ValueError, match="one value per dimension"):
+        scaled_tracks.update_scale([1.0, 1.0])
+
+
+def test_update_scale_restores_scale_when_recompute_fails(get_graph):
+    """An anisotropic scale is rejected by skimage's perimeter, so nothing changes.
+
+    The tracks must not be left holding the new scale with values measured under
+    the old one.
+    """
+    tracks = Tracks(
+        get_graph(3, with_seg=True), ndim=3, scale=[1.0, 1.0, 1.0], **track_attrs
+    )
+    tracks.enable_features(["area", "perimeter"])
+    areas_before = _node_attrs(tracks, "area")
+    refreshes = []
+    tracks.refresh.connect(lambda *args: refreshes.append(args))
+
+    with pytest.raises(NotImplementedError):
+        tracks.update_scale([1.0, 2.0, 3.0])
+
+    assert tracks.scale == [1.0, 1.0, 1.0]
+    assert _node_attrs(tracks, "area") == areas_before
+    assert refreshes == []
+
+
+def test_update_scale_leaves_pixel_space_features_alone(get_graph, monkeypatch):
+    """Position is `centroid_pixel`, so it is not even handed to the annotator."""
+    tracks = Tracks(
+        get_graph(3, with_seg=True), ndim=3, scale=[1.0, 1.0, 1.0], **track_attrs
+    )
+    tracks.enable_features(["pos", "area"])
+
+    computed = []
+    annotator = tracks.annotators[0]
+    original = annotator.compute
+    monkeypatch.setattr(
+        annotator, "compute", lambda keys=None: computed.append(keys) or original(keys)
+    )
+
+    tracks.update_scale([1.0, 2.0, 3.0])
+
+    assert computed == [["area"]]
 
 
 def test_has_track_id_at_time(get_tracks):
