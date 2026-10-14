@@ -391,6 +391,7 @@ class Tracks:
         from funtracks.annotators import (
             AnnotatorRegistry,
             EdgeAnnotator,
+            HoctAnnotator,
             RegionpropsAnnotator,
         )
 
@@ -414,6 +415,8 @@ class Tracks:
         # EdgeAnnotator: requires segmentation
         if EdgeAnnotator.can_annotate(self):
             annotator_list.append(EdgeAnnotator(self))
+
+        annotator_list.append(HoctAnnotator(self, retrain_every=1))
 
         # TrackAnnotator is registered on every Tracks — track ids are a core feature,
         # not a separate "type" of tracks. On an empty solution view it simply computes
@@ -440,18 +443,15 @@ class Tracks:
                 self.annotators.activate_features([key])
 
     def _check_existing_feature(self, key: str) -> bool:
-        """Detect if a key already exists on the graph by sampling the first node.
+        """Check whether a given feature exists.
 
-        Returns:
-            bool: True if the key is on the first sampled node or there are no nodes,
-                and False if missing from the first node.
+        Works for both node and edge features.
         """
-        if self.graph_solution.num_nodes() == 0:
-            return True
-
-        # Check which attributes exist
-        node_attrs = set(self.graph_solution.node_attr_keys())
-        return key in node_attrs
+        feature, _ = self.annotators.all_features[key]
+        scope = feature["feature_type"]
+        return ("node" not in scope or key in self.graph_full.node_attr_keys()) and (
+            "edge" not in scope or key in self.graph_full.edge_attr_keys()
+        )
 
     def _setup_core_computed_features(self) -> None:
         """Sets up core computed position features.
