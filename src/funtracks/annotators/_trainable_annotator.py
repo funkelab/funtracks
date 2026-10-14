@@ -46,6 +46,9 @@ class TrainableAnnotator(GraphAnnotator):
         Args:
             action (BasicAction): The action that triggered this update
         """
+        if self.score_key not in self.features:
+            return
+
         # only record adding / removing
         if not isinstance(action, (AddEdge, DeleteEdge)):
             return

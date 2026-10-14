@@ -474,7 +474,6 @@ class Tracks:
                 if self.features.position_key is None:
                     self.features.position_key = annotator.pos_key
                 core_features.extend(annotator.pos_keys)
-        core_features.append("trainable_score")
         self._register_core_features(core_features)
 
     def _register_core_features(self, keys: list[str]) -> None:
