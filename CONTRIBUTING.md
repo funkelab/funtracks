@@ -22,20 +22,7 @@ pre-commit hooks. Run `just` to see all available recipes.
 
 ## Dependencies
 
-Dependencies are declared in `pyproject.toml` and pinned in `uv.lock`, which is
-committed. The lock file is what makes an environment reproducible months later
-and keeps local and cluster runs identical; it resolves for every platform and
-Python version allowed by `requires-python`, so a lock file created on one OS
-works on the others.
-
-Add or remove dependencies with uv, which updates `pyproject.toml` and the lock
-file together:
-
-```bash
-uv add "numpy>=1.26,<3"          # runtime: floor at the oldest version you support
-uv add --group dev "ruff>=0.16,<0.17"   # tooling: floor at the current release
-uv remove numpy
-```
+Dependencies are declared in `pyproject.toml` and have the following conventions.
 
 ### Every dependency needs a lower and an upper bound
 
