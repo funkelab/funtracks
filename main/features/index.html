@@ -1150,6 +1150,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#funtracks.data_model.Tracks.register_annotator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;register_annotator
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#funtracks.data_model.Tracks.set_intensity_images" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3761,6 +3772,17 @@
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;redo
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.data_model.Tracks.register_annotator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;register_annotator
       
     </span>
   </a>
@@ -7675,6 +7697,104 @@ The action contains all necessary information about which elements to update.</p
             <td>
               <div class="doc-md-description">
                 <p>True if an action was redone, False if there were no actions to redo</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="funtracks.data_model.Tracks.register_annotator" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">register_annotator</span>
+
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">register_annotator</span><span class="p">(</span>
+    <span class="n">annotator</span><span class="p">:</span> <span class="n">GraphAnnotator</span><span class="p">,</span> <span class="n">enable_all</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Add a custom annotator to this Tracks' annotator registry.</p>
+<p>Makes the annotator's features available via get_available_features().
+By default they are not activated or computed - call enable_features()
+with the desired keys afterwards.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>annotator</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="funtracks.annotators.GraphAnnotator" href="#funtracks.annotators.GraphAnnotator">GraphAnnotator</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>An already-constructed GraphAnnotator (or subclass)
+instance, built against this same Tracks.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>enable_all</code>
+            </td>
+            <td>
+                  <code><span title="bool">bool</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If True, immediately enable (activate and compute) every
+feature the annotator owns, instead of leaving them inactive.</p>
+              </div>
+            </td>
+            <td>
+                  <code>False</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If any feature key the annotator owns collides with a
+key already owned by a registered annotator.</p>
               </div>
             </td>
           </tr>
