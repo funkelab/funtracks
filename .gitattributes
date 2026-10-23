@@ -1,0 +1,8 @@
+# Normalize line endings: LF in the repository and on checkout everywhere, so
+# that contributors on Windows do not produce whole-file diffs.
+* text=auto eol=lf
+
+# Collapse uv.lock in diffs and keep it out of GitHub's language statistics.
+# merge=binary avoids pointless 3-way merge conflicts in a generated file --
+# regenerate it with `uv lock` instead of resolving conflicts by hand.
+uv.lock merge=binary linguist-language=TOML linguist-generated=true
