@@ -4,13 +4,44 @@ import pytest
 import tracksdata as td
 
 from funtracks.actions import UpdateNodeAttrs
+from funtracks.annotators import GraphAnnotator
 from funtracks.data_model import Tracks
-from funtracks.features import SegBbox, SegMask
+from funtracks.features import Feature, SegBbox, SegMask
 from funtracks.user_actions import UserUpdateSegmentation
 from funtracks.utils.tracksdata_utils import (
     create_empty_graph,
     to_polars_dtype,
 )
+
+
+class DummyAnnotator(GraphAnnotator):
+    """Minimal annotator that writes a constant value to a single node feature."""
+
+    def __init__(self, tracks, key="dummy", value=1.0):
+        self.key = key
+        self.value = value
+        super().__init__(
+            tracks,
+            {
+                key: Feature(
+                    feature_type="node",
+                    value_type="float",
+                    num_values=1,
+                    default_value=0.0,
+                )
+            },
+        )
+
+    def compute(self, feature_keys=None):
+        keys_to_compute = self._filter_feature_keys(feature_keys)
+        if self.key not in keys_to_compute:
+            return
+        for node in self.graph.node_ids():
+            self.tracks._set_node_attr(node, self.key, self.value)
+
+    def update(self, action):
+        pass
+
 
 track_attrs = {"time_attr": "t", "tracklet_attr": "track_id"}
 
@@ -388,3 +419,45 @@ def test_has_track_id_at_time(get_tracks):
     assert not tracks.has_track_id_at_time(3, 0)
     assert not tracks.has_track_id_at_time(3, 3)
     assert not tracks.has_track_id_at_time(99, 0)
+
+
+def test_register_annotator_exposes_features(graph_2d_with_segmentation):
+    tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
+    annotator = DummyAnnotator(tracks)
+
+    assert "dummy" not in tracks.get_available_features()
+    tracks.register_annotator(annotator)
+
+    assert annotator in tracks.annotators
+    assert "dummy" in tracks.get_available_features()
+
+
+def test_register_annotator_default_does_not_activate(graph_2d_with_segmentation):
+    tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
+    annotator = DummyAnnotator(tracks)
+
+    tracks.register_annotator(annotator)
+
+    assert "dummy" not in tracks.features
+    assert "dummy" not in tracks.graph_solution.node_attr_keys()
+
+
+def test_register_annotator_enable_all_activates_and_computes(
+    graph_2d_with_segmentation,
+):
+    tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
+    annotator = DummyAnnotator(tracks, value=42.0)
+
+    tracks.register_annotator(annotator, enable_all=True)
+
+    assert "dummy" in tracks.features
+    node_id = next(iter(tracks.graph_solution.node_ids()))
+    assert tracks.get_node_attr(node_id, "dummy") == 42.0
+
+
+def test_register_annotator_raises_on_key_collision(graph_2d_with_segmentation):
+    tracks = Tracks(graph_2d_with_segmentation, ndim=3, **track_attrs)
+    tracks.register_annotator(DummyAnnotator(tracks, key="dummy"))
+
+    with pytest.raises(ValueError, match="dummy"):
+        tracks.register_annotator(DummyAnnotator(tracks, key="dummy"))
