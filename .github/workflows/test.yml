@@ -27,21 +27,18 @@ jobs:
         # ceiling, since that's where a dependency-resolution or OS interaction is
         # most likely to first appear. The intermediate versions get a single-OS
         # sanity check instead of full cross-OS coverage -- an OS-specific bug that
-        # only reproduces on 3.11 or 3.12 (and not 3.10 or 3.13) is possible but
+        # only reproduces on 3.12 (and not 3.11 or 3.13) is possible but
         # unlikely enough not to justify the extra CI cost of testing for it.
         include:
           - platform: ubuntu-latest
-            python-version: "3.10"
+            python-version: "3.11"
             resolution: lowest-direct
           - platform: macos-latest
-            python-version: "3.10"
+            python-version: "3.11"
             resolution: lowest-direct
           - platform: windows-latest
-            python-version: "3.10"
-            resolution: lowest-direct
-          - platform: ubuntu-latest
             python-version: "3.11"
-            resolution: highest
+            resolution: lowest-direct
           - platform: ubuntu-latest
             python-version: "3.12"
             resolution: highest
