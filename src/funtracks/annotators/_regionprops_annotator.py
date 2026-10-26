@@ -58,10 +58,10 @@ def _centroid(mask: Mask, spacing: tuple[float, ...] | None) -> list[float]:
     arr = mask.mask
     bbox_min = mask.bbox[: arr.ndim]
     local = np.array([idx.mean() for idx in np.nonzero(arr)])
-    pixel = local + bbox_min
+    centroid = local + bbox_min
     if spacing is not None:
-        pixel = pixel * np.asarray(spacing)
-    return [float(v) for v in pixel]
+        centroid = centroid * np.asarray(spacing)
+    return [float(v) for v in centroid]
 
 
 def _bbox_slicing(mask: Mask) -> tuple[slice, ...]:
