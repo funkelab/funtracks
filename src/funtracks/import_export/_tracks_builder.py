@@ -887,9 +887,9 @@ class TracksBuilder(ABC):
 
         # Resolve the scale to use for this import. By default the caller-provided
         # scale is used (e.g. from a scale widget); format-specific builders may
-        # override this to read a scale out of the source (the GEFF builder from the
-        # axes metadata). Runs after load_source so those builders can use anything the
-        # load turned up.
+        # override this (the CSV builder falls back to its scale columns, the GEFF
+        # builder keeps the scale for apply_points_scale). Runs after load_source so
+        # those builders can use anything the load turned up.
         scale = self._resolve_import_scale(scale)
 
         # 2. Combine multi-value feature columns
