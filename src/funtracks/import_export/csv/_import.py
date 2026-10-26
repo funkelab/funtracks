@@ -20,6 +20,37 @@ if TYPE_CHECKING:
     from funtracks.data_model.tracks import Tracks
 
 
+# Per-axis scale columns written by export_to_csv, in spatial axis order.
+SCALE_COLUMNS = ("z_scale", "y_scale", "x_scale")
+
+
+def _read_scale_columns(df: pd.DataFrame) -> list[float] | None:
+    """Read the spatial scale from the per-axis scale columns, if present.
+
+    Args:
+        df: A pandas dataframe, possibly holding ``z_scale``/``y_scale``/``x_scale``.
+
+    Returns:
+        list[float] | None: One value per spatial axis present, in (z, y, x) order,
+            or None if the dataframe has no scale columns.
+
+    Raises:
+        ValueError: If a scale column does not hold a single constant value.
+    """
+    cols = [col for col in SCALE_COLUMNS if col in df.columns]
+    if not cols:
+        return None
+    scale = []
+    for col in cols:
+        values = df[col].dropna().unique()
+        if len(values) != 1:
+            raise ValueError(
+                f"Scale column '{col}' must hold one constant value, got {values}"
+            )
+        scale.append(float(values[0]))
+    return scale
+
+
 def _ensure_integer_ids(df: pd.DataFrame) -> pd.DataFrame:
     """Ensure that the 'id' column in the dataframe contains integer values.
 
@@ -48,6 +79,18 @@ class CSVTracksBuilder(TracksBuilder):
         """Initialize CSV builder with CSV-specific required features."""
         super().__init__()
         self.required_features.extend(["id", "parent_id"])
+        # Spatial scale read from the CSV's scale columns, if it has them
+        self._file_scale: list[float] | None = None
+
+    def _resolve_import_scale(self, scale: list[float] | None) -> list[float] | None:
+        """Use the CSV's scale columns when the caller does not pass a scale.
+
+        An explicit scale always wins. The file scale is spatial only, so the dummy
+        time entry is prepended.
+        """
+        if scale is not None or self._file_scale is None:
+            return scale
+        return [1.0, *self._file_scale]
 
     def read_header(self, source: Path | pd.DataFrame) -> None:
         """Read CSV column names.
@@ -56,7 +99,11 @@ class CSVTracksBuilder(TracksBuilder):
             source: Path to CSV file or DataFrame
         """
         df = pd.read_csv(source, nrows=0) if isinstance(source, Path) else source
-        self.importable_node_props = df.columns.tolist()
+        # The per-axis scale columns written by export_to_csv carry Tracks.scale,
+        # not a node feature, so they are not offered for name mapping.
+        self.importable_node_props = [
+            col for col in df.columns if col not in SCALE_COLUMNS
+        ]
         self.importable_edge_props = []  # CSV has no edge properties
 
     def load_source(
@@ -76,6 +123,8 @@ class CSVTracksBuilder(TracksBuilder):
             if isinstance(source, Path)
             else source.copy()  # Make a copy to avoid modifying original
         )
+
+        self._file_scale = _read_scale_columns(df)
 
         # Validate that 'id' column contains unique values
         if "id" in df.columns and not df["id"].is_unique:

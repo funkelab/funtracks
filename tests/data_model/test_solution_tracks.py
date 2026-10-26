@@ -173,7 +173,7 @@ def test_export_to_csv_with_display_names(
     assert len(lines) == tracks.graph_solution.num_nodes() + 1  # add header
 
     # With display names: ID, Parent ID, Time, y, x, Tracklet ID,
-    # Lineage ID, Area
+    # Lineage ID, Area, and the per-axis scale columns
     header = [
         "ID",
         "Parent ID",
@@ -183,6 +183,8 @@ def test_export_to_csv_with_display_names(
         "Tracklet ID",
         "Lineage ID",
         "Area",
+        "y_scale",
+        "x_scale",
     ]
     assert lines[0].strip().split(",") == header
 
@@ -197,7 +199,7 @@ def test_export_to_csv_with_display_names(
     assert len(lines) == tracks.graph_solution.num_nodes() + 1  # add header
 
     # With display names: ID, Parent ID, Time, z, y, x,
-    # Tracklet ID, Lineage ID, Volume
+    # Tracklet ID, Lineage ID, Volume, and the per-axis scale columns
     header = [
         "ID",
         "Parent ID",
@@ -208,6 +210,9 @@ def test_export_to_csv_with_display_names(
         "Tracklet ID",
         "Lineage ID",
         "Volume",
+        "z_scale",
+        "y_scale",
+        "x_scale",
     ]
     assert lines[0].strip().split(",") == header
 

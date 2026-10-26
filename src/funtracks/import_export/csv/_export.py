@@ -36,6 +36,10 @@ def export_to_csv(
     and all registered features. Optionally also exports the segmentation as zarr or
     tiff. If a color dictionary is provided, it will also export the tracklet colors.
 
+    Coordinates are written as pixel coordinates. The spatial scale is written as one
+    constant column per axis (``z_scale``/``y_scale``/``x_scale``, defaulting to 1.0),
+    so a reader can convert to world units.
+
     Args:
         tracks: Tracks object containing the tracking data to export
         outfile: Path to output CSV file
@@ -164,6 +168,27 @@ def export_to_csv(
 
             column_map[feature_name] = names
 
+    # Exported coordinates are pixel coordinates, so carry the voxel size along in
+    # one constant column per spatial axis - a CSV has nowhere else to put it.
+    axes = ["z", "y", "x"] if tracks.ndim == 4 else ["y", "x"]
+    scale_columns = [f"{axis}_scale" for axis in axes]
+    # tracks.scale is optional; an absent scale means one world unit per pixel
+    scale_values = [1.0] * len(axes) if tracks.scale is None else list(tracks.scale[1:])
+    header.extend(scale_columns)
+
+    # World-unit positions are divided by the scale on the way out, so the exported
+    # coordinates are pixel coordinates either way and match the scale columns.
+    position_key = tracks.features.position_key
+    pos_keys = position_key if isinstance(position_key, list) else [position_key]
+    to_pixel = tracks.position_units == "world" and tracks.scale is not None
+
+    def pixel_position(node_id: int) -> list[float]:
+        """Node position in pixel coordinates, whatever units it is stored in."""
+        pos = tracks.get_position(node_id)
+        if to_pixel:
+            pos = [p / s for p, s in zip(pos, scale_values, strict=True)]
+        return pos
+
     # Determine which nodes to export
     if node_ids is None:
         nodes_to_keep = graph.node_ids()
@@ -184,8 +209,18 @@ def export_to_csv(
         row[cast(str, column_map["parent_id"])] = parent_id
 
         if use_display_names:
+            pixel_pos = pixel_position(node_id) if to_pixel else None
             for feature_name in feature_names:
-                value = tracks.get_node_attr(node_id, feature_name)
+                value: Any
+                if pixel_pos is not None and feature_name in pos_keys:
+                    # One combined position feature, or one scalar feature per axis
+                    value = (
+                        pixel_pos
+                        if len(pos_keys) == 1
+                        else pixel_pos[pos_keys.index(feature_name)]
+                    )
+                else:
+                    value = tracks.get_node_attr(node_id, feature_name)
                 cols = column_map[feature_name]
                 if isinstance(cols, list):
                     if not isinstance(value, (list, tuple)):
@@ -200,12 +235,13 @@ def export_to_csv(
                 tracks.get_time(node_id)
             )
 
-            pos = tracks.get_position(node_id)
+            pos = pixel_position(node_id)
             for name, value in zip(column_map["coords"], pos, strict=True):
                 row[name] = convert_numpy_to_python(value)
 
             row[cast(str, column_map["tracklet_id"])] = tracks.get_track_id(node_id)
 
+        row.update(zip(scale_columns, scale_values, strict=True))
         rows.append(row)
 
     df = pd.DataFrame(rows)

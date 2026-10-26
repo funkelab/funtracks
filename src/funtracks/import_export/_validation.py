@@ -24,19 +24,21 @@ SEG_KEY = "seg_id"
 def validate_graph_seg_match(
     graph: td.graph.BaseGraph,
     segmentation: da.Array,
-    scale: list[float],
     position_attr: list[str],
+    scale: list[float] | None = None,
 ) -> None:
     """Validate if the graph matches the provided segmentation data.
 
     Checks if the seg_id value of the last node matches the pixel value at the
-    (scaled) node coordinates.
+    node coordinates.
 
     Args:
         graph: tracksdata graph with standard keys
         segmentation: Segmentation data (dask array)
-        scale: Scaling information (pixel to world coordinates)
         position_attr: Position keys (e.g., ["y", "x"] or ["z", "y", "x"])
+        scale: Scale (including time) to divide node positions by to get pixel
+            coordinates, for positions stored in world units. None (default) when
+            positions are already pixel coordinates.
 
     Raises:
         ValueError: If the graph has no nodes, a node coordinate is out of
@@ -58,7 +60,7 @@ def validate_graph_seg_match(
 
     # Get the coordinates for the last node (using standard keys)
     # Position may be stored as composite "pos" attribute or separate y/x/z attributes
-    coord = [int(last_node_data["t"])]
+    coord: list[float] = [int(last_node_data["t"])]
     if "pos" in graph.node_attr_keys():
         # Composite position: [z, y, x] or [y, x]
         pos = last_node_data["pos"]
@@ -70,19 +72,19 @@ def validate_graph_seg_match(
         coord.append(last_node_data["y"])
         coord.append(last_node_data["x"])
 
+    # World-unit positions: convert to pixel coordinates to index the segmentation
+    if scale is not None:
+        coord = [c / s for c, s in zip(coord, scale, strict=True)]
+
     # Check bounds
     for i, (c, s) in enumerate(zip(coord, segmentation.shape, strict=False)):
-        pixel_coord = int(c / scale[i])
-        if not (0 <= pixel_coord < s):
+        if not (0 <= int(c) < s):
             raise ValueError(
-                f"Coordinate {i} ({c}) is out of bounds for segmentation shape {s} "
-                f"(pixel coord: {pixel_coord})"
+                f"Coordinate {i} ({c}) is out of bounds for segmentation shape {s}"
             )
 
     # Check if the segmentation pixel value at the coordinates matches the seg id
-    seg_id_at_coord, errors = has_seg_ids_at_coords(
-        segmentation, [coord], [seg_id], tuple(1 / s for s in scale)
-    )
+    seg_id_at_coord, errors = has_seg_ids_at_coords(segmentation, [coord], [seg_id])
     if not seg_id_at_coord:
         error_msg = "Error testing seg id:\n" + "\n".join(f"- {e}" for e in errors)
         raise ValueError(error_msg)

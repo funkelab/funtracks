@@ -178,18 +178,37 @@ def _build_geff_metadata(
         else ["time", "space", "space", "space"]
     )
 
-    # Create axes metadata. Points are always in world units, so no "scale" is
-    # written to the geff axes.
+    # Create axes metadata. When position_units is "world" points are already in
+    # world units, so no "scale" is written to the geff axes (world is the
+    # default a foreign reader should assume for an axis with no scale at all).
+    # When "pixel", the segmentation scale is written into axes.scale too, so a
+    # round trip through geff (or a foreign geff reader) can tell these apart
+    # from a genuine unit conversion: apply_points_scale on import recognizes an
+    # axes scale that matches tracks.scale as "this describes the segmentation,
+    # not a conversion" and leaves pos alone.
+    axis_scale = None
+    if tracks.position_units == "pixel" and tracks.scale is not None:
+        axis_scale = dict(zip(axis_names, tracks.scale, strict=True))
     axes = [
-        {"name": name, "type": axis_type}
+        {
+            "name": name,
+            "type": axis_type,
+            **({"scale": axis_scale[name]} if axis_scale is not None else {}),
+        }
         for name, axis_type in zip(axis_names, axis_types, strict=True)
     ]
 
     # The version stamp goes on every geff funtracks writes, including subgroup
-    # exports that omit the FeatureDict: it is what tells import that this file's
-    # points are already in world units. Without it a subgroup export looks like a
-    # foreign geff and its points would be scaled again (see `read_header`).
-    extra: dict = {"funtracks": {"version": _funtracks_version()}}
+    # exports that omit the FeatureDict: it is what tells import that this is not
+    # a legacy funtracks geff (see `read_header`). position_units is recorded
+    # explicitly so a round trip restores it exactly; the axes metadata alone
+    # cannot express "world" (no scale is written then, which reads as pixel).
+    extra: dict = {
+        "funtracks": {
+            "version": _funtracks_version(),
+            "position_units": tracks.position_units,
+        }
+    }
     if include_features:
         extra["funtracks"]["features"] = tracks.features.dump_json()
 
