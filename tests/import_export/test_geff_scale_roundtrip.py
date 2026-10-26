@@ -137,6 +137,63 @@ def test_explicit_scale_does_not_suppress_points_scaling():
     np.testing.assert_allclose(pos[:, 1], orig_x * 2.0)
 
 
+@pytest.mark.parametrize("user_scale", [2.0, 2.0 + 1e-12])
+def test_axes_scale_matching_user_scale_is_not_applied(user_scale):
+    """An axes scale equal (up to float noise) to the scale the user passes on
+    import describes the segmentation, not a unit conversion: pos stays pixel."""
+    store, graph_data = create_mock_geff(
+        node_id_dtype="uint",
+        node_axis_dtypes={"position": "float64", "time": "int64"},
+        directed=True,
+        num_nodes=5,
+        num_edges=2,
+        include_t=True,
+        include_z=False,
+        include_y=True,
+        include_x=True,
+    )
+    meta = GeffMetadata.read(store)
+    for ax in meta.axes:
+        if ax.type == "space":
+            ax.scale = 2.0
+            # No declared unit, so the scale comparison decides (not the unit)
+            ax.unit = None
+    meta.write(store)
+
+    orig_y = graph_data["node_props"]["y"]["values"]
+    orig_x = graph_data["node_props"]["x"]["values"]
+
+    tracks = import_from_geff(store, scale=[1.0, user_scale, user_scale])
+
+    assert tracks.position_units == "pixel"
+    df = tracks.graph_solution.node_attrs(attr_keys=["pos"])
+    pos = np.array(df["pos"].to_list())
+    np.testing.assert_allclose(pos[:, 0], orig_y)
+    np.testing.assert_allclose(pos[:, 1], orig_x)
+
+
+def test_v2_2_0_funtracks_geff_reads_as_world(get_tracks, tmp_path):
+    """funtracks v2.2.0 wrote world positions with a version stamp but no
+    position_units and no axes scale. Such a file must read as world, unscaled."""
+    tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
+    tracks.position_units = "world"
+    tracks.scale = [1.0, 0.25, 0.5]
+    node_ids = sorted(tracks.graph_solution.node_ids())
+    original_pos = tracks.get_positions(node_ids)
+
+    geff_path = tmp_path / "tracks.geff"
+    write_to_geff(tracks, geff_path)
+    # Strip the tag to get what v2.2.0 wrote
+    meta = GeffMetadata.read(geff_path)
+    del meta.extra["funtracks"]["position_units"]
+    meta.write(geff_path)
+
+    loaded = import_from_geff(geff_path)
+    assert loaded.position_units == "world"
+    assert loaded.scale == [1.0, 0.25, 0.5]
+    np.testing.assert_allclose(loaded.get_positions(node_ids), original_pos)
+
+
 def test_scale_none_when_axes_have_no_scale():
     """Third-party geff without per-axis scale stays 'unknown', not unity."""
     store, _ = create_mock_geff(

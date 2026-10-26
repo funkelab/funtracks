@@ -245,7 +245,15 @@ class GeffTracksBuilder(TracksBuilder):
         )
         # position_units as recorded by the funtracks writer, if present. When set
         # it is authoritative: pos was written exactly as stored on the Tracks.
+        # A versioned funtracks geff without it predates position_units (v2.2.0),
+        # when positions were always stored in world units.
         self._stored_position_units = (funtracks_extra or {}).get("position_units")
+        if (
+            self._stored_position_units is None
+            and funtracks_extra is not None
+            and "version" in funtracks_extra
+        ):
+            self._stored_position_units = "world"
         self._graph_metadata_scale = td.io.read_graph_metadata(metadata).get("scale")
 
         # Warn when masks/bboxes are present but the shape is absent.
@@ -362,6 +370,15 @@ class GeffTracksBuilder(TracksBuilder):
             return None
         return all(unit == "pixel" for unit in units)
 
+    def _resolve_import_scale(self, scale: list[float] | None) -> list[float] | None:
+        """Keep the import scale, so apply_points_scale can compare against it.
+
+        import_from_geff has already filled in the file's scale when the caller
+        passed none, so this is the caller's scale or else the file's.
+        """
+        self._import_scale = scale
+        return scale
+
     def apply_points_scale(self) -> None:
         """Decide whether ``pos`` is in pixel or world coordinates, and convert if so.
 
@@ -377,9 +394,10 @@ class GeffTracksBuilder(TracksBuilder):
         1. The spatial axes' declared ``unit`` (see ``_spatial_axes_are_pixel``),
            when present - the file says what it means, explicitly.
         2. Whether the axes scale (``_axes_scale``) matches the segmentation scale
-           (``infer_segmentation_scale``). A geff whose axes scale is exactly the
-           segmentation's voxel size is describing the segmentation, not
-           converting ``pos`` - so ``pos`` is pixel and left unscaled. A axes
+           used for this import (the caller's ``scale``, else the file's, see
+           ``_resolve_import_scale``), up to float noise. A geff whose axes scale
+           is the segmentation's voxel size is describing the segmentation, not
+           converting ``pos`` - so ``pos`` is pixel and left unscaled. An axes
            scale that differs from the segmentation scale (including an axes
            scale with no segmentation to compare against) is a real unit
            conversion, and is applied to ``pos``.
@@ -405,8 +423,10 @@ class GeffTracksBuilder(TracksBuilder):
                 # No unit, no scale declared: nothing suggests these are anything
                 # but pixel coordinates.
                 return
-            seg_scale = self.infer_segmentation_scale()
-            is_pixel = scale == seg_scale
+            # The scale this import uses for the segmentation: the caller's, or
+            # else the one from the file metadata (see import_from_geff).
+            seg_scale = getattr(self, "_import_scale", None)
+            is_pixel = seg_scale is not None and np.allclose(scale, seg_scale)
 
         if is_pixel:
             return
