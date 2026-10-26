@@ -154,6 +154,29 @@ def test_scale_none_when_axes_have_no_scale():
 
 
 @pytest.mark.parametrize("ndim", [3, 4])
+def test_world_positions_validate_against_segmentation(get_tracks, tmp_path, ndim):
+    """World-unit positions must be converted back to pixels before they are looked
+    up in a segmentation provided on import, or a valid file fails validation."""
+    # The segmentation is provided on import, so the geff itself holds no masks.
+    seg_tracks = get_tracks(ndim=ndim, with_seg=True, prefill_track_ids=True)
+    seg = np.asarray(seg_tracks.segmentation[:])
+    tracks = get_tracks(ndim=ndim, with_seg=False, prefill_track_ids=True)
+    scale = [1.0, 2.0, 4.0] if ndim == 3 else [1.0, 2.0, 4.0, 3.0]
+    node_ids = sorted(tracks.graph_solution.node_ids())
+    world_pos = tracks.get_positions(node_ids) * np.asarray(scale[1:])
+    tracks.set_positions(node_ids, world_pos)
+    tracks.position_units = "world"
+    tracks.scale = scale
+
+    geff_path = tmp_path / "tracks.geff"
+    write_to_geff(tracks, geff_path)
+
+    loaded = import_from_geff(geff_path, segmentation_path=seg)
+    assert loaded.position_units == "world"
+    np.testing.assert_allclose(loaded.get_positions(node_ids), world_pos)
+
+
+@pytest.mark.parametrize("ndim", [3, 4])
 def test_scale_roundtrip_with_segmentation(get_tracks, tmp_path, ndim):
     """Positions are in world units; the scale must come back so that
     segmentation lookups keep matching."""

@@ -677,7 +677,12 @@ class TracksBuilder(ABC):
         # sample_node = next(iter(graph.node_ids()))
         has_position = "pos" in graph.node_attr_keys()
         if has_position:
-            validate_graph_seg_match(graph, seg_array, self.axis_names)
+            validate_graph_seg_match(
+                graph,
+                seg_array,
+                self.axis_names,
+                scale=scale if self.position_units == "world" else None,
+            )
 
         # Check if relabeling is needed (seg_id != node_id)
         node_props = self.in_memory_geff["node_props"]

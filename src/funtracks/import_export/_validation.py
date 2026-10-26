@@ -25,17 +25,20 @@ def validate_graph_seg_match(
     graph: td.graph.BaseGraph,
     segmentation: da.Array,
     position_attr: list[str],
+    scale: list[float] | None = None,
 ) -> None:
     """Validate if the graph matches the provided segmentation data.
 
     Checks if the seg_id value of the last node matches the pixel value at the
-    node coordinates. Node coordinates and the segmentation are both in pixel
-    space, so no scaling is applied.
+    node coordinates.
 
     Args:
         graph: tracksdata graph with standard keys
         segmentation: Segmentation data (dask array)
         position_attr: Position keys (e.g., ["y", "x"] or ["z", "y", "x"])
+        scale: Scale (including time) to divide node positions by to get pixel
+            coordinates, for positions stored in world units. None (default) when
+            positions are already pixel coordinates.
 
     Raises:
         ValueError: If the graph has no nodes, a node coordinate is out of
@@ -57,7 +60,7 @@ def validate_graph_seg_match(
 
     # Get the coordinates for the last node (using standard keys)
     # Position may be stored as composite "pos" attribute or separate y/x/z attributes
-    coord = [int(last_node_data["t"])]
+    coord: list[float] = [int(last_node_data["t"])]
     if "pos" in graph.node_attr_keys():
         # Composite position: [z, y, x] or [y, x]
         pos = last_node_data["pos"]
@@ -68,6 +71,10 @@ def validate_graph_seg_match(
             coord.append(last_node_data["z"])
         coord.append(last_node_data["y"])
         coord.append(last_node_data["x"])
+
+    # World-unit positions: convert to pixel coordinates to index the segmentation
+    if scale is not None:
+        coord = [c / s for c, s in zip(coord, scale, strict=True)]
 
     # Check bounds
     for i, (c, s) in enumerate(zip(coord, segmentation.shape, strict=False)):
