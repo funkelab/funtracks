@@ -3,7 +3,7 @@ import pytest
 import tifffile
 import zarr
 
-from funtracks.import_export import export_to_csv
+from funtracks.import_export import export_to_csv, tracks_from_df
 
 
 @pytest.mark.parametrize(
@@ -386,6 +386,12 @@ def test_scale_columns_carry_the_voxel_size(get_tracks, tmp_path, ndim):
     positions = tracks.get_positions(node_ids)
     exported = df.set_index("id").loc[node_ids, axes].to_numpy()
     np.testing.assert_allclose(exported, positions)
+
+    # Importing the CSV back reads the scale columns as the scale, not as features.
+    loaded = tracks_from_df(df)
+    assert loaded.scale == scale
+    assert not any(key.endswith("_scale") for key in loaded.features)
+    np.testing.assert_allclose(loaded.get_positions(node_ids), positions)
 
 
 @pytest.mark.parametrize("use_display_names", [False, True])
