@@ -68,6 +68,30 @@ def test_pixel_scale_written_to_axes_and_not_double_applied(get_tracks, tmp_path
     np.testing.assert_allclose(loaded.get_positions(node_ids), original_pos)
 
 
+def test_world_position_units_survive_roundtrip(get_tracks, tmp_path):
+    """World-unit positions get no axes scale on export, which on its own reads as
+    pixel. The position_units recorded in the funtracks extra metadata must restore
+    "world" on import, with pos left unscaled and the segmentation scale intact."""
+    tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
+    tracks.position_units = "world"
+    tracks.scale = [1.0, 0.25, 0.5]
+    node_ids = sorted(tracks.graph_solution.node_ids())
+    original_pos = tracks.get_positions(node_ids)
+
+    geff_path = tmp_path / "tracks.geff"
+    write_to_geff(tracks, geff_path)
+
+    meta = GeffMetadata.read(geff_path)
+    assert all(ax.scale is None for ax in meta.axes if ax.type == "space")
+    assert meta.extra["funtracks"]["position_units"] == "world"
+
+    loaded = import_from_geff(geff_path)
+    assert loaded.position_units == "world"
+    assert loaded.scale == [1.0, 0.25, 0.5]
+    assert loaded.position_scale is None
+    np.testing.assert_allclose(loaded.get_positions(node_ids), original_pos)
+
+
 def test_explicit_scale_overrides_metadata(get_tracks, tmp_path):
     """A caller-supplied scale must still win over what the file says."""
     tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)

@@ -243,6 +243,9 @@ class GeffTracksBuilder(TracksBuilder):
         self._is_legacy_funtracks_geff = (
             funtracks_extra is not None and "version" not in funtracks_extra
         )
+        # position_units as recorded by the funtracks writer, if present. When set
+        # it is authoritative: pos was written exactly as stored on the Tracks.
+        self._stored_position_units = (funtracks_extra or {}).get("position_units")
         self._graph_metadata_scale = td.io.read_graph_metadata(metadata).get("scale")
 
         # Warn when masks/bboxes are present but the shape is absent.
@@ -368,6 +371,9 @@ class GeffTracksBuilder(TracksBuilder):
         marks them "world" without multiplying again.
 
         Otherwise, "pixel" vs. "world" is decided by, in order:
+        0. ``position_units`` recorded in the funtracks extra metadata, when present
+           (any geff written by funtracks since it was added). ``pos`` is stored
+           unconverted, so it is taken as-is in those units.
         1. The spatial axes' declared ``unit`` (see ``_spatial_axes_are_pixel``),
            when present - the file says what it means, explicitly.
         2. Whether the axes scale (``_axes_scale``) matches the segmentation scale
@@ -382,6 +388,13 @@ class GeffTracksBuilder(TracksBuilder):
         """
         if self._is_legacy_funtracks_geff:
             self.position_units = "world"
+            return
+
+        stored_units = getattr(self, "_stored_position_units", None)
+        if stored_units in ("pixel", "world"):
+            # Written by funtracks with position_units recorded: pos is stored
+            # unconverted in exactly those units, so take them as-is.
+            self.position_units = stored_units
             return
 
         is_pixel = self._spatial_axes_are_pixel()

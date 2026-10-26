@@ -199,10 +199,16 @@ def _build_geff_metadata(
     ]
 
     # The version stamp goes on every geff funtracks writes, including subgroup
-    # exports that omit the FeatureDict: it is what tells import that this file's
-    # points are already in world units. Without it a subgroup export looks like a
-    # foreign geff and its points would be scaled again (see `read_header`).
-    extra: dict = {"funtracks": {"version": _funtracks_version()}}
+    # exports that omit the FeatureDict: it is what tells import that this is not
+    # a legacy funtracks geff (see `read_header`). position_units is recorded
+    # explicitly so a round trip restores it exactly; the axes metadata alone
+    # cannot express "world" (no scale is written then, which reads as pixel).
+    extra: dict = {
+        "funtracks": {
+            "version": _funtracks_version(),
+            "position_units": tracks.position_units,
+        }
+    }
     if include_features:
         extra["funtracks"]["features"] = tracks.features.dump_json()
 
