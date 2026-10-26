@@ -388,6 +388,34 @@ def test_scale_columns_carry_the_voxel_size(get_tracks, tmp_path, ndim):
     np.testing.assert_allclose(exported, positions)
 
 
+@pytest.mark.parametrize("use_display_names", [False, True])
+@pytest.mark.parametrize("ndim", [3, 4])
+def test_world_positions_exported_as_pixels(
+    get_tracks, tmp_path, ndim, use_display_names
+):
+    """World-unit positions are divided by the scale on export, so the coordinates
+    are pixel coordinates that match the scale columns, as for pixel-unit tracks."""
+    import pandas as pd
+
+    scale = [1.0, 2.0, 0.5] if ndim == 3 else [1.0, 4.0, 2.0, 0.5]
+    tracks = get_tracks(ndim=ndim, with_seg=False, prefill_track_ids=True)
+    tracks.position_units = "world"
+    tracks.scale = scale
+
+    temp_file = tmp_path / "test_world.csv"
+    export_to_csv(tracks, temp_file, use_display_names=use_display_names)
+
+    df = pd.read_csv(temp_file)
+    axes = ["y", "x"] if ndim == 3 else ["z", "y", "x"]
+    id_col = "ID" if use_display_names else "id"
+    node_ids = sorted(tracks.graph_solution.node_ids())
+    expected = tracks.get_positions(node_ids) / np.asarray(scale[1:])
+    exported = df.set_index(id_col).loc[node_ids, axes].to_numpy()
+    np.testing.assert_allclose(exported, expected)
+    for axis, value in zip(axes, scale[1:], strict=True):
+        assert (df[f"{axis}_scale"] == value).all()
+
+
 @pytest.mark.parametrize("ndim", [3, 4])
 def test_scale_columns_default_to_one_without_a_scale(get_tracks, tmp_path, ndim):
     """tracks.scale is optional; an absent scale means one world unit per pixel."""
