@@ -77,10 +77,19 @@ class ActionGroup(Action):
             try:
                 init(self, *args, **kwargs)
             except Exception:
-                # Undo what was applied before the error, newest first. actions
-                # does not exist yet if the error came before super().__init__.
-                for action in reversed(getattr(self, "actions", [])):
-                    action.inverse()
+                # Once the action is in the undo history, Ctrl+Z can undo it, so an
+                # error raised after that (e.g. by a refresh listener) must not undo
+                # it here too. tracks and actions do not exist yet if the error came
+                # before super().__init__.
+                undo_stack = (
+                    self.tracks.action_history.undo_stack
+                    if hasattr(self, "tracks")
+                    else []
+                )
+                if not (undo_stack and undo_stack[-1] is self):
+                    # Undo what was applied before the error, newest first
+                    for action in reversed(getattr(self, "actions", [])):
+                        action.inverse()
                 raise
 
         cls.__init__ = init_or_roll_back  # type: ignore[method-assign]

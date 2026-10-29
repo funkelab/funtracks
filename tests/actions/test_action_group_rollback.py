@@ -186,3 +186,23 @@ class TestRollbackMechanics:
         with pytest.raises(RuntimeError, match="after applying"):
             _Nested(tracks)
         assert tracks_state(tracks, full=False) == before
+
+    def test_no_rollback_once_in_history(self, get_tracks):
+        """An error from a refresh listener comes after the action is in the undo
+        history, so the action must stay applied and be undone by Ctrl+Z only."""
+        tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
+
+        def broken_listener(*args):
+            raise RuntimeError("listener broke")
+
+        tracks.refresh.connect(broken_listener)
+        with pytest.raises(Exception, match="listener broke"):
+            UserDeleteNode(tracks, 4)
+        tracks.refresh.disconnect(broken_listener)
+
+        assert not tracks.graph_solution.has_node(4)
+        assert len(tracks.action_history.undo_stack) == 1
+        tracks.undo()
+        assert tracks.graph_solution.has_node(4)
+        assert tracks.graph_solution.has_edge(3, 4)
+        assert tracks.graph_solution.has_edge(4, 5)
