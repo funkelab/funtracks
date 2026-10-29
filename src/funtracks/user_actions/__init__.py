@@ -1,5 +1,6 @@
 from ._connect_utils import is_connected_chain
 from ._user_swap_predecessors import UserSwapPredecessors
+from .user_add_delete_feature import UserAddFeature, UserDeleteFeature
 from .user_add_edge import UserAddEdge
 from .user_add_node import UserAddNode
 from .user_connect_nodes import UserConnectNodes
@@ -19,9 +20,11 @@ from .user_update_segmentation import UserUpdateSegmentation
 
 __all__ = [
     "UserAddEdge",
+    "UserAddFeature",
     "UserAddNode",
     "UserConnectNodes",
     "UserDeleteEdge",
+    "UserDeleteFeature",
     "UserDeleteNode",
     "UserDeleteNodes",
     "UserDisconnectNodes",
