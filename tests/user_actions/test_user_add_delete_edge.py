@@ -1,5 +1,6 @@
 import pytest
 
+from funtracks.actions import AddEdge
 from funtracks.exceptions import InvalidActionError
 from funtracks.user_actions import UserAddEdge, UserDeleteEdge
 
@@ -136,3 +137,38 @@ def test_delete_edge_triple_div(get_tracks):
         InvalidActionError, match="Expected degree of 0 or 1 after removing edge, got 2"
     ):
         UserDeleteEdge(tracks, (1, 6))
+
+
+def test_add_edge_triple_div_forced_changes_nothing(get_tracks, tracks_state):
+    tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
+    # 1 is already a division, so the edge (1, 5) is invalid. Forcing would remove
+    # the in edge (4, 5) of 5 first, which must not happen when the out degree check
+    # fails.
+    before = tracks_state(tracks)
+    with pytest.raises(
+        InvalidActionError, match="Expected degree of 0 or 1 before adding edge"
+    ):
+        UserAddEdge(tracks, (1, 5), force=True)
+    assert tracks_state(tracks) == before
+
+
+def test_force_re_add_existing_division_edge(get_tracks):
+    tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
+    # The merge edge removed by force starts at the source itself, so the source's
+    # out degree check must count it as gone.
+    with pytest.warns(UserWarning, match="Removing edge"):
+        UserAddEdge(tracks, (1, 3), force=True)
+    assert tracks.graph_solution.has_edge(1, 3)
+    assert tracks.graph_solution.has_edge(1, 2)
+
+
+def test_delete_edge_triple_div_changes_nothing(get_tracks, tracks_state):
+    tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
+    # Make 1 a three-way division with the basic action, which does no checks
+    AddEdge(tracks, (1, 6))
+    before = tracks_state(tracks)
+    with pytest.raises(
+        InvalidActionError, match="Expected degree of 0 or 1 after removing edge"
+    ):
+        UserDeleteEdge(tracks, (1, 2))
+    assert tracks_state(tracks) == before

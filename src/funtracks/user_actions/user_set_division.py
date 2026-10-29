@@ -57,6 +57,12 @@ class UserSetDivision(ActionGroup):
                 f"{len(set(nodes))} ({list(nodes)})."
             )
 
+        # Checked up front: a node outside the solution would otherwise only fail
+        # halfway, after conflicting edges have already been deleted.
+        for node in nodes:
+            if not tracks.graph_solution.has_node(node):
+                raise InvalidActionError(f"Node {node} not in solution")
+
         times = {node: tracks.get_time(node) for node in nodes}
         earliest_time = min(times.values())
         parents = [node for node, time in times.items() if time == earliest_time]
