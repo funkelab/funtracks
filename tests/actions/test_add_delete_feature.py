@@ -1,4 +1,5 @@
 import numpy as np
+import polars as pl
 import pytest
 
 from funtracks.actions import AddFeature, DeleteFeature, UpdateNodeAttrs
@@ -88,6 +89,27 @@ def test_add_existing_feature_raises(get_tracks):
     AddFeature(tracks, "group", _group_feature())
     with pytest.raises(ValueError, match="already exists"):
         AddFeature(tracks, "group", _group_feature())
+
+
+def test_add_feature_over_unregistered_column_raises(get_tracks):
+    # A column in the graph that is not a registered feature, e.g. loaded from a
+    # geff: adding it as a feature would let the inverse drop its values.
+    tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
+    tracks.graph_full.add_node_attr_key("group", default_value=False, dtype=pl.Boolean)
+    tracks.graph_full.update_node_attrs(attrs={"group": [True]}, node_ids=[1])
+    with pytest.raises(ValueError, match="already exists in the graph"):
+        AddFeature(tracks, "group", _group_feature())
+    assert "group" not in tracks.features
+    assert tracks.get_node_attr(1, "group") is True
+
+
+def test_add_feature_copies_feature_dict(get_tracks):
+    tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
+    feature = _group_feature()
+    action = AddFeature(tracks, "group", feature)
+    feature["display_name"] = "renamed"
+    action.inverse().inverse()
+    assert tracks.features["group"]["display_name"] == "group"
 
 
 def test_add_annotator_feature_raises(get_tracks):

@@ -123,8 +123,14 @@ class AddFeature(BasicAction):
             raise ValueError(
                 f"Feature {key!r} is computed by an annotator; use enable_features"
             )
+        # A column that exists without being a registered feature (e.g. loaded from
+        # a geff) would keep its values here, and the inverse would then drop them.
+        if key in tracks.graph_full.node_attr_keys():
+            raise ValueError(f"Node attribute {key!r} already exists in the graph")
         self.key = key
-        self.feature = feature
+        # Copy, so that a later change to the caller's dict (which add_feature
+        # stores as is) does not change the feature this action restores.
+        self.feature = feature.copy()
         self.values = values
         self._apply()
 
