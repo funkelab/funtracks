@@ -41,34 +41,45 @@ class AddNode(BasicAction):
         super().__init__(tracks)
         self.tracks: Tracks  # Narrow type from base class
         self.node = int(node)
+        self.validate_attributes(tracks, node, attributes)
+        self.attributes = attributes
+        self._apply()
 
-        # Get keys from tracks features
+    @staticmethod
+    def validate_attributes(
+        tracks: Tracks, node: Node, attributes: dict[str, Any], has_mask: bool = False
+    ) -> None:
+        """Check that the attributes are enough to add the node.
+
+        User actions call this before applying anything, so that a node AddNode would
+        refuse is refused before any other change is made.
+
+        Args:
+            tracks: The Tracks the node would be added to.
+            node: The node id, used in the error messages.
+            attributes: The node attributes.
+            has_mask: True if a mask will be added to the attributes later, so
+                position is not needed even though the mask is not there yet.
+
+        Raises:
+            ValueError: If the time or tracklet attribute is missing, or if there
+                is neither a position nor a mask.
+        """
         time_key = tracks.features.time_key
         track_id_key = tracks.features.tracklet_key
         pos_key = tracks.features.position_key
 
-        # validate the input
         if time_key not in attributes:
             raise ValueError(f"Must provide a time attribute for node {node}")
         if track_id_key not in attributes:
             raise ValueError(f"Must provide a {track_id_key} attribute for node {node}")
 
-        # Check for position — not needed if the default mask is in attributes
-        # (position will be computed from the mask by annotators)
-        if td.DEFAULT_ATTR_KEYS.MASK not in attributes:
-            if isinstance(pos_key, list):
-                if not all(key in attributes for key in pos_key):
-                    raise ValueError(
-                        f"Must provide position or segmentation for node {node}"
-                    )
-            else:
-                if pos_key not in attributes:
-                    raise ValueError(
-                        f"Must provide position or segmentation for node {node}"
-                    )
-
-        self.attributes = attributes
-        self._apply()
+        # Position is not needed with a mask: annotators compute it from the mask
+        if has_mask or td.DEFAULT_ATTR_KEYS.MASK in attributes:
+            return
+        pos_keys = pos_key if isinstance(pos_key, list) else [pos_key]
+        if not all(key in attributes for key in pos_keys):
+            raise ValueError(f"Must provide position or segmentation for node {node}")
 
     def inverse(self) -> BasicAction:
         """Invert the action to delete nodes instead"""

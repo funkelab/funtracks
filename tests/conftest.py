@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from collections.abc import Callable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import polars as pl
@@ -13,8 +15,6 @@ from funtracks.utils.tracksdata_utils import (
 )
 
 if TYPE_CHECKING:
-    from typing import Any
-
     from funtracks.data_model import Tracks
 
 
@@ -378,7 +378,7 @@ def graph_3d_with_segmentation(tmp_path, backend) -> td.graph.BaseGraph:
 
 
 @pytest.fixture
-def get_tracks(get_graph) -> Callable[..., "Tracks"]:
+def get_tracks(get_graph) -> Callable[..., Tracks]:
     """Factory fixture to create Tracks or Tracks instances.
 
     Returns a factory function that can be called with:
@@ -536,3 +536,67 @@ def get_graph(tmp_path, backend) -> Callable[..., td.graph.BaseGraph]:
         )
 
     return _get_graph
+
+
+def _freeze(value: Any) -> Any:
+    """Turn an attribute value into something that compares with ==."""
+    if isinstance(value, Mask):
+        return (tuple(np.asarray(value.bbox).tolist()), value.mask.tobytes())
+    if isinstance(value, np.ndarray):
+        return tuple(value.tolist())
+    if isinstance(value, pl.Series):
+        return tuple(value.to_list())
+    if isinstance(value, list):
+        return tuple(_freeze(v) for v in value)
+    return value
+
+
+def _tracks_state(tracks: Tracks, full: bool = True) -> dict[str, Any]:
+    """Everything a user action can change, in a form that compares with ==.
+
+    Covers the nodes and edges with every attribute (solution flags included), the
+    track id bookkeeping, the next-node-id counter and the action history. The
+    segmentation is not compared separately: it is rendered from the masks.
+
+    Args:
+        tracks: The tracks to snapshot.
+        full: If True, cover every node and edge in graph_full. If False, only those
+            in the solution: a rolled-back (or undone) addition leaves a soft-deleted
+            candidate behind in graph_full, so only the solution is restored exactly.
+    """
+    graph = tracks.graph_full if full else tracks.graph_solution
+    node_keys = tracks.graph_full.node_attr_keys()
+    nodes = {
+        int(node): {key: _freeze(tracks.get_node_attr(node, key)) for key in node_keys}
+        for node in graph.node_ids()
+    }
+    edges = {
+        (row["source_id"], row["target_id"]): {
+            key: _freeze(value) for key, value in row.items() if key != "edge_id"
+        }
+        for row in tracks.graph_full.edge_attrs().to_dicts()
+    }
+    solution_edges = {tuple(e) for e in tracks.graph_solution.edge_list()}
+    if not full:
+        edges = {edge: attrs for edge, attrs in edges.items() if edge in solution_edges}
+    annotator = tracks.track_annotator
+    state = {
+        "nodes": nodes,
+        "edges": edges,
+        "solution_nodes": set(tracks.graph_solution.node_ids()),
+        "solution_edges": solution_edges,
+        "tracklets": {k: sorted(v) for k, v in annotator.tracklet_id_to_nodes.items()},
+        "lineages": {k: sorted(v) for k, v in annotator.lineage_id_to_nodes.items()},
+        "undo_stack": len(tracks.action_history.undo_stack),
+        "redo_stack": len(tracks.action_history.redo_stack),
+    }
+    if full:
+        # A rolled-back addition keeps its node id taken, like an undone one
+        state["max_node_id"] = tracks._max_node_id
+    return state
+
+
+@pytest.fixture
+def tracks_state() -> Callable[..., dict[str, Any]]:
+    """Snapshot a Tracks, to check that a failed user action left it unchanged."""
+    return _tracks_state

@@ -1,7 +1,7 @@
 import pytest
 
 from funtracks.exceptions import InvalidActionError
-from funtracks.user_actions import UserAddEdge, UserSetDivision
+from funtracks.user_actions import UserAddEdge, UserDeleteNode, UserSetDivision
 
 # Fixture graph: nodes 1 (t=0), 2 (t=1), 3 (t=1), 4 (t=2), 5 (t=4), 6 (t=4)
 # Edges: 1 -> 2, 1 -> 3, 3 -> 4, 4 -> 5
@@ -167,3 +167,15 @@ class TestUserSetDivision:
         assert tracks.graph_solution.has_edge(1, 2)
         assert tracks.graph_solution.has_edge(1, 6)
         assert not tracks.graph_solution.has_edge(2, 6)
+
+    def test_node_not_in_solution_changes_nothing(
+        self, get_tracks, tracks_state, ndim, with_seg
+    ):
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
+        # Soft-delete 6: it stays in graph_full, so its time can still be read.
+        # Making the division would remove (3, 4) and (4, 5) before reaching 6.
+        UserDeleteNode(tracks, 6)
+        before = tracks_state(tracks)
+        with pytest.raises(InvalidActionError, match="Node 6 not in solution"):
+            UserSetDivision(tracks, (3, 5, 6))
+        assert tracks_state(tracks) == before
