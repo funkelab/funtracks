@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from funtracks.exceptions import InvalidActionError
+
 from ..actions._base import ActionGroup
 from .user_delete_node import UserDeleteNode
 
@@ -31,6 +33,12 @@ class UserDeleteNodes(ActionGroup):
     ):
         super().__init__(tracks, actions=[])
         self.tracks: Tracks  # Narrow type from base class
+        # Check every node before deleting any, so that a failing check leaves the
+        # tracks unchanged.
+        nodes = list(dict.fromkeys(nodes))  # de-duplicate, keep order
+        for node in nodes:
+            if not tracks.graph_solution.has_node(node):
+                raise InvalidActionError(f"Node {node} not in solution, can't remove")
         for node in nodes:
             self.actions.append(UserDeleteNode(tracks, node, _top_level=False))
 

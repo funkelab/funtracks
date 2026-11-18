@@ -71,6 +71,9 @@ class UserAddNode(ActionGroup):
         """
         super().__init__(tracks, actions=[])
         self.tracks: Tracks  # Narrow type from base class
+        # Work on a copy: ids, mask and bbox are filled in below, and the caller's
+        # dict must not change, also not when the action fails.
+        attributes = dict(attributes)
 
         # Get keys from tracks features
         time_key = tracks.features.time_key
@@ -88,7 +91,6 @@ class UserAddNode(ActionGroup):
             raise InvalidActionError(
                 f"Node {node} already exists in the tracks, cannot add."
             )
-
         track_id = attributes[track_id_key]
         time = attributes[time_key]
 
@@ -113,21 +115,16 @@ class UserAddNode(ActionGroup):
                 break
 
         # check if you are adding a node to a track that divided previously
+        conflicting_edges: list[tuple[int, int]] = []
         if pred is not None and len(self.tracks.successors(pred)) == 2:
             if not force:
                 raise InvalidActionError(
                     "Cannot add node here - upstream division event detected.",
                     forceable=True,
                 )
-            else:
-                # Delete both conflicting edges in the upstream division.
-                succ_of_pred1, succ_of_pred2 = self.tracks.successors(pred)
-                self.actions.append(
-                    UserDeleteEdge(tracks, (pred, succ_of_pred1), _top_level=False)
-                )
-                self.actions.append(
-                    UserDeleteEdge(tracks, (pred, succ_of_pred2), _top_level=False)
-                )
+            # Delete both conflicting edges in the upstream division.
+            succ_of_pred1, succ_of_pred2 = self.tracks.successors(pred)
+            conflicting_edges = [(pred, succ_of_pred1), (pred, succ_of_pred2)]
 
         # check if you are adding a node to a track of which the parent track will divide
         # downstream
@@ -144,11 +141,19 @@ class UserAddNode(ActionGroup):
                         "Cannot add node here - downstream division of parent detected.",
                         forceable=True,
                     )
-                else:
-                    # Delete the conflicting edge
-                    self.actions.append(
-                        UserDeleteEdge(tracks, (pred_of_succ, succ), _top_level=False)
-                    )
+                # Delete the conflicting edge
+                conflicting_edges = [(pred_of_succ, succ)]
+
+        # AddNode runs the same check, but only after the conflicting edges have been
+        # deleted. Run it here too, so that a failing check changes nothing.
+        AddNode.validate_attributes(
+            tracks, node, attributes, has_mask=mask is not None or pixels is not None
+        )
+
+        for conflicting_edge in conflicting_edges:
+            self.actions.append(
+                UserDeleteEdge(tracks, conflicting_edge, _top_level=False)
+            )
 
         # Determine lineage_id from existing track nodes (if any)
         lineage_key = tracks.features.lineage_key
