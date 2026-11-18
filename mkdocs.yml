@@ -30,6 +30,7 @@ nav:
   - Architecture:
     - Features: features.md
     - Import: import-flow.md
+    - History log: history-log.md
   - API Reference: reference/
 
 markdown_extensions:

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from psygnal import Signal
+
 if TYPE_CHECKING:
     from ._base import Action
 
@@ -12,7 +14,15 @@ class ActionHistory:
     Essentially, if you go back and change something after undo-ing, you can always get
     back to every state if you undo far enough (instead of throwing out
     the undone actions)
+
+    Signals:
+        history_event (str, Action, int): Emitted as ``(kind, action, index)`` after
+            the history changed. ``kind`` is ``"commit"`` (a new action was added),
+            ``"undo"`` or ``"redo"``. ``action`` is the entry in ``undo_stack`` that
+            was added, undone or redone, and ``index`` is its position there.
     """
+
+    history_event = Signal(str, object, int)
 
     def __init__(self) -> None:
         self.undo_stack: list[Action] = []  # list of actions that can be undone
@@ -33,6 +43,7 @@ class ActionHistory:
             self.undo_stack.extend(self.redo_stack)
             self.redo_stack = []
         self.undo_stack.append(action)
+        self.history_event.emit("commit", action, len(self.undo_stack) - 1)
 
     def undo(self) -> bool:
         """Undo the last performed action
@@ -44,9 +55,11 @@ class ActionHistory:
         if self._undo_pointer < 0:
             return False
         else:
-            action = self.undo_stack[self._undo_pointer]
+            index = self._undo_pointer
+            action = self.undo_stack[index]
             inverse = action.inverse()
             self.redo_stack.append(inverse)
+            self.history_event.emit("undo", action, index)
             return True
 
     def redo(self) -> bool:
@@ -63,4 +76,6 @@ class ActionHistory:
             # apply the inverse but don't save it
             # (the original is already on the undo stack)
             action.inverse()
+            index = self._undo_pointer
+            self.history_event.emit("redo", self.undo_stack[index], index)
             return True

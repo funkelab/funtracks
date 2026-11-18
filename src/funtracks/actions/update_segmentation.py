@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import tracksdata as td
 from tracksdata.nodes import Mask
 
 from ._base import BasicAction
+from .serialization import decode_value, encode_value
 
 if TYPE_CHECKING:
     from funtracks.data_model import Tracks
@@ -51,6 +52,27 @@ class UpdateNodeSeg(BasicAction):
             mask=self.mask,
             added=not self.added,
             mask_key=self.mask_key,
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        """The action as a JSON-ready dict for the history log."""
+        return {
+            "a": "UpdateNodeSeg",
+            "node": self.node,
+            "mask": encode_value(self.mask),
+            "added": self.added,
+            "mask_key": self.mask_key,
+        }
+
+    @classmethod
+    def from_dict(cls, tracks: Tracks, d: dict[str, Any]) -> UpdateNodeSeg:
+        """Apply the action described by a dict from ``to_dict``."""
+        return cls(
+            tracks,
+            d["node"],
+            decode_value(d["mask"]),
+            added=d["added"],
+            mask_key=d["mask_key"],
         )
 
     def _apply(self) -> None:

@@ -74,6 +74,12 @@ class Tracks:
 
     refresh = Signal(object)
     action_applied = Signal(object)
+    # Emitted by the ActionGroup wrapper for top-level user actions only (not for
+    # user actions nested in another one): when one starts, and when one raises.
+    # user_action_failed carries (group, exception, rolled_back); rolled_back is
+    # False when the action was already in the undo history.
+    user_action_started = Signal(object)
+    user_action_failed = Signal(object, object, bool)
 
     def __init__(
         self,
@@ -156,6 +162,8 @@ class Tracks:
         # Highest node id handed out so far, filled in on first use by
         # get_next_node_id and kept up to date from there.
         self._max_node_id: int | None = None
+        # How many user actions are running, nested ones included (see ActionGroup)
+        self._user_action_depth = 0
         if _segmentation is not None:
             # Reuse provided segmentation instance (internal use only)
             self.segmentation = _segmentation

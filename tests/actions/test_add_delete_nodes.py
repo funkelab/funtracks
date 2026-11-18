@@ -159,18 +159,21 @@ def test_add_node_missing_time(get_tracks):
         AddNode(tracks, 8, {})
 
 
-def test_add_node_missing_pos(get_tracks):
-    tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
-    # First test: missing track_id raises an error
-    with pytest.raises(ValueError, match="Must provide a track_id attribute for node"):
-        AddNode(tracks, 8, {"t": 2})
+def test_add_node_missing_track_id_or_pos(get_tracks):
+    tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
+    # A missing track id is filled in with a fresh one: the node is a track of its own
+    next_track_id = tracks.get_next_track_id()
+    next_lineage_id = tracks.get_next_lineage_id()
+    AddNode(tracks, 8, {"t": 2, "pos": [3.0, 4.0]})
+    assert tracks.get_track_id(8) == next_track_id
+    assert tracks.get_lineage_id(8) == next_lineage_id
+    assert 8 in tracks.track_id_to_node[next_track_id]
 
-    # Second test: with track_id but without segmentation, missing pos raises an error
-    tracks_no_seg = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
+    # Without segmentation, a missing position raises an error
     with pytest.raises(
         ValueError, match="Must provide position or segmentation for node"
     ):
-        AddNode(tracks_no_seg, 8, {"t": 2, "track_id": 1})
+        AddNode(tracks, 9, {"t": 2, "track_id": 1})
 
 
 @pytest.mark.parametrize("ndim", [3, 4])

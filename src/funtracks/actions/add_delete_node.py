@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 import tracksdata as td
 
 from ._base import BasicAction
+from .serialization import decode_value, derived_keys, encode_value
 
 if TYPE_CHECKING:
     from typing import Any
@@ -30,20 +31,37 @@ class AddNode(BasicAction):
         Args:
             tracks: The Tracks to add the node to.
             node: A node id.
-            attributes: Node attributes including time, tracklet_id, and
-                optionally position, mask, bbox, etc.
+            attributes: Node attributes including time, and optionally position,
+                mask, bbox, tracklet and lineage id, etc. Missing tracklet and
+                lineage ids are filled in with fresh ones.
 
         Raises:
             ValueError: If time attribute is not in attributes.
-            ValueError: If track_id is not in attributes.
             ValueError: If neither position nor a mask feature is in attributes.
         """
         super().__init__(tracks)
         self.tracks: Tracks  # Narrow type from base class
         self.node = int(node)
         self.validate_attributes(tracks, node, attributes)
-        self.attributes = attributes
+        self.attributes = self._with_track_ids(tracks, attributes)
         self._apply()
+
+    @staticmethod
+    def _with_track_ids(tracks: Tracks, attributes: dict[str, Any]) -> dict[str, Any]:
+        """Fill in fresh tracklet and lineage ids where the attributes have none.
+
+        A new node has no edges yet, so it is a track of its own. The caller (e.g.
+        the history log replay, which does not record track ids) may leave the ids
+        out; the edges added afterwards give the node its real ids.
+        """
+        missing = {}
+        tracklet_key = tracks.features.tracklet_key
+        if tracklet_key in tracks.features and tracklet_key not in attributes:
+            missing[tracklet_key] = tracks.get_next_track_id()
+        lineage_key = tracks.features.lineage_key
+        if lineage_key in tracks.features and lineage_key not in attributes:
+            missing[lineage_key] = tracks.get_next_lineage_id()
+        return {**attributes, **missing} if missing else attributes
 
     @staticmethod
     def validate_attributes(
@@ -62,17 +80,14 @@ class AddNode(BasicAction):
                 position is not needed even though the mask is not there yet.
 
         Raises:
-            ValueError: If the time or tracklet attribute is missing, or if there
-                is neither a position nor a mask.
+            ValueError: If the time attribute is missing, or if there is neither a
+                position nor a mask.
         """
         time_key = tracks.features.time_key
-        track_id_key = tracks.features.tracklet_key
         pos_key = tracks.features.position_key
 
         if time_key not in attributes:
             raise ValueError(f"Must provide a time attribute for node {node}")
-        if track_id_key not in attributes:
-            raise ValueError(f"Must provide a {track_id_key} attribute for node {node}")
 
         # Position is not needed with a mask: annotators compute it from the mask
         if has_mask or td.DEFAULT_ATTR_KEYS.MASK in attributes:
@@ -84,6 +99,25 @@ class AddNode(BasicAction):
     def inverse(self) -> BasicAction:
         """Invert the action to delete nodes instead"""
         return DeleteNode(self.tracks, self.node)
+
+    def to_dict(self) -> dict[str, Any]:
+        """The action as a JSON-ready dict for the history log.
+
+        Features that annotators compute (including track ids) are left out, since
+        replay recomputes them. Position is kept when there is no mask to compute
+        it from.
+        """
+        left_out = derived_keys(self.tracks)
+        if td.DEFAULT_ATTR_KEYS.MASK not in self.attributes:
+            pos_key = self.tracks.features.position_key
+            left_out -= set(pos_key) if isinstance(pos_key, list) else {pos_key}
+        attributes = {k: v for k, v in self.attributes.items() if k not in left_out}
+        return {"a": "AddNode", "node": self.node, "attributes": encode_value(attributes)}
+
+    @classmethod
+    def from_dict(cls, tracks: Tracks, d: dict[str, Any]) -> AddNode:
+        """Apply the action described by a dict from ``to_dict``."""
+        return cls(tracks, d["node"], decode_value(d["attributes"]))
 
     def _apply(self) -> None:
         """Add the node, or revive a soft-deleted one.
@@ -170,6 +204,15 @@ class DeleteNode(BasicAction):
     def inverse(self) -> BasicAction:
         """Invert this action to re-add the node with its saved attributes."""
         return AddNode(self.tracks, self.node, self.attributes)
+
+    def to_dict(self) -> dict[str, Any]:
+        """The action as a JSON-ready dict for the history log."""
+        return {"a": "DeleteNode", "node": self.node}
+
+    @classmethod
+    def from_dict(cls, tracks: Tracks, d: dict[str, Any]) -> DeleteNode:
+        """Apply the action described by a dict from ``to_dict``."""
+        return cls(tracks, d["node"])
 
     def _apply(self) -> None:
         """Soft-delete the node: flag solution=False in the full graph and remove it

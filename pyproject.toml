@@ -51,6 +51,9 @@ dependencies =[
     "numcodecs>=0.15; python_version >= '3.13'", # TODO: remove pin once the 16 release is stable
 ]
 
+[project.scripts]
+funtracks = "funtracks.cli:main"
+
 [project.urls]
 "Bug Tracker" = "https://github.com/funkelab/funtracks/issues"
 "Documentation" = "https://funkelab.github.io/funtracks/"
@@ -112,6 +115,7 @@ unfixable = [
   "B905", # currently adds strict=False to zips. Should add strict=True (manually)
 ]
 [tool.ruff.lint.per-file-ignores]
+"src/funtracks/cli.py" = ["T201"] # a command line tool prints
 "tests/*" = ["D"]  # no docstrings in tests
 "__init__.py" = ["F401"]  # unused imports allowed in __init__.py
 
