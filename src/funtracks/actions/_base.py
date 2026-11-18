@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import functools
+from typing import TYPE_CHECKING, Any
 
 from typing_extensions import override
 
@@ -56,7 +57,42 @@ class ActionGroup(Action):
     They can contain BasicActions or other ActionGroups.
     They are not passed to annotators - only the BasicActions they contain are.
     Examples: UserAddNode, UserDeleteEdge, etc.
+
+    Subclasses apply their actions in ``__init__``. If that ``__init__`` raises, the
+    actions applied so far are undone, newest first, so a failing group leaves no
+    change outside the undo history. Like undo, this restores the solution, but
+    elements the group added stay in ``graph_full`` as soft-deleted candidates.
     """
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        # Only wrap an __init__ the class defines itself: an inherited one is
+        # already wrapped on the parent.
+        if "__init__" not in cls.__dict__:
+            return
+        init = cls.__init__
+
+        @functools.wraps(init)
+        def init_or_roll_back(self: ActionGroup, *args: Any, **kwargs: Any) -> None:
+            try:
+                init(self, *args, **kwargs)
+            except Exception:
+                # Once the action is in the undo history, Ctrl+Z can undo it, so an
+                # error raised after that (e.g. by a refresh listener) must not undo
+                # it here too. tracks and actions do not exist yet if the error came
+                # before super().__init__.
+                undo_stack = (
+                    self.tracks.action_history.undo_stack
+                    if hasattr(self, "tracks")
+                    else []
+                )
+                if not (undo_stack and undo_stack[-1] is self):
+                    # Undo what was applied before the error, newest first
+                    for action in reversed(getattr(self, "actions", [])):
+                        action.inverse()
+                raise
+
+        cls.__init__ = init_or_roll_back  # type: ignore[method-assign]
 
     def __init__(
         self,

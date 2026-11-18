@@ -2,6 +2,7 @@ import numpy as np
 import polars as pl
 import pytest
 
+from funtracks.exceptions import InvalidActionError
 from funtracks.user_actions import UserUpdateNodesAttrs
 
 
@@ -110,3 +111,13 @@ class TestUserUpdateNodesAttrs:
 
         with pytest.raises(ValueError, match="Cannot update attribute"):
             UserUpdateNodesAttrs(tracks, nodes=[1, 2], attrs={time_key: [0, 1]})
+
+    def test_missing_node_changes_nothing(self, get_tracks, tracks_state, ndim, with_seg):
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
+        tracks.graph_solution.add_node_attr_key(
+            "confidence", default_value=0, dtype=pl.Float64
+        )
+        before = tracks_state(tracks)
+        with pytest.raises(InvalidActionError, match="Node 99 not in the tracks"):
+            UserUpdateNodesAttrs(tracks, nodes=[1, 99], attrs={"confidence": [0.5, 0.5]})
+        assert tracks_state(tracks) == before

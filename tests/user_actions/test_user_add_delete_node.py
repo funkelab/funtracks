@@ -213,3 +213,30 @@ class TestUserAddDeleteNode:
         assert not graph.has_node(4)
         assert not graph.has_node(6)
         assert graph.has_edge(3, 5)
+
+    def test_add_node_without_position_changes_nothing(
+        self, get_tracks, tracks_state, ndim, with_seg
+    ):
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
+        # Track 3 has nodes 4 (t=2) and 5 (t=4), so adding to it at t=3 deletes the
+        # skip edge (4, 5) first. That must not happen when the node is invalid.
+        before = tracks_state(tracks)
+        with pytest.raises(ValueError, match="Must provide position or segmentation"):
+            UserAddNode(tracks, node=7, attributes={"t": 3, "track_id": 3})
+        assert tracks_state(tracks) == before
+
+    def test_delete_nodes_with_invalid_node_changes_nothing(
+        self, get_tracks, tracks_state, ndim, with_seg
+    ):
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
+        before = tracks_state(tracks)
+        with pytest.raises(InvalidActionError, match="Node 99 not in solution"):
+            UserDeleteNodes(tracks, [5, 99])
+        assert tracks_state(tracks) == before
+
+    def test_delete_nodes_with_duplicates(self, get_tracks, ndim, with_seg):
+        tracks = get_tracks(ndim=ndim, with_seg=with_seg, prefill_track_ids=True)
+        UserDeleteNodes(tracks, [5, 5])
+        assert not tracks.graph_solution.has_node(5)
+        assert tracks.undo()
+        assert tracks.graph_solution.has_node(5)
