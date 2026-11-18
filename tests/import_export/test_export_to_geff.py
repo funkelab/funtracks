@@ -195,6 +195,17 @@ def test_export_split_position_attrs(get_graph, ndim, prefill_track_ids, tmp_pat
     for key in pos_keys:
         assert key in axis_names
 
+    # A round trip normalizes a split position to the stacked column the importer
+    # builds, and position_key has to follow it: left naming the axis keys, every
+    # position read would look for columns the rebuilt graph does not have.
+    loaded = import_from_geff(export_dir / "tracks.geff")
+    assert loaded.features.position_key == "pos"
+    assert not set(pos_keys) & set(loaded.graph_full.node_attr_keys())
+    for node_id in tracks.graph_solution.node_ids():
+        assert list(loaded.get_position(node_id)) == pytest.approx(
+            list(tracks.get_position(node_id))
+        )
+
 
 # --- Node subset export ---
 

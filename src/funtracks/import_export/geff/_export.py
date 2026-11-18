@@ -138,14 +138,13 @@ def export_to_geff(
             zarr_format=zarr_format,
             node_ids=set(nodes_to_keep) if node_ids is not None else None,
         )
-        label_prop = resolve_relabel_attr(tracks, seg_relabel) or "node_id"
-        metadata.related_objects = [
-            {
-                "path": f"{rel_prefix}/{seg_name}",
-                "type": "labels",
-                "label_prop": label_prop,
-            }
-        ]
+        related_object = {"path": f"{rel_prefix}/{seg_name}", "type": "labels"}
+        # Without relabeling, seg labels are the geff node ids themselves, which are
+        # not a node property, so there is no label property to reference.
+        label_prop = resolve_relabel_attr(tracks, seg_relabel)
+        if label_prop is not None:
+            related_object["label_prop"] = label_prop
+        metadata.related_objects = [related_object]
 
     # Filter the graph if node_ids is provided
     if node_ids is not None:
@@ -255,8 +254,9 @@ def split_position_attr(tracks: Tracks) -> tuple[td.graph.GraphView, list[str] |
         new_graph.add_node_attr_key("x", default_value=0.0, dtype=pl.Float64)
         new_graph.add_node_attr_key("y", default_value=0.0, dtype=pl.Float64)
 
-        # Get all position values at once
-        pos_values = new_graph.node_attrs()["pos"].to_numpy()
+        # Get all position values at once, from the column position_key names -
+        # which is not necessarily called "pos"
+        pos_values = new_graph.node_attrs()[pos_key].to_numpy()
         ndim = pos_values.shape[1]
 
         if ndim == 2:

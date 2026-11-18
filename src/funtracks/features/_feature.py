@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any, Literal, TypedDict
-
-from typing_extensions import NotRequired
+from typing import Any, Literal, NotRequired, TypedDict
 
 # Type alias for feature value types
 ValueType = Literal["int", "float", "str", "bool", "mask"]

@@ -104,3 +104,26 @@ def Position(axes: Sequence[str]) -> Feature:
         "default_value": None,
         "spatial_dims": True,
     }
+
+
+def PositionAxis(axis: str) -> Feature:
+    """A feature to hold one axis of a node's position.
+
+    Used when positions are stored as one column per axis rather than as a single
+    stacked ``Position``. The two layouts are interchangeable: which one is in use
+    is recorded by ``FeatureDict.position_key`` (a str for stacked, a list of axis
+    keys for split).
+
+    Args:
+        axis (str): The axis name, e.g. "z", "y" or "x".
+
+    Returns:
+        Feature: A feature dict representing one position coordinate
+    """
+    return {
+        "feature_type": "node",
+        "value_type": "float",
+        "num_values": 1,
+        "display_name": axis,
+        "default_value": None,
+    }

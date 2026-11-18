@@ -212,12 +212,17 @@ def test_export_to_csv_with_display_names(
     assert lines[0].strip().split(",") == header
 
 
-def test_multi_axis_pos_attr_with_segmentation(graph_3d_with_segmentation):
+@pytest.mark.parametrize("drop_pos", [False, True])
+def test_multi_axis_pos_attr_with_segmentation(graph_3d_with_segmentation, drop_pos):
     """pos_attr as list should be respected even when segmentation is present.
 
-    Scenario: graph has both a "pos" column AND individual z/y/x columns with
-    distinct values. Tracks(pos_attr=['z','y','x']) should use z/y/x
-    as the position_key, not fall back to "pos".
+    Scenario: graph stores positions in individual z/y/x columns, either alongside
+    a "pos" column that nothing reads (drop_pos=False) or with no "pos" column at
+    all (drop_pos=True). Tracks(pos_attr=['z','y','x']) should use z/y/x as the
+    position_key, and must not need "pos" for anything: the RegionpropsAnnotator's
+    pos_key only shares its default name, so requiring it would compute a mask
+    centroid per node that is never read for positions — which dominates load time
+    on large graphs.
     """
     graph = graph_3d_with_segmentation
     # Add individual axis columns with values offset from "pos" so we can
@@ -226,11 +231,21 @@ def test_multi_axis_pos_attr_with_segmentation(graph_3d_with_segmentation):
     graph.add_node_attr_key("z", default_value=0.0, dtype=pl.Float64)
     graph.add_node_attr_key("y", default_value=0.0, dtype=pl.Float64)
     graph.add_node_attr_key("x", default_value=0.0, dtype=pl.Float64)
+    expected_positions = {}
     for node in graph.node_ids():
         pos = graph.nodes[node]["pos"]
-        graph.nodes[node]["z"] = float(pos[0]) + offset
-        graph.nodes[node]["y"] = float(pos[1]) + offset
-        graph.nodes[node]["x"] = float(pos[2]) + offset
+        expected_positions[node] = [float(pos[i]) + offset for i in range(3)]
+        graph.nodes[node]["z"] = expected_positions[node][0]
+        graph.nodes[node]["y"] = expected_positions[node][1]
+        graph.nodes[node]["x"] = expected_positions[node][2]
+    if drop_pos:
+        graph.remove_node_attr_key("pos")
+    else:
+        # Zero the stacked column. The fixture fills it with the mask centroids, so
+        # leaving it would make a needless recompute invisible - it would write back
+        # the same values.
+        for node in graph.node_ids():
+            graph.nodes[node]["pos"] = [0.0, 0.0, 0.0]
 
     tracks = Tracks(
         graph=graph,
@@ -245,9 +260,33 @@ def test_multi_axis_pos_attr_with_segmentation(graph_3d_with_segmentation):
     # positions should come from z/y/x (offset values), not from "pos"
     node_id = next(iter(graph.node_ids()))
     pos_from_tracks = tracks.get_position(node_id)
-    original_pos = graph.nodes[node_id]["pos"]
-    expected = [float(original_pos[i]) + offset for i in range(3)]
+    expected = expected_positions[node_id]
     assert list(pos_from_tracks) == expected, (
         f"Expected positions from z/y/x ({expected}), "
         f"got {list(pos_from_tracks)} — Tracks used 'pos' instead"
     )
+
+    # "pos" is the annotator's fallback key, not where positions live, so it must
+    # neither be computed nor registered as a feature.
+    if drop_pos:
+        assert "pos" not in tracks.graph_full.node_attr_keys(), (
+            "'pos' was computed from the masks and written to the graph, even "
+            "though positions were already in the per-axis columns"
+        )
+    else:
+        # The column exists either way, so its presence proves nothing - the values
+        # do: still zeroed, not centroids computed over every mask.
+        assert [float(v) for v in graph.nodes[node_id]["pos"]] == [0.0, 0.0, 0.0], (
+            "the unused 'pos' column was computed from the masks"
+        )
+    assert "pos" not in tracks.features, (
+        "'pos' was registered as a feature, but it is not where positions are read from"
+    )
+
+    # The per-axis keys are the position feature, and the only one on offer: "pos"
+    # is not a column this Tracks has, so it cannot be asked for either.
+    for key in ["z", "y", "x"]:
+        assert key in tracks.features
+    assert "pos" not in tracks.annotators.all_features
+    with pytest.raises(KeyError, match="Features not available"):
+        tracks.enable_features(["pos"])

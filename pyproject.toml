@@ -8,7 +8,7 @@ dynamic = ["version"]
 description = "Cell tracking data model"
 readme = "README.md"
 license = { text = "BSD 3-Clause License" }
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [
     { name = "Caroline Malin-Mayor", email = "malinmayorc@janelia.hhmi.org" },
 ]
@@ -21,10 +21,10 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering :: Image Processing",
 ]
 
@@ -34,21 +34,16 @@ dependencies =[
     "networkx>=3.4,<4",
     "psygnal>=0.14",
     "scikit-image>=0.25",
-    "geff>=1.2.0,<2",
+    "geff>=1.4,<2",
     "dask>=2025.5.0",
     "pandas>=2.3.3",
-    "zarr>=2.18,<4",
+    # zarr-python 3 only (it still reads/writes zarr format v2 files).
+    "zarr>=3,<4",
     # TEMPORARY pin: GraphView(root_fallback=True), royerlab/tracksdata#340.
-    # Restore "tracksdata>=<release>" once that PR lands in a release.
+    # Restore "tracksdata>=<release>" once that PR lands in a release (must be
+    # >=0.1.0rc13: drops the malformed numcodecs<0.16 marker that broke 3.14).
     "tracksdata @ git+https://github.com/TeunHuijben/tracksdata.git@e2513cc9509969878118a5b2cc5e5922cb6265af",
     "tqdm>=4.66.1",
-    # zarr 2.x's util.py imports cbuffer_sizes/cbuffer_metainfo from
-    # numcodecs.blosc, which numcodecs >= 0.16 removed. Pin numcodecs per
-    # Python version (mirroring geff) instead of pinning zarr, so tracksdata
-    # remains co-installable with downstream tools still on zarr 2.x.
-    "numcodecs>=0.13",
-    "numcodecs>=0.13,<0.16; python_version > '3.10,<=3.11'", # TODO: remove pin once the 16 release is stable
-    "numcodecs>=0.15; python_version >= '3.13'", # TODO: remove pin once the 16 release is stable
 ]
 
 [project.urls]
@@ -82,7 +77,7 @@ norecursedirs = ["tests/benchmarks"]
 
 [tool.ruff]
 line-length = 90
-target-version = "py310"
+target-version = "py311"
 fix = true
 src = ["src"]
 extend-exclude = [".github"]
@@ -120,7 +115,7 @@ unfixable = [
 
 [tool.mypy]
 ignore_missing_imports = true
-python_version = "3.10"
+python_version = "3.11"
 explicit_package_bases = true
 
 [tool.coverage.report]

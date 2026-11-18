@@ -1,3 +1,6 @@
+import polars as pl
+
+from funtracks.data_model import Tracks
 from funtracks.import_export._utils import rename_feature
 
 
@@ -28,6 +31,30 @@ def test_rename_feature_updates_position_key(get_tracks):
 
     assert tracks.features.position_key == new_key
     assert new_key in tracks.features
+
+
+def test_rename_feature_updates_one_axis_of_split_position_key(get_graph):
+    """Renaming one axis of a per-axis position_key moves just that entry.
+
+    Leaving the list stale would point positions at a column that no longer holds
+    them, while the annotator writes the renamed one.
+    """
+    graph = get_graph(ndim=3, with_seg=True, prefill_track_ids=True)
+    for key in ["y", "x"]:
+        graph.add_node_attr_key(key, default_value=None, dtype=pl.Float64)
+    for node in graph.node_ids():
+        pos = graph.nodes[node]["pos"]
+        graph.nodes[node]["y"] = float(pos[0])
+        graph.nodes[node]["x"] = float(pos[1])
+    graph.remove_node_attr_key("pos")
+    tracks = Tracks(
+        graph, ndim=3, pos_attr=["y", "x"], time_attr="t", tracklet_attr="track_id"
+    )
+
+    rename_feature(tracks, "y", "depth")
+
+    assert tracks.features.position_key == ["depth", "x"]
+    assert tracks.annotators.all_features.keys() >= {"depth", "x"}
 
 
 def test_rename_feature_updates_tracklet_key(get_tracks):
