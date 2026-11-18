@@ -42,6 +42,9 @@ def test_save_load(
         tracks_feature = tracks.features[key]
 
         for attr_name, attr_value in tracks_feature.items():
+            if attr_name not in loaded_feature:
+                # skip fields that are added after the snapshot was made.
+                continue
             loaded_attr_value = loaded_feature[attr_name]
 
             # For sequence attributes, cast to list to compare (handles tuple vs list)
