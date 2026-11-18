@@ -128,3 +128,8 @@ explicit_package_bases = true
 exclude_also = [
     "if TYPE_CHECKING:",
 ]
+
+# TEMPORARY: test against royerlab/tracksdata#346 (numcodecs marker fix, py3.14).
+# Remove once a tracksdata release includes it, and bump the tracksdata minimum.
+[tool.uv.sources]
+tracksdata = { git = "https://github.com/TeunHuijben/tracksdata", branch = "fix-pyproject-typo" }
