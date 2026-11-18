@@ -39,11 +39,10 @@ dependencies =[
     "pandas>=2.3.3",
     # zarr-python 3 only (it still reads/writes zarr format v2 files).
     "zarr>=3,<4",
-    # rc13 drops a malformed numcodecs marker that capped numcodecs < 0.16 on
-    # every Python, which broke installs on 3.14 (no numcodecs 0.15 wheels).
-    # rc11+ is also needed for sqlalchemy's asyncio extra (greenlet); see
-    # .claude/tracksdata_sqla.md.
-    "tracksdata>=0.1.0rc13",
+    # TEMPORARY pin: GraphView(root_fallback=True), royerlab/tracksdata#340.
+    # Restore "tracksdata>=<release>" once that PR lands in a release (must be
+    # >=0.1.0rc13: drops the malformed numcodecs<0.16 marker that broke 3.14).
+    "tracksdata @ git+https://github.com/TeunHuijben/tracksdata.git@37d655452cc19fb8bbaa27681d863403675b5430",
     "tqdm>=4.66.1",
 ]
 

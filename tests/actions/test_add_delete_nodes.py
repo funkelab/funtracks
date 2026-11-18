@@ -10,6 +10,7 @@ from funtracks.actions import (
     AddNode,
 )
 from funtracks.utils.tracksdata_utils import (
+    all_node_attrs,
     assert_node_attrs_equal_with_masks,
     create_empty_graph,
 )
@@ -89,8 +90,10 @@ def test_add_delete_nodes(get_tracks, ndim, with_seg):
     action = ActionGroup(tracks=tracks, actions=actions)
 
     assert set(tracks.graph_solution.node_ids()) == set(reference_graph.node_ids())
-    data_tracks = tracks.graph_solution.node_attrs()
-    data_reference = reference_graph.node_attrs()
+    # all_node_attrs, not node_attrs: on a database-backed graph the solution view is
+    # lean and leaves the mask column to graph_full.
+    data_tracks = all_node_attrs(tracks.graph_solution)
+    data_reference = all_node_attrs(reference_graph)
     if with_seg:
         assert_array_almost_equal(tracks.segmentation, reference_seg)
         assert_node_attrs_equal_with_masks(data_tracks, data_reference)
@@ -113,8 +116,8 @@ def test_add_delete_nodes(get_tracks, ndim, with_seg):
     # Re-invert the action to add back all the nodes and their attributes
     del_nodes.inverse()
     assert set(tracks.graph_solution.node_ids()) == set(reference_graph.node_ids())
-    data_tracks = tracks.graph_solution.node_attrs()
-    data_reference = reference_graph.node_attrs()
+    data_tracks = all_node_attrs(tracks.graph_solution)
+    data_reference = all_node_attrs(reference_graph)
     if with_seg:
         assert_array_almost_equal(tracks.segmentation, reference_seg)
         assert_node_attrs_equal_with_masks(data_tracks, data_reference)
