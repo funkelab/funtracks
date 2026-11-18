@@ -42,7 +42,7 @@ dependencies =[
     # TEMPORARY pin: GraphView(root_fallback=True), royerlab/tracksdata#340.
     # Restore "tracksdata>=<release>" once that PR lands in a release (must be
     # >=0.1.0rc13: drops the malformed numcodecs<0.16 marker that broke 3.14).
-    "tracksdata @ git+https://github.com/TeunHuijben/tracksdata.git@e2513cc9509969878118a5b2cc5e5922cb6265af",
+    "tracksdata @ git+https://github.com/TeunHuijben/tracksdata.git@37d655452cc19fb8bbaa27681d863403675b5430",
     "tqdm>=4.66.1",
 ]
 
