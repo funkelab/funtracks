@@ -24,6 +24,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering :: Image Processing",
 ]
 
@@ -33,22 +34,17 @@ dependencies =[
     "networkx>=3.4,<4",
     "psygnal>=0.14",
     "scikit-image>=0.25",
-    "geff>=1.2.0,<2",
+    "geff>=1.4,<2",
     "dask>=2025.5.0",
     "pandas>=2.3.3",
-    "zarr>=2.18,<4",
-    # rc11 is the first release whose sqlalchemy dependency carries the asyncio
-    # extra. Without it, sqlalchemy 2.1 installs without greenlet and every
-    # SQLGraph test fails to import. See .claude/tracksdata_sqla.md.
-    "tracksdata>=0.1.0rc11",
+    # zarr-python 3 only (it still reads/writes zarr format v2 files).
+    "zarr>=3,<4",
+    # rc13 drops a malformed numcodecs marker that capped numcodecs < 0.16 on
+    # every Python, which broke installs on 3.14 (no numcodecs 0.15 wheels).
+    # rc11+ is also needed for sqlalchemy's asyncio extra (greenlet); see
+    # .claude/tracksdata_sqla.md.
+    "tracksdata>=0.1.0rc13",
     "tqdm>=4.66.1",
-    # zarr 2.x's util.py imports cbuffer_sizes/cbuffer_metainfo from
-    # numcodecs.blosc, which numcodecs >= 0.16 removed. Pin numcodecs per
-    # Python version (mirroring geff) instead of pinning zarr, so tracksdata
-    # remains co-installable with downstream tools still on zarr 2.x.
-    "numcodecs>=0.13",
-    "numcodecs>=0.13,<0.16; python_version <= '3.11'", # TODO: remove pin once the 16 release is stable
-    "numcodecs>=0.15; python_version >= '3.13'", # TODO: remove pin once the 16 release is stable
 ]
 
 [project.urls]
@@ -127,3 +123,6 @@ explicit_package_bases = true
 exclude_also = [
     "if TYPE_CHECKING:",
 ]
+
+[tool.uv.sources]
+tracksdata = { git = "https://github.com/royerlab/tracksdata", tag = "v0.1.0rc13" }

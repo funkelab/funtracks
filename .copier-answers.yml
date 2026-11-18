@@ -1,0 +1,14 @@
+# Changes here will be overwritten by Copier; see https://copier.readthedocs.io/en/stable/configuring/#the-copier-answersyml-file
+_commit: v0.1.1
+_src_path: git@github.com:JaneliaSciComp/janelia-cookiecutter.git
+copyright_holder: Howard Hughes Medical Institute, Janelia Research Campus
+email: malinmayorc@janelia.hhmi.org
+full_name: Caroline Malin-Mayor
+github_owner: funkelab
+host_docs_on_github_io: true
+minimum_python_version: '3.11'
+project_name: funtracks
+project_short_description: Cell tracking data model
+project_slug: funtracks
+publish_to_pypi: true
+year: '2026'
