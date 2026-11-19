@@ -55,6 +55,8 @@ Every line has `v` (format version, `1`), `t` (wall-clock time, ISO 8601), `mono
 | `save` | no | `path`, `next_log` |
 | `session_end` | no | — |
 
+`source` is `{"kind", "path"}`, with kind `geff`, `sql`, `csv`, `other` or `none` (no file).
+
 Replay applies the `basic` lists in order and ignores `params`.
 
 ### Basic actions

@@ -70,8 +70,8 @@ class HistoryRecorder:
         tracks: The tracks to record.
         path: The log file. Created (with its parent directories) at the first edit.
         annotator: Who is editing, written with every session.
-        source: Where the tracks came from, as ``{"kind": "geff" | "sql" | "none",
-            "path": str | None}``.
+        source: Where the tracks came from, as ``{"kind": ..., "path": str | None}``
+            with kind ``"geff"``, ``"sql"``, ``"csv"``, ``"other"`` or ``"none"``.
         provenance_packages: Extra distributions whose version and commit to record,
             on top of funtracks and tracksdata (e.g. ``["napari-track-edit"]``).
         previous_log: The log of the session this one continues from, if any.
