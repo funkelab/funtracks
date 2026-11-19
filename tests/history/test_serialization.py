@@ -22,6 +22,7 @@ from funtracks.actions.serialization import (
     action_registry,
     decode_value,
     encode_value,
+    summarize_value,
 )
 from funtracks.cli import compare_tracks
 from funtracks.history import recompute_track_ids
@@ -48,6 +49,20 @@ def test_arrays_keep_dtype_and_values(array):
     assert isinstance(decoded, np.ndarray)
     assert decoded.dtype == array.dtype
     np.testing.assert_array_equal(decoded, array)
+
+
+def test_tag_names_are_stable():
+    # Renaming a tag breaks reading existing logs (a typo fixer once did)
+    assert set(encode_value(np.array([1.0]))) == {"__a__", "dtype"}
+    assert set(encode_value(np.arange(40))) == {"__nd__"}
+    assert set(encode_value(np.empty(2, dtype=object))) == {"__objarr__", "shape"}
+    mask = Mask(np.ones((1, 1), bool), bbox=[0, 0, 1, 1])
+    assert set(encode_value(mask)) == {"__mask__"}
+
+
+def test_long_lists_are_shortened_in_summaries():
+    assert summarize_value(list(range(10))) == list(range(10))
+    assert summarize_value(list(range(1000))) == {"n": 1000, "first": [0, 1, 2, 3, 4]}
 
 
 def test_other_values_round_trip():

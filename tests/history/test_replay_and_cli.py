@@ -75,11 +75,9 @@ def test_next_session_replays_onto_reloaded_save(get_tracks, tmp_path):
 
     reloaded = import_from_geff(saved)
     replay(reloaded, log)
-    reloaded_solution = reloaded.graph_solution
-    assert set(reloaded_solution.node_ids()) == set(tracks.graph_solution.node_ids())
-    assert {tuple(e) for e in reloaded_solution.edge_list()} == {
-        tuple(e) for e in tracks.graph_solution.edge_list()
-    }
+    recompute_track_ids(tracks)
+    # Solutions only: the reloaded geff has no soft-deleted candidates
+    assert compare_tracks(reloaded, tracks) == []
 
 
 def test_cli_replay_verify_summary(get_tracks, tmp_path, capsys):

@@ -19,6 +19,9 @@ recorder.close()
 replay(fresh_tracks, "embryo.geff.history/session.jsonl")
 ```
 
+Replay onto tracks without a recorder attached; otherwise the replayed steps are logged
+again, as `partial` entries.
+
 ## What is recorded
 
 - Every user action, with the basic actions it applied (feature create/delete included).
@@ -74,7 +77,7 @@ result has the same tracks as the session, possibly with different id numbers.
 ### Values
 
 numpy arrays are tagged so they decode with their dtype: `{"__a__": [...], "dtype": ...}`
-for short 1-D arrays, `{"__and__": {...}}` (compressed bytes) otherwise. Masks are written
+for short 1-D arrays, `{"__nd__": {...}}` (compressed bytes) otherwise. Masks are written
 as `{"__mask__": {"bbox", "shape", "bits"}}`.
 
 ### Baseline and versions
@@ -97,5 +100,5 @@ funtracks history summary LOG [LOG ...] [--idle-gap 120] [--csv OUT.csv]
 funtracks history verify LOG --base BASE.geff --against EXPECTED.geff
 ```
 
-`--follow` also replays the earlier logs of the chain. Logs recorded on a database (`.db`)
+`--follow` also replays the earlier logs of the chain; `--until` refers to a `seq` in the last log. Logs recorded on a database (`.db`)
 cannot be replayed yet: the database is edited in place, so they are for auditing only.

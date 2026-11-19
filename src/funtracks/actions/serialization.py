@@ -9,7 +9,7 @@ Value encoding (see the history log docs for the full format):
 - JSON scalars stay as they are; numpy scalars become Python scalars.
 - numpy arrays are always tagged, so they decode back to arrays of the same dtype:
   ``{"__a__": [...], "dtype": "float64"}`` for 1-D arrays of at most 16 values,
-  ``{"__and__": {"dtype", "shape", "data"}}`` (base64 of the zlib-compressed bytes)
+  ``{"__nd__": {"dtype", "shape", "data"}}`` (base64 of the zlib-compressed bytes)
   for the rest, and ``{"__objarr__": [...], "shape": [...]}`` for object arrays.
 - Masks become ``{"__mask__": {"bbox", "shape", "bits"}}``, with the pixels packed
   to bits and compressed.
@@ -33,6 +33,8 @@ if TYPE_CHECKING:
 
 # 1-D numeric arrays up to this length are written as readable lists
 _SHORT_ARRAY = 16
+# Longer lists in a user action's summary are shortened to their length and start
+_LONG_LIST = 50
 
 
 def _pack(data: bytes) -> str:
@@ -72,7 +74,7 @@ def encode_value(value: Any) -> Any:
         if value.ndim == 1 and value.size <= _SHORT_ARRAY:
             return {"__a__": value.tolist(), "dtype": value.dtype.name}
         return {
-            "__and__": {
+            "__nd__": {
                 # dtype.str includes the byte order, which the raw bytes depend on
                 "dtype": value.dtype.str,
                 "shape": list(value.shape),
@@ -110,8 +112,8 @@ def decode_value(value: Any) -> Any:
         return Mask(mask, bbox=np.asarray(d["bbox"], dtype=np.int64))
     if "__a__" in value:
         return np.asarray(value["__a__"], dtype=value["dtype"])
-    if "__and__" in value:
-        d = value["__and__"]
+    if "__nd__" in value:
+        d = value["__nd__"]
         array = np.frombuffer(_unpack(d["data"]), dtype=np.dtype(d["dtype"]))
         return array.reshape(d["shape"]).copy()
     if "__objarr__" in value:
@@ -126,7 +128,8 @@ def summarize_value(value: Any) -> Any:
     """Summarize a user-action argument for the human-readable log ``params``.
 
     Unlike ``encode_value``, this is lossy: masks and pixel coordinates become their
-    bounding box and number of pixels, and large arrays their shape and dtype.
+    bounding box and number of pixels, large arrays their shape and dtype, and lists
+    of more than 50 items their length and first 5 items.
 
     Args:
         value: The argument to summarize.
@@ -150,7 +153,11 @@ def summarize_value(value: Any) -> Any:
     if isinstance(value, np.generic):
         return value.item()
     if isinstance(value, list | tuple | set):
-        return [summarize_value(v) for v in value]
+        items = list(value)
+        if len(items) > _LONG_LIST:
+            # e.g. deleting thousands of nodes: the ids are in the basic actions anyway
+            return {"n": len(items), "first": [summarize_value(v) for v in items[:5]]}
+        return [summarize_value(v) for v in items]
     if isinstance(value, dict):
         return {str(k): summarize_value(v) for k, v in value.items()}
     if value is None or isinstance(value, bool | int | float | str):

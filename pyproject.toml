@@ -127,3 +127,6 @@ explicit_package_bases = true
 exclude_also = [
     "if TYPE_CHECKING:",
 ]
+
+[tool.typos.default.extend-words]
+nd = "nd" # the history log's "__nd__" tag for n-dimensional arrays

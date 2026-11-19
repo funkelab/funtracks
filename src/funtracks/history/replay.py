@@ -78,7 +78,9 @@ def replay(
     recomputed from the edges at the end: the result has the same tracks as the
     session, possibly with different id numbers.
 
-    The replayed edits are not added to the undo history.
+    The replayed edits are not added to the undo history. Don't replay onto tracks
+    that have a ``HistoryRecorder`` attached: it would log the replayed steps as
+    ``partial`` entries.
 
     Args:
         tracks: The tracks to apply the edits to.

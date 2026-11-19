@@ -50,7 +50,9 @@ def _build_parser() -> argparse.ArgumentParser:
     replay.add_argument("logs", nargs="+", type=Path, help="Log files, in order.")
     replay.add_argument("--base", required=True, type=Path, help="The baseline geff.")
     replay.add_argument("--out", required=True, type=Path, help="Where to save.")
-    replay.add_argument("--until", type=int, help="Stop after the line with this seq.")
+    replay.add_argument(
+        "--until", type=int, help="Stop after the line with this seq in the last log."
+    )
     replay.add_argument(
         "--force", action="store_true", help="Don't check the baseline fingerprint."
     )
@@ -115,10 +117,9 @@ def _replay_logs(
     from funtracks.history import read_log, replay
     from funtracks.import_export import import_from_geff
 
-    lines = []
-    for log in logs:
-        log_lines = list(read_log(log))
-        for line in log_lines:
+    log_lines = [list(read_log(log)) for log in logs]
+    for log, lines in zip(logs, log_lines, strict=True):
+        for line in lines:
             if line.get("type") == "session_start" and line["source"]["kind"] == "sql":
                 raise _SqlLogError(
                     f"{log} was recorded on a database (.db) that is edited in place, "
@@ -126,9 +127,11 @@ def _replay_logs(
                     "would apply the edits twice. Replaying database logs is not "
                     "supported yet."
                 )
-        lines.extend(log_lines)
     tracks = import_from_geff(base)
-    replay(tracks, lines, until_seq=until, check_baseline=not force)
+    for i, lines in enumerate(log_lines):
+        # seq restarts in every log, so --until refers to the last one
+        last = i == len(log_lines) - 1
+        replay(tracks, lines, until_seq=until if last else None, check_baseline=not force)
     return tracks
 
 
