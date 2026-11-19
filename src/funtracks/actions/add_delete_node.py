@@ -50,9 +50,10 @@ class AddNode(BasicAction):
     def _with_track_ids(tracks: Tracks, attributes: dict[str, Any]) -> dict[str, Any]:
         """Fill in fresh tracklet and lineage ids where the attributes have none.
 
-        A new node has no edges yet, so it is a track of its own. The caller (e.g.
-        the history log replay, which does not record track ids) may leave the ids
-        out; the edges added afterwards give the node its real ids.
+        Needed for history log replay: the log leaves track ids out, and without an
+        id the TrackAnnotator could not file the new node. A fresh id is always
+        right here, since a new node has no edges yet; the edges added afterwards
+        give it its real ids.
         """
         missing = {}
         tracklet_key = tracks.features.tracklet_key
