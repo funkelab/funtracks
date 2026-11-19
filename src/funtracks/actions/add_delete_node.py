@@ -31,38 +31,20 @@ class AddNode(BasicAction):
         Args:
             tracks: The Tracks to add the node to.
             node: A node id.
-            attributes: Node attributes including time, and optionally position,
-                mask, bbox, tracklet and lineage id, etc. Missing tracklet and
-                lineage ids are filled in with fresh ones.
+            attributes: Node attributes including time, tracklet_id, and
+                optionally position, mask, bbox, etc.
 
         Raises:
             ValueError: If time attribute is not in attributes.
+            ValueError: If track_id is not in attributes.
             ValueError: If neither position nor a mask feature is in attributes.
         """
         super().__init__(tracks)
         self.tracks: Tracks  # Narrow type from base class
         self.node = int(node)
         self.validate_attributes(tracks, node, attributes)
-        self.attributes = self._with_track_ids(tracks, attributes)
+        self.attributes = attributes
         self._apply()
-
-    @staticmethod
-    def _with_track_ids(tracks: Tracks, attributes: dict[str, Any]) -> dict[str, Any]:
-        """Fill in fresh tracklet and lineage ids where the attributes have none.
-
-        Needed for history log replay: the log leaves track ids out, and without an
-        id the TrackAnnotator could not file the new node. A fresh id is always
-        right here, since a new node has no edges yet; the edges added afterwards
-        give it its real ids.
-        """
-        missing = {}
-        tracklet_key = tracks.features.tracklet_key
-        if tracklet_key in tracks.features and tracklet_key not in attributes:
-            missing[tracklet_key] = tracks.get_next_track_id()
-        lineage_key = tracks.features.lineage_key
-        if lineage_key in tracks.features and lineage_key not in attributes:
-            missing[lineage_key] = tracks.get_next_lineage_id()
-        return {**attributes, **missing} if missing else attributes
 
     @staticmethod
     def validate_attributes(
@@ -81,14 +63,17 @@ class AddNode(BasicAction):
                 position is not needed even though the mask is not there yet.
 
         Raises:
-            ValueError: If the time attribute is missing, or if there is neither a
-                position nor a mask.
+            ValueError: If the time or tracklet attribute is missing, or if there
+                is neither a position nor a mask.
         """
         time_key = tracks.features.time_key
+        track_id_key = tracks.features.tracklet_key
         pos_key = tracks.features.position_key
 
         if time_key not in attributes:
             raise ValueError(f"Must provide a time attribute for node {node}")
+        if track_id_key not in attributes:
+            raise ValueError(f"Must provide a {track_id_key} attribute for node {node}")
 
         # Position is not needed with a mask: annotators compute it from the mask
         if has_mask or td.DEFAULT_ATTR_KEYS.MASK in attributes:
@@ -117,8 +102,20 @@ class AddNode(BasicAction):
 
     @classmethod
     def from_dict(cls, tracks: Tracks, d: dict[str, Any]) -> AddNode:
-        """Apply the action described by a dict from ``to_dict``."""
-        return cls(tracks, d["node"], decode_value(d["attributes"]))
+        """Apply the action described by a dict from ``to_dict``.
+
+        The log leaves track ids out, so the node gets fresh ones. That is always
+        right for a new node, which has no edges yet: the edges added afterwards give
+        it its real ids.
+        """
+        attributes = decode_value(d["attributes"])
+        for key, next_id in (
+            (tracks.features.tracklet_key, tracks.get_next_track_id),
+            (tracks.features.lineage_key, tracks.get_next_lineage_id),
+        ):
+            if key in tracks.features and key not in attributes:
+                attributes[key] = next_id()
+        return cls(tracks, d["node"], attributes)
 
     def _apply(self) -> None:
         """Add the node, or revive a soft-deleted one.

@@ -93,7 +93,7 @@ ACTIONS = {
     "AddNode": (
         False,
         None,
-        lambda t: AddNode(t, 7, {"t": 2, "pos": [5.0] * (t.ndim - 1)}),
+        lambda t: AddNode(t, 7, {"t": 2, "track_id": 9, "pos": [5.0] * (t.ndim - 1)}),
     ),
     "AddNode_mask": (
         True,
@@ -103,6 +103,7 @@ ACTIONS = {
             7,
             {
                 "t": 2,
+                "track_id": 9,
                 "mask": Mask(np.ones((3, 3), bool), bbox=[1, 1, 4, 4]),
                 "bbox": np.array([1, 1, 4, 4]),
             },
