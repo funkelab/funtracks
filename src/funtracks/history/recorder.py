@@ -54,7 +54,8 @@ class HistoryRecorder:
 
     One file holds one session on one baseline: the graph state when the recorder
     was created, identified by a fingerprint. Replaying the file onto that baseline
-    gives the state at the end of the session. See the history log docs for the
+    gives the state at the end of the session. The file is only created at the first
+    edit, so a session without edits leaves no file. See the history log docs for the
     format.
 
     Each user action is written as one ``action`` line with the basic actions it
@@ -67,7 +68,7 @@ class HistoryRecorder:
 
     Args:
         tracks: The tracks to record.
-        path: The log file. Opened for appending; parent directories are created.
+        path: The log file. Created (with its parent directories) at the first edit.
         annotator: Who is editing, written with every session.
         source: Where the tracks came from, as ``{"kind": "geff" | "sql" | "none",
             "path": str | None}``.
@@ -78,9 +79,7 @@ class HistoryRecorder:
         digest: Whether to include the SHA-256 digest in the baseline fingerprint.
         fsync: If True, fsync after every line, not just flush.
 
-    Raises:
-        OSError: If the log file cannot be opened. After that, write errors no
-            longer raise; they set ``failed`` instead.
+    Failing to create or write the file never raises: it sets ``failed``.
     """
 
     def __init__(
@@ -116,36 +115,40 @@ class HistoryRecorder:
         versions: dict[str, Any] = {name: package_provenance(name) for name in packages}
         versions["python"] = platform.python_version()
 
-        self._file: IO[str] = self._open(self.path)
-        self._write(
-            {
-                "type": "session_start",
-                "annotator": annotator,
-                "versions": versions,
-                "source": source,
-                "baseline": fingerprint(tracks, digest=digest),
-                "previous_log": str(previous_log) if previous_log is not None else None,
-                "extra": extra or {},
-            }
-        )
+        # Taken now, written with the first edit
+        self._file: IO[str] | None = None
+        self._session_start = {
+            "type": "session_start",
+            "annotator": annotator,
+            "versions": versions,
+            "source": source,
+            "baseline": fingerprint(tracks, digest=digest),
+            "previous_log": str(previous_log) if previous_log is not None else None,
+            "extra": extra or {},
+        }
+        self._session_start_time = datetime.now().astimezone()
         tracks.action_applied.connect(self._on_action_applied)
         tracks.action_history.history_event.connect(self._on_history_event)
         tracks.user_action_started.connect(self._on_user_action_started)
         tracks.user_action_failed.connect(self._on_user_action_failed)
 
-    @staticmethod
-    def _open(path: Path) -> IO[str]:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        return path.open("a", encoding="utf-8")
-
     # ---- public API ----
 
     def set_annotator(self, name: str) -> None:
         """Record that a different person continues editing from here on."""
-        self._write_guarded({"type": "annotator", "annotator": name})
+        if self._file is None:
+            # No edits yet: the session simply starts with this annotator
+            self._session_start["annotator"] = name
+        else:
+            self._write_guarded({"type": "annotator", "annotator": name})
 
     def mark_saved(self, path: Path | str, next_log: Path | str) -> None:
-        """Record that the tracks were saved, and which log continues the session."""
+        """Record that the tracks were saved, and which log continues the session.
+
+        Nothing is written if there were no edits.
+        """
+        if self._file is None:
+            return
         self._write_guarded(
             {"type": "save", "path": str(path), "next_log": str(next_log)}
         )
@@ -158,7 +161,8 @@ class HistoryRecorder:
         if self._closed:
             return
         self._flush_orphans()
-        self._write_guarded({"type": "session_end"})
+        if self._file is not None:
+            self._write_guarded({"type": "session_end"})
         self._closed = True
         for signal, slot in (
             (self.tracks.action_applied, self._on_action_applied),
@@ -167,10 +171,11 @@ class HistoryRecorder:
             (self.tracks.user_action_failed, self._on_user_action_failed),
         ):
             signal.disconnect(slot, missing_ok=True)
-        try:
-            self._file.close()
-        except OSError:
-            self._fail()
+        if self._file is not None:
+            try:
+                self._file.close()
+            except OSError:
+                self._fail()
 
     # ---- signal handlers ----
 
@@ -231,6 +236,8 @@ class HistoryRecorder:
 
     def _write_steps(self, line_type: str, **fields: Any) -> int:
         """Write a line holding the pending steps, and return its seq."""
+        if self._file is None:
+            self._create_file()
         self._seq += 1
         self._write(
             {"type": line_type, "seq": self._seq, **fields, "basic": self._pending}
@@ -266,12 +273,21 @@ class HistoryRecorder:
         except Exception:  # noqa: BLE001 -- recording must never break an edit
             self._fail()
 
-    def _write(self, line: dict[str, Any]) -> None:
-        now = datetime.now().astimezone()
+    def _create_file(self) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self._file = self.path.open("a", encoding="utf-8")
+        self._write(self._session_start, now=self._session_start_time, mono=0.0)
+
+    def _write(
+        self, line: dict[str, Any], now: datetime | None = None, mono: float | None = None
+    ) -> None:
+        assert self._file is not None
+        now = now if now is not None else datetime.now().astimezone()
+        mono = mono if mono is not None else time.monotonic() - self._start
         header = {
             "v": LOG_VERSION,
             "t": now.isoformat(timespec="milliseconds"),
-            "mono": round(time.monotonic() - self._start, 3),
+            "mono": round(mono, 3),
         }
         text = json.dumps(
             {**header, **encode_value(line)}, allow_nan=True, separators=(",", ":")

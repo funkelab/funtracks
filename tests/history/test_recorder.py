@@ -103,7 +103,22 @@ def test_invalid_edit_writes_nothing(get_tracks, tmp_path):
     with pytest.raises(InvalidActionError):
         UserAddEdge(tracks, (2, 5))  # 5 already has a parent
     recorder.close()
-    assert [line["type"] for line in lines_of(log)] == ["session_start", "session_end"]
+    assert not log.exists()
+
+
+def test_file_is_created_at_first_edit(get_tracks, tmp_path):
+    tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
+    log = tmp_path / "log.jsonl"
+    recorder = HistoryRecorder(tracks, log, annotator="ann", source=SOURCE)
+    recorder.set_annotator("other")  # before any edit: goes into the header
+    recorder.mark_saved(tmp_path / "out.geff", tmp_path / "next.jsonl")  # ignored
+    assert not log.exists()
+    UserDeleteEdge(tracks, (3, 4))
+    recorder.close()
+    lines = lines_of(log)
+    assert [line["type"] for line in lines] == ["session_start", "action", "session_end"]
+    assert lines[0]["annotator"] == "other"
+    assert lines[0]["mono"] == 0.0
 
 
 def test_error_after_commit_keeps_action_line(get_tracks, tmp_path):
@@ -145,15 +160,16 @@ def test_feature_toggles_are_not_logged(get_tracks, tmp_path):
     tracks.disable_features(["area"])
     tracks.enable_features(["area"])
     recorder.close()
-    assert [line["type"] for line in lines_of(log)] == ["session_start", "session_end"]
+    assert not log.exists()
 
 
 def test_recorder_failure_does_not_break_editing(get_tracks, tmp_path, caplog):
     tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
+    # A file where the log's directory should be: creating the log fails
+    (tmp_path / "not_a_dir").write_text("")
     recorder = HistoryRecorder(
-        tracks, tmp_path / "log.jsonl", annotator="ann", source=SOURCE
+        tracks, tmp_path / "not_a_dir" / "log.jsonl", annotator="ann", source=SOURCE
     )
-    recorder._file.close()  # every write fails from here on
     with caplog.at_level(logging.WARNING):
         UserDeleteEdge(tracks, (3, 4))
         UserDeleteEdge(tracks, (4, 5))

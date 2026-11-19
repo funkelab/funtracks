@@ -31,6 +31,7 @@ Not recorded: track ids, turning computed features on or off, scale, and UI stat
 
 - One file is one session on one **baseline**: the graph state when the recorder was
   created. Replaying the file onto its baseline gives the state at the end of the session.
+- The file is only created at the first edit: a session without edits leaves no file.
 - After a save, the application starts a new file whose baseline is the saved state; its
   `previous_log` points to the old file.
 - A file without `session_end` means the session crashed. A truncated last line (a crash

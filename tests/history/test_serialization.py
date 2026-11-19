@@ -66,14 +66,20 @@ def test_other_values_round_trip():
     assert list(json_round_trip(objects)) == ["a", None]
 
 
-def test_registry_has_every_basic_action_but_track_ids():
+def test_every_basic_action_is_loggable():
+    """A new basic action needs to_dict, from_dict and a registry entry, or the
+    history log cannot record or replay it. UpdateTrackIDs is the one exception."""
+
     def subclasses(cls):
         for sub in cls.__subclasses__():
             yield sub
             yield from subclasses(sub)
 
-    expected = {cls.__name__ for cls in subclasses(BasicAction)} - {"UpdateTrackIDs"}
-    assert set(action_registry()) == expected
+    actions = [cls for cls in subclasses(BasicAction) if cls is not UpdateTrackIDs]
+    for cls in actions:
+        assert "to_dict" in cls.__dict__, f"{cls.__name__} has no to_dict"
+        assert "from_dict" in cls.__dict__, f"{cls.__name__} has no from_dict"
+    assert set(action_registry()) == {cls.__name__ for cls in actions}
     with pytest.raises(ValueError, match="Unknown action"):
         action_from_dict(None, {"a": "UpdateTrackIDs"})
 

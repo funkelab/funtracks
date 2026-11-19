@@ -122,9 +122,11 @@ def test_cli_refuses_sql_logs(get_tracks, tmp_path, capsys):
     tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
     write_to_geff(tracks, base)
     log = tmp_path / "log.jsonl"
-    HistoryRecorder(
+    recorder = HistoryRecorder(
         tracks, log, annotator="ann", source={"kind": "sql", "path": "x.db"}
-    ).close()
+    )
+    UserDeleteEdge(tracks, (3, 4))
+    recorder.close()
     args = ["history", "replay", str(log), "--base", str(base), "--out", "o.geff"]
     assert main(args) == 1
     assert "auditing only" in capsys.readouterr().err
