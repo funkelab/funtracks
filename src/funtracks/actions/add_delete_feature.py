@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 import polars as pl
 import tracksdata as td
 
 from ._base import BasicAction
+from .serialization import decode_value, encode_value
 
 if TYPE_CHECKING:
     from funtracks.data_model import Tracks
@@ -138,6 +139,30 @@ class AddFeature(BasicAction):
         """Invert the action to delete the feature again."""
         return DeleteFeature(self.tracks, self.key)
 
+    def to_dict(self) -> dict[str, Any]:
+        """The action as a JSON-ready dict for the history log."""
+        values = None
+        if self.values is not None:
+            node_ids, vals = self.values
+            values = {"nodes": encode_value(node_ids), "vals": encode_value(vals)}
+        return {
+            "a": "AddFeature",
+            "key": self.key,
+            "feature": encode_value(dict(self.feature)),
+            "values": values,
+        }
+
+    @classmethod
+    def from_dict(cls, tracks: Tracks, d: dict[str, Any]) -> AddFeature:
+        """Apply the action described by a dict from ``to_dict``."""
+        values = None
+        if d["values"] is not None:
+            node_ids = decode_value(d["values"]["nodes"])
+            vals = decode_value(d["values"]["vals"])
+            values = (np.asarray(node_ids, dtype=np.int64), np.asarray(vals))
+        feature = cast("Feature", decode_value(d["feature"]))
+        return cls(tracks, d["key"], feature, values=values)
+
     def _apply(self) -> None:
         self.tracks.add_feature(self.key, self.feature)
         if self.values is not None and len(self.values[0]) > 0:
@@ -189,6 +214,19 @@ class DeleteFeature(BasicAction):
     def inverse(self) -> BasicAction:
         """Invert the action to re-add the feature with its saved values."""
         return AddFeature(self.tracks, self.key, self.feature, values=self.values)
+
+    def to_dict(self) -> dict[str, Any]:
+        """The action as a JSON-ready dict for the history log.
+
+        The saved values are not written: they only matter for the inverse, which is
+        logged as its own AddFeature when it runs.
+        """
+        return {"a": "DeleteFeature", "key": self.key}
+
+    @classmethod
+    def from_dict(cls, tracks: Tracks, d: dict[str, Any]) -> DeleteFeature:
+        """Apply the action described by a dict from ``to_dict``."""
+        return cls(tracks, d["key"])
 
     def _apply(self) -> None:
         self.tracks.delete_feature(self.key)

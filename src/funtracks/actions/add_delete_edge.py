@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from ._base import BasicAction
+from .serialization import decode_value, derived_keys, encode_value
 
 if TYPE_CHECKING:
     from typing import Any
@@ -34,6 +35,26 @@ class AddEdge(BasicAction):
     def inverse(self) -> BasicAction:
         """Delete edges"""
         return DeleteEdge(self.tracks, self.edge)
+
+    def to_dict(self) -> dict[str, Any]:
+        """The action as a JSON-ready dict for the history log.
+
+        Features that annotators compute (e.g. iou) are left out, since replay
+        recomputes them.
+        """
+        left_out = derived_keys(self.tracks)
+        attributes = {k: v for k, v in self.attributes.items() if k not in left_out}
+        return {
+            "a": "AddEdge",
+            "edge": [int(n) for n in self.edge],
+            "attributes": encode_value(attributes),
+        }
+
+    @classmethod
+    def from_dict(cls, tracks: Tracks, d: dict[str, Any]) -> AddEdge:
+        """Apply the action described by a dict from ``to_dict``."""
+        source, target = d["edge"]
+        return cls(tracks, (source, target), decode_value(d["attributes"]))
 
     def _apply(self) -> None:
         """
@@ -124,6 +145,16 @@ class DeleteEdge(BasicAction):
     def inverse(self) -> BasicAction:
         """Restore edge and their attributes"""
         return AddEdge(self.tracks, self.edge, attributes=self.attributes)
+
+    def to_dict(self) -> dict[str, Any]:
+        """The action as a JSON-ready dict for the history log."""
+        return {"a": "DeleteEdge", "edge": [int(n) for n in self.edge]}
+
+    @classmethod
+    def from_dict(cls, tracks: Tracks, d: dict[str, Any]) -> DeleteEdge:
+        """Apply the action described by a dict from ``to_dict``."""
+        source, target = d["edge"]
+        return cls(tracks, (source, target))
 
     def _apply(self) -> None:
         """Soft-delete the edge: flag solution=False in the full graph and remove it
