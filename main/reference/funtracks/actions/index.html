@@ -510,6 +510,8 @@
       
         
       
+        
+      
     
     
     
@@ -602,6 +604,34 @@
     
   
     <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>add_delete_edge
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="add_delete_feature/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>add_delete_feature
   
 
     
@@ -1366,6 +1396,8 @@
       
         
       
+        
+      
     
     
     
@@ -1413,6 +1445,34 @@
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user_actions/user_add_delete_feature/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    <code class="doc-symbol doc-symbol-nav doc-symbol-module"></code>user_add_delete_feature
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
               
             
               
@@ -1968,6 +2028,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#funtracks.actions.AddFeature" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;AddFeature
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label=" AddFeature">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.actions.AddFeature.inverse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;inverse
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#funtracks.actions.AddNode" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2020,6 +2108,34 @@
         
           <li class="md-nav__item">
   <a href="#funtracks.actions.DeleteEdge.inverse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;inverse
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#funtracks.actions.DeleteFeature" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-class"></code>&nbsp;DeleteFeature
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label=" DeleteFeature">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#funtracks.actions.DeleteFeature.inverse" class="md-nav__link">
     <span class="md-ellipsis">
       
         <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;inverse
@@ -2610,6 +2726,198 @@ Annotator. Defaults to None.</p>
 
 
 
+<h2 id="funtracks.actions.AddFeature" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">AddFeature</span>
+
+
+</h2>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">AddFeature</span><span class="p">(</span>
+    <span class="n">tracks</span><span class="p">:</span> <span class="n">Tracks</span><span class="p">,</span>
+    <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">feature</span><span class="p">:</span> <span class="n">Feature</span><span class="p">,</span>
+    <span class="n">values</span><span class="p">:</span> <span class="n">FeatureValues</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="            BasicAction (funtracks.actions._base.BasicAction)" href="#funtracks.actions.BasicAction">BasicAction</a></code></p>
+
+
+
+        <p>Action for adding a new node feature (an attribute column) to the Tracks.</p>
+<p>Meant for user-created features such as groups. Features computed by an
+annotator are switched on with <code>Tracks.enable_features</code> instead, which is not
+an action and is not undoable.</p>
+
+        <p>Create an action to add a new node feature.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>tracks</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="funtracks.data_model.Tracks" href="../../../features/#funtracks.data_model.Tracks">Tracks</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The Tracks to add the feature to.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>key</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The key of the new feature.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>feature</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="funtracks.features.Feature" href="../../../features/#funtracks.features.Feature">Feature</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The feature metadata. Only node features are supported.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>values</code>
+            </td>
+            <td>
+                  <code><span title="tuple">tuple</span>[<span title="list">list</span>[<span title="int">int</span>], <span title="list">list</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Optional node ids and their
+values. Used by the inverse of DeleteFeature to restore a column.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="NotImplementedError">NotImplementedError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the feature is not a node feature.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the key is already a feature, or is owned by an annotator.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="funtracks.actions.AddFeature.inverse" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">inverse</span>
+
+
+</h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">inverse</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">BasicAction</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Invert the action to delete the feature again.</p>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
 <h2 id="funtracks.actions.AddNode" class="doc doc-heading">
 <code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">AddNode</span>
 
@@ -2945,6 +3253,160 @@ Examples: AddNode, DeleteEdge, UpdateNodeSeg, etc.</p>
     <div class="doc doc-contents ">
 
         <p>Restore edge and their attributes</p>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="funtracks.actions.DeleteFeature" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">DeleteFeature</span>
+
+
+</h2>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">DeleteFeature</span><span class="p">(</span><span class="n">tracks</span><span class="p">:</span> <span class="n">Tracks</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="            BasicAction (funtracks.actions._base.BasicAction)" href="#funtracks.actions.BasicAction">BasicAction</a></code></p>
+
+
+
+        <p>Action for deleting a user-created node feature (an attribute column).</p>
+<p>Saves the column's values for every node in graph_full (soft-deleted candidates
+included), so the action can be inverted.</p>
+
+        <p>Create an action to delete a node feature.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>tracks</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="funtracks.data_model.Tracks" href="../../../features/#funtracks.data_model.Tracks">Tracks</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The Tracks to delete the feature from.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>key</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The key of the feature to delete.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="NotImplementedError">NotImplementedError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the feature is not a node feature.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If the key is not a feature, is a core feature of the Tracks,
+is owned by an annotator, or has derived features.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="funtracks.actions.DeleteFeature.inverse" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">inverse</span>
+
+
+</h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">inverse</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">BasicAction</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Invert the action to re-add the feature with its saved values.</p>
 
 
     </div>
