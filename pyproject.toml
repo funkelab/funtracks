@@ -123,6 +123,3 @@ explicit_package_bases = true
 exclude_also = [
     "if TYPE_CHECKING:",
 ]
-
-[tool.uv.sources]
-tracksdata = { git = "https://github.com/royerlab/tracksdata", tag = "v0.1.0rc13" }
