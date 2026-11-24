@@ -37,9 +37,8 @@ class AddFeature(BasicAction):
             tracks (Tracks): The Tracks to add the feature to.
             key (str): The key of the new feature.
             feature (Feature): The feature metadata. Only node features are supported.
-            values (tuple[np.ndarray, np.ndarray] | None): Optional node ids and the
-                values to set for them. Nodes not listed get the feature's default
-                value. Used by the inverse of DeleteFeature to restore a column.
+            values (tuple[list[int], list] | None): Optional node ids and their
+                values. Used by the inverse of DeleteFeature to restore a column.
 
         Raises:
             NotImplementedError: If the feature is not a node feature.
