@@ -66,8 +66,7 @@ class ActionGroup(Action):
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
-        # Only wrap an __init__ the class defines itself: an inherited one is
-        # already wrapped on the parent.
+        # An inherited __init__ is already wrapped on the parent
         if "__init__" not in cls.__dict__:
             return
         init = cls.__init__
@@ -77,10 +76,8 @@ class ActionGroup(Action):
             try:
                 init(self, *args, **kwargs)
             except Exception:
-                # Once the action is in the undo history, Ctrl+Z can undo it, so an
-                # error raised after that (e.g. by a refresh listener) must not undo
-                # it here too. tracks and actions do not exist yet if the error came
-                # before super().__init__.
+                # Skip if already in the undo history (e.g. a refresh listener raised).
+                # tracks/actions are unset if the error came before super().__init__.
                 undo_stack = (
                     self.tracks.action_history.undo_stack
                     if hasattr(self, "tracks")
