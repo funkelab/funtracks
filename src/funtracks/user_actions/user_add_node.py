@@ -91,6 +91,7 @@ class UserAddNode(ActionGroup):
             raise InvalidActionError(
                 f"Node {node} already exists in the tracks, cannot add."
             )
+
         track_id = attributes[track_id_key]
         time = attributes[time_key]
 
@@ -144,11 +145,18 @@ class UserAddNode(ActionGroup):
                 # Delete the conflicting edge
                 conflicting_edges = [(pred_of_succ, succ)]
 
-        # AddNode runs the same check, but only after the conflicting edges have been
-        # deleted. Run it here too, so that a failing check changes nothing.
-        AddNode.validate_attributes(
-            tracks, node, attributes, has_mask=mask is not None or pixels is not None
-        )
+        # put mask+bbox into attributes
+        if mask is None and pixels is not None:
+            mask = pixels_to_td_mask(pixels, self.tracks.ndim)
+        if mask is not None:
+            mask_key = td.DEFAULT_ATTR_KEYS.MASK
+            attributes[mask_key] = mask
+            mask_feature = tracks.features.get(mask_key)
+            if mask_feature is not None:
+                for derived_key in mask_feature.get("derived_features", []):
+                    attributes[derived_key] = mask.bbox
+        # AddNode checks this too, but only after the conflicting edges are deleted
+        AddNode.validate_attributes(tracks, node, attributes)
 
         for conflicting_edge in conflicting_edges:
             self.actions.append(
@@ -171,16 +179,6 @@ class UserAddNode(ActionGroup):
         # remove skip edge that will be replaced by new edges after adding nodes
         if pred is not None and succ is not None:
             self.actions.append(DeleteEdge(tracks, (pred, succ)))
-        # put mask+bbox into attributes
-        if mask is None and pixels is not None:
-            mask = pixels_to_td_mask(pixels, self.tracks.ndim)
-        if mask is not None:
-            mask_key = td.DEFAULT_ATTR_KEYS.MASK
-            attributes[mask_key] = mask
-            mask_feature = tracks.features.get(mask_key)
-            if mask_feature is not None:
-                for derived_key in mask_feature.get("derived_features", []):
-                    attributes[derived_key] = mask.bbox
         self.actions.append(AddNode(tracks, node, attributes))
         # add predecessor and successor edges
         if pred is not None:

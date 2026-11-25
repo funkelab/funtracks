@@ -47,9 +47,8 @@ class UserUpdateNodesAttrs(ActionGroup):
                     f"Values list for attribute '{key}' has length {len(values)}, "
                     f"expected {len(nodes)}"
                 )
-        # Check every node before updating any, so that a failing check leaves the
-        # tracks unchanged. Checked on graph_full, not the solution: UpdateNodeAttrs
-        # writes to graph_full, and soft-deleted candidates may be updated too.
+        # Check before applying anything. graph_full, not the solution: soft-deleted
+        # candidates may be updated too.
         for node in nodes:
             if not tracks.graph_full.has_node(node):
                 raise InvalidActionError(f"Node {node} not in the tracks, can't update")

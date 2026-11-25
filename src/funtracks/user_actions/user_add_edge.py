@@ -60,9 +60,8 @@ class UserAddEdge(ActionGroup):
             pred = next(iter(self.tracks.graph_solution.predecessors(target)))
             merge_edge = (pred, target)
 
-        # Check the out degree of the source before applying anything, so that a
-        # failing check leaves the tracks unchanged. Removing the merge edge lowers it
-        # when that edge starts at the source.
+        # Check before applying anything. Removing the merge edge lowers the out
+        # degree when that edge starts at the source.
         out_degree_source = len(self.tracks.successors(source))
         if merge_edge is not None and merge_edge[0] == source:
             out_degree_source -= 1

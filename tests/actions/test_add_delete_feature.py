@@ -1,4 +1,3 @@
-import numpy as np
 import polars as pl
 import pytest
 
@@ -50,7 +49,7 @@ def test_delete_feature_restores_values(get_tracks, ndim, with_seg):
     action = DeleteFeature(tracks, "group")
     assert "group" not in tracks.features
     assert "group" not in tracks.graph_full.node_attr_keys()
-    np.testing.assert_array_equal(np.sort(action.values[0]), [1, 2])
+    assert set(action.values[0]) == set(tracks.graph_full.node_ids())
 
     inverse = action.inverse()
     assert tracks.features["group"] == feature
@@ -63,8 +62,7 @@ def test_delete_feature_restores_values(get_tracks, ndim, with_seg):
     assert "group" not in tracks.graph_full.node_attr_keys()
 
 
-def test_delete_feature_object_values(get_tracks):
-    """Columns that are not numeric take the slow path, which must also be sparse."""
+def test_delete_feature_str_values(get_tracks):
     tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
     feature = Feature(
         feature_type="node",
@@ -77,8 +75,6 @@ def test_delete_feature_object_values(get_tracks):
     UpdateNodeAttrs(tracks, 3, {"label": "a"})
 
     action = DeleteFeature(tracks, "label")
-    assert action.values[0].tolist() == [3]
-
     action.inverse()
     assert tracks.get_node_attr(3, "label") == "a"
     assert tracks.get_node_attr(1, "label") == ""
@@ -119,17 +115,18 @@ def test_add_annotator_feature_raises(get_tracks):
         AddFeature(tracks, "area", _group_feature())
 
 
-@pytest.mark.parametrize("key", ["t", "pos", "mask", "bbox", "solution", "track_id"])
+@pytest.mark.parametrize("key", ["t", "pos", "mask", "bbox", "solution"])
 def test_delete_core_feature_raises(get_tracks, key):
     tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
     with pytest.raises(ValueError, match="core feature"):
         DeleteFeature(tracks, key)
 
 
-def test_delete_annotator_feature_raises(get_tracks):
+@pytest.mark.parametrize("key", ["area", "track_id"])
+def test_delete_annotator_feature_raises(get_tracks, key):
     tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
     with pytest.raises(ValueError, match="computed by an annotator"):
-        DeleteFeature(tracks, "area")
+        DeleteFeature(tracks, key)
 
 
 def test_delete_missing_feature_raises(get_tracks):

@@ -48,23 +48,11 @@ class AddNode(BasicAction):
 
     @staticmethod
     def validate_attributes(
-        tracks: Tracks, node: Node, attributes: dict[str, Any], has_mask: bool = False
+        tracks: Tracks, node: Node, attributes: dict[str, Any]
     ) -> None:
-        """Check that the attributes are enough to add the node.
+        """Raise ValueError if the attributes are not enough to add the node.
 
-        User actions call this before applying anything, so that a node AddNode would
-        refuse is refused before any other change is made.
-
-        Args:
-            tracks: The Tracks the node would be added to.
-            node: The node id, used in the error messages.
-            attributes: The node attributes.
-            has_mask: True if a mask will be added to the attributes later, so
-                position is not needed even though the mask is not there yet.
-
-        Raises:
-            ValueError: If the time or tracklet attribute is missing, or if there
-                is neither a position nor a mask.
+        Also called by user actions, to refuse the node before changing anything.
         """
         time_key = tracks.features.time_key
         track_id_key = tracks.features.tracklet_key
@@ -76,7 +64,7 @@ class AddNode(BasicAction):
             raise ValueError(f"Must provide a {track_id_key} attribute for node {node}")
 
         # Position is not needed with a mask: annotators compute it from the mask
-        if has_mask or td.DEFAULT_ATTR_KEYS.MASK in attributes:
+        if td.DEFAULT_ATTR_KEYS.MASK in attributes:
             return
         pos_keys = pos_key if isinstance(pos_key, list) else [pos_key]
         if not all(key in attributes for key in pos_keys):

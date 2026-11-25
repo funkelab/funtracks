@@ -177,21 +177,12 @@ class UserUpdateSegmentation(ActionGroup):
                 f"but entry lengths were {sorted(lengths)}."
             )
 
-        # Decide what happens to each painted-over node before applying anything, so
-        # that a failing check leaves the tracks unchanged. Painting with new_value
-        # only changes new_value's own mask, so deciding this first is equivalent.
-        painted_over: list[tuple[Mask, int, bool]] = []
-        for mask, _time, old_value in updates:
-            if old_value == 0:
-                continue
-            if not self.tracks.graph_solution.has_node(old_value):
+        # Check before applying anything
+        for _mask, _time, old_value in updates:
+            if old_value != 0 and not self.tracks.graph_solution.has_node(old_value):
                 raise InvalidActionError(
                     f"Cannot paint over node {old_value}: it is not in the solution."
                 )
-            mask_old_value = self.tracks.graph_full.nodes[old_value]["mask"]
-            # If pixels fully overlap with the old_value mask, the node is deleted
-            fully_covered = mask.intersection(mask_old_value) == mask_old_value.mask.sum()
-            painted_over.append((mask, old_value, fully_covered))
 
         if new_value != 0 and updates:
             # name the node that was painted with
@@ -238,8 +229,13 @@ class UserUpdateSegmentation(ActionGroup):
 
         # Now that the InvalidAction check for adding a new node has passed, we can add
         # actions for updating/deleting existing nodes
-        for mask, old_value, fully_covered in painted_over:
-            if fully_covered:
+        for mask, _time, old_value in updates:
+            if old_value == 0:
+                continue
+            # check if all pixels of old_value are removed
+            mask_old_value = self.tracks.graph_full.nodes[old_value]["mask"]
+            # If pixels fully overlaps with old_value mask, delete node
+            if mask.intersection(mask_old_value) == mask_old_value.mask.sum():
                 self.actions.append(UserDeleteNode(tracks, old_value, _top_level=False))
             else:
                 self.actions.append(UpdateNodeSeg(tracks, old_value, mask, added=False))
