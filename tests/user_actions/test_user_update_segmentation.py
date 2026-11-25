@@ -328,6 +328,24 @@ class TestUpdateNodeSeg:
         assert tracks.get_track_id(node_id) == 10
 
 
+def test_painting_over_node_not_in_solution_changes_nothing(get_tracks, tracks_state):
+    tracks = get_tracks(ndim=3, with_seg=True, prefill_track_ids=True)
+    # Soft-delete node 6, then report one of its pixels as painted over with a new
+    # label. Adding the new node must not happen when the painted-over node is invalid.
+    pixels = td_mask_to_pixels(tracks.get_mask(6), tracks.get_time(6), ndim=tracks.ndim)
+    one_pixel = tuple(np.array([coords[0]]) for coords in pixels)
+    UserDeleteNodes(tracks, [6])
+    before = tracks_state(tracks)
+    with pytest.raises(InvalidActionError, match="Cannot paint over node 6"):
+        UserUpdateSegmentation(
+            tracks,
+            new_value=7,
+            updated_pixels=[(one_pixel, 6)],
+            current_track_id=10,
+        )
+    assert tracks_state(tracks) == before
+
+
 def test_missing_seg(get_tracks):
     tracks = get_tracks(ndim=3, with_seg=False, prefill_track_ids=True)
     with pytest.raises(ValueError, match="Cannot update non-existing segmentation"):

@@ -71,6 +71,9 @@ class UserAddNode(ActionGroup):
         """
         super().__init__(tracks, actions=[])
         self.tracks: Tracks  # Narrow type from base class
+        # Work on a copy: ids, mask and bbox are filled in below, and the caller's
+        # dict must not change, also not when the action fails.
+        attributes = dict(attributes)
 
         # Get keys from tracks features
         time_key = tracks.features.time_key
@@ -113,21 +116,16 @@ class UserAddNode(ActionGroup):
                 break
 
         # check if you are adding a node to a track that divided previously
+        conflicting_edges: list[tuple[int, int]] = []
         if pred is not None and len(self.tracks.successors(pred)) == 2:
             if not force:
                 raise InvalidActionError(
                     "Cannot add node here - upstream division event detected.",
                     forceable=True,
                 )
-            else:
-                # Delete both conflicting edges in the upstream division.
-                succ_of_pred1, succ_of_pred2 = self.tracks.successors(pred)
-                self.actions.append(
-                    UserDeleteEdge(tracks, (pred, succ_of_pred1), _top_level=False)
-                )
-                self.actions.append(
-                    UserDeleteEdge(tracks, (pred, succ_of_pred2), _top_level=False)
-                )
+            # Delete both conflicting edges in the upstream division.
+            succ_of_pred1, succ_of_pred2 = self.tracks.successors(pred)
+            conflicting_edges = [(pred, succ_of_pred1), (pred, succ_of_pred2)]
 
         # check if you are adding a node to a track of which the parent track will divide
         # downstream
@@ -144,11 +142,26 @@ class UserAddNode(ActionGroup):
                         "Cannot add node here - downstream division of parent detected.",
                         forceable=True,
                     )
-                else:
-                    # Delete the conflicting edge
-                    self.actions.append(
-                        UserDeleteEdge(tracks, (pred_of_succ, succ), _top_level=False)
-                    )
+                # Delete the conflicting edge
+                conflicting_edges = [(pred_of_succ, succ)]
+
+        # put mask+bbox into attributes
+        if mask is None and pixels is not None:
+            mask = pixels_to_td_mask(pixels, self.tracks.ndim)
+        if mask is not None:
+            mask_key = td.DEFAULT_ATTR_KEYS.MASK
+            attributes[mask_key] = mask
+            mask_feature = tracks.features.get(mask_key)
+            if mask_feature is not None:
+                for derived_key in mask_feature.get("derived_features", []):
+                    attributes[derived_key] = mask.bbox
+        # AddNode checks this too, but only after the conflicting edges are deleted
+        AddNode.validate_attributes(tracks, node, attributes)
+
+        for conflicting_edge in conflicting_edges:
+            self.actions.append(
+                UserDeleteEdge(tracks, conflicting_edge, _top_level=False)
+            )
 
         # Determine lineage_id from existing track nodes (if any)
         lineage_key = tracks.features.lineage_key
@@ -166,16 +179,6 @@ class UserAddNode(ActionGroup):
         # remove skip edge that will be replaced by new edges after adding nodes
         if pred is not None and succ is not None:
             self.actions.append(DeleteEdge(tracks, (pred, succ)))
-        # put mask+bbox into attributes
-        if mask is None and pixels is not None:
-            mask = pixels_to_td_mask(pixels, self.tracks.ndim)
-        if mask is not None:
-            mask_key = td.DEFAULT_ATTR_KEYS.MASK
-            attributes[mask_key] = mask
-            mask_feature = tracks.features.get(mask_key)
-            if mask_feature is not None:
-                for derived_key in mask_feature.get("derived_features", []):
-                    attributes[derived_key] = mask.bbox
         self.actions.append(AddNode(tracks, node, attributes))
         # add predecessor and successor edges
         if pred is not None:

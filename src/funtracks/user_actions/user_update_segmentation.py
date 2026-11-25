@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, TypeAlias, cast
 import numpy as np
 from tracksdata.nodes import Mask
 
+from funtracks.exceptions import InvalidActionError
 from funtracks.utils.tracksdata_utils import pixels_to_td_mask, union_td_masks
 
 from ..actions._base import ActionGroup
@@ -175,6 +176,13 @@ class UserUpdateSegmentation(ActionGroup):
                 "(mask, time, old value) triples or (multi-index, old value) pairs, "
                 f"but entry lengths were {sorted(lengths)}."
             )
+
+        # Check before applying anything
+        for _mask, _time, old_value in updates:
+            if old_value != 0 and not self.tracks.graph_solution.has_node(old_value):
+                raise InvalidActionError(
+                    f"Cannot paint over node {old_value}: it is not in the solution."
+                )
 
         if new_value != 0 and updates:
             # name the node that was painted with

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from funtracks.exceptions import InvalidActionError
+
 from ..actions._base import ActionGroup
 from .user_update_node_attrs import UserUpdateNodeAttrs
 
@@ -45,6 +47,11 @@ class UserUpdateNodesAttrs(ActionGroup):
                     f"Values list for attribute '{key}' has length {len(values)}, "
                     f"expected {len(nodes)}"
                 )
+        # Check before applying anything. graph_full, not the solution: soft-deleted
+        # candidates may be updated too.
+        for node in nodes:
+            if not tracks.graph_full.has_node(node):
+                raise InvalidActionError(f"Node {node} not in the tracks, can't update")
         for i, node in enumerate(nodes):
             node_attrs = {key: values[i] for key, values in attrs.items()}
             self.actions.append(
