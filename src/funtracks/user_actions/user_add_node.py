@@ -91,6 +91,7 @@ class UserAddNode(ActionGroup):
             raise InvalidActionError(
                 f"Node {node} already exists in the tracks, cannot add."
             )
+
         track_id = attributes[track_id_key]
         time = attributes[time_key]
 

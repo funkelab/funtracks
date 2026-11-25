@@ -35,8 +35,7 @@ class UserDeleteEdge(ActionGroup):
         if not self.tracks.graph_solution.has_edge(*edge):
             raise InvalidActionError(f"Edge {edge} not in solution, can't remove")
 
-        # The out degree the source will have once the edge is gone. Check it before
-        # applying anything, so that a failing check leaves the tracks unchanged.
+        # Check before applying anything: the out degree once the edge is gone
         out_degree = len(self.tracks.successors(edge[0])) - 1
         if out_degree > 1:
             raise InvalidActionError(
