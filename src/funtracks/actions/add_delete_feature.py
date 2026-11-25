@@ -86,9 +86,8 @@ class AddFeature(BasicAction):
         """Apply the action described by a dict from ``to_dict``."""
         values = None
         if d["values"] is not None:
-            node_ids = decode_value(d["values"]["nodes"])
-            vals = decode_value(d["values"]["vals"])
-            values = (np.asarray(node_ids, dtype=np.int64), np.asarray(vals))
+            node_ids = [int(node) for node in decode_value(d["values"]["nodes"])]
+            values = (node_ids, list(decode_value(d["values"]["vals"])))
         feature = cast("Feature", decode_value(d["feature"]))
         return cls(tracks, d["key"], feature, values=values)
 
