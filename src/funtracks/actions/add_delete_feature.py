@@ -11,9 +11,7 @@ if TYPE_CHECKING:
     from funtracks.data_model import Tracks
     from funtracks.features import Feature
 
-# Column values: the node ids and their values, in the same order. Stored densely
-# (every node). If undo memory becomes a problem on large graphs, store only the
-# values that differ from the feature's default.
+# Column values: the node ids and their values, in the same order
 FeatureValues = tuple[list[int], list[Any]]
 
 
@@ -145,6 +143,9 @@ class DeleteFeature(BasicAction):
             raise ValueError(f"Cannot delete feature {key!r}, it has derived features")
         self.key = key
         self.feature = feature
+        # TODO: Saves every node's value, undoing this logs them all in the history log.
+        # If memory or log size becomes a problem on large graphs, save only the
+        # values that differ from the feature's default.
         node_id = td.DEFAULT_ATTR_KEYS.NODE_ID
         df = tracks.graph_full.node_attrs(attr_keys=[node_id, key])
         self.values = (df[node_id].to_list(), df[key].to_list())
