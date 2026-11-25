@@ -2078,6 +2078,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#funtracks.actions.AddNode.validate_attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;validate_attributes
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2498,6 +2509,10 @@ back to the exact state it had before applying this action.</p>
 They can contain BasicActions or other ActionGroups.
 They are not passed to annotators - only the BasicActions they contain are.
 Examples: UserAddNode, UserDeleteEdge, etc.</p>
+<p>Subclasses apply their actions in <code>__init__</code>. If that <code>__init__</code> raises, the
+actions applied so far are undone, newest first, so a failing group leaves no
+change outside the undo history. Like undo, this restores the solution, but
+elements the group added stay in <code>graph_full</code> as soft-deleted candidates.</p>
 
         <p>A group of actions that is also an action.</p>
 <p>This is useful for creating composite actions from atomic BasicActions or other
@@ -3082,6 +3097,29 @@ optionally position, mask, bbox, etc.</p>
     <div class="doc doc-contents ">
 
         <p>Invert the action to delete nodes instead</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="funtracks.actions.AddNode.validate_attributes" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">validate_attributes</span>
+
+
+</h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">validate_attributes</span><span class="p">(</span>
+    <span class="n">tracks</span><span class="p">:</span> <span class="n">Tracks</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">,</span> <span class="n">attributes</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Raise ValueError if the attributes are not enough to add the node.</p>
+<p>Also called by user actions, to refuse the node before changing anything.</p>
 
 
     </div>

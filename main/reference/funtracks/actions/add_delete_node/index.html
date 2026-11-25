@@ -734,6 +734,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#funtracks.actions.add_delete_node.AddNode.validate_attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;validate_attributes
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2086,6 +2097,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#funtracks.actions.add_delete_node.AddNode.validate_attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        <code class="doc-symbol doc-symbol-toc doc-symbol-method"></code>&nbsp;validate_attributes
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2335,6 +2357,29 @@ optionally position, mask, bbox, etc.</p>
     <div class="doc doc-contents ">
 
         <p>Invert the action to delete nodes instead</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="funtracks.actions.add_delete_node.AddNode.validate_attributes" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">validate_attributes</span>
+
+
+</h3>
+<div class="doc-signature highlight"><pre><span></span><code><span class="nf">validate_attributes</span><span class="p">(</span>
+    <span class="n">tracks</span><span class="p">:</span> <span class="n">Tracks</span><span class="p">,</span> <span class="n">node</span><span class="p">:</span> <span class="n">Node</span><span class="p">,</span> <span class="n">attributes</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Raise ValueError if the attributes are not enough to add the node.</p>
+<p>Also called by user actions, to refuse the node before changing anything.</p>
 
 
     </div>
