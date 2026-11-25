@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import numpy as np
 import polars as pl
@@ -15,6 +15,8 @@ from funtracks.utils.tracksdata_utils import (
 )
 
 if TYPE_CHECKING:
+    from typing import Any
+
     from funtracks.data_model import Tracks
 
 

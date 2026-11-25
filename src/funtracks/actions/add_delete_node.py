@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 import tracksdata as td
 
 from ._base import BasicAction
+from .serialization import decode_value, derived_keys, encode_value
 
 if TYPE_CHECKING:
     from typing import Any
@@ -47,23 +48,11 @@ class AddNode(BasicAction):
 
     @staticmethod
     def validate_attributes(
-        tracks: Tracks, node: Node, attributes: dict[str, Any], has_mask: bool = False
+        tracks: Tracks, node: Node, attributes: dict[str, Any]
     ) -> None:
-        """Check that the attributes are enough to add the node.
+        """Raise ValueError if the attributes are not enough to add the node.
 
-        User actions call this before applying anything, so that a node AddNode would
-        refuse is refused before any other change is made.
-
-        Args:
-            tracks: The Tracks the node would be added to.
-            node: The node id, used in the error messages.
-            attributes: The node attributes.
-            has_mask: True if a mask will be added to the attributes later, so
-                position is not needed even though the mask is not there yet.
-
-        Raises:
-            ValueError: If the time or tracklet attribute is missing, or if there
-                is neither a position nor a mask.
+        Also called by user actions, to refuse the node before changing anything.
         """
         time_key = tracks.features.time_key
         track_id_key = tracks.features.tracklet_key
@@ -75,7 +64,7 @@ class AddNode(BasicAction):
             raise ValueError(f"Must provide a {track_id_key} attribute for node {node}")
 
         # Position is not needed with a mask: annotators compute it from the mask
-        if has_mask or td.DEFAULT_ATTR_KEYS.MASK in attributes:
+        if td.DEFAULT_ATTR_KEYS.MASK in attributes:
             return
         pos_keys = pos_key if isinstance(pos_key, list) else [pos_key]
         if not all(key in attributes for key in pos_keys):
@@ -84,6 +73,37 @@ class AddNode(BasicAction):
     def inverse(self) -> BasicAction:
         """Invert the action to delete nodes instead"""
         return DeleteNode(self.tracks, self.node)
+
+    def to_dict(self) -> dict[str, Any]:
+        """The action as a JSON-ready dict for the history log.
+
+        Features that annotators compute (including track ids) are left out, since
+        replay recomputes them. Position is kept when there is no mask to compute
+        it from.
+        """
+        left_out = derived_keys(self.tracks)
+        if td.DEFAULT_ATTR_KEYS.MASK not in self.attributes:
+            pos_key = self.tracks.features.position_key
+            left_out -= set(pos_key) if isinstance(pos_key, list) else {pos_key}
+        attributes = {k: v for k, v in self.attributes.items() if k not in left_out}
+        return {"a": "AddNode", "node": self.node, "attributes": encode_value(attributes)}
+
+    @classmethod
+    def from_dict(cls, tracks: Tracks, d: dict[str, Any]) -> AddNode:
+        """Apply the action described by a dict from ``to_dict``.
+
+        The log leaves track ids out, so the node gets fresh ones. That is always
+        right for a new node, which has no edges yet: the edges added afterwards give
+        it its real ids.
+        """
+        attributes = decode_value(d["attributes"])
+        for key, next_id in (
+            (tracks.features.tracklet_key, tracks.get_next_track_id),
+            (tracks.features.lineage_key, tracks.get_next_lineage_id),
+        ):
+            if key in tracks.features and key not in attributes:
+                attributes[key] = next_id()
+        return cls(tracks, d["node"], attributes)
 
     def _apply(self) -> None:
         """Add the node, or revive a soft-deleted one.
@@ -170,6 +190,15 @@ class DeleteNode(BasicAction):
     def inverse(self) -> BasicAction:
         """Invert this action to re-add the node with its saved attributes."""
         return AddNode(self.tracks, self.node, self.attributes)
+
+    def to_dict(self) -> dict[str, Any]:
+        """The action as a JSON-ready dict for the history log."""
+        return {"a": "DeleteNode", "node": self.node}
+
+    @classmethod
+    def from_dict(cls, tracks: Tracks, d: dict[str, Any]) -> DeleteNode:
+        """Apply the action described by a dict from ``to_dict``."""
+        return cls(tracks, d["node"])
 
     def _apply(self) -> None:
         """Soft-delete the node: flag solution=False in the full graph and remove it

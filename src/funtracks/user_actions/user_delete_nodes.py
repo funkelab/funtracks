@@ -33,8 +33,7 @@ class UserDeleteNodes(ActionGroup):
     ):
         super().__init__(tracks, actions=[])
         self.tracks: Tracks  # Narrow type from base class
-        # Check every node before deleting any, so that a failing check leaves the
-        # tracks unchanged.
+        # Check before applying anything
         nodes = list(dict.fromkeys(nodes))  # de-duplicate, keep order
         for node in nodes:
             if not tracks.graph_solution.has_node(node):

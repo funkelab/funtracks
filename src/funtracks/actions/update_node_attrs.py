@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from ._base import BasicAction
+from .serialization import decode_value, derived_keys, encode_value
 
 if TYPE_CHECKING:
     from typing import Any
@@ -52,6 +53,20 @@ class UpdateNodeAttrs(BasicAction):
             self.node,
             self.prev_attrs,
         )
+
+    def to_dict(self) -> dict[str, Any]:
+        """The action as a JSON-ready dict for the history log.
+
+        Track ids are left out, since replay recomputes them.
+        """
+        left_out = derived_keys(self.tracks)
+        attrs = {k: v for k, v in self.new_attrs.items() if k not in left_out}
+        return {"a": "UpdateNodeAttrs", "node": self.node, "attrs": encode_value(attrs)}
+
+    @classmethod
+    def from_dict(cls, tracks: Tracks, d: dict[str, Any]) -> UpdateNodeAttrs:
+        """Apply the action described by a dict from ``to_dict``."""
+        return cls(tracks, d["node"], decode_value(d["attrs"]))
 
     def _apply(self) -> None:
         """Set new attributes"""
